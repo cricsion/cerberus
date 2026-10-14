@@ -1,0 +1,683 @@
+# Custom Semgrep taint rules — sink families the public registry misses or
+# under-specifies for our harness (project-wrapper sinks, framework gaps).
+# Every rule carries metadata.cwe so harness/tools/sast.py normalize_to_candidates
+# maps it automatically. Taint mode: sources -> sinks unless a sanitizer fires.
+rules:
+  # ---------------- Python ----------------
+  - id: custom-py-sqli-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+      - pattern: input(...)
+    pattern-sinks:
+      - pattern: $C.execute(...)
+      - pattern: $C.executemany(...)
+      - pattern: $M.raw(...)
+    pattern-sanitizers:
+      - pattern: int(...)
+      # Literal query text = parameterized/bound call: the sink itself is safe.
+      - pattern: $C.execute("...", ...)
+      - pattern: $C.executemany("...", ...)
+    message: Possible SQL injection via string-built query reaching execute().
+    metadata:
+      cwe: CWE-89
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-py-cmd-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: input(...)
+      - pattern: sys.argv
+    pattern-sinks:
+      - pattern: os.system(...)
+      - pattern: os.popen(...)
+      - patterns:
+          - pattern: subprocess.$F(...)
+          - pattern: shell=True
+    pattern-sanitizers:
+      - pattern: shlex.quote(...)
+    message: Possible OS command injection reaching a shell sink.
+    metadata:
+      cwe: CWE-78
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-py-xss-taint
+    languages: [python]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+    pattern-sinks:
+      - pattern: flask.render_template_string(...)
+      - pattern: flask.Response(...)
+      - pattern: django.http.HttpResponse(...)
+      - pattern: return $X + ...
+    pattern-sanitizers:
+      - pattern: flask.escape(...)
+      - pattern: markupsafe.escape(...)
+    message: Possible XSS via untrusted data reaching an HTML response sink.
+    metadata:
+      cwe: CWE-79
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-py-path-taint
+    languages: [python]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+    pattern-sinks:
+      - pattern: open(...)
+      - pattern: flask.send_file(...)
+      - pattern: flask.send_from_directory(...)
+    pattern-sanitizers:
+      - pattern: werkzeug.utils.safe_join(...)
+      - pattern: os.path.realpath(...)
+    message: Possible path traversal via untrusted data reaching a file sink.
+    metadata:
+      cwe: CWE-22
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  # ---------------- JavaScript / TypeScript ----------------
+  - id: custom-js-eval-taint
+    languages: [javascript, typescript]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: req.query.$ATTR
+      - pattern: req.params.$ATTR
+      - pattern: req.body.$ATTR
+      - patterns:
+          - pattern-inside: function $F(..., $SRC, ...) {...}
+          - pattern: $SRC
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: Function(...)
+      - pattern: $CP.exec(...)
+      - pattern: $CP.execSync(...)
+    message: Possible code/command injection via request data reaching eval/exec.
+    metadata:
+      cwe: CWE-94
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-js-xss-taint
+    languages: [javascript, typescript]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: req.query.$ATTR
+      - pattern: req.params.$ATTR
+    pattern-sinks:
+      - patterns:
+          - pattern: $EL.innerHTML = ...
+      - patterns:
+          - pattern: document.write(...)
+    message: Possible XSS via request data reaching an HTML sink.
+    metadata:
+      cwe: CWE-79
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- Java ----------------
+  - id: custom-java-sqli-taint
+    languages: [java]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+      - pattern: $REQ.getHeader(...)
+    pattern-sinks:
+      - pattern: $ST.executeQuery(...)
+      - pattern: $ST.execute(...)
+    pattern-sanitizers:
+      - pattern: $PS.setString(...)
+    message: Possible SQL injection via request data reaching a query sink.
+    metadata:
+      cwe: CWE-89
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-java-cmd-taint
+    languages: [java]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+    pattern-sinks:
+      - pattern: Runtime.getRuntime().exec(...)
+      - pattern: new ProcessBuilder(...)
+    message: Possible OS command injection via request data.
+    metadata:
+      cwe: CWE-78
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- Go ----------------
+  - id: custom-go-cmd-taint
+    languages: [go]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get(...)
+      - pattern: $R.FormValue(...)
+    pattern-sinks:
+      - pattern: exec.Command(...)
+    message: Possible OS command injection via request data reaching exec.Command.
+    metadata:
+      cwe: CWE-78
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-go-sqli-taint
+    languages: [go]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get(...)
+    pattern-sinks:
+      - pattern: $DB.Query(...)
+      - pattern: $DB.Exec(...)
+    message: Possible SQL injection via request data reaching a query sink.
+    metadata:
+      cwe: CWE-89
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- Ruby ----------------
+  - id: custom-rb-inject-taint
+    languages: [ruby]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: params[...]
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: system(...)
+      - pattern: $M.where(...)
+    message: Possible injection via params reaching eval/exec/query sink.
+    metadata:
+      cwe: CWE-94
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- PHP ----------------
+  - id: custom-php-inject-taint
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $_GET[...]
+      - pattern: $_POST[...]
+      - pattern: $_REQUEST[...]
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: system(...)
+      - pattern: mysql_query(...)
+      - pattern: mysqli_query(...)
+      - pattern: unserialize(...)
+    message: Possible injection via superglobal reaching dangerous sink.
+    metadata:
+      cwe: CWE-78
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- Open redirect ----------------
+  - id: custom-redirect-taint-py
+    languages: [python]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: request.args
+      - pattern: request.form
+      - pattern: request.values
+      - pattern: flask.request.$ATTR
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+    pattern-sinks:
+      - pattern: redirect(...)
+      - pattern: django.http.HttpResponseRedirect(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  - id: custom-redirect-taint-js
+    languages: [javascript, typescript]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: req.query.$ATTR
+      - pattern: req.params.$ATTR
+      - patterns:
+          - pattern-inside: "function $F(..., $SRC, ...) {...}"
+          - pattern: $SRC
+    pattern-sinks:
+      - pattern: res.redirect(...)
+      - pattern: redirect(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  - id: custom-redirect-taint-java
+    languages: [java]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+    pattern-sinks:
+      - pattern: $RES.sendRedirect(...)
+      - pattern: redirect(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  - id: custom-redirect-taint-go
+    languages: [go]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get(...)
+    pattern-sinks:
+      - pattern: http.Redirect(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  - id: custom-redirect-taint-php
+    languages: [php]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: $_GET[...]
+      - pattern: $_POST[...]
+    pattern-sinks:
+      - pattern: redirect(...)
+      - pattern: header(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  - id: custom-redirect-taint-rb
+    languages: [ruby]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: params[...]
+    pattern-sinks:
+      - pattern: redirect_to(...)
+    message: Possible open redirect via request-controlled destination.
+    metadata:
+      cwe: CWE-601
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  # ---------------- Log injection ----------------
+  - id: custom-loginject-taint-py
+    languages: [python]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: logging.$F(...)
+    message: Possible log injection via untrusted data in log output.
+    metadata:
+      cwe: CWE-117
+      owasp: "A09:2021 - Logging Failures"
+      source: custom-harness
+
+  - id: custom-loginject-taint-java
+    languages: [java]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+    pattern-sinks:
+      - pattern: $LOG.info(...)
+      - pattern: $LOG.error(...)
+      - pattern: System.out.println(...)
+    message: Possible log injection via untrusted data in log output.
+    metadata:
+      cwe: CWE-117
+      owasp: "A09:2021 - Logging Failures"
+      source: custom-harness
+
+  - id: custom-loginject-taint-js
+    languages: [javascript, typescript]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: req.query.$ATTR
+      - pattern: req.params.$ATTR
+      - patterns:
+          - pattern-inside: "function $F(..., $SRC, ...) {...}"
+          - pattern: $SRC
+    pattern-sinks:
+      - pattern: console.log(...)
+      - pattern: console.error(...)
+    message: Possible log injection via untrusted data in log output.
+    metadata:
+      cwe: CWE-117
+      owasp: "A09:2021 - Logging Failures"
+      source: custom-harness
+
+  - id: custom-loginject-taint-go
+    languages: [go]
+    severity: WARNING
+    mode: taint
+    pattern-sources:
+      - pattern: $R.URL.Query().Get(...)
+      - pattern: $R.FormValue(...)
+    pattern-sinks:
+      - pattern: log.Printf(...)
+      - pattern: log.Println(...)
+    message: Possible log injection via untrusted data in log output.
+    metadata:
+      cwe: CWE-117
+      owasp: "A09:2021 - Logging Failures"
+      source: custom-harness
+
+  # ---------------- Unrestricted upload ----------------
+  - id: custom-upload-taint-pyjs
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: request.files
+      - pattern: request.FILES
+      - pattern: req.file
+    pattern-sinks:
+      - pattern: $F.save(...)
+      - pattern: $F.mv(...)
+    message: Possible unrestricted upload via user-controlled filename.
+    metadata:
+      cwe: CWE-434
+      owasp: "A04:2021 - Insecure Design"
+      source: custom-harness
+
+  - id: custom-upload-taint-php
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $_FILES[...]
+    pattern-sinks:
+      - pattern: move_uploaded_file(...)
+    message: Possible unrestricted upload via user-controlled filename.
+    metadata:
+      cwe: CWE-434
+      owasp: "A04:2021 - Insecure Design"
+      source: custom-harness
+
+  # ---------------- LDAP injection ----------------
+  - id: custom-ldap-taint-py
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+    pattern-sinks:
+      - pattern: $L.search(...)
+      - pattern: $L.search_s(...)
+      - pattern: $L.search_st(...)
+      - pattern: $L.search_ext(...)
+    message: Possible LDAP injection via input reaching a search filter.
+    metadata:
+      cwe: CWE-90
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-ldap-taint-java
+    languages: [java]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+    pattern-sinks:
+      - pattern: $L.search(...)
+    message: Possible LDAP injection via input reaching a search filter.
+    metadata:
+      cwe: CWE-90
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  # ---------------- Debug info exposure (search) ----------------
+  - id: custom-debug-info
+    languages: [python, javascript, typescript, java]
+    severity: WARNING
+    mode: search
+    patterns:
+      - pattern-either:
+          - pattern: DEBUG = True
+          - pattern: app.run(..., debug=True, ...)
+          - pattern: traceback.print_exc(...)
+          - pattern: $E.printStackTrace(...)
+    message: Debug information exposure risk (stack traces / debug mode).
+    metadata:
+      cwe: CWE-200
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  # ---------------- Permissive permissions (search) ----------------
+  - id: custom-perms-open
+    languages: [python, javascript, typescript, php, ruby, c, bash]
+    severity: WARNING
+    mode: search
+    # pattern-regex only: language-agnostic text match. Bare patterns in a
+    # multi-language rule silently match nothing (verified quirk).
+    patterns:
+      - pattern-regex: (?m)(chmod\s+777|os\.chmod\(.*0o?777|umask\s*\(\s*0\s*\))
+    message: Overly permissive file permissions.
+    metadata:
+      cwe: CWE-732
+      owasp: "A01:2021 - Broken Access Control"
+      source: custom-harness
+
+  # ---------------- Weak password hashing (taint) ----------------
+  - id: custom-weakhash-pass-taint-py
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $P, ...): ..."
+          - metavariable-regex:
+              metavariable: $P
+              regex: (?i).*passw.*
+          - pattern: $P
+      - pattern: request.form.$ATTR
+      - pattern: request.args.$ATTR
+    pattern-sinks:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+    message: Possible weak password hashing (fast unsalted hash of a password).
+    metadata:
+      cwe: CWE-916
+      owasp: "A02:2021 - Cryptographic Failures"
+      source: custom-harness
+
+  - id: custom-weakhash-pass-taint-js
+    languages: [javascript, typescript]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "function $F(..., $P, ...) {...}"
+          - metavariable-regex:
+              metavariable: $P
+              regex: (?i).*passw.*
+          - pattern: $P
+    pattern-sinks:
+      - pattern: md5(...)
+      - pattern: sha1(...)
+      - pattern: crypto.createHash(...)
+    message: Possible weak password hashing (fast unsalted hash of a password).
+    metadata:
+      cwe: CWE-916
+      owasp: "A02:2021 - Cryptographic Failures"
+      source: custom-harness
+
+  - id: custom-weakhash-pass-taint-java
+    languages: [java]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $REQ.getParameter(...)
+    pattern-sinks:
+      - pattern: MessageDigest.getInstance(...)
+    message: Possible weak password hashing (fast unsalted hash of a password).
+    metadata:
+      cwe: CWE-916
+      owasp: "A02:2021 - Cryptographic Failures"
+      source: custom-harness
+
+  - id: custom-py-ssrf-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: requests.get($URL, ...)
+      - pattern: requests.post($URL, ...)
+      - pattern: requests.request(..., $URL, ...)
+      - pattern: urllib.request.urlopen($URL, ...)
+      - pattern: httpx.get($URL, ...)
+      - pattern: httpx.post($URL, ...)
+    message: Possible SSRF reaching outbound HTTP request sink.
+    metadata:
+      cwe: CWE-918
+      owasp: "A10:2021 - Server-Side Request Forgery"
+      source: custom-harness
+
+  - id: custom-py-deser-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: pickle.loads(...)
+      - pattern: pickle.load(...)
+      - pattern: _pickle.loads(...)
+      - pattern: yaml.load(..., Loader=yaml.Loader)
+      - pattern: yaml.unsafe_load(...)
+      - pattern: marshal.loads(...)
+      - pattern: jsonpickle.decode(...)
+    message: Possible insecure deserialization of untrusted input.
+    metadata:
+      cwe: CWE-502
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      source: custom-harness
+
+  - id: custom-py-code-exec-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: compile(...)
+    message: Possible arbitrary code execution reaching dynamic evaluation sink.
+    metadata:
+      cwe: CWE-94
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-py-xxe-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: xml.etree.ElementTree.fromstring(...)
+      - pattern: xml.etree.ElementTree.parse(...)
+      - pattern: lxml.etree.fromstring(...)
+      - pattern: lxml.etree.parse(...)
+      - pattern: xml.dom.minidom.parse(...)
+      - pattern: xml.dom.minidom.parseString(...)
+    message: Possible XML External Entity (XXE) vulnerability in XML parsing.
+    metadata:
+      cwe: CWE-611
+      owasp: "A05:2021 - Security Misconfiguration"
+      source: custom-harness
+
+  - id: custom-py-xpath-taint
+    languages: [python]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-inside: "def $F(..., $SRC, ...): ..."
+          - pattern: $SRC
+      - pattern: flask.request.$ATTR
+      - pattern: request.$ATTR
+    pattern-sinks:
+      - pattern: $TREE.xpath(...)
+      - pattern: $TREE.evaluate(...)
+    message: Possible XPath injection reaching XPath query sink.
+    metadata:
+      cwe: CWE-643
+      owasp: "A03:2021 - Injection"
+      source: custom-harness
+
