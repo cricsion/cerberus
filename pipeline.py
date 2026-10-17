@@ -1,33 +1,3 @@
-"""Scan pipeline driver: indexer -> threat_model -> hunters(fan-out) -> system_pass
--> aggregator -> validator -> [confirm] -> triage -> threat_update -> scorer.
-
-Plain Python, no graph runtime. Deterministic stages are functions of the
-scan state; every LLM stage runs as a Deep Agent (harness/agents/deep.py).
-The driver owns three things the old StateGraph did implicitly:
-
-- state merging (append-only channels + explicit Overwrite),
-- bounded parallel fan-out of hunter workers (the CONCURRENCY knob),
-- the human confirm step: when `confirm_critical` is set and confirmed
-  critical/high findings exist, the driver pauses between validation and
-  triage and asks via a plain callback (the CLI prompts on stdin). A decline
-  demotes those findings to needs-review; nothing is ever dropped.
-
-Stage summary:
-- indexer: deterministic file inventory + SAST (secrets/sca/iac, all graceful
-  when binaries missing) + regex prefilter + codegraph context.
-- threat_model: deterministic STRIDE-lite summary + THREAT_MODEL.md resolution
-  (override > owner file > machine cache > deterministic floor) + LLM swarm
-  enrichment on every scan (researcher + historian in parallel, then a
-  synthesizer; owner files and overrides never rewritten).
-- hunters: router partitions into logical units; one hunter_worker per unit
-  hunts ALL classes (deep agent, fail-open). Without API_KEY the router emits
-  per-file review tasks (fail-open for recall).
-- aggregator: normalized-path + CWE + snippet-hash dedup + merge.
-- validator: evidence gate + adversarial verdicts (other model). Confirmed
-  false positives are recorded in the threat model's "Known false
-  positives" section at the threat-update stage, not in a database.
-- scorer: heuristic CVSS + rank (documented heuristic, static analysis only).
-"""
 from __future__ import annotations
 
 import hashlib
@@ -42,8 +12,14 @@ from typing import Any, TypedDict
 
 from langgraph.types import Overwrite
 
-from harness.schemas import SEVERITY_ORDER
+from harness.schemas import SEVERITY_ORDER, safe_float
 from harness.progress import AgentRegistry, AgentState
+
+try:
+    from harness import observability as _obs
+except Exception:  # observability module unavailable → tracing disabled (fail-open)
+    _obs = None
+
 CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.0}
 
 # Channels that accumulate across stages (everything else is last-writer-wins).
@@ -54,12 +30,7 @@ logger = logging.getLogger(__name__)
 
 def _verified_reducer(left: list[dict] | None,
                       right: list[dict] | None) -> list[dict]:
-    """Append-only accumulation.
-
-    Pipelined writers (hunter workers, validator_node) return plain lists that
-    accumulate. triage_node and scorer_node return Overwrite(out), which
-    bypasses this reducer entirely (see apply_update) and swaps the channel.
-    """
+    # Plain-list updates append; triage/scorer bypasses the reducer via Overwrite(...).
     return list(left or []) + list(right or [])
 
 
@@ -82,23 +53,12 @@ class ScanState(TypedDict, total=False):
     fanout_payloads: list[dict]
     candidates: list[dict]
     findings: list[dict]
-    # verified accumulates from two writers at different times: hunter
-    # workers validate their own unit inline, and validator_node covers the
-    # remainder (deterministic candidates + system-pass findings). Appends
-    # only; aggregator joins raw findings against this list so nothing is
-    # validated twice.
+    # Two writers (hunter workers, then validator_node); append-only — aggregator joins against it so nothing validates twice.
     verified: list[dict]
-    # Raw merged findings not yet validated (single writer: aggregator).
     pending: list[dict]
 
 
 def apply_update(state: dict, update: dict | None) -> dict:
-    """Merge one stage's returned update into the scan state (in place).
-
-    Mirrors the old channel semantics: candidates/findings/tools_used append,
-    verified appends unless the stage returned Overwrite(...), and any other
-    key is last-writer-wins.
-    """
     for key, val in (update or {}).items():
         if isinstance(val, Overwrite):
             state[key] = list(val.value or [])
@@ -112,27 +72,23 @@ def apply_update(state: dict, update: dict | None) -> dict:
 
 
 def _call_node(node, state, **kwargs):
-    """Call a pipeline node while tolerating test mocks that do not accept
-    the agent-visibility keyword arguments."""
+    # Introspect once and pass only the kwargs the node declares (upstream
+    # callers pass optional params such as agent_registry). TypeError raised
+    # *inside* a node is a harness bug (fatal class) and must propagate, so
+    # the call itself is never retried here.
     try:
-        signature = inspect.signature(node)
-        params = signature.parameters
-        has_var_keyword = any(p.kind == inspect.Parameter.VAR_KEYWORD
-                              for p in params.values())
-        if has_var_keyword:
-            accepted = dict(kwargs)
-        else:
-            accepted = {k: v for k, v in kwargs.items() if k in params}
-        return node(state, **accepted)
-    except (TypeError, ValueError):
-        try:
-            return node(state, **kwargs)
-        except TypeError:
-            return node(state)
+        params = inspect.signature(node).parameters
+    except (TypeError, ValueError):  # C callables etc. — cannot introspect.
+        return node(state, **kwargs)
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        return node(state, **kwargs)
+    accepted = {k: v for k, v in kwargs.items() if k in params}
+    if not accepted:
+        return node(state)
+    return node(state, **accepted)
 
 
 def _call_tool(tool_fn, **kwargs) -> str:
-    """Call a @tool function directly (bypasses agent loop). Never raises."""
     try:
         if hasattr(tool_fn, "func"):
             return str(tool_fn.func(**kwargs))
@@ -167,14 +123,10 @@ _SHEBANG_MAX_BYTES = 262_144
 
 
 def _graphify_ignore_predicate(root: Path):
-    """Return Graphify's live ignore predicate when its helper is available."""
     try:
         from graphify.detect import ignored_predicate
-    except Exception:
-        # The repository carries Graphify's source under ./graphify, while
-        # minimal dev environments may not have the graphifyy package
-        # installed. Load that source for its lightweight ignore helper when
-        # the top-level name is currently only a namespace package.
+    except ImportError:
+        # Minimal dev envs lack the graphify package; the repo vendors its source under ./graphify.
         source_pkg = Path(__file__).resolve().parents[1] / "graphify" / "graphify"
         if not (source_pkg / "detect.py").is_file():
             return None
@@ -193,22 +145,27 @@ def _graphify_ignore_predicate(root: Path):
             return None
         try:
             from graphify.detect import ignored_predicate
-        except Exception:
+        except ImportError:
             return None
+
+    # graphify's ignored_predicate is a factory: ignored_predicate(root)
+    # returns the per-path predicate. Call it once, then guard each use.
     try:
-        return ignored_predicate(root)
+        predicate = ignored_predicate(root)
     except Exception:
         return None
 
+    def _safe_ignored(p) -> bool:
+        # The vendored predicate can throw on odd paths; skipping the skip is safe.
+        try:
+            return bool(predicate(p))
+        except Exception:
+            return False
+
+    return _safe_ignored
+
 
 def _is_shebang_script(path: Path) -> bool:
-    """True when an extensionless file is executable code, by shebang.
-
-    Reads the head of the file (binary-safe, at most two lines, never raises)
-    and answers True only when line 1 starts with "#!" and names a known
-    interpreter. Only meaningful for files with no suffix and at most 256KB;
-    anything else (or an unreadable file) is not a script.
-    """
     try:
         if path.suffix or path.stat().st_size > _SHEBANG_MAX_BYTES:
             return False
@@ -218,32 +175,16 @@ def _is_shebang_script(path: Path) -> bool:
                 return False
             head = (first + fh.readline()).lower()
         return any(interp in head for interp in _SHEBANG_INTERPRETERS)
-    except Exception:
+    except OSError:
         return False
 
 
 def _inventory_files(base: Path) -> list[str]:
-    """Inventory of repo-relative file paths under `base` (sorted, dedup-free).
-
-    No file-count cap: large codebases are a supported target. Per-agent work
-    is bounded downstream by the partition budget (harness/units.py
-    partition_target), not by truncating the inventory. A `base` that is a
-    plain file returns that path unless Graphify ignores it; a directory is
-    walked recursively, pruning Graphify's ignored paths and symlinks, then
-    skipping anything that is neither a known extension (or a Dockerfile) nor
-    an extensionless shebang script -- entry points such as bin/www or manage
-    would otherwise never reach a partition unit. If Graphify's Python ignore
-    helper is unavailable, the shared skip-directory set still applies.
-    """
     from harness.tools.graphify import GRAPHIFY_SKIP_DIRS
     if base.is_file():
         graphify_ignored = _graphify_ignore_predicate(base.parent)
-        if graphify_ignored is not None:
-            try:
-                if graphify_ignored(base):
-                    return []
-            except Exception:
-                pass
+        if graphify_ignored is not None and graphify_ignored(base):
+            return []
         return [str(base)]
     if not base.is_dir():
         return []
@@ -257,12 +198,8 @@ def _inventory_files(base: Path) -> list[str]:
             directory = root_path / name
             if name in GRAPHIFY_SKIP_DIRS or directory.is_symlink():
                 continue
-            if graphify_ignored is not None:
-                try:
-                    if graphify_ignored(directory):
-                        continue
-                except Exception:
-                    pass
+            if graphify_ignored is not None and graphify_ignored(directory):
+                continue
             kept_dirs.append(name)
         dirs[:] = kept_dirs
         for name in sorted(names):
@@ -273,12 +210,8 @@ def _inventory_files(base: Path) -> list[str]:
                     or f.name.lower().startswith("dockerfile")
                     or _is_shebang_script(f)):
                 continue
-            if graphify_ignored is not None:
-                try:
-                    if graphify_ignored(f):
-                        continue
-                except Exception:
-                    pass
+            if graphify_ignored is not None and graphify_ignored(f):
+                continue
             try:
                 files.append(str(f.relative_to(base)))
             except ValueError:
@@ -287,99 +220,91 @@ def _inventory_files(base: Path) -> list[str]:
 
 
 def indexer_node(state: ScanState) -> dict:
+    from harness.fallback import run_fail_open
     from harness.tools.sast import (iac_check, sca_scan, secrets_scan,
                                     regex_prefilter)
     repo = state.get("repo", ".")
-    # File inventory — no file-count cap: large codebases are a supported
-    # target. Per-agent work is bounded downstream by the partition budget
-    # (harness/units.py partition_target), not by truncating the inventory.
+    # No file-count cap; per-agent work is bounded by the partition budget (harness/units.py partition_target).
     base = Path(repo)
     files = _inventory_files(base)
     cands = [_info_candidate(
         "prefilter", "deterministic prefilter hits", repo,
         _call_tool(regex_prefilter, target=repo))]
     _tools_used = ["regex_prefilter"]
-    # No whole-repo Semgrep/OpenGrep here: hunters run those scans themselves
-    # on their own unit files (per-unit beats whole-repo: no git-filtering
-    # surprises, no duplicated work). The indexer keeps fast signals +
-    # context: prefilter, secrets/SCA/IaC envelopes, manifests, routes, and
-    # template hints below.
-    try:
+
+    def _template_stage() -> list[dict]:
         from harness.tools.sast import template_reflect_candidates
+
         _tpl = template_reflect_candidates(repo)
-        if _tpl:
-            _tools_used.append("template_reflect")
-        for c in (_tpl):
+        for c in _tpl:
             c.setdefault("status", "needs-review")
-            cands.append(c)
-    except Exception:
-        pass
-    # Secrets + SCA + IaC (raw envelope as one info candidate each when not skipped).
+        return _tpl
+
+    _tpl = run_fail_open("template_reflect", _template_stage,
+                         default=[], logger=logger)
+    if _tpl:
+        _tools_used.append("template_reflect")
+        cands.extend(_tpl)
+
+    # No whole-repo Semgrep/OpenGrep: hunters scan their own unit files; the indexer keeps fast signals only.
     for cid, title, raw in (
             ("secrets", "secrets scan raw", _call_tool(secrets_scan, target=repo)),
             ("sca", "SCA scan raw", _call_tool(sca_scan, target=repo)),
             ("iac", "IaC scan raw", _call_tool(iac_check, target=repo))):
-        try:
-            compact = raw.replace(" ", "")
-            if "binarynotfound" not in compact.lower() and '"skipped":true' not in compact:
-                cands.append(_info_candidate(cid, title, repo, raw))
-                _tools_used.append({"secrets": "secrets_scan", "sca": "sca_scan",
-                                    "iac": "iac_check"}[cid])
-        except Exception:
-            pass
-    # Code graph context: manifest summary + framework routes as info candidates.
-    try:
+        compact = raw.replace(" ", "")
+        if "binarynotfound" not in compact.lower() and '"skipped":true' not in compact:
+            cands.append(_info_candidate(cid, title, repo, raw))
+            _tools_used.append({"secrets": "secrets_scan", "sca": "sca_scan",
+                                "iac": "iac_check"}[cid])
+
+    def _codegraph_stage() -> tuple[list[dict], list[str]]:
         from harness.tools.codegraph import framework_routes, manifest_parse
+
+        extra: list[dict] = []
+        used: list[str] = []
         man = _call_tool(manifest_parse, root=repo)
         if man and "(no manifests found)" not in man and "(unavailable" not in man:
-            cands.append(_info_candidate("manifest", "repo manifest summary", repo, man))
-            _tools_used.append("manifest_parse")
+            extra.append(_info_candidate("manifest", "repo manifest summary", repo, man))
+            used.append("manifest_parse")
         routes = _call_tool(framework_routes, root=repo)
         if routes and "(no matches)" not in routes and "(unavailable" not in routes:
-            cands.append(_info_candidate("routes", "framework routes", repo, routes))
-            _tools_used.append("framework_routes")
-    except Exception:
-        pass
-    # Graphify structural pass (opt-in, local Tree-sitter, graceful when absent).
-    # Skipped at low effort. Complements grep: AST-proven structure, not sinks.
-    try:
+            extra.append(_info_candidate("routes", "framework routes", repo, routes))
+            used.append("framework_routes")
+        return extra, used
+
+    _extra, _used = run_fail_open("codegraph_signals", _codegraph_stage,
+                                  default=([], []), logger=logger)
+    cands.extend(_extra)
+    _tools_used.extend(_used)
+
+    def _graphify_stage() -> tuple[list[dict], list[str]]:
+        from harness.config import load_config_safe
         from harness.tools import graphify as _gf
-        try:
-            from harness.config import load_config as _lc
-            _gcfg = _lc()
-        except Exception:
-            _gcfg = {}
+
+        _gcfg, _gcfg_err = load_config_safe()
+        if _gcfg_err is not None:
+            logger.debug("graphify config load failed; defaulting to enabled: %s",
+                         _gcfg_err)
         _gen = str(((_gcfg.get("graphify") or {}).get("enabled", "1"))).lower()
-        if (_gen in ("1", "true", "yes") and base.is_dir()):
+        if _gen in ("1", "true", "yes") and base.is_dir():
             _gpath = _gf.graphify_build(repo)
             if _gpath:
-                cands.append(_info_candidate(
+                return [_info_candidate(
                     "graphify", "code-graph structural summary", repo,
-                    _gf.graphify_summary(repo)))
-                _tools_used.append("graphify_build")
-    except Exception:
-        pass
+                    _gf.graphify_summary(repo))], ["graphify_build"]
+        return [], []
+
+    _extra, _used = run_fail_open("graphify_build", _graphify_stage,
+                                  default=([], []), logger=logger)
+    cands.extend(_extra)
+    _tools_used.extend(_used)
     return {"files": files, "candidates": cands, "tools_used": sorted(set(_tools_used))}
 
 
 def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
-    """Threat summary + full THREAT_MODEL.md resolution + LLM swarm enrichment.
-
-    Summary candidate (id=threat-model) is unchanged for backward compat.
-    Full text resolves: --threat-model override > <repo>/THREAT_MODEL.md >
-    deterministic bootstrap floor. The bootstrap floor (and the machine cache
-    from a prior scan) is then enriched by the LLM swarm on EVERY scan —
-    enrichment is skipped only for owner-authored files and explicit
-    overrides, which are authoritative human input. `--vulns <file>` rows are
-    deterministic past-vulnerability evidence for section 4. Never raises;
-    every stage degrades to the floor.
-    """
-    try:
-        repo = state.get("repo", ".") or "."
-        cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
-        files = [f for f in (state.get("files") or []) if f]
-    except Exception:
-        repo, cands, files = ".", [], []
+    repo = state.get("repo", ".") or "."
+    cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
+    files = [f for f in (state.get("files") or []) if f]
     pre = next((c.get("snippet", "") for c in cands if c.get("id") == "prefilter"), "")
     classes = [line[3:] for line in str(pre).splitlines() if line.startswith("## ")]
     routes = next((c.get("snippet", "") for c in cands if c.get("id") == "routes"), "")
@@ -395,23 +320,21 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     out: dict = {"threat_model": summary,
                  "candidates": [_info_candidate("threat-model", "STRIDE-lite threat model", repo, summary)]}
     if agent_registry is not None:
-        for _r in ("threat-researcher", "threat-historian", "threat-synthesizer"):
-            try:
-                agent_registry.create(_r, _r, parent_stage="threat_model",
-                                     state=AgentState.queued)
-                agent_registry.transition(_r, AgentState.running,
-                                         parent_stage="threat_model")
-            except Exception:
-                pass
-    # Full-text resolution (plan-1345 M1). Artifact writing stays in CLI (single writer).
-    try:
-        from harness import threat as _th
+        for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
+            agent_registry.create(_r, _r, parent_stage="threat_model",
+                                  state=AgentState.queued)
+            agent_registry.transition(_r, AgentState.running,
+                                      parent_stage="threat_model")
+    # Artifact writing stays in the CLI (single writer).
 
-        try:
-            from harness.config import load_config as _lc2
-            _cfg2 = _lc2()
-        except Exception:
-            _cfg2 = {}
+    def _threat_doc_stage() -> dict:
+        from harness import threat as _th
+        from harness.config import load_config_safe
+
+        _cfg2, _cfg2_err = load_config_safe()
+        if _cfg2_err is not None:
+            logger.debug("threat model config load failed; using defaults: %s",
+                         _cfg2_err)
         override = state.get("threat_model_override") or ""
         vulns_path = state.get("vulns_file") or ""
         try:
@@ -419,11 +342,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
         except Exception:
             vulns = []
         source, md = _th.load_threat(repo, override=override or None, cfg=_cfg2)
-        # STALE CACHE GUARD: a loaded document must satisfy the 8-section
-        # schema. 50 pre-migration caches still carry the old "In-scope
-        # classes" headings and would otherwise be fed to every consumer
-        # while the gates score them 9/100. --vulns invalidates the cache
-        # too (the cached doc lacks the supplied evidence base).
+        # Stale-cache guard: cached doc must pass the 8-section schema; --vulns invalidates the cache (no supplied evidence base).
         if (source == "repo-cache" and md.strip()
                 and (_th.validate_threat_md(md) or vulns)):
             source = "repo-cache-stale"
@@ -438,8 +357,6 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
             print(f"warning: --vulns {vulns_path} parsed to 0 rows "
                   "(missing or unrecognized format); continuing on git history",
                   file=sys.stderr)
-        # LLM swarm enrichment (default on). Owner files and explicit
-        # overrides are authoritative: never rewrite human-authored input.
         enrich_meta: dict = {}
         if (source not in ("override", "repo-file")
                 and _th.threat_enabled(_cfg2, "llm_enrich", True)):
@@ -453,45 +370,68 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
                     md = enriched
             except Exception as e:
                 enrich_meta = {"error": f"{type(e).__name__}: {e}"}
-        if agent_registry is not None:
-            for _r in ("threat-researcher", "threat-historian", "threat-synthesizer"):
-                try:
-                    agent_registry.transition(_r, AgentState.succeeded,
-                                             parent_stage="threat_model")
-                except Exception:
-                    pass
-        out["threat_model_source"] = source
+        stage_out: dict = {"threat_model_source": source}
         if md.strip():
-            out["threat_model_md"] = md
+            stage_out["threat_model_md"] = md
             if enrich_meta:
-                out["threat_enrich"] = enrich_meta
+                stage_out["threat_enrich"] = enrich_meta
+            from harness.agents.deep import is_fatal_error
+
             try:
-                out["threat_quality"] = _th.threat_quality(md, files, cands)
-            except Exception:
-                pass
+                stage_out["threat_quality"] = _th.threat_quality(md, files, cands)
+            except Exception as e:
+                # Absence of a score is a valid degrade; a harness bug must not hide.
+                if is_fatal_error(e):
+                    raise
+                logger.warning("threat quality check failed: %s", e)
             try:
-                out["threat_verified"] = _th.verify_threat(repo, md, files, cands)
-            except Exception:
-                pass
-    except Exception as _e:
+                stage_out["threat_verified"] = _th.verify_threat(repo, md, files, cands)
+            except Exception as e:
+                if is_fatal_error(e):
+                    raise
+                logger.warning("threat verification failed: %s", e)
+        return stage_out
+
+    stage_err: dict = {}
+
+    def _threat_doc_probe() -> dict:
+        nonlocal stage_err
+        try:
+            return _threat_doc_stage()
+        except Exception as e:
+            stage_err["exc"] = e
+            raise
+
+    from harness.fallback import run_fail_open
+
+    _stage_updates = run_fail_open("threat_model.doc", _threat_doc_probe,
+                                   default={}, logger=logger)
+    out.update(_stage_updates)
+    if stage_err.get("exc") is not None:
+        e = stage_err["exc"]
         if agent_registry is not None:
-            for _r in ("threat-researcher", "threat-historian", "threat-synthesizer"):
-                try:
-                    agent_registry.transition(_r, AgentState.failed,
-                                             parent_stage="threat_model",
-                                             error=str(_e))
-                except Exception:
-                    pass
+            for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
+                agent_registry.transition(_r, AgentState.failed,
+                                          parent_stage="threat_model",
+                                          error=str(e))
         out["threat_model_source"] = "summary"
+    else:
+        if agent_registry is not None:
+            for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
+                agent_registry.transition(_r, AgentState.succeeded,
+                                          parent_stage="threat_model")
     return out
 
 
 def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
-    """Fan-out plan: no key -> fail-open review tasks; else payloads per unit."""
-    try:
-        from harness.config import api_key_present, load_config
-        cfg = load_config()
-    except Exception:
+    from harness.config import api_key_present, load_config_safe
+
+    cfg, cfg_err = load_config_safe()
+    if cfg_err is not None:
+        # Operator error at the user-fixable layer: degrade gracefully but LOUDLY.
+        print(f"warning: config load failed ({cfg_err}); the LLM layer is "
+              "unconfigured — continuing in degraded no-key mode",
+              file=sys.stderr, flush=True)
         cfg = {"concurrency": 8}
     if not api_key_present(cfg):
         out = []
@@ -510,40 +450,42 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
     _focus = state.get("focus", []) or []
     if isinstance(_focus, str):
         _focus = [f.strip() for f in _focus.split(",") if f.strip()]
-    # Partition by LOGICAL UNIT: partitioning AGENT first (reads structure,
-    # groups by business logic), deterministic fallback (graphify/dir).
-    # Each hunter owns one coherent unit across ALL classes.
     units: list[dict] = []
-    _partition_failed = False
+    units: list[dict] = []
     if agent_registry is not None:
-        try:
-            agent_registry.create("partitioner", "partitioner", parent_stage="partition",
-                                 state=AgentState.queued)
-            agent_registry.transition("partitioner", AgentState.running,
-                                     parent_stage="partition")
-        except Exception:
-            pass
-    try:
+        agent_registry.create("partitioner", "partitioner", parent_stage="partition",
+                              state=AgentState.queued)
+        agent_registry.transition("partitioner", AgentState.running,
+                                  parent_stage="partition")
+
+    _partition_exc: dict = {}
+
+    def _partition_probe() -> list[dict]:
         from harness.partitioning.llm import run_partitioner_agent
-        units = run_partitioner_agent(
-            state.get("repo", "."), payload_files, payload_cands, cfg,
-            threat_md=threat_md)
-    except Exception:
-        _partition_failed = True
-        units = []
-    if agent_registry is not None:
+
         try:
-            if _partition_failed:
-                agent_registry.transition("partitioner", AgentState.failed,
-                                         parent_stage="partition")
-            else:
-                agent_registry.transition("partitioner", AgentState.succeeded,
-                                         parent_stage="partition")
-        except Exception:
-            pass
+            return run_partitioner_agent(
+                state.get("repo", "."), payload_files, payload_cands, cfg,
+                threat_md=threat_md)
+        except Exception as e:
+            _partition_exc["exc"] = e
+            raise
+
+    from harness.fallback import run_fail_open
+
+    units = run_fail_open("partitioner", _partition_probe, default=[],
+                          logger=logger)
+    _partition_failed = _partition_exc.get("exc") is not None
+    if agent_registry is not None:
+        if _partition_failed:
+            agent_registry.transition("partitioner", AgentState.failed,
+                                      parent_stage="partition")
+        else:
+            agent_registry.transition("partitioner", AgentState.succeeded,
+                                      parent_stage="partition")
     if not units:
         from harness.partitioning import partition_units
-        units = partition_units(state.get("repo", "."), payload_files, payload_cands)
+        units = partition_units(state.get("repo", "."), payload_files)
     if not units:
         return {"findings": [], "fanout_payloads": []}
     from harness.partitioning import verify_partition
@@ -564,14 +506,6 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
 def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
                      votes: int | None, label: str,
                      repo: str | None = None) -> list[dict]:
-    """Validate one worker's own outputs immediately (pipelined validation).
-
-    Same verdict path as the post-hunt pool (run_validation: evidence gate +
-    per-partition cells + fp guardrail), but scoped to this worker's findings
-    with a small pool so concurrent workers do not oversubscribe the API.
-    Fail-open: on catastrophic error the raw findings pass through as
-    needs-review and the aggregator join re-queues anything unvalidated.
-    """
     from harness.agents.validator import run_validation
 
     try:
@@ -586,17 +520,13 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
             raise
         out = []
         for f in (findings or []):
-            try:
-                g = dict(f) if isinstance(f, dict) else {"title": str(f)}
-                g.setdefault("status", "needs-review")
-                out.append(g)
-            except Exception:
-                continue
+            g = dict(f) if isinstance(f, dict) else {"title": str(f)}
+            g.setdefault("status", "needs-review")
+            out.append(g)
         return out
 
 
 def hunter_worker(state: dict) -> dict:
-    """One logical unit, all vulnerability classes."""
     import time as _time
 
     from harness.agents.hunters import _fallback_finding, _run_unit
@@ -615,11 +545,8 @@ def hunter_worker(state: dict) -> dict:
                         threat_md=threat_md, focus=focus, _tools_out=_tools)
         # Stamp the partition so validation runs one validator per unit.
         for f in out:
-            try:
-                if isinstance(f, dict) and not f.get("unit"):
-                    f["unit"] = str(label)
-            except Exception:
-                pass
+            if isinstance(f, dict) and not f.get("unit"):
+                f["unit"] = str(label)
         print(f"[hunters] {label}: {len(out)} findings in {_time.time()-t0:.0f}s",
               file=sys.stderr, flush=True)
         validated = _validate_inline(out, cfg, threat_md,
@@ -628,9 +555,7 @@ def hunter_worker(state: dict) -> dict:
         return {"findings": out, "verified": validated,
                 "tools_used": sorted(set(str(t) for t in _tools))}
     except Exception as e:
-        # A bad key or an unknown model must fail the scan: letting each unit
-        # emit a fallback finding would turn a config error into a "clean"
-        # scan with zero real verdicts.
+        # A config error must sink the scan, not become a unit fallback finding.
         from harness.agents.deep import is_fatal_error
 
         if is_fatal_error(e):
@@ -638,10 +563,7 @@ def hunter_worker(state: dict) -> dict:
         print(f"[hunters] {label}: ERROR {type(e).__name__} after {_time.time()-t0:.0f}s",
               file=sys.stderr, flush=True)
         fb = _fallback_finding(str(label), repo, files, str(e))
-        try:
-            fb["unit"] = str(label)
-        except Exception:
-            pass
+        fb["unit"] = str(label)
         return {"findings": [fb]}
 
 
@@ -661,12 +583,14 @@ def _norm_key(f: dict) -> str:
             return f"{path}|{cwe}|{line}|{title[:80]}|{digest}"
         return f"{path}|{cwe}|{line}"
     except (AttributeError, TypeError, ValueError):
-        return f"{f.get('path')}|{f.get('title')}"
+        # Non-dict payloads: the fallback must hold the same never-raises
+        # contract as the body above it.
+        if hasattr(f, "get"):
+            return f"{f.get('path')}|{f.get('title')}"
+        return str(f)
 
 
 def _merge_dup(a: dict, b: dict) -> dict:
-    """Merge two findings on the same (path, cwe, line): keep max confidence,
-    union evidence, status priority confirmed > needs-review > fp."""
     prio = {"confirmed": 2, "needs-review": 1, "fp": 0}
     keep, drop = (a, b) if prio.get(a.get("status"), 1) >= prio.get(b.get("status"), 1) else (b, a)
     g = dict(keep)
@@ -683,53 +607,53 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 
 def system_pass_node(state: ScanState) -> dict:
-    """System-level pass after unit hunting (plan-1345 M2).
-
-    Adds cross-unit chains + global gaps only; unit findings are preserved
-    regardless of whether hunters found anything. Skipped without API key or
-    when discovery.system_pass is off.
-    Fail-open: any error (or empty result) contributes nothing.
-    """
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    try:
-        from harness.config import api_key_present, load_config
-        _cfg_sys = load_config()
-    except Exception:
-        _cfg_sys = {}
+    from harness.config import api_key_present, load_config_safe
+
+    _cfg_sys, _cfg_err = load_config_safe()
+    if _cfg_err is not None:
+        logger.debug("system_pass config load failed; using defaults: %s",
+                     _cfg_err)
     if not api_key_present(_cfg_sys):
         return {}
-    try:
-        from harness.config import load_config as _lc3
-        _cfg3 = _lc3()
-    except Exception:
-        _cfg3 = {}
-    try:
-        _enabled = str(((_cfg3.get("discovery") or {}).get("system_pass", True))).lower()
-        if _enabled not in ("1", "true", "yes"):
-            return {}
-    except Exception:
-        pass
+    _enabled = str(((_cfg_sys.get("discovery") or {}).get("system_pass", True))).lower()
+    if _enabled not in ("1", "true", "yes"):
+        return {}
     import time as _time
     t0 = _time.time()
-    try:
-        from harness.agents.hunters import _run_system_pass
-        focus = state.get("focus", []) or []
-        _tools: list = []
-        out = _run_system_pass(state.get("repo", "."),
-                               list(state.get("files", [])),
-                               findings,
-                               state.get("threat_model_md", "") or "",
-                               _cfg3, focus, _tools)
-        print(f"[system-pass] +{len(out)} cross-unit findings in {_time.time()-t0:.0f}s",
-              file=sys.stderr, flush=True)
-        ret: dict = {"findings": out or []}
-        if _tools:
-            ret["tools_used"] = sorted(set(str(t) for t in _tools))
-        return ret
-    except Exception as e:
-        print(f"[system-pass] ERROR {type(e).__name__} after {_time.time()-t0:.0f}s",
-              file=sys.stderr, flush=True)
+
+    _sysfail: dict = {}
+
+    def _system_pass_probe() -> tuple[list[dict], list[str]]:
+        try:
+            from harness.agents.hunters import _run_system_pass
+
+            focus = state.get("focus", []) or []
+            _tools: list = []
+            out = _run_system_pass(state.get("repo", "."),
+                                   list(state.get("files", [])),
+                                   findings,
+                                   state.get("threat_model_md", "") or "",
+                                   _cfg_sys, focus, _tools)
+            print(f"[system-pass] +{len(out)} cross-unit findings in {_time.time()-t0:.0f}s",
+                  file=sys.stderr, flush=True)
+            return out, sorted(set(str(t) for t in _tools))
+        except Exception as e:
+            print(f"[system-pass] ERROR {type(e).__name__} after {_time.time()-t0:.0f}s",
+                  file=sys.stderr, flush=True)
+            _sysfail["fail"] = True
+            raise
+
+    from harness.fallback import run_fail_open
+
+    out, _sys_tools = run_fail_open("system_pass", _system_pass_probe,
+                                    default=([], []), logger=logger)
+    if _sysfail.get("fail"):
         return {}
+    ret: dict = {"findings": out or []}
+    if _sys_tools:
+        ret["tools_used"] = _sys_tools
+    return ret
 
 
 def aggregator_node(state: ScanState) -> dict:
@@ -738,46 +662,26 @@ def aggregator_node(state: ScanState) -> dict:
         key = _norm_key(f)
         seen[key] = _merge_dup(seen[key], f) if key in seen else f
     out: list[dict] = list(seen.values())
-    # Pipelined validation: hunter workers already validated their own
-    # outputs into `verified`. Only queue what has no validated counterpart
-    # (same norm-key), so nothing is validated twice and anything a worker
-    # failed to validate is re-queued here, never dropped.
-    try:
-        done_keys = {_norm_key(f) for f in (state.get("verified", []) or [])}
-    except Exception:
-        done_keys = set()
+    # Pipelined validation: queue only findings with no validated counterpart (same norm-key); never validated twice.
+    done_keys = {_norm_key(f) for f in (state.get("verified", []) or [])}
     pending = [f for f in out if _norm_key(f) not in done_keys]
     return {"pending": pending}
 
 
 def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
-    """Validate the remainder: raw findings with no validated counterpart.
-
-    Hunter workers validate their own unit inline; this pool covers
-    everything else (deterministic candidates + system-pass findings).
-    Appends to `verified`; never rewrites what earlier writers appended.
-    The human confirm step lives in the driver (`confirm_critical_step`).
-    """
     from harness.agents.validator import run_validation
 
     pending = [dict(f) for f in (state.get("pending", []) or [])]
     if agent_registry is not None:
-        try:
-            agent_registry.create("validator", "validator", parent_stage="validation",
-                                 state=AgentState.queued)
-            agent_registry.transition("validator", AgentState.running,
-                                     parent_stage="validation")
-        except Exception:
-            pass
-    try:
-        from harness.config import load_config
+        agent_registry.create("validator", "validator", parent_stage="validation",
+                              state=AgentState.queued)
+        agent_registry.transition("validator", AgentState.running,
+                                  parent_stage="validation")
+    from harness.config import load_config_safe
 
-        try:
-            cfg = load_config()
-        except Exception:
-            cfg = {}
-    except Exception:
-        cfg = {}
+    cfg, cfg_err = load_config_safe()
+    if cfg_err is not None:
+        logger.debug("validator config load failed; using defaults: %s", cfg_err)
     import time as _time
     t0 = _time.time()
     print(f"[validator] validating {len(pending)} remaining findings "
@@ -786,42 +690,28 @@ def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
     try:
         units = []
         for p in (state.get("fanout_payloads", []) or []):
-            try:
-                if isinstance(p, dict) and p.get("unit"):
-                    units.append({"name": str(p["unit"]),
-                                  "files": list(p.get("files", []))})
-            except Exception:
-                continue
+            if isinstance(p, dict) and p.get("unit"):
+                units.append({"name": str(p["unit"]),
+                              "files": list(p.get("files", []))})
         validated = run_validation(
             pending, cfg, state.get("threat_model_md", "") or "",
             state.get("votes_override"), units=units,
             repo=state.get("repo"))
         if agent_registry is not None:
-            try:
-                agent_registry.transition("validator", AgentState.succeeded,
-                                         parent_stage="validation")
-            except Exception:
-                pass
+            agent_registry.transition("validator", AgentState.succeeded,
+                                      parent_stage="validation")
     except Exception as e:
         from harness.agents.deep import is_fatal_error
 
-        # Fail-open: never drop on validator error — unless it is the
-        # operator's configuration, which must fail loudly.
+        # Never drop on validator error, unless it is the operator's config.
         if is_fatal_error(e):
             if agent_registry is not None:
-                try:
-                    agent_registry.transition("validator", AgentState.failed,
-                                             parent_stage="validation", error=str(e))
-                except Exception:
-                    pass
+                agent_registry.transition("validator", AgentState.failed,
+                                          parent_stage="validation", error=str(e))
             raise
         if agent_registry is not None:
-            try:
-                agent_registry.transition("validator", AgentState.failed,
-                                         parent_stage="validation", error=str(e))
-            except Exception:
-                pass
-        # Fail-open: never drop on validator error.
+            agent_registry.transition("validator", AgentState.failed,
+                                      parent_stage="validation", error=str(e))
         validated = []
         for f in pending:
             fb = dict(f)
@@ -840,14 +730,7 @@ def _is_hot(f: dict) -> bool:
 
 def confirm_critical_step(state: ScanState,
                           confirm: Callable[[dict], bool] | None) -> dict:
-    """Human confirm between validation and triage.
-
-    Considers every validated finding (pipelined + remainder). With no
-    confirm callback the safe default is to HOLD: hot findings are demoted to
-    needs-review rather than released unreviewed. A decline demotes every
-    confirmed critical/high finding; an approval changes nothing. Returns a
-    state update (Overwrite of `verified`) or {} when there is nothing to ask.
-    """
+    # No confirm callback => HOLD: hot findings are demoted to needs-review, never released unreviewed.
     verified = list(state.get("verified", []) or [])
     hot = [f for f in verified if isinstance(f, dict) and _is_hot(f)]
     if not hot:
@@ -860,7 +743,10 @@ def confirm_critical_step(state: ScanState,
     }
     try:
         approved = bool(confirm(payload)) if confirm is not None else False
-    except Exception:
+    except Exception as e:
+        # Hold direction is the safe failure: never release unreviewed hot findings.
+        logger.warning("confirm callback failed (%s: %s); holding hot findings",
+                       type(e).__name__, e)
         approved = False
     if approved:
         return {}
@@ -876,39 +762,28 @@ def confirm_critical_step(state: ScanState,
 
 
 def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
-    """Dedup by root cause + severity rubric (plan-1345 M4).
-
-    Runs after validation, before scoring. Annotates duplicate_of/triage in
-    place; never drops. Fail-open: any error leaves verified untouched.
-    """
     import time as _time
     t0 = _time.time()
     verified = list(state.get("verified", []))
     if not verified:
         return {}
     if agent_registry is not None:
-        try:
-            agent_registry.create("triage:1", "triage:1", parent_stage="triage",
-                                 state=AgentState.queued)
-            agent_registry.transition("triage:1", AgentState.running,
-                                     parent_stage="triage")
-        except Exception:
-            pass
-    try:
-        from harness.config import load_config as _lc4
-        _cfg4 = _lc4()
-    except Exception:
-        _cfg4 = {}
+        agent_registry.create("triage:1", "triage:1", parent_stage="triage",
+                              state=AgentState.queued)
+        agent_registry.transition("triage:1", AgentState.running,
+                                  parent_stage="triage")
+    from harness.config import load_config_safe
+
+    _cfg4, _cfg4_err = load_config_safe()
+    if _cfg4_err is not None:
+        logger.debug("triage config load failed; using defaults: %s", _cfg4_err)
     try:
         from harness.agents.triage import run_triage
         res = run_triage(verified, _cfg4, state.get("threat_model_md", "") or "")
         out = res.get("findings", verified)
         if agent_registry is not None:
-            try:
-                agent_registry.transition("triage:1", AgentState.succeeded,
-                                         parent_stage="triage")
-            except Exception:
-                pass
+            agent_registry.transition("triage:1", AgentState.succeeded,
+                                      parent_stage="triage")
         print(f"[triage] {len(out)} findings, "
               f"{res.get('n_duplicates', 0)} duplicates, "
               f"{res.get('triage_llm_calls', 0)} LLM calls in {_time.time()-t0:.0f}s",
@@ -922,55 +797,42 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
 
         if is_fatal_error(e):
             if agent_registry is not None:
-                try:
-                    agent_registry.transition("triage:1", AgentState.failed,
-                                             parent_stage="triage", error=str(e))
-                except Exception:
-                    pass
+                agent_registry.transition("triage:1", AgentState.failed,
+                                          parent_stage="triage", error=str(e))
             raise
         if agent_registry is not None:
-            try:
-                agent_registry.transition("triage:1", AgentState.failed,
-                                         parent_stage="triage", error=str(e))
-            except Exception:
-                pass
+            agent_registry.transition("triage:1", AgentState.failed,
+                                      parent_stage="triage", error=str(e))
         print(f"[triage] ERROR {type(e).__name__} after {_time.time()-t0:.0f}s "
               "(verified untouched)", file=sys.stderr, flush=True)
         return {}
 
 
 def threat_update_node(state: ScanState) -> dict:
-    """Fold validator-confirmed findings back into the threat model (feedback
-    loop, so CLI and eval paths both get it). Pure state update —
-    file writing stays in CLI (single writer). Fail-open: any error (or no
-    confirmed findings) leaves the model untouched."""
+    # State only; the CLI is the single file writer.
     md = state.get("threat_model_md", "") or ""
     if not md.strip():
         return {}
-    try:
+    from harness.fallback import run_fail_open
+
+    def _threat_update_stage() -> dict:
         from harness import threat as _th5
+
         updated = _th5.update_threat_with_findings(
             md, list(state.get("verified", [])), state.get("repo", "."))
         if updated.strip() and updated != md:
             return {"threat_model_md": updated}
         return {}
-    except Exception:
-        return {}
+
+    return run_fail_open("threat_update", _threat_update_stage,
+                         default={}, logger=logger)
 
 
 def scorer_node(state: ScanState) -> dict:
-    """Heuristic CVSS (static-analysis-only): severity base scaled by confidence.
-
-    Documented estimate, not a substitute for analyst scoring: analysts should
-    re-score with exploitability/impact context before acting.
-    """
     out = []
     for f in state.get("verified", []):
         g = dict(f)
-        try:
-            conf = float(g.get("confidence", 0) or 0)
-        except (TypeError, ValueError):
-            conf = 0.0
+        conf = safe_float(g.get("confidence"))
         base = CVSS_BASE.get(g.get("severity", "medium"), 5.0)
         g["cvss"] = round(base * (0.5 + 0.5 * max(0.0, min(1.0, conf))), 1)
         out.append(g)
@@ -983,31 +845,23 @@ def scorer_node(state: ScanState) -> dict:
 
 
 def _safe_max_concurrency() -> int:
-    """get_concurrency(load_config()), falling back to the 4-way default."""
-    try:
-        from harness.config import get_concurrency, load_config
+    from harness.config import get_concurrency, load_config_safe
 
-        return get_concurrency(load_config())
-    except Exception:
-        return 4
+    cfg, cfg_err = load_config_safe()
+    if cfg_err is not None:
+        logger.debug("concurrency config load failed; using default: %s", cfg_err)
+    return get_concurrency(cfg)
 
 
 def _reset_agent_scratch_phase(repo: str) -> None:
-    """Wipe the run sandbox's per-agent scratchpads between phases.
-
-    Best-effort phase hygiene, not a security boundary. This clears the
-    conventional per-agent scratch paths to reduce accidental carryover.
-    Agents share a runtime identity, and shell processes can write elsewhere
-    or continue in the background; use a fresh sandbox for strong separation.
-
-    Gated on ``sandbox.reset_agent_scratch`` (default on) and never fatal:
-    a failed reset is reported once on stderr and the scan continues, since
-    a hygiene step must not cost the whole run. No-op in local mode.
-    """
+    # Hygiene only: config-gated, best-effort — NOT a security boundary.
     try:
         from harness.config import load_config
         from harness.sandbox import reset_agent_scratch
 
+        # NOTE: load_config() must stay a zero-arg call here — tests pin a
+        # zero-arg mock for harness.config.load_config (load_config_safe
+        # forwards a path argument and would break that contract).
         try:
             cfg = load_config()
         except Exception:
@@ -1024,23 +878,11 @@ def _reset_agent_scratch_phase(repo: str) -> None:
 
 
 def _sweep_orphan_sandboxes() -> None:
-    """Reap sandboxes a killed run left behind, before this run starts.
-
-    A SIGKILL'd harness (kill -9, host OOM-kill, power loss) cannot reap its
-    own sandbox: atexit never fires and the SIGTERM handler never sees the
-    signal. Teardown paths cover the graceful cases, so this covers the
-    remaining one -- and it can only ever run at the START of a scan, when
-    nothing of this run exists yet.
-
-    Gated on ``sandbox.sweep_orphans`` (default on) and never fatal: the
-    sweep is best-effort housekeeping and must not cost a scan. Only
-    sandboxes this harness created are candidates, and a run still alive on
-    this machine (any harness process) is never touched. No-op in local mode.
-    """
     try:
         from harness.config import load_config
         from harness.sandbox import sweep_orphans
 
+        # Zero-arg load_config() — see note in _reset_agent_scratch_phase.
         try:
             cfg = load_config()
         except Exception:
@@ -1059,12 +901,6 @@ def _sweep_orphan_sandboxes() -> None:
 
 
 def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) -> None:
-    """Run one hunter_worker per payload, at most `max_workers` at a time.
-
-    Results are applied in payload order (deterministic regardless of which
-    worker finishes first). hunter_worker is fail-open by itself; the guard
-    here covers anything it did not catch so one unit can never sink the scan.
-    """
     payloads = list(state.get("fanout_payloads", []) or [])
     if not payloads:
         return
@@ -1075,17 +911,10 @@ def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) 
         for p in payloads:
             unit = str(p.get("unit", "unit"))
             cfg = p.get("cfg") or state.get("cfg") or {}
-            model = None
-            try:
-                model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
-            except Exception:
-                model = None
-            try:
-                agent_registry.create("hunter:" + unit, "hunter", unit=unit,
-                                      parent_stage="hunters", model=model,
-                                      state=AgentState.queued)
-            except Exception:
-                pass
+            model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
+            agent_registry.create("hunter:" + unit, "hunter", unit=unit,
+                                  parent_stage="hunters", model=model,
+                                  state=AgentState.queued)
 
     def _one(p: dict) -> dict:
         unit = str(p.get("unit", "unit"))
@@ -1093,52 +922,38 @@ def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) 
         cfg = p.get("cfg") or state.get("cfg") or {}
         model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
         if agent_registry is not None:
-            try:
-                agent_registry.transition(aid, AgentState.running,
-                                         parent_stage="hunters", model=model,
-                                         message="unit started")
-            except Exception:
-                pass
+            agent_registry.transition(aid, AgentState.running,
+                                      parent_stage="hunters", model=model,
+                                      message="unit started")
         try:
             merged = dict(p)
             for k, v in shared.items():
                 merged.setdefault(k, v)
             res = hunter_worker(merged)
             if agent_registry is not None:
-                try:
-                    # update stats from worker? leave coarse.
-                    agent_registry.transition(aid, AgentState.succeeded,
-                                             parent_stage="hunters",
-                                             message="completed",
-                                             model=model)
-                except Exception:
-                    pass
+                agent_registry.transition(aid, AgentState.succeeded,
+                                         parent_stage="hunters",
+                                         message="completed",
+                                         model=model)
             return res
         except Exception as e:  # pragma: no cover - hunter_worker is fail-open
             from harness.agents.deep import is_fatal_error
 
-            # Config-class failures are the operator's setup, not one bad
-            # unit: they must sink the scan instead of becoming fallbacks.
+            # Operator config errors must sink the scan, not become fallbacks.
             if is_fatal_error(e):
                 if agent_registry is not None:
-                    try:
-                        agent_registry.transition(aid, AgentState.failed,
-                                                 parent_stage="hunters",
-                                                 model=model, error=str(e))
-                    except Exception:
-                        pass
+                    agent_registry.transition(aid, AgentState.failed,
+                                              parent_stage="hunters",
+                                              model=model, error=str(e))
                 raise
             from harness.agents.hunters import _fallback_finding
             fb = _fallback_finding(str(p.get("unit", "unit")), p.get("repo", "."),
                                    list(p.get("files", [])), str(e))
             fb["unit"] = str(p.get("unit", "unit"))
             if agent_registry is not None:
-                try:
-                    agent_registry.transition(aid, AgentState.failed,
-                                             parent_stage="hunters",
-                                             model=model, error=str(e))
-                except Exception:
-                    pass
+                agent_registry.transition(aid, AgentState.failed,
+                                          parent_stage="hunters",
+                                          model=model, error=str(e))
             return {"findings": [fb]}
 
     with ThreadPoolExecutor(max_workers=max(1, int(max_workers))) as ex:
@@ -1153,46 +968,20 @@ def run_scan(repo: str, confirm_critical: bool = False,
              votes: int | None = None,
              vulns_file: str | None = None,
              confirm: Callable[[dict], bool] | None = None,
-             agent_registry: Any = None,
-             progress_sink: Any = None,
-             on_event: Any = None,
-             agent_events: Any = None,
              agent_events_path: Any = None,
-             events_path: Any = None,
              ) -> dict[str, Any]:
-    """Run the full scan and return the final state.
-
-    `confirm` is called with the hot-findings payload when `confirm_critical`
-    is set and confirmed critical/high findings exist; it returns True to
-    release them. Without a callback they are held (see confirm_critical_step).
-    """
     os.environ["TARGET_REPO"] = str(repo)
     _sweep_orphan_sandboxes()
     state: dict[str, Any] = {"repo": repo}
+    if _obs is not None:
+        _scan_id = _obs.start_scan(repo)
+        if _scan_id:
+            state["scan_id"] = _scan_id
 
-    _events_path = agent_events_path if agent_events_path is not None else events_path
-    if agent_registry is None:
-        try:
-            agent_registry = AgentRegistry(run_id=str(repo), sink=progress_sink,
-                                           on_event=on_event,
-                                           progress_sink=progress_sink,
-                                           events_path=_events_path)
-        except Exception:
-            agent_registry = None
-    else:
-        try:
-            if _events_path is not None and getattr(agent_registry, "events_path", None) is None:
-                agent_registry.events_path = _events_path
-        except Exception:
-            pass
-        try:
-            if progress_sink is not None and getattr(agent_registry, "sink", None) is None:
-                agent_registry.sink = progress_sink
-            if on_event is not None and getattr(agent_registry, "on_event", None) is None:
-                agent_registry.on_event = on_event
-        except Exception:
-            pass
-    _agent_registry = agent_registry
+    try:
+        _agent_registry = AgentRegistry(run_id=str(repo), events_path=agent_events_path)
+    except Exception:
+        _agent_registry = None
     if confirm_critical:
         state["confirm_critical"] = True
     if threat_model_override:
@@ -1209,9 +998,17 @@ def run_scan(repo: str, confirm_critical: bool = False,
     import time as _stage_time
     stage_timings = {}
     def _stage(name, fn):
+        print(f"[pipeline] >>> Stage '{name}' starting...", file=sys.stderr, flush=True)
         _t0 = _stage_time.time()
         try:
-            return fn()
+            res = fn()
+            elapsed = round(_stage_time.time() - _t0, 3)
+            print(f"[pipeline] <<< Stage '{name}' completed in {elapsed}s", file=sys.stderr, flush=True)
+            return res
+        except Exception as exc:
+            elapsed = round(_stage_time.time() - _t0, 3)
+            print(f"[pipeline] !!! Stage '{name}' failed after {elapsed}s: {exc}", file=sys.stderr, flush=True)
+            raise
         finally:
             stage_timings[name] = round(_stage_time.time() - _t0, 3)
 
@@ -1222,8 +1019,6 @@ def run_scan(repo: str, confirm_critical: bool = False,
         _stage("hunters", lambda: _fan_out_hunters(state, _safe_max_concurrency(), agent_registry=_agent_registry))
     _stage("system_pass", lambda: apply_update(state, system_pass_node(state)))
     _stage("aggregator", lambda: apply_update(state, aggregator_node(state)))
-    # Phase boundary: clear conventional scratch paths to reduce accidental
-    # carryover (config-gated, best-effort; not a fresh sandbox).
     _reset_agent_scratch_phase(state.get("repo", "."))
     _stage("validator", lambda: apply_update(state, _call_node(validator_node, state, agent_registry=_agent_registry)))
     if state.get("confirm_critical"):
@@ -1240,9 +1035,6 @@ def run_scan(repo: str, confirm_critical: bool = False,
         state["stage_timings"] = dict(stage_timings)
     except Exception:
         pass
-    if agent_events is not None:
-        try:
-            agent_events.extend(state.get("agent_events", []))
-        except Exception:
-            pass
+    if _obs is not None:
+        _obs.finish_scan()
     return dict(state)

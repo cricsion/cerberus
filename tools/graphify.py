@@ -1,49 +1,16 @@
-"""Graphify-backed structural tools (library-first, subprocess fallback).
-
-Uses the installed `graphify` package as a LIBRARY (no subprocess overhead):
-- `graphify.serve._load_graph` — cached graph loading with size caps
-- `graphify.serve._query_graph_text` — BFS query with seed scoring
-- `graphify.serve._shortest_path_text` — directed caller->callee shortest path
-- `graphify.affected.{resolve_seed, affected_nodes, format_affected}` —
-  structured reverse traversal with CALL-SITE lines (via_file/via_location)
-
-What the codebase gives us beyond CLI text (see graphify/ source):
-- `calls` edges only fire when the callee resolves to a real in-project
-  callable (engine.py); `indirect_call` covers by-name callbacks + getattr
-  string refs (Python, JS/TS); unresolved names become `uses_<name>` edges.
-- `affected_nodes` returns AffectedHit(node_id, depth, via_relation,
-  via_file, via_location) — the call SITE, not the def line.
-- `resolve_seed` handles bare names, decorated `name()`, and repo-relative paths.
-
-Spike verdict (verified on fixtures): cross-file `calls` with EXTRACTED
-confidence (e.g. `handle() --calls--> run_query()`), but no intra-function
-dataflow and no stdlib-sink nodes. So: Graphify proves WHO calls WHOM,
-grep/Semgrep find sinks, the LLM joins arg flow.
-
-Everything degrades gracefully: no graph -> pointer at grep codegraph.
-`graphify-out/` is in grep SKIP_DIRS so artifacts never pollute scans.
-"""
 from __future__ import annotations
 
 import subprocess
 import sys
 from pathlib import Path
 
-try:
-    from langchain_core.tools import tool
-except ImportError:  # pragma: no cover
-    def tool(*dargs, **dkwargs):  # type: ignore
-        def deco(fn):
-            return fn
-        if dargs and callable(dargs[0]):
-            return dargs[0]
-        return deco
+from ._compat import tool
+from .code import _resolve_limit
 
 
 _graph_cache: dict[str, tuple[float, object]] = {}
 
-# Keep this shared with the scan inventory: these paths are deliberately
-# excluded from Graphify's source graph and should not reach hunter units.
+# Kept in sync with the scan inventory: excluded from Graphify's source graph.
 GRAPHIFY_SKIP_DIRS = frozenset({
     ".venv", "venv", "node_modules", ".git", "__pycache__",
     "graphify-out", ".graphify", "dist", "build",
@@ -51,7 +18,6 @@ GRAPHIFY_SKIP_DIRS = frozenset({
 
 
 def _cmd() -> list[str] | None:
-    """graphify invocation, or None when unavailable."""
     try:
         import graphify  # noqa: F401
         return [sys.executable, "-m", "graphify"]
@@ -64,20 +30,11 @@ def _cmd() -> list[str] | None:
 
 
 def graph_path_for(root: str) -> Path:
-    """Resolve the graph.json path, enforcing repo containment.
-
-    Raises ``ValueError`` when root escapes the repo. Callers exposed as
-    tools convert that to an agent-facing error string.
-    """
     from harness.tools.code import _safe_path
     base = _safe_path(root)
     if base.is_file():
         base = base.parent
     return base / "graphify-out" / "graph.json"
-
-
-def graph_available() -> bool:
-    return _cmd() is not None
 
 
 def _graph_chars() -> int:
@@ -97,36 +54,28 @@ def _truncate(s: str) -> str:
 
 
 def _source_files(root: str) -> list[Path]:
-    # No file-count cap: a capped staleness walk can miss newer files and
-    # skip a needed rebuild on very large repos.
+    # No file-count cap: a capped staleness walk can miss newer files.
     from harness.tools.code import _safe_path as _sp
-    try:
-        base = _sp(root)
-    except ValueError:
-        return []
+    base = _sp(root)
     if base.is_file():
         return [base]
     out: list[Path] = []
-    try:
-        resolved_base = base.resolve()
-        for f in sorted(base.rglob("*")):
-            if not f.is_file() or f.is_symlink():
+    resolved_base = base.resolve()
+    for f in sorted(base.rglob("*")):
+        if not f.is_file() or f.is_symlink():
+            continue
+        try:
+            if any(p in GRAPHIFY_SKIP_DIRS for p in f.relative_to(base).parts):
                 continue
-            try:
-                if any(p in GRAPHIFY_SKIP_DIRS for p in f.relative_to(base).parts):
-                    continue
-                # rglob descends through symlink dirs; re-check each file.
-                f.resolve().relative_to(resolved_base)
-            except ValueError:
-                continue
-            out.append(f)
-    except Exception:
-        pass
+            # rglob descends through symlink dirs; re-check each file.
+            f.resolve().relative_to(resolved_base)
+        except ValueError:
+            continue
+        out.append(f)
     return out
 
 
 def needs_rebuild(root: str) -> bool:
-    """True when graph.json is missing or older than any source file."""
     gp = graph_path_for(root)
     if not gp.is_file():
         return True
@@ -134,6 +83,8 @@ def needs_rebuild(root: str) -> bool:
         gmt = gp.stat().st_mtime
     except OSError:
         return True
+    # A filesystem error mid-walk would underreport staleness; fail toward
+    # rebuilding (stale is never served as fresh).
     try:
         for f in _source_files(root):
             try:
@@ -141,24 +92,20 @@ def needs_rebuild(root: str) -> bool:
                     return True
             except OSError:
                 continue
-    except Exception:
+    except OSError:
         return True
     return False
 
 
 def graphify_build(root: str, timeout: int = 600) -> str:
-    """Build/update the code-only graph. Returns graph.json path or ''."""
     from harness.tools.sast import scrubbed_env
     cmd = _cmd()
     if cmd is None:
         return ""
-    try:
-        from harness.tools.code import _safe_path as _sp
-        root = str(_sp(root))
-    except ValueError:
-        return ""
+    from harness.tools.code import _safe_path as _sp
+    root = str(_sp(root))
     if Path(root).is_file():
-        return ""  # single files: nothing to map
+        return ""
     if not needs_rebuild(root):
         p = graph_path_for(root)
         return str(p) if p.is_file() else ""
@@ -168,8 +115,6 @@ def graphify_build(root: str, timeout: int = 600) -> str:
                               env=scrubbed_env())
     except (subprocess.TimeoutExpired, OSError):
         return ""
-    except Exception:
-        return ""
     p = graph_path_for(root)
     if p.is_file():
         _graph_cache.pop(str(p), None)  # rebuilt: drop cached graph object
@@ -178,7 +123,6 @@ def graphify_build(root: str, timeout: int = 600) -> str:
 
 
 def graphify_summary(root: str) -> str:
-    """One-paragraph structural summary (god nodes by degree). No LLM."""
     import json
     gp = graph_path_for(root)
     try:
@@ -207,11 +151,7 @@ def graphify_summary(root: str) -> str:
 
 
 def _load_nx(root: str):
-    """Load the networkx graph (mtime-cached). None when unavailable."""
-    try:
-        gp = graph_path_for(root)
-    except ValueError:
-        return None
+    gp = graph_path_for(root)
     try:
         if not gp.is_file():
             return None
@@ -237,7 +177,6 @@ def _no_graph_msg() -> str:
 
 
 def _run_graph(args: list[str], root: str, timeout: int = 120) -> str:
-    """Subprocess fallback when the library path is unavailable."""
     from harness.tools.sast import scrubbed_env
     cmd = _cmd()
     if cmd is None:
@@ -253,8 +192,6 @@ def _run_graph(args: list[str], root: str, timeout: int = 120) -> str:
                               capture_output=True, text=True, timeout=timeout,
                               env=scrubbed_env())
     except (subprocess.TimeoutExpired, OSError) as e:
-        return f"(graph query failed: {e})"
-    except Exception as e:
         return f"(graph query failed: {e})"
     out = (proc.stdout or "").strip()
     return _truncate(out) or "(no graph results)"
@@ -281,15 +218,11 @@ def graph_neighbors(node: str, root: str = ".", limit: int | None = None) -> str
         if seed is None:
             return f"No unique node match for {name}"
         lines = [f"Neighbors of {G.nodes[seed].get('label', seed)}:"]
-        import os as _osn
-        try:
-            _limn = int(limit) if limit is not None else int(_osn.environ.get("GRAPH_NEIGHBORS", "100") or 100)
-        except (TypeError, ValueError):
-            _limn = 100
+        _limn = _resolve_limit(limit, "GRAPH_NEIGHBORS", 100)
         try:
             out_edges = list(G.out_edges(seed, data=True))
             in_edges = list(G.in_edges(seed, data=True))
-        except Exception:
+        except AttributeError:
             out_edges = [(s, t, d) for s, t, d in G.edges(data=True) if s == seed]
             in_edges = [(s, t, d) for s, t, d in G.edges(data=True) if t == seed]
         oe = out_edges if _limn <= 0 else out_edges[:_limn]
@@ -305,7 +238,9 @@ def graph_neighbors(node: str, root: str = ".", limit: int | None = None) -> str
         if _limn > 0 and (len(out_edges) > len(oe) or len(in_edges) > len(ie)):
             lines.append(f"… +{len(out_edges) - len(oe) + len(in_edges) - len(ie)} more edges (total {len(out_edges) + len(in_edges)})")
         return _truncate("\n".join(lines))
-    except Exception as e:
+    except (ImportError, KeyError, AttributeError, ValueError):
+        # In-process graph quirk (or graphify python pkg absent): re-query
+        # through the CLI, which has its own error handling.
         return _run_graph(["explain", name], root)
 
 
@@ -327,7 +262,9 @@ def graph_path(source: str, sink: str, root: str = ".") -> str:
     try:
         from graphify.serve import _shortest_path_text
         return _truncate(_shortest_path_text(G, {"source": a, "target": b}))
-    except Exception:
+    except (ImportError, KeyError, AttributeError, ValueError):
+        # In-process graph quirk (or graphify python pkg absent): re-query
+        # through the CLI, which has its own error handling.
         return _run_graph(["path", a, b], root)
 
 
@@ -343,11 +280,7 @@ def graph_query(question: str, root: str = ".", budget: int | None = None) -> st
     q = (question or "").strip()[:2000]
     if not q:
         return "(no results)"
-    import os as _osq
-    try:
-        _b = int(budget) if budget is not None else int(_osq.environ.get("GRAPH_BUDGET", "4000") or 4000)
-    except (TypeError, ValueError):
-        _b = 4000
+    _b = _resolve_limit(budget, "GRAPH_BUDGET", 4000)
     if _b <= 0:
         _b = 100000
     G = _load_nx(root)
@@ -359,20 +292,15 @@ def graph_query(question: str, root: str = ".", budget: int | None = None) -> st
         return _truncate(_query_graph_text(G, q, mode="bfs", depth=3,
                                  token_budget=_b,
                                  graph_path=str(gp)))
-    except Exception:
+    except (ImportError, KeyError, AttributeError, ValueError):
+        # In-process graph quirk (or graphify python pkg absent): re-query
+        # through the CLI, which has its own error handling.
         return _run_graph(["query", q, "--budget", str(_b)], root)
 
 
 @tool(parse_docstring=True)
 def graph_affected(node: str, root: str = ".", limit: int | None = None) -> str:
-    """Reverse traversal: who CAN reach this function (callers up to depth 2).
-
-    Returns structured hits with CALL-SITE lines (via_file:via_location) --
-    proof of call-graph REACHABILITY, nothing more. It says nothing about
-    whether the connecting argument is attacker-controlled: verify the
-    source-to-call argument flow before building a taint claim on these
-    edges. Ideal for enumerating every reach path into a sink wrapper.
-    Paginated via limit (0=unlimited).
+    """Reverse traversal: who CAN reach this function (callers up to depth 2); call-site lines prove REACHABILITY only, not taint flow. Paginated via limit (0=unlimited).
 
     Args:
         node: Symbol to trace backwards from.
@@ -382,11 +310,7 @@ def graph_affected(node: str, root: str = ".", limit: int | None = None) -> str:
     name = (node or "").strip()[:500]
     if not name:
         return "(no results)"
-    import os as _osa
-    try:
-        _lima = int(limit) if limit is not None else int(_osa.environ.get("GRAPH_AFFECTED", "100") or 100)
-    except (TypeError, ValueError):
-        _lima = 100
+    _lima = _resolve_limit(limit, "GRAPH_AFFECTED", 100)
     G = _load_nx(root)
     if G is None:
         return _run_graph(["affected", name], root)
@@ -407,5 +331,7 @@ def graph_affected(node: str, root: str = ".", limit: int | None = None) -> str:
         if len(hits) > len(page):
             lines.append(f"… +{len(hits) - len(page)} more")
         return _truncate("\n".join(lines))
-    except Exception:
+    except (ImportError, KeyError, AttributeError, ValueError):
+        # In-process graph quirk (or graphify python pkg absent): re-query
+        # through the CLI, which has its own error handling.
         return _run_graph(["affected", name], root)

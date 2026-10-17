@@ -1,17 +1,8 @@
 """A deny-only command prefilter shared by every sandbox backend.
 
-Command policy = CHEAP PRE-FILTER, not the security boundary. The boundary
-is the sandbox (no host paths, read-only repo, scrubbed env, resource
-caps); egress is whatever the backend's network posture allows, and it is
-NOT enforced here -- a string check cannot hold a network boundary
-(``python -c 'import socket...'`` can make network requests too).
-The deny-list is defeatable by shell syntax and only exists to fail fast on
-obvious host/container tooling. Unknown commands are allowed through to the
-sandbox. Do not claim more for this check anywhere in docs or prompts.
-
-Binaries denied at COMMAND POSITION (first word of a pipeline segment, or
-the string of a shell -c / eval wrapper): container runtimes and tools that
-poke the host's namespaces or kernel network stack.
+CHEAP PRE-FILTER, not the security boundary (the sandbox is; egress is the
+backend's network posture, never this check). Defeatable by shell syntax,
+unknown commands pass through. Do not claim more for it in docs or prompts.
 """
 from __future__ import annotations
 
@@ -26,8 +17,7 @@ DENIED = frozenset({
 })
 
 # Shell wrappers need one extra look so `bash -c 'docker ps'` gets the same
-# obvious-command check as a direct invocation. This is still a pre-filter,
-# not a shell parser or a sandbox boundary.
+# obvious-command check as a direct call. Still a pre-filter, not a parser.
 _SHELLS = frozenset({"bash", "sh", "zsh", "dash"})
 _SHELL_COMMAND_FLAGS = frozenset({"-c", "-lc"})
 
@@ -46,11 +36,10 @@ def _segments(source: str) -> list[str]:
 
 
 def _commands_in_segment(segment: str) -> list[str]:
-    """Return the segment's executable and any simple shell-wrapper command.
+    """The segment's executable and any simple shell-wrapper command.
 
-    Arguments are deliberately ignored, so review tokens such as `ip` in
-    `grep -rn ip .` do not look like executables. The check only unwraps the
-    common `sh -c`, `eval`, and `exec` forms; shell syntax is not parsed here.
+    Arguments are ignored so `ip` in `grep -rn ip .` is not read as an
+    executable; only the common sh -c / eval / exec forms are unwrapped.
     """
     words = _tokens(segment)
     while words and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]):
@@ -79,12 +68,8 @@ def _commands_in_source(source: str) -> list[str]:
 
 
 def policy_error(command: str) -> str | None:
-    """Fail fast on obvious host/runtime commands; allow other commands.
-
-    The lightweight splitter avoids treating ordinary arguments like `ip` in
-    `grep -rn ip .` as executables. It is deliberately not a shell parser.
-    Network egress is controlled by the sandbox, not this function.
-    """
+    """Fail fast on obvious host/runtime commands; all others pass through
+    (egress is the sandbox's business, not this function's)."""
     segments = _segments(command)
     for segment in segments:
         for base in (os.path.basename(w).lower()

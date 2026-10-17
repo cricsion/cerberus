@@ -1,7 +1,4 @@
-"""Triage prompts: duplicate rules and severity rubric for the dedup pass.
-
-Structured output lives here too, next to the text that describes it.
-"""
+"""Triage prompts: duplicate rules and severity rubric for the dedup pass."""
 from pydantic import BaseModel, Field
 
 DEDUP_RULES = (
@@ -36,7 +33,6 @@ TRIAGE_SYSTEM = (
 
 
 def build_triage_batch_task(scope: str, slim_json: str) -> str:
-    """Assemble the triage batch prompt over one batch of slimmed findings."""
     return (
         f"{scope}All triage findings of this scan (JSON):\n"
         f"{slim_json}\n"

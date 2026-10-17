@@ -3,18 +3,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from harness.schemas import safe_float
 
+logger = logging.getLogger(__name__)
+
 
 def prompt_confirm(payload: dict) -> bool:
-    """Plain CLI prompt: show confirmed critical/high findings, ask on stdin.
-
-    EOF (non-interactive run) counts as a decline, so criticals are held for
-    review instead of being released unreviewed.
-    """
+    """Show confirmed critical/high findings, ask on stdin; EOF (non-interactive
+    run) counts as a decline."""
     print("HUMAN REVIEW REQUIRED (confirmed critical/high):")
     try:
         print(json.dumps(payload, indent=2)[:3000])
@@ -31,57 +31,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
     from harness.pipeline import SEVERITY_ORDER, run_scan
     from harness.reporting.reports import write_html, write_json, write_junit, write_markdown, write_sarif
 
-    _ui = "auto"
-    try:
-        from harness.tui import RICH_AVAILABLE
-    except Exception:
-        RICH_AVAILABLE = False
-    use_rich = False
-    if _ui == "rich":
-        use_rich = True
-    elif _ui == "auto":
-        import os as _os
-        if sys.stdout.isatty() and not _os.environ.get("CI") and RICH_AVAILABLE:
-            use_rich = True
-    if use_rich and getattr(args, "confirm_critical", False):
-        print("warning: --confirm-critical disables rich mode; using plain", file=sys.stderr)
-        use_rich = False
-    if use_rich and RICH_AVAILABLE:
-        from harness.tui import make_console, run_scan_tui
-        console = make_console()
-        _focus = args.focus
-        if isinstance(_focus, str):
-            _focus = [x.strip() for x in _focus.split(",") if x.strip()]
-        out = Path(args.out)
-        try:
-            out.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            print(f"cannot create output dir {out}: {e}", file=sys.stderr)
-            return 1
-        scan_kwargs = {
-            "confirm_critical": False,
-            "threat_model_override": args.threat_model,
-            "focus": _focus,
-            "votes": args.votes,
-            "vulns_file": args.vulns,
-        }
-        return run_scan_tui(args.repo, out=out, scan_kwargs=scan_kwargs, console=console)
-
     out = Path(args.out)
     try:
         out.mkdir(parents=True, exist_ok=True)
     except OSError as e:
         print(f"cannot create output dir {out}: {e}", file=sys.stderr)
         return 1
-    # argparse guarantees every one of these: they are all registered on the
-    # `scan` subparser in build_parser(), the only dispatcher of this command.
     confirm = bool(args.confirm_critical)
     _focus = args.focus
     _votes = args.votes
-    # The driver pauses between validation and triage and calls prompt_confirm
-    # when confirmed critical/high findings exist (only with --confirm-critical).
-    # Record the target tree at scan start and compare it at teardown. The
-    # finally also removes the run sandbox if the scan fails.
+    # Manifest: record target tree at scan start, compare at teardown.
     from harness.sandbox import shutdown_run_sandbox
     from harness.scan_manifest import close_scan, record_scan_manifest
     scan_record: dict = {}
@@ -97,8 +56,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
                          agent_events_path=out / "agents.jsonl")
         findings = state.get("verified", [])
         # CI gate: min-confidence + fail-on severity filter
-        # --fail-on is choices-gated by build_parser(), and SEVERITY_ORDER
-        # holds every allowed choice, so the lookup is total here.
         fail_at = SEVERITY_ORDER[args.fail_on]
         min_conf = args.min_confidence
         write_json(findings, out / "findings.json")
@@ -106,57 +63,61 @@ def cmd_scan(args: argparse.Namespace) -> int:
         write_markdown(findings, out / "report.md")
         write_html(findings, out / "report.html")
         write_junit(findings, out / "junit.xml")
-        # Threat-model artifact (single writer: CLI). Full text, never truncated.
+        # Threat-model artifact (single writer: CLI; full text, never truncated).
         threat_md = state.get("threat_model_md", "") or ""
         try:
             from harness import threat as _th2
-            from harness.config import load_config as _lc
-            _write_tm = _th2.threat_enabled(_lc(), "write_artifact", True)
+            from harness.config import load_config_safe
+            _write_cfg, _write_err = load_config_safe()
+            if _write_err is not None:
+                logger.debug("artifact config load failed; defaulting threat-model "
+                             "artifact on: %s", _write_err)
+            _write_tm = _th2.threat_enabled(_write_cfg, "write_artifact", True)
         except Exception:
             _write_tm = True
-        # Threat snapshot + persist: the graph's threat_update node already folded
-        # validator-confirmed findings into state. CLI only writes (single writer).
+        # threat_update node already folded validator findings into state; CLI
+        # only writes (single writer).
         threat_persisted = ""
         if threat_md.strip() and _write_tm:
             (out / "THREAT_MODEL.md").write_text(threat_md)
-        # Written triage audit trail (reference-harness style). Single writer: CLI.
+        # Triage audit trail (single writer: CLI).
         triage_log = state.get("triage_log", []) or []
         if triage_log:
             try:
                 from harness.agents.triage import _resolve_batch, render_triage_log
-                from harness.config import load_config as _lc_log
+                from harness.config import load_config_safe
+                _batch_cfg, _batch_err = load_config_safe()
+                if _batch_err is not None:
+                    logger.debug("batch-config load failed for triage.log; "
+                                 "using the default batch: %s", _batch_err)
                 try:
-                    _batch = _resolve_batch(_lc_log())
-                except Exception:
+                    _batch = _resolve_batch(_batch_cfg)
+                except (TypeError, ValueError):
                     _batch = 30
                 _calls = max((int(e.get("batch", 0) or 0) for e in triage_log
                               if isinstance(e, dict)), default=0)
                 (out / "triage.log").write_text(
                     render_triage_log(triage_log, _calls, _batch))
-            except Exception:
-                pass
-        # Persist for future runs: only when this scan generated the model
-        # (bootstrap floor / swarm enrichment / machine cache). Owner files
-        # and explicit --threat-model overrides are never overwritten; the
-        # cache lives in .harness/.
+            except OSError as e:
+                print(f"warning: cannot write triage.log: {e}", file=sys.stderr)
+        # Persist only models this scan generated (floor/swarm/cache); owner files
+        # and --threat-model overrides are never overwritten (cache: .harness/).
         try:
             from harness import threat as _th4
             if (threat_md.strip() and _write_tm
                     and state.get("threat_model_source") not in ("override", "repo-file")):
                 threat_persisted = _th4.persist_threat(args.repo, threat_md) or ""
-        except Exception:
+        except OSError as e:
+            print(f"warning: could not persist threat model: {e}", file=sys.stderr)
             threat_persisted = ""
     finally:
-        # The run's shared sandbox container (docker mode) is run-level
-        # state: remove it here so a crashed scan leaks no container.
+        # Run-level sandbox container (docker mode): remove so no container leaks.
         shutdown_run_sandbox()
         scan_record = close_scan(args.repo)
         try:
-            import os as _os2
             (out / "scan.pid").unlink(missing_ok=True)
-        except Exception:
+        except OSError:
             pass
-    # Persist agent events/summary for on-demand status and inspection.
     try:
         _agent_events = state.get("agent_events", []) or []
         if isinstance(_agent_events, list):
@@ -166,8 +127,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if _agent_summary is not None:
             (out / "agent_summary.json").write_text(
                 json.dumps(_agent_summary, indent=2))
-    except Exception:
-        pass
+    except OSError as e:
+        print(f"warning: could not write agent artifacts: {e}", file=sys.stderr)
     meta = {
         "repo": args.repo,
         "format": args.format,
@@ -188,6 +149,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         "triage_log": "triage.log" if (out / "triage.log").is_file() else "",
         "tools_used": sorted(set(str(t) for t in state.get("tools_used", []))),
         "manifest": scan_record,
+        "scan_id": state.get("scan_id", ""),
+        "stage_timings": state.get("stage_timings") or {},
     }
     (out / "scan_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"files={len(state.get('files', []))} findings={len(findings)} out={out}")
@@ -201,14 +164,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 
 def cmd_threat_model(args: argparse.Namespace) -> int:
-    """Create THREAT_MODEL.md for a repo (reference 8-section schema).
-
-    Default path: deterministic bootstrap floor, then the LLM swarm
-    (researcher + historian + synthesizer) enriches it on every run — the
-    same default a scan uses; `threat.llm_enrich: false` (or
-    HARNESS_THREAT_LLM=0) keeps it offline. With --interview, an LLM
-    interviewer asks follow-ups on stdin and rewrites the document with the
-    answers; without a key it degrades to the static Shostack set.
+    """Create THREAT_MODEL.md for a repo (reference 8-section schema): deterministic
+    floor + swarm enrichment (`threat.llm_enrich: false` / HARNESS_THREAT_LLM=0
+    offline); --interview asks on stdin; without a key it degrades to Shostack.
     """
     from harness import threat as _th
     from harness.pipeline import indexer_node
@@ -227,11 +185,8 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             if not md.strip():
                 print("no threat model found for repo", file=sys.stderr)
                 return 1
-        try:
-            st = indexer_node({"repo": repo})
-            files, cands = list(st.get("files", [])), list(st.get("candidates", []))
-        except Exception:
-            files, cands = [], []
+        st = indexer_node({"repo": repo})
+        files, cands = list(st.get("files", [])), list(st.get("candidates", []))
         q = _th.threat_quality(md, files, cands)
         print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections, "
               f"{q.get('threat_rows', 0)} threat rows)")
@@ -266,11 +221,8 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     except Exception as e:
         print(f"indexer failed: {e}", file=sys.stderr)
         files, cands = [], []
-    try:
-        summary = next((c.get("snippet", "") for c in cands
-                        if c.get("id") == "threat-model"), "")
-    except Exception:
-        summary = ""
+    summary = next((c.get("snippet", "") for c in cands
+                    if c.get("id") == "threat-model"), "")
     _vulns_path = getattr(args, "vulns", None) or ""
     vulns = _th.parse_vulns_file(_vulns_path) if _vulns_path else []
     if _vulns_path and not vulns:
@@ -279,11 +231,11 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     if bool(getattr(args, "interview", False)):
         import os as _os
 
-        from harness.config import load_config as _lc_tm
-        try:
-            _cfg_tm = _lc_tm()
-        except Exception:
-            _cfg_tm = {}
+        from harness.config import load_config_safe
+        _cfg_tm, _cfg_tm_err = load_config_safe()
+        if _cfg_tm_err is not None:
+            logger.debug("threat-model config load failed; using defaults: %s",
+                         _cfg_tm_err)
         if not _os.environ.get("API_KEY"):
             answers: dict[str, str] = {}
             print("Answer Shostack's four questions (empty = skip):")
@@ -341,55 +293,22 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"swarm enrichment error, kept deterministic floor: {e}")
     dest = getattr(args, "out", None)
     if not dest:
-        try:
-            dest = str(Path(repo) / _th.FILENAME) if Path(repo).is_dir() else _th.FILENAME
-        except Exception:
-            dest = _th.FILENAME
+        dest = str(Path(repo) / _th.FILENAME) if Path(repo).is_dir() else _th.FILENAME
     try:
         Path(dest).write_text(md)
     except OSError as e:
         print(f"cannot write {dest}: {e}", file=sys.stderr)
         return 1
     print(f"wrote {dest}")
-    try:
-        q = _th.threat_quality(md, files, cands)
-        print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections)")
-        for gap in q["gaps"][:10]:
-            print(f"  gap: {gap}")
-    except Exception:
-        pass
+    q = _th.threat_quality(md, files, cands)
+    print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections)")
+    for gap in q["gaps"][:10]:
+        print(f"  gap: {gap}")
     return 0
 
 
-def cmd_tui(args: argparse.Namespace) -> int:
-    from harness.tui import make_console, run_scan_tui, view_run
-
-    console = make_console()
-    target = Path(args.target)
-    if target.is_dir() and (target / "scan_meta.json").is_file():
-        return int(view_run(target, console=console) or 0)
-    # Otherwise treat target as a repo and run a scan with the Rich monitor.
-    out = Path(args.out)
-    try:
-        out.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        print(f"cannot create output dir {out}: {e}", file=sys.stderr)
-        return 1
-    _focus = args.focus
-    if isinstance(_focus, str):
-        _focus = [x.strip() for x in _focus.split(",") if x.strip()]
-    scan_kwargs = {
-        "confirm_critical": False,
-        "threat_model_override": args.threat_model,
-        "focus": _focus,
-        "votes": args.votes,
-        "vulns_file": args.vulns,
-    }
-    return int(run_scan_tui(str(target), out=out, scan_kwargs=scan_kwargs, console=console) or 0)
-
-
 def cmd_runs(args: argparse.Namespace) -> int:
-    from harness.tui import make_console, list_runs
+    from harness.reporting.view import make_console, list_runs
 
     console = make_console()
     return int(list_runs(args.runs_dir, limit=args.limit, console=console) or 0)
@@ -398,7 +317,7 @@ def cmd_runs(args: argparse.Namespace) -> int:
 def cmd_status(args: argparse.Namespace) -> int:
     import json as _json
 
-    from harness.tui import make_console
+    from harness.reporting.view import clean_untrusted, make_console, RICH_AVAILABLE
 
     console = make_console()
     run_dir = Path(args.run)
@@ -409,14 +328,15 @@ def cmd_status(args: argparse.Namespace) -> int:
         summary = _json.loads(summary_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         summary = None
-    if console is None or (not __import__("harness.tui", fromlist=["RICH_AVAILABLE"]).RICH_AVAILABLE):
-        print(f"run: {run_dir}")
+    if console is None or not RICH_AVAILABLE:
+        print(clean_untrusted(f"run: {run_dir}"))
         if summary:
-            print(_json.dumps(summary, indent=2))
+            print(clean_untrusted(_json.dumps(summary, indent=2)))
         if events_path.is_file():
             print(f"events: {sum(1 for _ in events_path.open())}")
         return 0 if summary is not None or events_path.is_file() else 1
     from rich.panel import Panel
+    from rich.text import Text
 
     lines = [f"run: {run_dir}"]
     if isinstance(summary, dict):
@@ -434,12 +354,13 @@ def cmd_status(args: argparse.Namespace) -> int:
     pid_path = run_dir / "scan.pid"
     if pid_path.is_file():
         lines.append(f"pid: {pid_path.read_text().strip()}")
-    console.print(Panel("\n".join(lines), title="Agent status", border_style="cyan"))
+    console.print(Panel(Text(clean_untrusted("\n".join(lines))),
+                        title="Agent status", border_style="cyan"))
     return 0 if (summary is not None or events_path.is_file()) else 1
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
-    from harness.tui import make_console, view_run
+    from harness.reporting.view import make_console, view_run
 
     console = make_console()
     return int(view_run(Path(args.run), console=console,
@@ -470,7 +391,7 @@ def cmd_cancel(args: argparse.Namespace) -> int:
     except ProcessLookupError:
         print(f"process {pid} not running", file=sys.stderr)
         return 1
-    except Exception as e:
+    except OSError as e:
         print(f"cancel failed: {e}", file=sys.stderr)
         return 1
     print(f"sent SIGTERM to {pid}")
@@ -480,7 +401,7 @@ def cmd_cancel(args: argparse.Namespace) -> int:
 def cmd_findings(args: argparse.Namespace) -> int:
     import json as _json
 
-    from harness.tui import make_console, render_findings
+    from harness.reporting.view import make_console, render_findings
 
     console = make_console()
     run_dir = Path(args.run)
@@ -505,7 +426,7 @@ def cmd_findings(args: argparse.Namespace) -> int:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    from harness.tui import make_console, doctor
+    from harness.reporting.view import make_console, doctor
 
     console = make_console()
     return int(doctor(args.config, console=console) or 0)
@@ -549,16 +470,6 @@ def build_parser() -> argparse.ArgumentParser:
                    help="fold validator-released findings into the machine cache "
                         "(.harness/THREAT_MODEL.md); owner files are never touched")
     t.set_defaults(func=cmd_threat_model)
-
-    u = sub.add_parser("tui", help="interactive rich scan viewer / runner")
-    u.add_argument("target", help="run dir with scan_meta.json, or repo path to scan")
-    u.add_argument("--out", default="runs/latest", help="output dir when scanning")
-    u.add_argument("--config", default="config/default.yaml")
-    u.add_argument("--threat-model", default=None)
-    u.add_argument("--vulns", default=None)
-    u.add_argument("--focus", default=None)
-    u.add_argument("--votes", type=int, default=None)
-    u.set_defaults(func=cmd_tui)
 
     r = sub.add_parser("runs", help="list discovered scan runs")
     r.add_argument("--runs-dir", default="runs", dest="runs_dir")

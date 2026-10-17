@@ -1,8 +1,6 @@
 """Agent prompts, one module per pipeline role.
 
-Prompt text lives here so wording can be reviewed without reading agent
-plumbing. The agents/ modules own tools, control flow, and parsing; they
-import these constants. prompts/ imports nothing from harness.
+Prompts import nothing from harness; agents own tools, flow, and parsing.
 """
 
 UNTRUSTED_CONTEXT_NOTE = (

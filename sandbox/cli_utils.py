@@ -1,11 +1,6 @@
-"""Subprocess and naming seams shared by every sandbox backend.
-
-Nothing here knows about docker or sbx: these are the two ways this package
-runs a CLI -- one reading AT MOST a byte budget, one collecting a small fixed
-output -- plus the sanitiser for untrusted agent ids. They live in their own
-module so ONE monkeypatched seam covers every backend, and so neither backend
-module is the accidental owner of shared code (sbx used to import these from
-docker_backend, which made docker look like the base).
+"""Subprocess and naming seams shared by every sandbox backend: a byte-budgeted
+runner, a small-output runner, and the untrusted-agent-id sanitiser. Living
+here gives tests ONE monkeypatch seam covering every backend.
 """
 from __future__ import annotations
 
@@ -32,15 +27,9 @@ def run_bounded(argv: list[str], *, timeout: float, byte_cap: int
                 ) -> tuple[str, int | None, bool]:
     """Run a command reading AT MOST byte_cap bytes of combined output.
 
-    A PIPE with no cap means a chatty command buffers its whole output in
-    THIS process before any check: one `python -c 'while True: print(...)''`
-    for the full command timeout drives harness RSS into the GBs (measured
-    ~380 MB/s), times `concurrency` parallel agents. Reading in chunks and
-    stopping at the cap turns that into a bounded, truncated result. The
-    process is killed on cap exceed (in-container `timeout` is the
-    backstop; this is the harness-side backstop).
-
-    Returns (output, exit_code, truncated).
+    Kills the process on cap exceed so a chatty command cannot drive harness
+    memory up; the in-container ``timeout`` is the backstop. Returns (output,
+    exit_code, truncated).
     """
     proc = subprocess.Popen(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -97,12 +86,8 @@ def run_bounded(argv: list[str], *, timeout: float, byte_cap: int
 
 
 def safe_slug(text: str | None, default: str = "agent") -> str:
-    """Filesystem-safe per-agent scratch name.
-
-    Agent ids carry unit names from the partitioner model (untrusted text):
-    they must never be able to steer the scratch path (no ``..``, no ``/``,
-    no leading dash) inside the shared sandbox.
-    """
+    """Filesystem-safe per-agent scratch name: agent ids are untrusted and must
+    never steer the scratch path (no ``..``, ``/``, leading dash)."""
     slug = re.sub(r"[^a-z0-9_.-]+", "_", str(text or "").strip().lower())
     slug = slug.strip("._-")
     return slug[:48] or default

@@ -1,7 +1,4 @@
-"""Partitioner prompts: split a codebase into logical units for parallel review.
-
-Structured output lives here too, next to the text that describes it.
-"""
+"""Partitioner prompts: split a codebase into logical units for parallel review."""
 from pydantic import BaseModel, Field
 
 PARTITIONER_SYSTEM = (

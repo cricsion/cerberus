@@ -1,17 +1,11 @@
-"""Setting validation shared by the backends.
-
-Every one of these raises ``ValueError``, and every one of them is called at
-construction time so a bad setting fails BEFORE a container or a microVM
-exists -- not halfway through a scan.
-"""
+"""Setting validation shared by the backends: every function raises
+``ValueError`` at construction time, before a container or microVM exists."""
 from __future__ import annotations
 
 import re
 
-# A Docker image reference: registry/repo path components plus one optional
-# tag or digest. Anything else -- notably a value starting with "-", which
-# docker would parse as a FLAG (e.g. "image": "--privileged" would silently
-# grant a privileged container) -- is refused.
+# A Docker image reference: registry/repo components plus one optional tag or
+# digest. A leading "-" is refused: docker would parse it as a FLAG.
 IMAGE_RE = re.compile(
     r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*"
     r"(?::[A-Za-z0-9_][A-Za-z0-9._-]*)?"
@@ -28,10 +22,8 @@ def validate_image(image: str) -> str:
     return image
 
 
-# The only two network modes the docker container will run. `host` is
-# deliberately NOT one: it would put the agent in the host's network
-# namespace, where the harness's own services (and every host-only service)
-# are reachable.
+# The only two network modes the docker container runs: `host` is deliberately
+# not one -- it would put the agent in the host netns, beside our own services.
 NETWORK_MODES = ("none", "bridge")
 
 
@@ -50,8 +42,12 @@ def validate_cpus(cpus: object) -> str:
     """sbx cpu share: a bare count, 0 meaning "the runtime default"."""
     try:
         n = int(str(cpus or 0).strip() or 0)
-    except (TypeError, ValueError):
-        n = 0
+    except (TypeError, ValueError) as exc:
+        # Same contract as validate_memory/validate_image: garbage config
+        # fails the resolve (callers degrade to the local backend), it is
+        # never silently coerced to the runtime default.
+        raise ValueError(f"invalid sandbox.sbx.cpus {cpus!r}: expected a "
+                         "bare count (0 = runtime default)") from exc
     if n < 0:
         n = 0
     return str(n)

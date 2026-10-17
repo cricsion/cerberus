@@ -1,12 +1,3 @@
-"""The partition graph: graphify communities + the edge signals.
-
-Single loader for the graph signals the algorithm consumes, so graph.json is
-parsed once per partition. Two edge views join the community signal:
-``file_edges`` sums import/call graph links into per-file dependency weights,
-and ``augment_edges`` layers on framework coupling (template renders, dir
-barrels, dynamic loaders, same-dir adjacency) the import graph cannot see.
-Everything degrades gracefully: no graph -> "no signal", never raises.
-"""
 from __future__ import annotations
 
 import json
@@ -100,7 +91,6 @@ _RENDER_TARGET_MAX = 5
 
 
 def support_file_kind(path: str) -> str | None:
-    """Support category for an unowned path, or None for application code."""
     normalized = str(path or "").replace("\\", "/")
     if not normalized:
         return None
@@ -127,11 +117,8 @@ def support_file_kind(path: str) -> str | None:
 
 
 def load_partition_graph(repo: str) -> dict:
-    """Parsed graph.json dict, or {} when absent/unreadable. Never raises."""
-    try:
-        from harness.tools.graphify import graph_path_for
-    except Exception:
-        return {}
+    from harness.tools.graphify import graph_path_for
+
     try:
         gp = graph_path_for(repo)
         if not gp.is_file():
@@ -142,14 +129,7 @@ def load_partition_graph(repo: str) -> dict:
         return {}
 
 
-def graph_present(repo: str) -> bool:
-    """True when graph.json loads to a non-empty dict."""
-    return bool(load_partition_graph(repo))
-
-
 def file_communities(graph: dict) -> dict[str, int]:
-    """source_file -> community id, first mapping wins. Malformed nodes are
-    skipped, never raised (the algorithm treats an empty map as "no signal")."""
     if not graph or not isinstance(graph, dict):
         return {}
     nodes = graph.get("nodes")
@@ -170,7 +150,6 @@ def file_communities(graph: dict) -> dict[str, int]:
 
 
 def _relation_weight(rel: object) -> int:
-    """2 for a def-use relation, 1 for a call/uses relation, else 0 (skipped)."""
     r = str(rel or "").lower()
     if r in _DEF_USE_RELATIONS:
         return 2
@@ -180,15 +159,6 @@ def _relation_weight(rel: object) -> int:
 
 
 def file_edges(graph: dict, files: list[str]) -> dict[tuple[str, str], int]:
-    """(a, b) = a depends on b; value = summed relation weight over the links
-    whose both endpoints resolve to entries of ``files``.
-
-    Node ids map to source_file via the nodes; a graph path canonicalizes to
-    ``files`` by exact match, else the first present path suffix. def-use
-    relations weigh 2, call/uses relations 1, all other links (contains /
-    method / semantically_similar_to intra-file noise) are skipped. Self-edges
-    and links resolving outside ``files`` drop; weights sum per ordered pair,
-    so the result never depends on link order."""
     if not graph or not isinstance(graph, dict) or not files:
         return {}
     links = graph.get("links") or graph.get("edges")
@@ -229,7 +199,6 @@ def file_edges(graph: dict, files: list[str]) -> dict[tuple[str, str], int]:
 def _resolve_render_targets(name: str, fs: set[str],
                             file_list: list[str],
                             source: str | None = None) -> list[str]:
-    """Resolve a render literal by exact path, suffix, extension, or stem."""
     name = name.strip().replace("\\", "/")
     if not name:
         return []
@@ -268,7 +237,6 @@ def _resolve_render_targets(name: str, fs: set[str],
 
 def _resolve_config_targets(name: str, source: str,
                             config_paths: set[str]) -> list[str]:
-    """Resolve an explicit config path from its source file or repo root."""
     raw = str(name or "").strip().replace("\\", "/")
     if not raw:
         return []
@@ -305,7 +273,6 @@ def _resolve_config_targets(name: str, source: str,
 
 def _resolve_config_module(module: str, source: str,
                            config_paths: set[str]) -> list[str]:
-    """Resolve a Python config/settings module import to its source file."""
     raw = str(module or "").strip()
     if not raw:
         return []
@@ -333,9 +300,6 @@ def _environment_references(text: str) -> set[str]:
 
 
 def _read_local_texts(repo: str, file_list: list[str]) -> dict[str, str]:
-    """Text of each file under repo, bounded per-file and in total; decode
-    errors replaced. Files over edge_max_file_bytes are skipped, and scanning
-    stops once total bytes read would exceed edge_read_cap_bytes."""
     base = Path(repo).resolve()
     max_file = edge_max_file_bytes()
     read_cap = edge_read_cap_bytes()
@@ -363,127 +327,99 @@ def _read_local_texts(repo: str, file_list: list[str]) -> dict[str, str]:
 
 def augment_edges(repo: str, files: list[str],
                   edges: dict[tuple[str, str], int]) -> dict[tuple[str, str], int]:
-    """``edges`` plus the framework coupling the import graph cannot see.
-
-    Reads the source files backing ``files`` (per-file and total byte bounds
-    from partitioning.config, decoded with errors="replace") and adds five
-    edge families; a stronger signal upgrades a weaker edge for the same
-    ordered pair:
-      (a) renderer -> template, weight 2, string-literal render calls resolved
-          by relative path, exact path / suffix, extension, or stem (capped five);
-      (b) component -> config file, weight 2, explicit config path or .env key use;
-      (c) barrel file -> same-directory siblings, weight 2, both directions;
-      (d) dynamic-loader file -> same-directory siblings, weight 1, both dirs;
-      (e) every pair in a directory of <= 40 files, weight 1, both directions.
-    Deterministic (sorted traversal). Never raises: any read error returns the
-    input edges unchanged."""
     out = dict(edges)
-    try:
-        file_list = sorted(set(files))
-        fs = set(file_list)
-
-        def put(a: str, b: str, w: int) -> None:
-            k = (a, b)
-            if out.get(k, 0) < w:
-                out[k] = w
-
-        texts = _read_local_texts(repo, file_list)
-        config_paths = {f for f in file_list if support_file_kind(f) == "config"}
-
-        # (a) renderer -> template, including extensionless framework names.
-        for f in sorted(texts):
-            for pat in _RENDER_PATTERNS:
-                for m in pat.finditer(texts[f]):
-                    for target in _resolve_render_targets(m.group(1), fs,
-                                                          file_list, f):
-                        if target != f:
-                            put(f, target, 2)
-
-        # (b) component -> explicitly loaded config file.
-        for f in sorted(texts):
-            for m in _CONFIG_PATH_LITERAL.finditer(texts[f]):
-                for target in _resolve_config_targets(m.group("path"), f,
-                                                      config_paths):
+    file_list = sorted(set(files))
+    fs = set(file_list)
+    def put(a: str, b: str, w: int) -> None:
+        k = (a, b)
+        if out.get(k, 0) < w:
+            out[k] = w
+    texts = _read_local_texts(repo, file_list)
+    config_paths = {f for f in file_list if support_file_kind(f) == "config"}
+    # (a) renderer -> template, including extensionless framework names.
+    for f in sorted(texts):
+        for pat in _RENDER_PATTERNS:
+            for m in pat.finditer(texts[f]):
+                for target in _resolve_render_targets(m.group(1), fs,
+                                                      file_list, f):
                     if target != f:
                         put(f, target, 2)
-            for m in _CONFIG_MODULE_IMPORT.finditer(texts[f]):
-                module = m.group("from") or m.group("import")
-                for target in _resolve_config_module(module, f, config_paths):
-                    if target != f:
-                        put(f, target, 2)
-
-        # .env consumers are linked only for explicit environment access
-        # expressions; matching arbitrary variable names would over-link.
-        env_by_key: dict[str, list[str]] = {}
-        for f in sorted(config_paths):
-            for key in sorted(_environment_keys(f, texts.get(f, ""))):
-                env_by_key.setdefault(key, []).append(f)
-        if env_by_key:
-            for f in sorted(texts):
-                if f in config_paths:
-                    continue
-                used = _environment_references(texts[f])
-                for key in sorted(used & env_by_key.keys()):
-                    source_dirs = PurePosixPath(f).parent.parts
-                    targets = env_by_key[key]
-                    def depth(target: str) -> int:
-                        count = 0
-                        for a, b in zip(source_dirs,
-                                        PurePosixPath(target).parent.parts):
-                            if a != b:
-                                break
-                            count += 1
-                        return count
-                    closest = max(depth(target) for target in targets)
+    # (b) component -> explicitly loaded config file.
+    for f in sorted(texts):
+        for m in _CONFIG_PATH_LITERAL.finditer(texts[f]):
+            for target in _resolve_config_targets(m.group("path"), f,
+                                                  config_paths):
+                if target != f:
+                    put(f, target, 2)
+        for m in _CONFIG_MODULE_IMPORT.finditer(texts[f]):
+            module = m.group("from") or m.group("import")
+            for target in _resolve_config_module(module, f, config_paths):
+                if target != f:
+                    put(f, target, 2)
+    # .env links need explicit env-access expressions, not just variable names.
+    env_by_key: dict[str, list[str]] = {}
+    for f in sorted(config_paths):
+        for key in sorted(_environment_keys(f, texts.get(f, ""))):
+            env_by_key.setdefault(key, []).append(f)
+    if env_by_key:
+        for f in sorted(texts):
+            if f in config_paths:
+                continue
+            used = _environment_references(texts[f])
+            for key in sorted(used & env_by_key.keys()):
+                source_dirs = PurePosixPath(f).parent.parts
+                targets = env_by_key[key]
+                def depth(target: str) -> int:
+                    count = 0
+                    for a, b in zip(source_dirs,
+                                    PurePosixPath(target).parent.parts):
+                        if a != b:
+                            break
+                        count += 1
+                    return count
+                closest = max(depth(target) for target in targets)
+                targets = [target for target in targets
+                           if depth(target) == closest]
+                if any(PurePosixPath(target).name == ".env"
+                       for target in targets):
                     targets = [target for target in targets
-                               if depth(target) == closest]
-                    if any(PurePosixPath(target).name == ".env"
-                           for target in targets):
-                        targets = [target for target in targets
-                                   if PurePosixPath(target).name == ".env"]
-                    for target in sorted(targets):
-                        if target != f:
-                            put(f, target, 2)
-
-        by_dir: dict[str, list[str]] = {}
-        for f in file_list:
-            norm_parent = str(PurePosixPath(str(f).replace("\\", "/")).parent)
-            by_dir.setdefault(norm_parent, []).append(f)
-
-        # (c) barrel file -> every same-dir sibling, both directions.
-        for d in sorted(by_dir):
-            for f in by_dir[d]:
-                if PurePosixPath(str(f).replace("\\", "/")).name in _BARREL_BASENAMES:
-                    for other in by_dir[d]:
-                        if other != f:
-                            put(f, other, 2)
-                            put(other, f, 2)
-
-        # (d) dynamic-loader file -> every same-dir sibling, both directions.
-        for f in sorted(texts):
-            if any(marker in texts[f] for marker in _LOADER_MARKERS):
-                loader_parent = str(PurePosixPath(str(f).replace("\\", "/")).parent)
-                for other in by_dir.get(loader_parent, []):
+                               if PurePosixPath(target).name == ".env"]
+                for target in sorted(targets):
+                    if target != f:
+                        put(f, target, 2)
+    by_dir: dict[str, list[str]] = {}
+    for f in file_list:
+        norm_parent = str(PurePosixPath(str(f).replace("\\", "/")).parent)
+        by_dir.setdefault(norm_parent, []).append(f)
+    # (c) barrel file -> every same-dir sibling, both directions.
+    for d in sorted(by_dir):
+        for f in by_dir[d]:
+            if PurePosixPath(str(f).replace("\\", "/")).name in _BARREL_BASENAMES:
+                for other in by_dir[d]:
                     if other != f:
-                        put(f, other, 1)
-                        put(other, f, 1)
-
-        # (e) soft edges between same-dir pairs in dirs of <= 40 files.
-        if same_dir_soft_edges():
-            for d in sorted(by_dir):
-                members = by_dir[d]
-                if len(members) <= _SAME_DIR_MAX_FILES:
-                    for a in members:
-                        for b in members:
-                            if a != b:
-                                put(a, b, 1)
-
-        return out
-    except Exception:
-        return edges
+                        put(f, other, 2)
+                        put(other, f, 2)
+    # (d) dynamic-loader file -> every same-dir sibling, both directions.
+    for f in sorted(texts):
+        if any(marker in texts[f] for marker in _LOADER_MARKERS):
+            loader_parent = str(PurePosixPath(str(f).replace("\\", "/")).parent)
+            for other in by_dir.get(loader_parent, []):
+                if other != f:
+                    put(f, other, 1)
+                    put(other, f, 1)
+    # (e) soft edges between same-dir pairs in dirs of <= 40 files.
+    if same_dir_soft_edges():
+        for d in sorted(by_dir):
+            members = by_dir[d]
+            if len(members) <= _SAME_DIR_MAX_FILES:
+                for a in members:
+                    for b in members:
+                        if a != b:
+                            put(a, b, 1)
+    return out
 
 
 __all__ = [
-    "load_partition_graph", "file_communities", "graph_present",
+    "load_partition_graph", "file_communities",
     "file_edges", "augment_edges", "support_file_kind",
 ]

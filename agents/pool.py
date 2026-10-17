@@ -1,9 +1,5 @@
-"""One shared bounded worker-pool helper for per-unit/per-batch stages.
-
-No stage-wide hard timeout is imposed by this helper: LangGraph runs are
-bounded by ModelCallLimit middleware, the configured recursion limit, and
-provider/model request timeouts. Callers keep their own per-task fallbacks.
-"""
+"""Bounded worker-pool helper for per-unit/per-batch stages; imposes no stage-wide
+timeout, so callers keep their own per-task fallbacks."""
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor

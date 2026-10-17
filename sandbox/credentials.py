@@ -1,26 +1,8 @@
 """Credential files inside the target repo: detect, expose, and block.
 
-An agent runs with the repo in reach (read-only, but reachable) and, since
-egress is allowed, anything it can read it can send out. The dangerous files
-are the ones an operator leaves in a working tree without thinking of them as
-secrets: ``.env`` with a live API key, ``.netrc``, ``.pypirc``, ``id_rsa``,
-``.npmrc`` with an auth token, ``*.pem``/``*.key``.
-
-This module answers three questions, so the harness never has to guess:
-
-* :func:`find_credential_files` -- which repo-relative paths match (a scan
-  start walk, recorded in scan metadata).
-* :func:`credential_warning` -- the operator-facing sentence, and the louder
-  one for when the target IS the harness checkout (its own ``.env`` holds the
-  live model API key).
-* :func:`blocked_paths` -- the glob set the repo-local file tools refuse, so
-  the cheap in-process read path is closed even in modes that cannot mask the
-  file (sbx attaches the whole workspace; only Docker can mask paths, and the
-  docker backend does that with a read-only ``/dev/null`` bind per target).
-
-This does NOT make the model channel safe: an agent that reads a credential can
-always write it into its own answer, and no sandbox stops that. It removes the
-easy read path, records what was exposed, and says so out loud.
+find_credential_files()/credential_warning() report what is readable;
+blocked_paths() is the glob set the file tools refuse. Not a security
+boundary: an agent that reads a credential can still write it into an answer.
 """
 from __future__ import annotations
 
@@ -54,27 +36,26 @@ def is_credential_path(rel_path: str, globs: tuple[str, ...] = CREDENTIAL_GLOBS)
 
 def find_credential_files(repo: str | Path,
                           globs: tuple[str, ...] = CREDENTIAL_GLOBS) -> list[str]:
-    """Repo-relative credential paths present in the tree, including aliases.
-
-    A credential-named symlink is included when it points to a file. Callers
-    that mask files should resolve that path and mask its in-repo target too;
-    file-tool callers should refuse both the alias and the resolved target.
-    Symlink directories are not traversed.
+    """Repo-relative credential paths in the tree, including credential-named
+    symlink aliases: callers that mask files must also mask the resolved target.
+    Symlinked directories are not traversed.
     """
     base = Path(repo)
     found: list[str] = []
-    try:
-        for path in sorted(base.rglob("*")):
-            try:
-                rel = path.relative_to(base)
-            except ValueError:
-                continue
-            if not is_credential_path(str(rel), globs):
-                continue
+    for path in sorted(base.rglob("*")):
+        try:
+            rel = path.relative_to(base)
+        except ValueError:
+            continue
+        if not is_credential_path(str(rel), globs):
+            continue
+        try:
             if path.is_file():
                 found.append(str(rel))
-    except OSError:
-        return []
+        except OSError:
+            # An unreadable entry skips only itself: partial masking (and the
+            # credential warning) survives a failure mid-tree.
+            continue
     return found
 
 
@@ -84,11 +65,8 @@ def blocked_paths() -> tuple[str, ...]:
 
 
 def looks_like_harness_checkout(repo: str | Path) -> bool:
-    """Best-effort "the target is the harness itself" detection.
-
-    Used only to make the warning louder: the harness checkout is the one repo
-    whose credential file holds the operator's live model API key.
-    """
+    """Best-effort "the target is the harness itself" detection, used only to
+    make the warning louder: its ``.env`` holds the live key."""
     base = Path(repo)
     hits = sum(1 for marker in _HARNESS_MARKERS
                if (base / marker).is_dir() or (base / marker).is_file())

@@ -1,11 +1,34 @@
 from __future__ import annotations
 
+import functools
 import json
+import logging
 import threading
 import time
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional, Protocol, runtime_checkable
+from pathlib import Path
+from typing import Any, Optional
+
+_logger = logging.getLogger(__name__)
+
+
+def _bookkeep_method(fn):
+    """Agent-registry bookkeeping must never sink a scan: fatal-class errors
+    (provider config errors, harness bugs per is_fatal_error) propagate;
+    anything else logs at debug and returns None. This is the single boundary —
+    pipeline/cli call sites stay bare (no per-call try/except guards)."""
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        from harness.fallback import run_fail_open  # lazy: fallback → deep imports at call time
+        return run_fail_open(
+            f"agent-registry.{fn.__name__}",
+            lambda: fn(self, *args, **kwargs),
+            default=None,
+            logger=_logger,
+        )
+    return wrapper
+
 
 class AgentState(str, Enum):
     pending = "pending"
@@ -79,21 +102,15 @@ class AgentHandle:
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
     thread_id: Optional[int] = None
-    cancel_token: Any = None
     stats: AgentStats = None
     error: Optional[str] = None
     parent_stage: str = ""
     run_id: str = ""
 
     def __post_init__(self):
-        if self.cancel_token is None:
-            self.cancel_token = threading.Event()
         if self.stats is None:
             self.stats = AgentStats()
-        try:
-            self.state = AgentState.normalize(self.state)
-        except Exception:
-            pass
+        self.state = AgentState.normalize(self.state)
 
     @property
     def elapsed_s(self):
@@ -122,8 +139,6 @@ class AgentHandle:
             "error": self.error,
             "parent_stage": self.parent_stage,
             "run_id": self.run_id,
-            "canceled": bool(self.cancel_token.is_set()) if hasattr(
-                self.cancel_token, "is_set") else False,
         }
 
 @dataclass
@@ -142,10 +157,7 @@ class AgentEvent:
     elapsed_s: float = 0.0
 
     def __post_init__(self):
-        try:
-            self.state = AgentState.normalize(self.state)
-        except Exception:
-            pass
+        self.state = AgentState.normalize(self.state)
         if self.progress is None:
             self.progress = {}
         if not isinstance(self.progress, dict):
@@ -179,138 +191,23 @@ class AgentEvent:
             "elapsed_s": self.elapsed_s,
         }
 
-    def to_json(self, **kw):
-        return json.dumps(self.to_dict(), **kw)
-
-    def get(self, key, default=None):
-        return self.to_dict().get(key, default)
-
-    def __getitem__(self, key):
-        return self.to_dict()[key]
-
-    def keys(self):
-        return self.to_dict().keys()
-
-    def __contains__(self, key):
-        return key in self.to_dict()
-
-    def __iter__(self):
-        return iter(self.to_dict())
-
-    def __eq__(self, other):
-        if isinstance(other, AgentEvent):
-            return self.to_dict() == other.to_dict()
-        if isinstance(other, dict):
-            return self.to_dict() == other
-        return NotImplemented
-
-    def __str__(self):
-        return json.dumps(self.to_dict())
-
-@runtime_checkable
-class ProgressSink(Protocol):
-    def on_event(self, event):
-        ...
-
-class PlainSink:
-    def __init__(self, stream=None, fmt="[agents] {agent_id} {state} {message}"):
-        self.stream = stream
-        self.fmt = fmt
-
-    def on_event(self, event):
-        d = event.to_dict() if hasattr(event, "to_dict") else dict(event or {})
-        try:
-            line = self.fmt.format(**d)
-        except Exception:
-            line = "[agents] %s %s %s" % (
-                d.get("agent_id", "?"), d.get("state", "?"),
-                d.get("message", ""))
-        tail = ""
-        if d.get("unit"):
-            tail += " unit=%s" % d["unit"]
-        if d.get("model"):
-            tail += " model=%s" % d["model"]
-        if d.get("error"):
-            tail += " error=%s" % d["error"]
-        out = line + tail
-        stream = self.stream
-        if stream is None:
-            import sys as _sys
-            stream = _sys.stderr
-        try:
-            stream.write(out + "\n")
-            stream.flush()
-        except Exception:
-            try:
-                print(out)
-            except Exception:
-                pass
-
-class RichLiveSink:
-    def __init__(self, console=None, max_events=1000):
-        self.console = console
-        self.max_events = int(max_events)
-        self.events = []
-        self.latest = {}
-        self._lock = threading.Lock()
-
-    def on_event(self, event):
-        d = event.to_dict() if hasattr(event, "to_dict") else dict(event or {})
-        with self._lock:
-            self.events.append(d)
-            if len(self.events) > self.max_events:
-                del self.events[: len(self.events) - self.max_events]
-            aid = d.get("agent_id")
-            if aid is not None:
-                self.latest[aid] = d
-
-    def snapshot(self):
-        with self._lock:
-            return dict(self.latest), list(self.events)
 
 class AgentRegistry:
-    def __init__(self, run_id="", *, sink=None, on_event=None,
-                 progress_sink=None, events_path=None, **kw):
-        self.run_id = run_id or (kw.get("run_id") if isinstance(kw.get("run_id"), str) else "")
+    def __init__(self, run_id="", *, sink=None, on_event=None, events_path=None):
+        self.run_id = run_id or ""
         self._lock = threading.RLock()
         self._agents = {}
         self._order = []
         self.events = []
-        self.sink = progress_sink if progress_sink is not None else sink
-        if self.sink is None and "sink" in kw:
-            self.sink = kw.get("sink")
+        self.sink = sink
         self.on_event = on_event
-        if self.on_event is None and "callback" in kw:
-            self.on_event = kw.get("callback")
-        if self.sink is None and callable(self.on_event) and hasattr(self.on_event, "on_event"):
-            self.sink, self.on_event = self.on_event, None
-        # Cross-bin agent visibility: append events to this JSONL path when set.
-        _ep = events_path
-        if _ep is None:
-            for _key in ("events_path", "agents_path", "jsonl_path",
-                         "persist_path", "agents_jsonl"):
-                if _key in kw and kw.get(_key) is not None:
-                    _ep = kw.get(_key)
-                    break
-        self.events_path = None
-        if _ep is not None:
-            try:
-                from pathlib import Path as _Path
-                self.events_path = _Path(_ep)
-            except Exception:
-                self.events_path = _ep
-        # PID tracking for the owning scan process (best-effort).
-        try:
-            self.pid = kw.get("pid", None)
-            if self.pid is None:
-                import os as _os
-                self.pid = _os.getpid()
-        except Exception:
-            self.pid = None
+        # Cross-process agent visibility: append events to this path when set.
+        self.events_path = Path(events_path) if events_path is not None else None
 
+    @_bookkeep_method
     def create(self, agent_id, role, unit=None, *, model=None, parent_stage="",
                state=AgentState.pending, thread_id=None, run_id=None,
-               message="", emit=True, **stats_kwargs):
+               message="", **stats_kwargs):
         aid = str(agent_id)
         effective_run = self.run_id if run_id is None else run_id
         handle = AgentHandle(
@@ -332,14 +229,11 @@ class AgentRegistry:
             self._agents[aid] = handle
             if aid not in self._order:
                 self._order.append(aid)
-            evt = None
-            if emit:
-                evt = self._make_event(handle, AgentState.normalize(state),
-                                       message=message or "created",
-                                       progress=_stats_progress(handle))
-                self.events.append(evt)
-        if emit and evt is not None:
-            self._dispatch(evt)
+            evt = self._make_event(handle, AgentState.normalize(state),
+                                   message=message or "created",
+                                   progress=_stats_progress(handle))
+            self.events.append(evt)
+        self._dispatch(evt)
         return handle
 
     def get(self, agent_id):
@@ -351,8 +245,9 @@ class AgentRegistry:
         with self._lock:
             return [self._agents[aid] for aid in self._order if aid in self._agents]
 
+    @_bookkeep_method
     def transition(self, agent_id, state, *, message="", error=None, model=None,
-                   progress=None, ts=None, emit=True, **kw):
+                   progress=None, ts=None, **kw):
         aid = _agent_id(agent_id)
         handle = None
         evt = None
@@ -387,10 +282,7 @@ class AgentRegistry:
             if new_state in TERMINAL_STATES and handle.finished_at is None:
                 handle.finished_at = now
             if handle.thread_id is None:
-                try:
-                    handle.thread_id = threading.get_ident()
-                except Exception:
-                    pass
+                handle.thread_id = threading.get_ident()
             if isinstance(progress, dict):
                 try:
                     handle.stats.increment(
@@ -406,142 +298,16 @@ class AgentRegistry:
                         handle.stats.increment(**{k: kw[k]})
                     except Exception:
                         pass
-            if emit:
-                prog = progress if isinstance(progress, dict) else _stats_progress(handle)
-                if not isinstance(prog, dict):
-                    prog = _stats_progress(handle)
-                evt = self._make_event(handle, new_state,
-                                       message=message or str(new_state.value),
-                                       progress=prog, error=handle.error,
-                                       model=handle.model)
-                self.events.append(evt)
-        if emit and evt is not None:
-            self._dispatch(evt)
+            prog = progress if isinstance(progress, dict) else _stats_progress(handle)
+            if not isinstance(prog, dict):
+                prog = _stats_progress(handle)
+            evt = self._make_event(handle, new_state,
+                                   message=message or str(new_state.value),
+                                   progress=prog, error=handle.error,
+                                   model=handle.model)
+            self.events.append(evt)
+        self._dispatch(evt)
         return handle
-
-    def update_stats(self, agent_id, *positional, **kw):
-        aid = _agent_id(agent_id)
-        updates = {}
-        for p in positional:
-            if isinstance(p, dict):
-                updates.update(p)
-        updates.update(kw)
-        if "stats" in updates and isinstance(updates["stats"], dict):
-            updates.update(updates.pop("stats"))
-        handle = None
-        evt = None
-        with self._lock:
-            handle = self._agents.get(aid)
-            if handle is None:
-                handle = AgentHandle(agent_id=aid, role="agent", run_id=self.run_id)
-                self._agents[aid] = handle
-                if aid not in self._order:
-                    self._order.append(aid)
-            inc_tc = updates.get("tool_calls", updates.get("tool_calls_increment", 0))
-            inc_fr = updates.get("files_read", updates.get("files_read_increment", 0))
-            inc_fp = updates.get("findings_produced", updates.get("findings_produced_increment", 0))
-            absolute = bool(updates.get("absolute", False) or updates.get("set", False))
-            if absolute:
-                handle.stats.tool_calls = int(inc_tc or 0)
-                handle.stats.files_read = int(inc_fr or 0)
-                handle.stats.findings_produced = int(inc_fp or 0)
-            else:
-                handle.stats.increment(tool_calls=inc_tc or 0,
-                                      files_read=inc_fr or 0,
-                                      findings_produced=inc_fp or 0)
-            for k, v in updates.items():
-                if k in ("tool_calls", "files_read", "findings_produced",
-                         "absolute", "set", "agent_id", "message"):
-                    continue
-                try:
-                    if hasattr(handle.stats, k):
-                        setattr(handle.stats, k, v)
-                except Exception:
-                    pass
-            if updates.get("emit", True):
-                evt = self._make_event(handle, AgentState.normalize(handle.state),
-                                       message=updates.get("message", "progress"),
-                                       progress=_stats_progress(handle),
-                                       model=handle.model, error=handle.error)
-                self.events.append(evt)
-        if evt is not None and updates.get("emit", True):
-            self._dispatch(evt)
-        return handle
-
-    def emit(self, event=None, **kw):
-        evt = None
-        with self._lock:
-            if event is None:
-                aid = _agent_id(kw.get("agent_id") or kw.get("id") or kw.get("agent"))
-                handle = self._agents.get(aid) if aid else None
-                state = kw.get("state", handle.state if handle else AgentState.pending)
-                evt = self._make_event(
-                    handle if handle else _handle_from_kw(kw, self.run_id),
-                    state,
-                    parent_stage=kw.get("parent_stage", handle.parent_stage if handle else ""),
-                    role=kw.get("role", handle.role if handle else "agent"),
-                    unit=kw.get("unit", handle.unit if handle else None),
-                    run_id=kw.get("run_id", self.run_id),
-                    model=kw.get("model", handle.model if handle else None),
-                    message=kw.get("message", ""),
-                    progress=kw.get("progress", _stats_progress(handle) if handle else {}),
-                    error=kw.get("error", handle.error if handle else None),
-                    ts=kw.get("ts"),
-                    elapsed_s=kw.get("elapsed_s"),
-                    agent_id=aid if aid else kw.get("agent_id"),
-                )
-            elif isinstance(event, AgentEvent):
-                evt = event
-                if not evt.run_id and self.run_id:
-                    evt.run_id = self.run_id
-            elif isinstance(event, dict):
-                evt = AgentEvent(**{k: v for k, v in event.items()
-                                   if k in AgentEvent.__dataclass_fields__})
-                if not evt.run_id and self.run_id:
-                    evt.run_id = self.run_id
-            else:
-                evt = self._make_event(event if isinstance(event, AgentHandle) else None,
-                                       kw.get("state", AgentState.pending),
-                                       **{k: v for k, v in kw.items() if k != "state"})
-            if evt is not None:
-                if not evt.run_id:
-                    evt.run_id = self.run_id
-                self.events.append(evt)
-        if evt is not None:
-            self._dispatch(evt)
-        return evt
-
-    @staticmethod
-    def read_events(path) -> list:
-        out = []
-        try:
-            from pathlib import Path as _Path
-            import json as _json
-            p = _Path(path)
-            if not p.is_file():
-                return out
-            for line in p.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    out.append(_json.loads(line))
-                except Exception:
-                    continue
-        except Exception:
-            pass
-        return out
-
-    @staticmethod
-    def poll_events(path, *, since=0):
-        evs = AgentRegistry.read_events(path)
-        try:
-            since = int(since or 0)
-        except Exception:
-            since = 0
-        if since < 0:
-            since = 0
-        return evs[since:]
 
     def dump(self):
         with self._lock:
@@ -568,8 +334,6 @@ class AgentRegistry:
             "run_id": self.run_id,
         }
 
-    counts = summary
-
     def events_list(self):
         with self._lock:
             return [e.to_dict() for e in self.events]
@@ -595,20 +359,8 @@ class AgentRegistry:
         aid = agent_id if agent_id is not None else (handle.agent_id if handle else "")
         rid = run_id if run_id is not None else self.run_id
         if elapsed_s is None:
-            if handle is not None:
-                try:
-                    elapsed_s = handle.elapsed_s
-                except Exception:
-                    elapsed_s = 0.0
-            else:
-                elapsed_s = 0.0
-        prog = progress if isinstance(progress, dict) else {}
-        if prog is None:
-            prog = {}
-        try:
-            prog = dict(prog)
-        except Exception:
-            prog = {}
+            elapsed_s = handle.elapsed_s if handle is not None else 0.0
+        prog = dict(progress) if isinstance(progress, dict) else {}
         st = AgentState.normalize(state)
         now = time.time() if ts is None else float(ts)
         msg = message
@@ -632,20 +384,18 @@ class AgentRegistry:
         )
 
     def _append_event_to_path(self, evt):
-        path = getattr(self, "events_path", None)
+        path = self.events_path
         if not path:
             return
         try:
-            import json as _json
-            from pathlib import Path as _Path
-            p = _Path(path)
+            p = Path(path)
             try:
                 p.parent.mkdir(parents=True, exist_ok=True)
-            except Exception:
+            except OSError:
                 pass
             d = evt.to_dict() if hasattr(evt, "to_dict") else (evt if isinstance(evt, dict) else {})
             with p.open("a", encoding="utf-8") as f:
-                f.write(_json.dumps(d) + "\n")
+                f.write(json.dumps(d) + "\n")
                 f.flush()
         except Exception:
             pass
@@ -686,15 +436,6 @@ def _agent_id(value):
         return str(value.get("agent_id", ""))
     return str(value)
 
-def _handle_from_kw(kw, run_id):
-    aid = _agent_id(kw.get("agent_id") or kw.get("id") or kw.get("agent"))
-    if not aid:
-        return None
-    return AgentHandle(agent_id=aid, role=str(kw.get("role", "agent")),
-                      unit=kw.get("unit"), model=kw.get("model"),
-                      parent_stage=kw.get("parent_stage", ""),
-                      run_id=run_id or kw.get("run_id", ""))
-
 def _stats_progress(handle):
     if handle is None or not hasattr(handle, "stats"):
         return {}
@@ -703,11 +444,7 @@ def _stats_progress(handle):
         return st.to_dict()
     if hasattr(st, "__dataclass_fields__"):
         return asdict(st)
-    try:
-        return dict(st)
-    except Exception:
-        return {}
+    return dict(st)
 
 __all__ = ["AgentState", "AgentStats", "AgentHandle", "AgentEvent",
-           "AgentRegistry", "ProgressSink", "PlainSink", "RichLiveSink",
-           "TERMINAL_STATES"]
+           "AgentRegistry", "TERMINAL_STATES"]

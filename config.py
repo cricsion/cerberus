@@ -50,11 +50,27 @@ def _load_dotenv(path: Path | str = ".env") -> None:
 def load_config(path: str | Path = "config/default.yaml") -> dict:
     _load_dotenv()
     raw = yaml.safe_load(Path(path).read_text())
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"config file must contain a YAML mapping; got "
+            f"{type(raw).__name__} from {path}")
     cfg = _interpolate(raw)
-    # Resolve api key via api_key_env pointer without logging value.
+    # Resolve the key via api_key_env pointer; never log its value.
     key_env = cfg.get("api_key_env", "API_KEY")
     cfg["api_key_present"] = bool(os.environ.get(key_env))
     return cfg
+
+
+def load_config_safe(path: str | Path = "config/default.yaml") -> tuple[dict, Exception | None]:
+    """load_config() that never raises: returns ``(cfg, error)``. A config parse
+    or read failure is an operator error and must be surfaced, not silently
+    masked: callers print/log ``error``; ``cfg`` degrades to ``{}`` so the
+    no-key path remains the single fallthrough. Call this instead of the
+    ``try: load_config() / except: cfg = {}`` pattern."""
+    try:
+        return load_config(path), None
+    except Exception as exc:
+        return {}, exc
 
 
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
@@ -62,7 +78,7 @@ EFFORT_RANK = {name: i for i, name in enumerate(EFFORT_LEVELS)}
 
 
 def get_effort(cfg: dict) -> str:
-    """Effort level, default max while testing."""
+    """Effort level; defaults to ``max`` when unset or unknown."""
     eff = str((cfg or {}).get("effort", "max") or "max").strip().lower()
     return eff if eff in EFFORT_RANK else "max"
 
@@ -73,12 +89,7 @@ def meets_effort(cfg: dict, level: str) -> bool:
 
 
 def api_key_present(cfg: dict | None = None) -> bool:
-    """True when an API key is configured.
-
-    Honors the api_key_env pointer (custom key env) as well as API_KEY, so a
-    scan configured with a non-default key variable does not silently take
-    the no-key path in one stage while others proceed.
-    """
+    """True when a key is configured (honors api_key_env as well as API_KEY)."""
     cfg = cfg or {}
     try:
         key_env = str(cfg.get("api_key_env", "API_KEY") or "API_KEY")
@@ -88,14 +99,8 @@ def api_key_present(cfg: dict | None = None) -> bool:
 
 
 def get_concurrency(cfg: dict) -> int:
-    """The single concurrency knob: max parallel agents at a time.
-
-    Used for hunter fan-out (LangGraph max_concurrency), the validator pool,
-    and the legacy hunter pool. Hunters and validators run in different
-    phases, so one value caps concurrent agents everywhere.
-    Tolerates legacy shapes (plain int or {hunters, validators} map —
-    the map's max wins) but the canonical config is a single number.
-    """
+    """The single concurrency knob: caps hunter fan-out, the validator pool,
+    and the legacy hunter pool."""
     cfg = cfg or {}
     raw = cfg.get("concurrency", 8)
     if isinstance(raw, dict):
@@ -113,16 +118,13 @@ def get_concurrency(cfg: dict) -> int:
     return min(val, 32)
 
 
-# Thinking effort for models: reasoning depth per level, passed through
-# verbatim — our backend accepts low/medium/high/xhigh/max (verified live).
-# No token caps anywhere.
+# Reasoning effort is passed through verbatim; the backend accepts
+# low/medium/high/xhigh/max (verified live), and no token caps are set.
 
 
 def get_reasoning_kwargs(cfg: dict, agent: str | None = None) -> dict:
-    """Thinking-effort params. Per-agent override wins over global effort:
-
-    effort_by_agent: {hunter: ..., validator: ..., partitioner: ...}.
-    """
+    """Thinking-effort params; effort_by_agent{hunter,validator,partitioner} wins over the
+    global effort level."""
     cfg = cfg or {}
     level = ""
     if agent:
@@ -134,22 +136,33 @@ def get_reasoning_kwargs(cfg: dict, agent: str | None = None) -> dict:
 
 
 def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
-    """Return ChatOpenAI kwargs for hunter|validator. Lazy — no import here.
-
-    Includes thinking-effort params (reasoning_effort) for the user-set
-    effort level; builders forward them into ChatOpenAI.
-    """
+    """ChatOpenAI kwargs for hunter|validator, incl. reasoning_effort; no
+    langchain import happens here."""
     model_key = f"{role}_model"
+    model_name = ""
+    # Check agent-specific override first (e.g. PARTITIONER_MODEL, TRIAGE_MODEL, THREAT_MODEL)
+    if agent:
+        agent_env = f"{agent.upper().replace('-', '_')}_MODEL"
+        model_name = os.environ.get(agent_env, "")
+    if not model_name:
+        model_name = os.environ.get(model_key.upper(), cfg.get(model_key, ""))
+
+    base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get("BASE_URL", cfg.get("base_url", ""))
+    api_key_name = cfg.get("api_key_env", "API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(api_key_name, "")
+
     out = {
-        "base_url": os.environ.get("BASE_URL", cfg.get("base_url", "")),
-        "api_key": os.environ.get(cfg.get("api_key_env", "API_KEY"), ""),
-        "model": os.environ.get(model_key.upper(), cfg.get(model_key, "")),
+        "base_url": base_url,
+        "api_key": api_key,
+        "model": model_name,
         "timeout": int(os.environ.get("HARNESS_TIMEOUT", cfg.get("timeout", 60))),
-        "max_retries": int(os.environ.get("HARNESS_MAX_RETRIES", cfg.get("max_retries", 3))),
-        # Provider-outage fallback list (comma-separated model ids, same
-        # provider as this role's primary). Consumed by
-        # ``harness.agents.deep._fallback_models``; empty disables it.
-        "fallback_models": os.environ.get("FALLBACK_MODELS", cfg.get("fallback_models", "")),
+        "max_retries": int(os.environ.get("HARNESS_MAX_RETRIES", cfg.get("max_retries", 5))),
+        # Model-profile pins for a proxied base_url model (which ships no
+        # profile data); consumed by harness.agents.deep._apply_model_profile.
+        "model_profile": (cfg.get("model_profile")
+                          if isinstance(cfg.get("model_profile"), dict)
+                          else {}),
     }
     out.update(get_reasoning_kwargs(cfg, agent or role))
     return out
+

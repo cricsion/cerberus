@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 from pathlib import PurePosixPath
 import re
 
 from harness.config import get_model_kwargs
+from harness.fallback import run_fail_open
 from harness.partitioning import partition_units as _det_partition_units
 from harness.partitioning.config import max_units, vendor_unit_enabled
 from harness.partitioning.units import (
-    _dominant_top_dir,
     _file_weights,
     _load_partition_edges,
     _normalize_units,
@@ -19,9 +20,10 @@ from harness.partitioning.units import (
     isolate_vendor,
     partition_target,
     single_unit_enabled,
-    single_unit_max_files,
     small_repo_unit,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 def _structure_context(repo: str, files: list[str],
@@ -50,7 +52,7 @@ def _parse_units(text: object) -> list[dict]:
     try:
         parsed = json.loads(s)
         candidates = parsed if isinstance(parsed, list) else (parsed.get("units") if isinstance(parsed, dict) else [])
-    except Exception:
+    except json.JSONDecodeError:
         candidates = []
     return [dict(item) for item in (candidates or []) if isinstance(item, dict)]
 
@@ -92,11 +94,10 @@ def _enforce_coverage(units, files, repo=None) -> list[dict]:
                 "reason": reason,
             })
 
-    # Missing app files: attach to best existing unit by directory proximity or core/platform/config
+    # Missing app files attach by parent-dir match, then core/platform/config.
     missing = [f for f in app_files if f not in seen]
     edges = _load_partition_edges(repo, app_files) if repo is not None else {}
     if missing and app_units:
-        # Precompute unit characteristics
         unit_parents = []
         core_idx = 0
         for i, u in enumerate(app_units):
@@ -164,7 +165,7 @@ def _files_signature(repo: str, files: list[str]) -> str:
             st = os.stat(pth)
             h.update(str(f).encode())
             h.update(str(st.st_size).encode())
-        except Exception:
+        except OSError:
             h.update(str(f).encode())
     return h.hexdigest()
 
@@ -175,7 +176,7 @@ def _deterministic_baseline(repo: str, files: list[str],
     cache_dir = os.path.join(repo, ".harness")
     try:
         os.makedirs(cache_dir, exist_ok=True)
-    except Exception:
+    except OSError:
         cache_dir = None
     cache_path = os.path.join(cache_dir, "partition-baseline.json") if cache_dir else None
     sig = _files_signature(repo, files)
@@ -188,18 +189,18 @@ def _deterministic_baseline(repo: str, files: list[str],
                 cached_units = cached.get("units")
                 if isinstance(cached_units, list):
                     return cached_units
-        except Exception:
+        except (OSError, json.JSONDecodeError):
             pass
 
-    try:
-        baseline = _det_partition_units(repo, files, candidates)
-    except Exception:
-        baseline = []
+    baseline = run_fail_open(
+        "partition-baseline",
+        lambda: _det_partition_units(repo, files),
+        default=[], logger=_logger)
     if cache_path:
         try:
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump({"files_sig": sig, "units": baseline}, f, indent=2)
-        except Exception:
+        except OSError:
             pass
     return baseline
 
@@ -209,7 +210,6 @@ def _build_partition_message(ctx: str, baseline: list[dict]) -> str:
     from harness.partitioning.prompts import build_partition_task
 
     msg = build_partition_task(ctx, max_units())
-    # Format baseline cleanly and compactly without string-slicing mid-JSON
     baseline_lines = []
     for u in baseline:
         uname = u.get("name") or "unit"
@@ -233,48 +233,26 @@ def _build_partition_message(ctx: str, baseline: list[dict]) -> str:
 
 
 def _agent_units(mk: dict, msg: str, repo: str, timeout: int) -> list[dict]:
-    """Run the Deep-Agent partitioner and extract parsed units.
-
-    Uses the shared structured-items parser when the agent returned a schema
-    result, then falls back to raw JSON parsing.
-    """
+    """Run the Deep-Agent partitioner and extract parsed units; an empty result falls
+    back to deterministic grouping in `units._units_from_dirs`."""
     from harness.agents.deep import run_structured
     from harness.llmjson import structured_items
     from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
 
-    try:
-        parsed, raw_text, _ = run_structured(
+    parsed, raw_text, _ = run_fail_open(
+        "partitioner-llm",
+        lambda: run_structured(
             mk, UnitList,
             PARTITIONER_SYSTEM
             + " Return exactly one JSON object matching UnitList and no prose; "
             "do not call tools.",
             msg, timeout=timeout, name="partitioner", tools=[], root_dir=repo,
-            recursion_limit=100)
-    except Exception:
-        parsed, raw_text = None, ""
+            recursion_limit=100),
+        default=(None, "", ""), logger=_logger)
 
     units = structured_items(parsed, field="units")
     if not units and str(raw_text).strip():
         units = _parse_units(raw_text)
-
-    if not units:
-        # Fix #1: direct structured-output fallback (NO repo tools)
-        try:
-            from harness.agents.deep import make_llm
-            llm = make_llm(mk, timeout=timeout, max_retries=3, reasoning=True)
-            struct = llm.with_structured_output(UnitList, method="json_schema", strict=True)
-            direct = struct.invoke([
-                {"role": "system",
-                 "content": PARTITIONER_SYSTEM
-                 + " Return only a JSON object matching UnitList and no prose; "
-                   "do not call tools."},
-                {"role": "user", "content": msg},
-            ])
-            units = structured_items(direct, field="units")
-            if not units:
-                units = _parse_units(str(direct))
-        except Exception:
-            units = []
     return units
 
 
@@ -284,7 +262,7 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     if not valid:
         return []
 
-    # Separate vendor files first so dependency bundles don't skew code analysis
+    # Separate vendor files first so dependencies never skew code analysis
     if vendor_unit_enabled():
         app_files, vendor_files = isolate_vendor(valid, repo)
     else:
@@ -293,8 +271,7 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     weights = _file_weights(repo, app_files) if repo is not None else {}
     pt = partition_target(weights) if weights else 0
 
-    # Short-circuit small repos early: if repo qualifies for single-unit collapse,
-    # skip LLM invocation entirely to save latency, token budget, and quota.
+    # Small-repo collapse skips the LLM call entirely.
     if single_unit_enabled() and app_files:
         single = small_repo_unit(app_files, weights, pt, repo or ".")
         if single is not None:
@@ -303,8 +280,7 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
                 out.append(_vendor_unit(vendor_files, {single["name"]}))
             return out
 
-    # Imported inside the function so tests can monkeypatch
-    # harness.config.get_model_kwargs.
+    # Imported here so tests can monkeypatch harness.config.get_model_kwargs.
     from harness.config import get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")

@@ -1,34 +1,7 @@
-"""Threat-model prompts: swarm research, planning, and owner-interview stages.
-
-The swarm briefs track defending-code-reference-harness/.claude/skills/
-threat-model/bootstrap.md as closely as the swarm architecture allows:
-
-- researcher = the reference's Stage-1 **surface mapper** + **asset finder**
-  + **infra reader** briefs, merged into one agent (our mini-swarm), including
-  its grep-target seed table, bounding rules, and infra/IAM questions.
-- historian = the reference's **history miner** brief, with the git mining
-  itself done deterministically upstream (`threat._bug_shapes`) because our
-  historian stage has no shell; the agent classifies what was mined, plus any
-  `--vulns` rows (the reference's **vuln-file parser** agent — ours parses
-  the four accepted formats deterministically and feeds the historian).
-- planner = the reference's Stages 2-5 (**synthesize → generalize → gap-fill →
-  emit**), returning the judgment payload only: harness code renders every
-  deterministic cell (ids, sort order, provenance, measured facts, surfaces).
-
-Differences forced by our architecture: the researcher can use repo-confined
-filesystem tools in every mode and gets sandbox `execute` only in Docker/sbx;
-the historian and planner classify supplied text without shell access. No
-`gh api` is used (advisory fetching is out of scope — `--vulns` covers the
-same ground from an owner-supplied file), and threat ids are assigned by code.
-
-Structured output lives here next to the text that describes it, matching the
-other prompt modules: the Pydantic models ARE the contract the prose asks for.
-"""
 from pydantic import BaseModel, Field
 
 
-# The output contract both swarm stages and the synthesizer are held to.
-# Mirrors defending-code-reference-harness/.claude/skills/threat-model/schema.md.
+# Output contract for both swarm stages and the synthesizer; mirrors defending-code-reference-harness/.claude/skills/threat-model/schema.md.
 SCHEMA_CONTRACT = (
     "Emit markdown with these eight sections, headings exactly:\n"
     "# Threat Model: <name>\n"
@@ -106,12 +79,7 @@ class SwarmHistory(BaseModel):
     vulns: list[SwarmVuln] = Field(default_factory=list)
 
 
-# --- synthesis payload: judgment only; every deterministic cell is code-owned --
-# The synthesizer does NOT write the document. It returns the editorial
-# decisions (ratings, clusters, parked rows, mitigations); harness code renders
-# ids, enum validation, sorting, provenance, measured facts, and the surface
-# skeleton (harness/threat.py merge). No `id` field: code assigns T1..Tn after
-# sorting by (impact, likelihood), so ids are stable per document content.
+# No `id` field: code assigns T1..Tn after sorting by (impact, likelihood).
 
 
 class SwarmThreat(BaseModel):
@@ -164,10 +132,7 @@ class QuestionList(BaseModel):
                     "material is left open.")
 
 
-# Filesystem tools are always confined to the target repo. In local mode there
-# is no shell; Docker/sbx expose `execute` only inside their sandbox. Dynamic
-# checks are deliberately bounded and local, not a way to run arbitrary
-# repository scripts or contact external systems.
+# Filesystem tools are confined to the target repo; local mode has no shell; `execute` (Docker/sbx) runs inside the sandbox only.
 READ_ONLY_NOTE = (
     "The filesystem tools (read_file/grep/glob/ls) are confined to the target "
     "repository. If `execute` is available, it runs inside the configured "
@@ -186,10 +151,7 @@ READ_ONLY_NOTE = (
     "is absent."
 )
 
-# The reference surface mapper's grep-target table. Its "Look for" column is
-# a SEED, not a checklist: one concrete token per row sets the specificity
-# bar, then you extend with the idioms of whatever language/framework the
-# target actually uses.
+# A SEED, not a checklist: one concrete token per row sets the specificity bar.
 SURFACE_GREP_TABLE = (
     "Surface lookup seeds (extend with the target's own idioms):\n"
     "- Network: socket listen/accept/bind; HTTP route definitions "
@@ -220,7 +182,6 @@ RESEARCHER_SYSTEM = (
 
 
 def build_research_task(repo: str, draft_md: str, files: list[str]) -> str:
-    """Assemble the merged surface-mapper + asset-finder + infra-reader brief."""
     return (
         f"Repository (read-only): {repo}\n\n"
         f"Indexed files ({len(files or [])}):\n"
@@ -278,9 +239,6 @@ HISTORIAN_SYSTEM = (
 
 def build_historian_task(repo: str, bug_shapes: str, draft_md: str,
                          vulns: list[dict] | None = None) -> str:
-    """Assemble the history-miner brief around the mined fix-shaped commits
-    plus any --vulns rows (the reference miner runs `git log --grep` itself;
-    ours has no shell, so the mining is upstream and you classify)."""
     task = (
         f"Repository (read-only): {repo}\n\n"
         f"Past fix-shaped commits (deterministically mined from security-fix "
@@ -322,24 +280,12 @@ SYNTH_SYSTEM = (
 )
 
 
-# Row budgets for the planner's `threats` list. The merge side already caps
-# rendered rows (harness/threat.py ROW_CAPS["threats"] == 60), but that cap is
-# far too loose to save a small model: an unbounded "generalize every past
-# vuln AND STRIDE-gap-fill every entry point" ask is where synthesis dies —
-# the prose and lists come back filled while `threats` and `mitigations`
-# come back empty (observed on 3 real repos). A bounded, impact-ranked ask
-# matches the class-level schema and is something a model can actually
-# finish; the narrow variant is the retry brief for the weakest models.
+# Row budget for the planner's `threats` (merge-side ROW_CAPS["threats"] is too loose: unbounded asks returned empty threats). NARROW is the retry brief.
 THREAT_ROW_BUDGET = 8
 THREAT_ROW_BUDGET_NARROW = 5
 
 
 def _threat_row_budget(cap: int) -> str:
-    """The row-budget rule, placed where the brief describes `threats`.
-
-    Bounded on purpose: one row per CLASS cluster (never one row per
-    finding), ranked by impact, fewer rows preferred over padded ones.
-    """
     return (
         f"ROW BUDGET — at most {cap} threat rows, one row per CLASS "
         f"cluster, never one row per finding, ranked by impact (worst "
@@ -351,9 +297,7 @@ def _threat_row_budget(cap: int) -> str:
     )
 
 
-# STAGE 4 as-is for the default brief, held as a constant so the narrow
-# retry brief can drop it wholesale: the STRIDE walk is the part of the ask
-# that inflates the row count without adding judgment.
+# STAGE 4 for the default brief; the narrow retry drops it wholesale (the STRIDE walk inflates the row count without adding judgment).
 STRIDE_GAPFILL_STAGE = (
     "STAGE 4 — Gap-fill (the part past vulns can't give you). Past "
     "vulns are biased toward what was already found. For every entry "
@@ -376,9 +320,7 @@ STRIDE_GAPFILL_STAGE = (
     "probably also has a DoS threat.\n\n"
 )
 
-# What replaces the gap-fill stage in the narrow retry brief: no walk, no
-# per-entry-point coverage sweep — only what the evidence and the research
-# surfaces actually support, inside a smaller row budget.
+# Replaces the gap-fill stage in the narrow retry brief (no walk, no sweep).
 NARROW_GAPFILL_SKIP = (
     "STAGE 4 — Skipped in this retry: no coverage sweep and no "
     "per-entry-point walk. Work only from the clusters the past vulns and "
@@ -392,14 +334,6 @@ def build_synth_task(repo: str, draft_md: str, research_json: str,
                      history_json: str,
                      measured_facts: str = "",
                      *, narrow: bool = False) -> str:
-    """Assemble the Stages 2-5 synthesis prompt (synthesize, generalize,
-    gap-fill, emit-as-plan) over all swarm input.
-
-    `narrow=True` builds the retry brief for weak models: the same schema
-    contract and the same section markers, but a smaller threat-row budget
-    (5 rows instead of 8) and no STRIDE gap-fill stage — the unbounded ask
-    is what makes synthesis come back with `threats: []`.
-    """
     cap = THREAT_ROW_BUDGET_NARROW if narrow else THREAT_ROW_BUDGET
     gapfill = NARROW_GAPFILL_SKIP if narrow else STRIDE_GAPFILL_STAGE
     return (
@@ -473,7 +407,6 @@ INTERVIEWER_SYSTEM = (
 
 
 def build_interview_task(draft_md: str, history_text: str, max_questions: int) -> str:
-    """Assemble the follow-up-question prompt from the draft and Q&A so far."""
     return (
         f"Draft threat model (FULL text):\n{(draft_md or '').strip()}\n\n"
         f"Interview so far:\n{history_text}\n\n"
@@ -493,7 +426,6 @@ FINALIZE_SYSTEM = (
 
 
 def build_finalize_task(draft_md: str, history_text: str) -> str:
-    """Assemble the draft-rewrite prompt incorporating the owner interview."""
     return (
         f"Draft threat model (FULL text):\n{(draft_md or '').strip()}\n\n"
         f"Owner interview:\n{history_text}\n\n"

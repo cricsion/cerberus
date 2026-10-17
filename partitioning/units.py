@@ -1,32 +1,9 @@
-"""Deterministic partitioning: which files each hunter sees.
-
-The algorithm, in stages:
-   0. vendor isolation (node_modules/dist/minified -> one budget-exempt unit),
-   1. small-repo collapse (a repo that fits the budget is ONE unit),
-   2. graph signals (partitioning.graph: graphify communities),
-   3. grouping (graphify communities, else top-level directories),
-   4. size balancing (the per-agent byte budget; partition_target),
-   5. normalization (merge same-named, tiny units, cap at MAX_UNITS, then
-      re-enforce the byte budget so no merge/cap leaves a blob behind).
-
-Policy knobs live in partitioning.config; the Deep-Agent proposer and its
-invariant enforcement live in partitioning.llm.
-
-Primary source: Graphify communities (Leiden clustering over the AST graph) —
-real subsystems, not directory accidents. Fallback: top-level directory
-grouping. By default, tiny CODE units never land in misc: they merge into their
-most-coupled in-budget neighbour (file-coupling edges) or stay singletons; only
-untyped non-code leftovers absorb into misc. Unowned support groups remain
-explicit. Set PARTITION_MISC_CODE_MERGE=0 for the
-legacy policy. Huge unit lists cap at MAX_UNITS, and the byte budget is
-re-enforced afterwards, so neither step can re-form an over-budget blob.
-
-Units are [{name, files, reason}] (plus budget_exempt on the vendor unit).
-Hunters run all vulnerability classes inside ONE unit (full coherent context);
-validators later partition by class.
-"""
+"""Deterministic partitioning: which files each hunter sees: vendor isolation ->
+small-repo collapse -> community/dir grouping -> byte budget -> normalization.
+Units are [{name, files, reason}] (+ budget_exempt on the vendor unit)."""
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
@@ -39,6 +16,8 @@ from harness.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
                                          single_unit_enabled, vendor_unit_enabled)
 from harness.partitioning.graph import (file_communities, load_partition_graph,
                                         support_file_kind)
+
+_logger = logging.getLogger(__name__)
 
 _NON_CODE_EXTS_LOWER = frozenset(e.lower() for e in NON_CODE_EXTS)
 _NON_CODE_NAMES_LOWER = frozenset(n.lower() for n in NON_CODE_NAMES)
@@ -56,8 +35,7 @@ _MINIFIED_LINE_CHARS = 500
 
 
 def _is_minified(path: Path) -> bool:
-    """A large single-line/low-newline file: a bundled artifact (swagger-ui,
-    redoc, angular, AdminLTE), not source. Never raises."""
+    """A large single-line/low-newline file (a bundled artifact, not source). Never raises."""
     try:
         if not path.is_file() or path.stat().st_size < _MINIFIED_MIN_BYTES:
             return False
@@ -73,9 +51,6 @@ def _is_minified(path: Path) -> bool:
 
 
 def _is_vendor_file(f: str, repo: str | None = None) -> bool:
-    """True when any path segment is a vendor directory, the file name is a
-    minified/bundled artifact, or the content is a minified bundle. Never
-    raises on a malformed path."""
     path = str(f or "").replace("\\", "/")
     if not path:
         return False
@@ -96,15 +71,13 @@ def _is_vendor_file(f: str, repo: str | None = None) -> bool:
 
 
 def _is_path(f: object) -> bool:
-    """A usable relative path: a non-empty string (fail-soft filter for the
-    junk a malformed caller can pass)."""
+    """True for a usable relative path (fail-soft filter for malformed caller input)."""
     return isinstance(f, str) and bool(f)
 
 
 def isolate_vendor(files: list[str],
                    repo: str | None = None) -> tuple[list[str], list[str]]:
-    """(app_files, vendor_files), both sorted: third-party dependencies never
-    get their own structural treatment, they get one budget-exempt unit."""
+    """(app_files, vendor_files), both sorted; vendor gets one budget-exempt unit."""
     app: list[str] = []
     vendor: list[str] = []
     for f in files or []:
@@ -115,8 +88,6 @@ def isolate_vendor(files: list[str],
 
 
 def _vendor_unit(vendor_files: list[str], taken: set[str]) -> dict:
-    """The vendor unit: budget-exempt (node_modules is nobody's byte budget)
-    and collision-safe named ("vendor", else "vendor-2", ...)."""
     name = VENDOR_UNIT_NAME
     i = 2
     while name in (taken or set()):
@@ -130,19 +101,21 @@ def _vendor_unit(vendor_files: list[str], taken: set[str]) -> dict:
 
 
 def _dominant_top_dir(files: list[str], weight_of: dict[str, int]) -> str:
-    """Top-level directory holding the most bytes (sorted tie-break); "app"
-    when every file is top-level or the winner carries no name at all."""
+    """Top-level directory holding the most bytes; tie-breaks by file count,
+    then the reverse-alphabetical top name; "app" fallback."""
     total: dict[str, int] = defaultdict(int)
+    counts: dict[str, int] = defaultdict(int)
     for f in files:
         parts = [p for p in str(f).replace("\\", "/").split("/") if p and p != "."]
         top = parts[0] if len(parts) > 1 else ""
-        try:
-            total[top] += int(weight_of.get(f, 0) or 0)
-        except (TypeError, ValueError):
-            pass
+        total[top] += int(weight_of.get(f, 0) or 0)
+        counts[top] += 1
     if not total:
         return "app"
-    best = sorted(total.items(), key=lambda kv: (-kv[1], kv[0]))[0][0]
+    top_bytes = max(total.values())
+    tie = {k: counts[k] for k, b in total.items() if b == top_bytes}
+    max_files = max(tie.values())
+    best = max(k for k, c in tie.items() if c == max_files)
     return best or "app"
 
 
@@ -150,8 +123,7 @@ def small_repo_unit(app_files: list[str],
                     weight_of: dict[str, int] | None = None,
                     target: int = 0,
                     repo: str = ".") -> dict | None:
-    """One unit for a repo that fits BOTH the file count and the byte budget
-    (P0.2); None when the rule is off or the repo does not qualify."""
+    """One unit when the repo fits both the file count and byte budget; None otherwise."""
     if single_unit_max_files() <= 0:
         return None
     fs = sorted({f for f in (app_files or []) if _is_path(f)})
@@ -159,10 +131,9 @@ def small_repo_unit(app_files: list[str],
         return None
     w = weight_of if weight_of is not None else _file_weights(repo, fs)
     t = target if target > 0 else partition_target(w)
-    try:
-        total = sum(int(w.get(f, 0) or 0) for f in fs)
-    except (TypeError, ValueError):
-        total = 0
+    total = sum(int(w.get(f, 0) or 0) for f in fs)
+    if total <= 0:
+        return None  # no measured bytes: cannot certify the budget, decline
     if total > t:
         return None
     return {"name": _dominant_top_dir(fs, w), "files": fs,
@@ -173,8 +144,7 @@ def small_repo_unit(app_files: list[str],
 
 
 def _is_non_code(f: str) -> bool:
-    """Docs/config/manifest/assets by extension, exact file name, or support kind.
-    Everything else counts as code (and never merges into misc)."""
+    """Docs/config/manifest/assets by extension, name, or support kind; else code."""
     name = str(f or "").replace("\\", "/").rsplit("/", 1)[-1]
     if name.lower() in _NON_CODE_NAMES_LOWER:
         return True
@@ -193,23 +163,15 @@ def _support_reason_kind(reason: object) -> str | None:
 def _unit_bytes(u: dict, weight_of: dict[str, int] | None) -> int:
     if not weight_of:
         return 0
-    try:
-        return sum(int(weight_of.get(f, 0) or 0) for f in (u.get("files") or []))
-    except (TypeError, ValueError):
-        return 0
+    return sum(int(weight_of.get(f, 0) or 0) for f in (u.get("files") or []))
 
 
 def _edge_index(edges: dict | None) -> dict[str, dict[str, int]]:
-    """file -> {neighbour: weight}, both directions ((a,b) means a needs b).
-    Malformed entries are skipped, never raised."""
+    """file -> {neighbour: weight}, both directions; malformed entries skipped."""
     idx: dict[str, dict[str, int]] = {}
     if not edges or not hasattr(edges, "items"):
         return idx
-    try:
-        items = list(edges.items())
-    except Exception:
-        return idx
-    for key, w in items:
+    for key, w in edges.items():
         try:
             a, b = key
         except (TypeError, ValueError):
@@ -229,7 +191,6 @@ def _edge_index(edges: dict | None) -> dict[str, dict[str, int]]:
 
 def _cross_weight(a: list[str], b: list[str],
                   idx: dict[str, dict[str, int]]) -> int:
-    """Total coupling between two file sets: sum over all cross pairs."""
     if not idx or not a or not b:
         return 0
     sb = set(b)
@@ -242,8 +203,7 @@ def _cross_weight(a: list[str], b: list[str],
 
 
 def _fresh_unit_name(files: list[str], n: int) -> str:
-    """Name for a unit that must not be called "misc": its first file's top
-    directory, else that file's basename stem, else unit-<n>."""
+    """Non-"misc" name for a unit: first file's top dir, else stem, else unit-<n>."""
     fs = sorted(f for f in (files or []) if f)
     if not fs:
         return f"unit-{n}"
@@ -255,8 +215,7 @@ def _fresh_unit_name(files: list[str], n: int) -> str:
 
 
 def _keep_tiny_singleton(u: dict, n: int) -> dict:
-    """A tiny CODE unit kept on its own. A stray code unit named "misc" is
-    renamed from its first file, so code is never labelled as docs."""
+    """A tiny code unit kept alone, renamed so code is never labelled "misc"."""
     name = u.get("name")
     if name == "misc":
         name = _fresh_unit_name(u.get("files") or [], n)
@@ -265,15 +224,14 @@ def _keep_tiny_singleton(u: dict, n: int) -> dict:
             "reason": u.get("reason", "")}
 
 
-def _merge_tiny_legacy(units: list[dict],
-                       _min: int) -> tuple[list[dict], dict | None]:
-    """Legacy policy: tiny units fold into misc except explicit support groups."""
+def _merge_tiny_legacy(units: list[dict]) -> tuple[list[dict], dict | None]:
+    """Legacy policy: singleton units fold into misc except explicit support groups."""
     misc = next((u for u in units if u["name"] == "misc"), None)
     big = [u for u in units
-           if (len(u["files"]) >= _min or u["name"] == "misc"
+           if (len(u["files"]) >= 2 or u["name"] == "misc"
                or _support_reason_kind(u.get("reason")) is not None)]
     for u in units:
-        if (len(u["files"]) < _min and u["name"] != "misc"
+        if (len(u["files"]) < 2 and u["name"] != "misc"
                 and _support_reason_kind(u.get("reason")) is None):
             if misc is None:
                 misc = {"name": "misc", "files": [], "reason": "merged-tiny-units"}
@@ -285,12 +243,8 @@ def _merge_tiny_legacy(units: list[dict],
 def _merge_tiny_policy(units: list[dict], _min: int, edges: dict | None,
                        weight_of: dict[str, int] | None,
                        target: int) -> tuple[list[dict], dict | None]:
-    """P1.3 policy (PARTITION_MISC_CODE_MERGE): unowned support groups remain
-    explicit; other non-code leftovers fold into misc. Tiny CODE units never
-    do. Each tiny code unit
-    merges into the kept unit it is most coupled to (most cross-pair edge
-    weight; ties: larger unit bytes, then unit name) when that still fits the
-    byte budget — otherwise it stays a singleton of its own."""
+    """P1.3 policy (PARTITION_MISC_CODE_MERGE): support groups stay explicit, non-code
+    folds into misc; tiny CODE units merge into their most-coupled in-budget unit."""
     kept: list[dict] = []
     misc: dict | None = None
     tiny_code: list[dict] = []
@@ -301,9 +255,8 @@ def _merge_tiny_policy(units: list[dict], _min: int, edges: dict | None,
             continue
         non_code = all(_is_non_code(f) for f in fs)
         if u.get("name") == "misc" and (len(fs) >= _min or non_code):
-            # An existing misc is the catch-all whenever it can hold a unit; a
-            # stray tiny CODE unit named misc falls through to tiny_code below
-            # and gets renamed (code is never labelled as docs).
+            # A misc that can hold this unit is the catch-all; a tiny CODE unit
+            # named misc falls through to tiny_code and gets renamed.
             misc = u
             kept.append(u)
         elif len(fs) >= _min:
@@ -348,15 +301,9 @@ def _merge_tiny_policy(units: list[dict], _min: int, edges: dict | None,
 def _fold_to_cap(units: list[dict], max_units: int,
                  weight_of: dict[str, int], target: int,
                  edges: dict | None = None) -> list[dict]:
-    """Re-apply MAX_UNITS after size-splitting WITHOUT breaking the budget.
-
-    Whole units merge, smallest first, into the neighbor with highest edge
-    coupling that still fits under target (falling back to the lightest unit).
-    A merge that would blow the target is skipped, so at worst the unit count
-    stays above the cap — an over-budget blob is never re-created just to
-    satisfy a soft cap. Unit dicts are copied before mutation: the caller may
-    reject this fold and reuse its own list, which must not carry the folded
-    files (aliasing would duplicate them)."""
+    """Re-apply MAX_UNITS after size-splitting: merge smallest-first into the
+    most-coupled neighbor that still fits; over-cap beats an over-budget blob.
+    Unit dicts are copied (no aliasing)."""
     out = [dict(u, files=list(u.get("files") or [])) for u in units]
     idx = _edge_index(edges) if edges else {}
     for _ in range(len(out) + 1):
@@ -382,7 +329,6 @@ def _fold_to_cap(units: list[dict], max_units: int,
                      <= _SUPPORT_GROUP_MAX_FILES)]
         if not fits:
             break
-        # Prefer highest cross-coupling weight first, then lightest byte weight
         best = min(fits, key=lambda j: (
             -_cross_weight(sfiles, out[j].get("files") or [], idx),
             _unit_bytes(out[j], weight_of),
@@ -400,13 +346,7 @@ def _attach_linked_support(files: list[str], units: list[dict],
                            edges: dict | None,
                            weight_of: dict[str, int] | None,
                            target: int) -> list[str]:
-    """Attach linked templates/configs to the strongest owning community.
-
-    Direct renderer/config references establish ownership first. Template
-    includes/inheritance and config-to-config imports then carry that ownership
-    through support-file chains. Files without a strong path to code stay
-    unowned for the explicit support fallback.
-    """
+    """Attach linked templates/configs to the strongest owning community."""
     if not edges or not units:
         return files
     records: list[tuple] = []
@@ -420,13 +360,9 @@ def _attach_linked_support(files: list[str], units: list[dict],
             member_set = set(members)
             weights = []
             for other in member_set:
-                try:
-                    weight = max(int(edges.get((f, other), 0) or 0),
-                                 int(edges.get((other, f), 0) or 0))
-                except (TypeError, ValueError):
-                    continue
-                # Bidirectional same-directory soft edges are weight 1 each;
-                # use only direct graph/render/config evidence for ownership.
+                weight = max(int(edges.get((f, other), 0) or 0),
+                             int(edges.get((other, f), 0) or 0))
+                # Same-dir soft edges are weight 1; only weight >= 2 counts.
                 if weight >= 2:
                     weights.append(weight)
             if not weights:
@@ -454,9 +390,8 @@ def _attach_linked_support(files: list[str], units: list[dict],
                 unit["reason"] = f"{prev}+{reason}" if prev else reason
             attached.add(f)
             break
-    # Propagate ownership through template inheritance/includes and config
-    # imports. Process paths in sorted order and repeat until no more files
-    # join, so the result is independent of input ordering.
+    # Propagate ownership via template inheritance/includes and config imports;
+    # sorted paths + iterate to fixpoint, so input order does not matter.
     remaining = set(files) - attached
     while remaining:
         progress = False
@@ -471,11 +406,8 @@ def _attach_linked_support(files: list[str], units: list[dict],
                            if support_file_kind(member) == kind]
                 weights = []
                 for other in members:
-                    try:
-                        weight = max(int(edges.get((f, other), 0) or 0),
-                                     int(edges.get((other, f), 0) or 0))
-                    except (TypeError, ValueError):
-                        continue
+                    weight = max(int(edges.get((f, other), 0) or 0),
+                                 int(edges.get((other, f), 0) or 0))
                     if weight >= 2:
                         weights.append(weight)
                 if not weights:
@@ -508,9 +440,8 @@ def _support_group_units(groups: dict[tuple[str, str], list[str]],
     """Small, explicit chunks for support files with no owning code unit."""
     units: list[dict] = []
     root = f"{prefix}/" if prefix else ""
-    # Group support files by *kind* globally rather than by directory, so a
-    # repository never becomes a spray of single-file support buckets per
-    # parent path. Each kind forms at most a handful of byte-bounded chunks.
+    # Group by kind globally, not per directory: a repo must not become a spray
+    # of single-file support buckets per parent path.
     by_kind: dict[str, list[str]] = defaultdict(list)
     for (kind, _parent), members in (groups or {}).items():
         by_kind[kind].extend(members or [])
@@ -544,10 +475,8 @@ def _units_from_graphify(repo: str, files: list[str],
     file_community = file_communities(load_partition_graph(repo))
     if not file_community:
         return None
-    # Suffix index (O(files), not O(files x communities)): the graph records
-    # repo-relative paths while the file list may carry a prefix, so a file
-    # matches through an exact key, a key that suffixes the file, or a file
-    # that suffixes a key. First match wins, deterministic by construction.
+    # Graph paths are repo-relative, the file list may carry a prefix: match on
+    # exact key, key-suffix-of-file, or file-suffix-of-key; first match wins.
     exact: dict[str, int] = {}
     key_suffix: dict[str, int] = {}
     for key, comm in file_community.items():
@@ -583,8 +512,6 @@ def _units_from_graphify(repo: str, files: list[str],
     unowned_support = _attach_linked_support(support_files, units, edges,
                                              weight_of, target)
     unmapped.extend(unowned_support)
-    # Linked templates/configs join their owning community. Remaining support
-    # files become small typed groups; other unmapped files use directory fallback.
     if unmapped:
         units.extend(_raw_units_from_dirs(repo, unmapped, prefix="unmapped",
                                           weight_of=weight_of, target=target))
@@ -607,12 +534,9 @@ def _raw_units_from_dirs(repo: str, files: list[str], prefix: str = "",
         key = parts[0] if len(parts) > 1 else "root"
         # Strip repo-prefix noise: a lone dir equal to repo basename merges to root.
         groups[key].append(f)
-    try:
-        base = Path(repo).name.lower()
-        if base in groups and len(groups) > 1 and len(groups[base]) <= min_files():
-            groups["root"].extend(groups.pop(base))
-    except Exception:
-        pass
+    base = Path(repo).name.lower()
+    if base in groups and len(groups) > 1 and len(groups[base]) <= min_files():
+        groups["root"].extend(groups.pop(base))
     units = [{"name": f"{prefix}/{k}" if prefix else k, "files": sorted(v),
                "reason": "top-level-directory"}
              for k, v in sorted(groups.items())]
@@ -629,8 +553,10 @@ def _units_from_dirs(repo: str, files: list[str], prefix: str = "",
 
 
 def _file_weights(repo: str, files: list[str]) -> dict[str, int]:
-    """Byte sizes for budget weighting. stat-only; unstattable = 0 (fail-soft:
-    an unreadable file never breaks partitioning, it just weighs nothing)."""
+    """Byte sizes for budget weighting; stat-only, unstattable = 0.
+
+    Invariant relied on downstream: every value is a non-negative int, so
+    byte-summing helpers coerce with ``int(x or 0)`` without a guard."""
     out: dict[str, int] = {}
     base = Path(repo or ".").resolve()
     for f in files:
@@ -646,21 +572,18 @@ def _file_weights(repo: str, files: list[str]) -> dict[str, int]:
 
 
 def partition_target(weight_of: dict[str, int]) -> int:
-    """Per-unit ceiling in BYTES.
+    """Per-unit byte ceiling: max(loc_budget x bytes_per_loc, code_bytes / MAX_UNITS);
+    binary assets excluded."""
+    from harness.config import load_config_safe
 
-    = max(loc_budget x bytes_per_loc, ceil(code_total_bytes / MAX_UNITS))
+    cfg, err = load_config_safe()
+    if err is not None:
+        from harness.fallback import is_fatal_error
 
-    The LOC budget (default 10k) governs repos that fit in MAX_UNITS units;
-    for bigger repos MAX_UNITS raises the ceiling so a large repo can spread
-    across the configured unit count instead of collapsing into one blob.
-    Binary assets (.png, .pdf, .mp4, etc.) are excluded from total_bytes so
-    non-code blobs do not inflate the audit target for actual source code.
-    """
-    try:
-        from harness.config import load_config
-        cfg = load_config()
-    except Exception:
-        cfg = {}
+        if is_fatal_error(err):
+            raise err
+        _logger.warning("scan config unreadable, partition target falls back "
+                        "to env defaults: %s: %s", type(err).__name__, err)
     try:
         _part = (cfg or {}).get("partition") or {}
         loc = int(_part.get("loc_budget", 10000) or 0)
@@ -668,7 +591,6 @@ def partition_target(weight_of: dict[str, int]) -> int:
     except (TypeError, ValueError):
         loc, bpl = 10000, 40.0
     nominal = int(loc * bpl) if loc > 0 and bpl > 0 else 0
-    # Exclude non-code assets from the total byte calculation
     total = sum(v for f, v in weight_of.items() if support_file_kind(f) != "asset")
     cap = max_units()  # MAX_UNITS (env), <= 0 meaning unlimited
     derived = -(-total // cap) if total > 0 else 0  # ceil division
@@ -678,14 +600,9 @@ def partition_target(weight_of: dict[str, int]) -> int:
 def _split_over_budget(files: list[str], weight_of: dict[str, int],
                         target: int,
                         edges: dict | None = None) -> list[list[str]]:
-    """Deterministic, locality- and coupling-preserving split of one oversized unit.
-
-    When graph edges exist among these files, parts are seeded by the highest-degree
-    files and greedily expanded by cross-coupling up to the byte budget target.
-    Files without edge coupling fall back to directory locality grouping.
-    Everything sorts deterministically by degree, weight, and path (lexical tie-breaking).
-    The ceiling `target` is strictly enforced so verify_partition never fails.
-    """
+    """Deterministic split of an oversized unit: seeds on the highest-degree file,
+    grows greedily by coupling up to `target` (strict); unconnected files fall
+    back to directory locality."""
     if not files:
         return []
     if target <= 0:
@@ -693,7 +610,6 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
 
     idx = _edge_index(edges) if edges else {}
     file_set = set(files)
-    # Check if there is meaningful internal edge coupling among the files
     has_internal_edges = False
     if idx:
         for f in file_set:
@@ -702,14 +618,12 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
                 break
 
     if has_internal_edges:
-        # Edge-aware greedy clustering
         unassigned = set(files)
         parts: list[list[str]] = []
         weights: list[int] = []
 
         while unassigned:
-            # Seed selection: pick the unassigned file with highest internal degree,
-            # then largest byte size, then lexical path.
+            # Seed: highest internal degree, then largest bytes, then lexical path.
             def seed_key(f: str):
                 deg = sum(w for nbr, w in idx.get(f, {}).items() if nbr in unassigned)
                 return (-deg, -weight_of.get(f, 0), f)
@@ -719,7 +633,6 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
             chunk = [seed]
             cw = weight_of.get(seed, 0)
 
-            # Greedily pull in highest cross-coupled unassigned files that fit
             while unassigned:
                 chunk_set = set(chunk)
                 candidates = []
@@ -742,10 +655,9 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
             parts.append(sorted(chunk))
             weights.append(cw)
 
-        # Try to merge tiny tail parts into previous parts if they have coupling and fit under 1.25x target
+        # Merge tail parts into coupled parts that stay under 1.25x target.
         if len(parts) > 1:
             max_ceiling = int(target * 1.25)
-            # Sort parts: largest first, so smaller remainder parts merge into core parts
             sorted_indices = sorted(range(len(parts)), key=lambda i: (-weights[i], parts[i][0]))
             compacted_parts: list[list[str]] = []
             compacted_weights: list[int] = []
@@ -772,7 +684,6 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
 
         return [p for p in parts if p]
 
-    # Fallback to directory locality when no internal edges exist
     groups: dict[str, list[str]] = defaultdict(list)
     for f in files:
         norm_f = str(f).replace("\\", "/")
@@ -786,9 +697,7 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
         gfiles = sorted(gfiles)
         gw = sum(weight_of.get(f, 0) for f in gfiles)
         if gw > target:
-            # A directory that alone exceeds the budget: locality is already
-            # as good as it will get, so chunk in path order rather than
-            # emitting one part that still blows the ceiling.
+            # A lone over-budget directory: chunk in path order (locality is maxed).
             chunk: list[str] = []
             cw = 0
             for f in gfiles:
@@ -821,13 +730,8 @@ def _balance_units(units: list[dict], weight_of: dict[str, int],
                         target: int,
                         skip_exempt: bool = False,
                         edges: dict | None = None) -> list[dict]:
-    """Split any unit over 1.25x byte target. No-op when target <= 0.
-
-    The LLM planner output is not size-constrained; this is the stage that
-    makes the budget an invariant regardless of who proposed the units.
-    Units within 1.25x target are preserved to maintain feature cohesion.
-    skip_exempt leaves budget_exempt units (vendor) untouched.
-    """
+    """Split any unit over 1.25x byte target (no-op when target <= 0); skip_exempt leaves
+    budget_exempt units (vendor) untouched."""
     if target <= 0:
         return units
     max_ceiling = int(target * 1.25)
@@ -873,9 +777,8 @@ def verify_partition(units: list[dict], all_files: list[str],
     assert not dupes, f"files assigned to multiple units: {dupes[:10]}"
     assert not missing, f"files in no unit: {missing[:10]}"
     if weight_of and target > 0:
-        # A lone oversized file is unsplittable by the balancer's own rule
-        # ("cannot be split further"), so a one-file unit over target is not
-        # a violation. budget_exempt units (vendor) are out of budget scope.
+        # A one-file unit over target is not a violation (unsplittable), and
+        # budget_exempt (vendor) units are out of budget scope.
         max_ceiling = int(target * 1.25)
         over = [str(u.get("name")) for u in units
                 if not u.get("budget_exempt")
@@ -891,20 +794,13 @@ def verify_partition(units: list[dict], all_files: list[str],
 
 def _rebalance_units(units: list[dict], weight_of: dict[str, int] | None,
                       target: int) -> list[dict]:
-    """Last-mile rebalance: merge support micro-units and split giant leftovers.
-
-    Conservative - only merges units with <= 3 files or < 5% of the byte
-    budget into a neighbour that can absorb them without crossing 1.25x
-    target; leaves semantic code units alone. Splits any remaining unit
-    above 1.25x target into byte-bounded chunks. Only runs with weights so
-    direct unit tests keep their structural behavior.
-    """
+    """Last-mile rebalance: merge support micro-units (<= 3 files or < 5% of budget) into
+    a neighbor under 1.25x target, split giant leftovers. Runs only with weights."""
     out = [dict(u) for u in units if u.get("files")]
     if not weight_of or target <= 0 or not out:
         return out
     max_ceiling = int(target * 1.25)
-    # Only scattershot support shards are candidates for merging. Code
-    # singletons and the canonical `misc` bucket deliberately stay alone.
+    # Only scattershot support shards merge; code singletons and `misc` stay alone.
     def _is_mergeable_micro(u: dict) -> bool:
         name = str(u.get("name", "")).lower()
         return ("support" in name or "unmapped" in name or "part-" in name)
@@ -913,11 +809,9 @@ def _rebalance_units(units: list[dict], weight_of: dict[str, int] | None,
                      and (len(u["files"]) <= 3
                           or _unit_bytes(u, weight_of) < max(1, int(target * 0.05)))
                      and _is_mergeable_micro(u))]
-    # drop micro units into the best (smallest full) neighbour
     for i in sorted(micro_idx, reverse=True):
         tiny = out.pop(i)
         tiny_bytes = _unit_bytes(tiny, weight_of)
-        # prefer a neighbour that stays under 1.25x target; if none fits, keep tiny unit as its own unit
         candidates = [u for u in out if not u.get("budget_exempt")]
         absorbed = None
         for u in candidates:
@@ -930,7 +824,6 @@ def _rebalance_units(units: list[dict], weight_of: dict[str, int] | None,
         absorbed["files"] = sorted(set(absorbed.get("files", [])) | set(tiny["files"]))
         if tiny.get("reason") and tiny.get("reason") not in (absorbed.get("reason") or ""):
             absorbed["reason"] = (absorbed.get("reason") or "") + "+merged-tiny"
-    # split oversized non-exempt units (incl. any catch-all misc)
     rebuilt: list[dict] = []
     for u in out:
         bytes_u = _unit_bytes(u, weight_of)
@@ -962,20 +855,10 @@ def _rebalance_units(units: list[dict], weight_of: dict[str, int] | None,
 
 def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
                       target: int = 0, edges: dict | None = None) -> list[dict]:
-    """Merge, cap, and guarantee UNIQUE names (one hunter label each).
-
-    MIN_FILES/MIN_FILES env-overridable (0/1 disables tiny-merge, keeping
-    singletons separate). MAX_UNITS env-overridable (0=unlimited).
-
-    With PARTITION_MISC_CODE_MERGE on, tiny CODE units never land in misc
-    (they merge into their most-coupled in-budget neighbour per the `edges`
-    coupling, or stay singletons); only untyped non-code leftovers absorb into misc.
-    Either way the byte budget is re-enforced after the merge/cap steps, so
-    re-merging cannot re-form an over-budget blob. budget_exempt units are
-    never split or folded away.
-    """
+    """Merge tiny units, cap at MAX_UNITS, re-enforce the budget, unique names (MIN_FILES /
+    MAX_UNITS env-overridable). Tiny code units never land in misc; budget_exempt safe."""
     cap = max_units()  # MAX_UNITS (env), <= 0 meaning unlimited
-    # Re-read MIN_FILES live so tests/env can disable tiny-merge without reimport.
+    # Read MIN_FILES live so tests/env can change it without reimport.
     _min = min_files()
     if _min < 0:
         _min = 0
@@ -1000,19 +883,17 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
                 entry["budget_exempt"] = True
             merged[u["name"]] = entry
     units = list(merged.values())
-    # 1b. Size balancing: split units over the per-agent byte budget so no
-    # hunter inherits an unbounded unit. Skipped when no weights are supplied
-    # (direct unit tests keep the pure structural behavior).
+    # 1b. Split units over the byte budget; skipped without weights (direct unit
+    # tests keep the pure structural behavior).
     if weight_of is not None and target > 0:
         units = _balance_units(units, weight_of, target, edges=edges)
-    # 2. Merge tiny units: legacy (everything into misc) or the P1.3 code
-    # policy (only non-code into misc, tiny code couples or stays singleton).
+    # 2. Merge tiny units: legacy (singletons into misc) or P1.3 (only non-code into
+    # misc; a tiny code unit couples or stays a singleton).
     if misc_code_merge_enabled():
         big, misc = _merge_tiny_policy(units, _min, edges, weight_of, target)
     else:
-        big, misc = _merge_tiny_legacy(units, _min)
-    # 3. Cap: fold overflow by support category, keeping unrelated support
-    # classes out of the application-code catch-all.
+        big, misc = _merge_tiny_legacy(units)
+    # 3. Cap: fold overflow by support category, never into the code catch-all.
     if len(big) > cap:
         big.sort(key=lambda u: (-len(u["files"]), str(u.get("name", ""))))
         keep_len = min(cap, len(big) - 1)
@@ -1059,11 +940,8 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
                 keep.append(misc)
             misc["files"] = sorted(set(misc["files"]) | set(folded_other))
         big = keep
-    # 3b. Re-enforce the byte budget AFTER merge/cap: misc absorbs tiny and
-    # folded units alike, so both steps can outgrow the target. Split the
-    # offenders (never the budget_exempt ones). When the split would exceed
-    # MAX_UNITS, the fold that re-forms the over-budget blob is refused: the
-    # byte budget is the asserted invariant, the cap is a soft bound.
+    # 3b. Merge/cap can outgrow the target, so re-enforce the byte budget after
+    # them; when a split would exceed MAX_UNITS the budget wins (cap is soft).
     if weight_of and target > 0:
         for _ in range(2):
             split = _balance_units(big, weight_of, target, skip_exempt=True, edges=edges)
@@ -1094,35 +972,22 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
 
 
 def _load_partition_edges(repo: str, files: list[str]) -> dict:
-    """File-coupling edges for the misc policy.
+    """File-coupling edges; "no signal" ({}) when the graph is absent or
+    unreadable (``load_partition_graph`` fails open); a harness defect
+    propagates instead of silently degrading coverage."""
+    from harness.partitioning.config import framework_edges_enabled
+    from harness.partitioning.graph import (augment_edges, file_edges,
+                                            load_partition_graph)
 
-    graph.file_edges / graph.augment_edges are imported lazily (they may not
-    exist yet): an ImportError, a missing graph, or a malformed repo all mean
-    "no edge signal", which degrades the policy to "tiny code units stay
-    singletons". Never raises.
-    """
-    try:
-        from harness.partitioning.config import framework_edges_enabled
-        from harness.partitioning.graph import (augment_edges, file_edges,
-                                                load_partition_graph)
-        edges = file_edges(load_partition_graph(repo), files)
-        if framework_edges_enabled():
-            edges = augment_edges(repo, files, edges)
-        return dict(edges or {})
-    except Exception:
-        return {}
+    edges = file_edges(load_partition_graph(repo), files)
+    if framework_edges_enabled():
+        edges = augment_edges(repo, files, edges)
+    return dict(edges or {})
 
 
-def partition_units(repo: str, files: list[str],
-                    candidates: list[dict] | None = None) -> list[dict]:
-    """Logical units for per-unit hunting. Never returns [].
-
-    Both the unit source (graphify communities, else directories) and the
-    size balancer run here, so units are structurally coherent AND bounded by
-    the per-agent byte budget (see partition_target). Vendor files split off
-    first into one budget-exempt unit; a repo small enough to fit the budget
-    collapses into a single unit instead of being scattered.
-    """
+def partition_units(repo: str, files: list[str]) -> list[dict]:
+    """Logical units for per-unit hunting: vendor splits off into one budget-exempt
+    unit; a repo that fits the budget collapses to a single unit."""
     files = [f for f in (files or []) if f]
     if not files:
         return []
@@ -1131,8 +996,7 @@ def partition_units(repo: str, files: list[str],
         app_files, vendor_files = isolate_vendor(files, repo)
 
     def _finish(units: list[dict]) -> list[dict]:
-        # Appended AFTER normalization: the vendor unit bypasses tiny-merge
-        # and the MAX_UNITS cap, and is named collision-safely.
+        # Appended after normalization: vendor bypasses tiny-merge and the cap.
         if vendor_files:
             units.append(_vendor_unit(vendor_files, {u["name"] for u in units}))
         return units

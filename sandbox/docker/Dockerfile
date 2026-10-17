@@ -209,9 +209,10 @@ RUN set -eu; \
 # that `sandbox.network` may or may not allow at run time
 # at run time. Extend this dir if you need more offline rulesets.
 COPY harness/rules /opt/scan-rules/harness
-# Scanner usage skills: the sandbox's file tools are repo-confined, so the
-# agent reads these through `execute` (`cat /opt/harness-skills/...`).
-# The hunter prompt names this path; sandbox.skills_dir must match it.
+# Scanner usage skills: served to the agent through the skills route on its
+# backend (harness/agents/deep.py, SKILLS_ROUTE); copied in at the SAME path
+# so in-container reads (e.g. `cat` via execute) agree with the routed file
+# tools. Content is the build-time snapshot -- rebuild after editing skills.
 COPY harness/skills /opt/harness-skills
 
 # gitleaks + osv-scanner: release binaries, checksum-verified at build.

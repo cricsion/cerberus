@@ -1,14 +1,9 @@
 """Repo-confined local backend for scan agents (no sandbox, no shell).
 
-Extends :class:`FilesystemBackend` -- file operations only. It deliberately
-does NOT extend ``LocalShellBackend``, so the backend never satisfies
-``SandboxBackendProtocol`` and deepagents never creates an ``execute`` tool
-for it. There is no shell to refuse; one simply does not exist.
-
-All reads run in-process against the target repository with resolve-then-check
-containment: symlinks pointing outside the repo are rejected, not followed.
-
-Read-only by design: write/edit/delete raise.
+Extends :class:`FilesystemBackend`, never ``LocalShellBackend``, so deepagents
+creates no ``execute`` tool. Reads run in-process with resolve-then-check
+containment (symlinks outside the repo are rejected, not followed);
+write/edit/delete raise.
 """
 from __future__ import annotations
 
@@ -36,14 +31,12 @@ class RepoLocalBackend(FilesystemBackend):
         self.repo_path = Path(repo_path).resolve()
         if not self.repo_path.is_dir():
             raise ValueError(f"repo_path is not a directory: {repo_path}")
-        # Credential files are readable-but-refused: egress is allowed, so a
-        # live key inside the scanned tree must not be handed to the model
-        # through the cheap in-process path.
+        # Credentials are readable-but-refused: egress is allowed, so a live
+        # key must not reach the model by this cheap in-process path.
         self.denied_globs = tuple(CREDENTIAL_GLOBS if denied_globs is None
                                   else denied_globs)
-        # Protect the in-repo destination of a credential-named symlink too.
-        # Otherwise `.env -> settings.txt` is refused by name while a direct
-        # read of settings.txt still exposes the same bytes.
+        # Protect the in-repo destination of a credential-named symlink too:
+        # `.env -> settings.txt` must not leak the same bytes by direct read.
         self._credential_targets: set[Path] = set()
         if self.denied_globs:
             for rel in find_credential_files(self.repo_path, self.denied_globs):
@@ -79,25 +72,54 @@ class RepoLocalBackend(FilesystemBackend):
                 "sandbox will not hand it to the model")
 
     def _contained(self, key: str | None) -> Path:
-        """Resolve an agent-supplied path and enforce repo containment.
-
-        In virtual mode (always, for scan backends) paths are repo-relative
-        and the middleware normalizes them to leading-slash form: the model
-        asks for ``/app.py`` or ``app.py`` and both mean
-        ``<repo>/app.py``. Absolute-looking paths therefore map INTO the repo;
-        the containment check then still rejects anything that resolves
-        outside it (e.g. via a symlink planted inside the repo).
-        """
+        """Resolve an agent-supplied path and enforce repo containment: in
+        virtual mode paths are repo-relative (``/app.py`` maps INTO the repo),
+        and anything resolving outside it is rejected."""
         p = (key or ".").strip() or "."
-        # virtual_mode is always True for scan backends -- the constructor
-        # forces it and nothing reassigns it -- so the non-virtual branches
-        # are unreachable and paths are always repo-relative.
+        # Handle cases where agents provide absolute or relative paths referencing self.repo_path
+        # e.g., /Users/.../repo/path/file.py or Real-Vuln-Benchmark/repos/realvuln-.../file.py
+        repo_str = str(self.repo_path)
+        repo_str_lstrip = repo_str.lstrip("/")
+        stripped = p.lstrip("/")
+        if p == repo_str or p.startswith(repo_str + "/"):
+            p = p[len(repo_str):].lstrip("/")
+        elif stripped == repo_str_lstrip or stripped.startswith(repo_str_lstrip + "/"):
+            p = stripped[len(repo_str_lstrip):].lstrip("/")
+        elif self.repo_path.name and (stripped == self.repo_path.name or stripped.startswith(self.repo_path.name + "/")):
+            p = stripped[len(self.repo_path.name):].lstrip("/")
+        else:
+            # Check if stripped ends with repo_path's tail or relative path from workspace
+            for ancestor in [self.repo_path] + list(self.repo_path.parents):
+                try:
+                    rel_to_ancestor = str(self.repo_path.relative_to(ancestor))
+                    if rel_to_ancestor and rel_to_ancestor != ".":
+                        if stripped == rel_to_ancestor or stripped.startswith(rel_to_ancestor + "/"):
+                            p = stripped[len(rel_to_ancestor):].lstrip("/")
+                            break
+                except ValueError:
+                    pass
+
+        # virtual_mode is always True for scan backends (constructor forces it,
+        # nothing reassigns it), so paths are always repo-relative.
         candidate = (self.repo_path / p.lstrip("/")).resolve()
         try:
             candidate.relative_to(self.repo_path)
         except ValueError:
             raise ValueError(f"Access denied: {key!r} is outside the repo") from None
         return candidate
+
+    def _resolve_path(self, key: str) -> Path:
+        """Containment-based resolver for the base backend's virtual mode.
+
+        The base implementation rejects any path containing the substring
+        ".." before resolving — a false positive on legitimate filenames like
+        Next.js catch-alls (``pages/api/auth/[...nextauth].js``; the dots sit
+        inside the brackets). Enforce the real invariant instead, same as
+        every other entry point here: resolve, then require containment under
+        ``repo_path`` (this still rejects real ``..`` escapes and symlinks
+        that leave the repo).
+        """
+        return self._contained(key)
 
     # -- reads: validate, then delegate ---------------------------------
 
@@ -115,13 +137,9 @@ class RepoLocalBackend(FilesystemBackend):
 
     def grep(self, pattern: str, path: str | None = None, glob: str | None = None,
              *, max_count: int | None = None, context_lines: int = 0):  # type: ignore[override]
-        """Search the repo without returning credential-file contents.
-
-        The base filesystem backend searches recursively, so a directory
-        search must filter matches as well as refusing a credential file when
-        it is named directly. Filtering is done on resolved paths, which also
-        closes aliases through in-repo symlinks.
-        """
+        """Search the repo without returning credential-file contents: a
+        directory search filters matches as well as refusing a file named
+        directly, and filtering on resolved paths closes symlink aliases."""
         search_path = path or "."
         try:
             target = self._contained(search_path)
@@ -130,7 +148,8 @@ class RepoLocalBackend(FilesystemBackend):
         if target.is_file() and self._is_credential_path(target, search_path):
             return GrepResult(error=self._credential_refusal(search_path), matches=[])
 
-        result = super().grep(pattern, search_path, glob, max_count=max_count,
+        rel_search_path = str(target.relative_to(self.repo_path))
+        result = super().grep(pattern, rel_search_path, glob, max_count=max_count,
                               context_lines=context_lines)
         if not result.matches:
             return result
@@ -140,8 +159,8 @@ class RepoLocalBackend(FilesystemBackend):
             try:
                 match_path = self._contained(match.get("path", ""))
             except (ValueError, OSError, RuntimeError):
-                # The base backend already enforces containment, but fail
-                # closed if a path changes between its search and this check.
+                # Base backend enforces containment; fail closed anyway if a
+                # path changes between its search and this check.
                 continue
             if not self._is_credential_path(match_path, match.get("path", "")):
                 safe_matches.append(match)
@@ -192,8 +211,7 @@ class RepoLocalBackend(FilesystemBackend):
         return out
 
     # -- refused: no mutation --------------------------------------------
-    # Denials return structured errors (not raises): a raise halts the agent
-    # run, while an error result lets the model recover and continue.
+    # Denials return structured errors, never raise: a raise halts the agent run.
 
     def write(self, file_path: str = "", *args, **kwargs):  # type: ignore[override]
         from deepagents.backends.protocol import WriteResult

@@ -11,8 +11,7 @@ SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
 
 def safe_int(value: object, default: int = 0) -> int:
-    """Lenient int for LLM-produced numbers ("12-15", "unknown", 12.7 all
-    occur in the wild). Never raises; unparseable becomes default."""
+    """Lenient int for LLM-produced numbers ("12-15", "unknown", 12.7 all occur); never raises."""
     try:
         if isinstance(value, bool):
             return default
@@ -61,7 +60,7 @@ class Finding(BaseModel):
     snippet: str = ""
     taint: TaintPath = Field(default_factory=TaintPath)
     reachability: Reachability = Field(default_factory=Reachability)
-    rationale: str = ""  # why this is a real vuln (source->sink story), first for reasoning order
+    rationale: str = ""  # why this is real (source->sink), first for reasoning order
     evidence: str = ""
     fix_suggestion: str = ""
     status: Status = "needs-review"

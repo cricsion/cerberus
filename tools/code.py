@@ -1,26 +1,6 @@
-"""Shared code-reading primitives for the scan agents.
-
-Agent-facing filesystem reads (open a file, list files, search text) come
-from deepagents' FilesystemMiddleware — ``read_file``/``ls``/``glob``/
-``grep``, confined to the target repo by the backend (see
-``harness.agents.deep``). Those built-ins replaced this module's old
-``code_read``/``code_glob``/``code_grep`` tools, which were never stronger
-than what the middleware now provides.
-
-What remains here, and why the middleware cannot replace it:
-
-- ``_safe_path``: the resolve-then-check containment primitive every tool
-  module shares (grep engine, code-graph, SAST wrappers, verifier).
-- ``grep_files``: the grep engine the deterministic prefilter, route
-  scanner, and call-graph greppers reuse internally. Deliberately NOT a
-  tool: an agent searching the repo uses the built-in grep, and this
-  engine exists so the harness's own deterministic passes share one
-  capped, contained implementation.
-- ``ast_query``: the one agent-facing tool that survives — structural
-  queries the regex-based grep cannot answer.
-
-Read-only, no exec, no network.
-"""
+"""Code-reading primitives shared by the tool modules: ``_safe_path`` (repo
+containment), ``grep_files`` (capped shared engine), ``ast_query``. Read-only,
+no exec, no network; agent reads come from FilesystemMiddleware."""
 from __future__ import annotations
 
 import fnmatch
@@ -28,37 +8,16 @@ import os
 import re
 from pathlib import Path
 
-try:
-    from langchain_core.tools import tool
-except ImportError:  # pragma: no cover - allow import without langchain installed
-    def tool(*dargs, **dkwargs):  # type: ignore
-        def deco(fn):
-            return fn
-        if dargs and callable(dargs[0]):
-            return dargs[0]
-        return deco
-
-
-def _env_int(key: str, default: int) -> int:
-    """Env override for caps. 0 = unlimited."""
-    try:
-        v = os.environ.get(key)
-        if v is None or v == "":
-            return default
-        return int(v)
-    except (TypeError, ValueError):
-        return default
+from ._compat import env_int, tool
 
 
 def _resolve_limit(explicit: int | None, env_key: str, default: int) -> int:
     """Explicit arg wins; otherwise env; 0 = unlimited."""
     if explicit is not None:
-        try:
-            v = int(explicit)
-            return v if v >= 0 else default
-        except (TypeError, ValueError):
-            return default
-    return _env_int(env_key, default)
+        # int already validated by the tool's schema; env_int covers env caps.
+        v = int(explicit)
+        return v if v >= 0 else default
+    return env_int(env_key, default)
 
 SKIP_DIRS = frozenset({
     ".venv", "venv", ".env", "node_modules", ".git", "__pycache__",
@@ -68,23 +27,9 @@ SKIP_DIRS = frozenset({
 
 
 def _safe_path(path: str, root: str = ".") -> Path:
-    """Resolve path and enforce containment within root.
-
-    Resolution happens BEFORE the check, so a symlink pointing outside the
-    root is rejected, not followed.
-
-    When TARGET_REPO is set (every scan), it is the ONLY readable root: there
-    is deliberately no CWD fallback, because CWD is the harness checkout
-    holding .env with the live API key. Without TARGET_REPO (tests, offline
-    use), paths are confined to root (CWD by default).
-
-    An absolute-looking path is VIRTUAL, not a host path, whenever the repo
-    has a counterpart for it: "/app.py" means the repo's own ``app.py``,
-    exactly as the in-process backend's virtual mode maps it. A leading
-    slash therefore never escapes. An absolute path with NO counterpart keeps
-    the host meaning it always had, and the containment check still decides:
-    "/etc/passwd" is refused, and only paths that resolve inside the root are
-    readable.
+    """Resolve path and enforce containment within root; symlinks are followed
+    BEFORE the check, so an escape is refused, not followed. TARGET_REPO, when
+    set, is the only root ("/" maps to the repo when it has that counterpart).
     """
     target = os.environ.get("TARGET_REPO")
     base = Path(target).resolve() if target else Path(root).resolve()
@@ -104,17 +49,11 @@ def _safe_path(path: str, root: str = ".") -> Path:
 def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | None = None, offset: int = 0) -> str:
     """Ripgrep-like search, the shared engine behind the deterministic passes.
 
-    NOT an agent tool: agents search the repo with deepagents' built-in
-    grep (confined by the backend). The prefilter, route scanner, and
-    call-graph greppers reuse this so every harness grep shares one
-    capped, SKIP_DIRS-aware, containment-checked implementation. Returns
-    file:line matches, paginated via limit/offset (0 = unlimited).
+    Not an agent tool (agents use the built-in grep). Capped, SKIP_DIRS-aware,
+    containment-checked; paginated via limit/offset (0 = unlimited).
     """
     lim = _resolve_limit(limit, "GREP_LIMIT", 500)
-    try:
-        off = int(offset or 0)
-    except (TypeError, ValueError):
-        off = 0
+    off = int(offset or 0)
     if off < 0:
         off = 0
     try:
@@ -127,7 +66,6 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
         pat = re.compile(regex)
     except re.error as e:
         return f"ERROR: bad regex: {e}"
-    # Single-file root support.
     targets: list[Path] = []
     try:
         if base.is_file():
@@ -151,21 +89,15 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
             return
         if b"\x00" in raw[:8192]:
             return
-        try:
-            text = raw.decode("utf-8", errors="replace")
-        except Exception:
-            return
+        text = raw.decode("utf-8", errors="replace")
         for n, line in enumerate(text.splitlines(), start=1):
-            try:
-                if pat.search(line):
-                    try:
-                        rel = f.relative_to(base)
-                    except ValueError:
-                        rel = f
-                    truncated = len(line) > 1000
-                    hits.append(f"{rel}:{n}: {line[:1000]}" + (" …[truncated]" if truncated else ""))
-            except Exception:
-                continue
+            if pat.search(line):
+                try:
+                    rel = f.relative_to(base)
+                except ValueError:
+                    rel = f
+                truncated = len(line) > 1000
+                hits.append(f"{rel}:{n}: {line[:1000]}" + (" …[truncated]" if truncated else ""))
 
     if targets:
         f = targets[0]
@@ -215,8 +147,7 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
 def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int | None = None, offset: int = 0) -> str:
     """Structural query: Python AST for .py files (stdlib), grep fallback otherwise.
 
-    node: FunctionDef|ClassDef|Call|Import|Assign. name_pattern: optional regex
-    matched against the node name / called func / imported module. Paginated via limit/offset (0=unlimited).
+    node: FunctionDef|ClassDef|Call|Import|Assign. Paginated via limit/offset.
 
     Args:
         path: File path to parse, relative to the repo root.
@@ -228,10 +159,7 @@ def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int 
     import ast as _ast
 
     lim = _resolve_limit(limit, "AST_LIMIT", 500)
-    try:
-        off = int(offset or 0)
-    except (TypeError, ValueError):
-        off = 0
+    off = int(offset or 0)
     if off < 0:
         off = 0
     try:
@@ -241,7 +169,6 @@ def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int 
     if not p.is_file():
         return f"ERROR: not a file: {path}"
     if p.suffix.lower() != ".py":
-        # Fallback: structural-ish grep for call-like patterns.
         rx = re.escape(name_pattern) if name_pattern else r"\w+"
         return grep_files(regex=rf"\b{rx}\s*\(" if name_pattern else r"\b\w+\s*\(",
                           include=p.name, root=str(p.parent))

@@ -1,23 +1,14 @@
 """Verification helpers: reachability gate."""
 from __future__ import annotations
 
-try:
-    from langchain_core.tools import tool
-except ImportError:  # pragma: no cover
-    def tool(*dargs, **dkwargs):  # type: ignore
-        def deco(fn):
-            return fn
-        if dargs and callable(dargs[0]):
-            return dargs[0]
-        return deco
+from ._compat import tool
 
 
 @tool(parse_docstring=True)
 def reachability_check(path: str, snippet: str, sanitizer_hint: str = "") -> str:
     """Heuristic static check: flags obvious sanitizers to aid the validator LLM.
 
-    Looks for common sanitizer signals in the snippet + file context.
-    The LLM makes the final call; this only surfaces evidence.
+    Surfaces evidence only; the validator LLM makes the final call.
 
     Args:
         path: File path containing the candidate snippet.

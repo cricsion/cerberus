@@ -1,26 +1,13 @@
-"""One best-effort parser for JSON arrays inside LLM replies.
-
-Agent stages ask the model for a JSON array of per-finding verdicts; replies
-come back fenced, prefixed with prose, or wrapped in a contract object
-(``{"verdicts": [...]}``). Hand-rolled copies drift — one stage silently
-stops parsing a format change the others absorb — so the extraction lives
-here once. Stdlib only, and fail-open: any malformed reply is ``[]`` so the
-caller keeps its deterministic stage rather than raising.
-"""
+"""Best-effort parser for JSON arrays in LLM replies (fenced, prose-prefixed, or
+wrapped in a contract object). Stdlib only; fail-open."""
 from __future__ import annotations
 
 import json
 
 
 def extract_json_array(text: object) -> list | None:
-    """First JSON array in an LLM reply, or None when none decodes.
-
-    Scans each '[' offset and raw-decodes from there (bracket-matching
-    fails on citations like "[1]" in prose). When several arrays decode,
-    the one with the most dict elements wins (so a scalar citation "[1]"
-    never shadows the real array of finding objects); ties break on the
-    longer array, then the earlier offset.
-    """
+    """First JSON array in an LLM reply, or None. Scans each '[' offset; the most
+    dict-heavy array wins, so citation arrays cannot shadow findings."""
     if not text or not str(text).strip():
         return None
     s = str(text)
@@ -32,7 +19,7 @@ def extract_json_array(text: object) -> list | None:
             continue
         try:
             parsed, _ = dec.raw_decode(s[i:])
-        except (ValueError, TypeError):
+        except ValueError:
             continue
         if not isinstance(parsed, list):
             continue
@@ -44,14 +31,8 @@ def extract_json_array(text: object) -> list | None:
 
 
 def parse_verdict_array(text: object, *, require_id: bool = False) -> list[dict]:
-    """Best-effort parse of a JSON array of dicts from an LLM reply.
-
-    Unwraps a ``{"verdicts": [...]}`` contract object and drops non-dict
-    items. ``require_id`` additionally drops items with no truthy ``"id"``
-    — used by the stages that merge verdicts back into findings by id, which
-    would otherwise KeyError (or silently mis-merge) on an id-less item.
-    Never raises.
-    """
+    """Best-effort parse of a JSON array of dicts; unwraps a ``verdicts`` object,
+    drops non-dict items and (with require_id) id-less items."""
     if not text or not str(text).strip():
         return []
     arr = extract_json_array(text)
@@ -83,12 +64,8 @@ def structured_items(parsed: object, field: str = "verdicts") -> list[dict]:
 def extract_structured_items(parsed: object, raw_text: object, *,
                              field: str = "verdicts",
                              require_id: bool = True) -> list[dict]:
-    """Prefer parsed structured output, then parse raw text as fallback.
-
-    This is the shared core for validator and triage: both accept a
-    ``{field: [...]}`` structured result and fall back to the agent's final
-    text. Keeping it here stops the two stages from drifting apart.
-    """
+    """Structured items first, else a raw-text fallback (shared validator and
+    triage core)."""
     items = [it for it in structured_items(parsed, field)
              if isinstance(it, dict) and (it.get("id") or not require_id)]
     if items:
@@ -98,12 +75,8 @@ def extract_structured_items(parsed: object, raw_text: object, *,
 
 def extract_string_array(text: object,
                          field: str = "questions") -> list[str] | None:
-    """Best-effort array of strings from raw LLM text.
-
-    Accepts ``["a", "b"]`` or a wrapper object such as
-    ``{"questions": ["a"]}``. Returns None when no decodable array exists.
-    Never raises.
-    """
+    """Best-effort string array from raw LLM text (bare or wrapper object); never
+    raises, None when none decodes."""
     if not text or not str(text).strip():
         return None
     s = str(text)
@@ -115,7 +88,7 @@ def extract_string_array(text: object,
             continue
         try:
             parsed, _ = decoder.raw_decode(s[idx:])
-        except (ValueError, TypeError):
+        except ValueError:
             continue
         if isinstance(parsed, dict):
             parsed = parsed.get(field)

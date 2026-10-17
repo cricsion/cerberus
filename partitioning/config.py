@@ -1,23 +1,27 @@
-"""Partitioning policy knobs (env-overridable, read at call time).
-
-Every tunable lives here so the algorithm reads its policy from one place.
-Functions (not import-time constants) so tests can monkeypatch the environment
-without reloading the module.
-"""
+"""Partitioning policy knobs (env-overridable, read at call time; functions, not
+import-time constants, so tests can monkeypatch the environment)."""
 from __future__ import annotations
 
+import logging
 import os as _os
 from typing import Any
 
+_logger = logging.getLogger(__name__)
 
-def _int_env(key: str, default: int) -> int:
+
+def _coerce_int(value: Any, default: int) -> int:
+    """int(value) or default: a malformed operator value degrades, never blocks."""
     try:
-        v = _os.environ.get(key)
-        if v is None or v == "":
-            return default
-        return int(v)
+        return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _int_env(key: str, default: int) -> int:
+    v = _os.environ.get(key)
+    if v is None or v == "":
+        return default
+    return _coerce_int(v, default)
 
 
 def _env_flag(key: str, default: str = "0") -> str:
@@ -30,12 +34,7 @@ def _flag_on(key: str, default: str = "0") -> bool:
 
 
 def _cfg_value(cfg: dict | None, key: str) -> Any:
-    """``partition.<key>`` from cfg, or None when cfg has no such value.
-
-    Callers that already loaded a config pass it; callers without one pass
-    None and fall back to the environment, which keeps the policy functions
-    monkeypatch-friendly and import-free.
-    """
+    """``partition.<key>`` from cfg, or None when unset (callers fall back to env)."""
     section = cfg.get("partition") if isinstance(cfg, dict) else None
     if not isinstance(section, dict):
         return None
@@ -44,33 +43,35 @@ def _cfg_value(cfg: dict | None, key: str) -> Any:
 
 
 def _loaded_cfg(cfg: dict | None) -> dict | None:
-    """Lazily load the scan config so config-backed knobs stay authoritative
-    even from code paths that never threaded a cfg through."""
+    """Lazily load the scan config when cfg is None (config beats env).
+
+    An unreadable config is operator input, not noise: it is logged at
+    warning and degrades to None (env defaults) — never silently swallowed.
+    A fatal-class harness defect re-raises."""
     if cfg is not None:
         return cfg
-    try:
-        from harness.config import load_config
-        return load_config()
-    except Exception:
-        return None
+    from harness.config import load_config_safe
+
+    cfg, err = load_config_safe()
+    if err is None:
+        return cfg
+    from harness.fallback import is_fatal_error
+
+    if is_fatal_error(err):
+        raise err
+    _logger.warning("scan config unreadable, partition policy falls back to "
+                    "env defaults: %s: %s", type(err).__name__, err)
+    return None
 
 
 # --- core budget knobs (pre-existing behavior) ------------------------------
 
 def max_units(cfg: dict | None = None) -> int:
-    """Cap on unit count; 0 means unlimited.
-
-    ``partition.max_units`` wins when a caller (or the lazy config load) has
-    it; otherwise MAX_UNITS is read from the environment, so env-driven runs
-    and monkeypatched tests behave the same either way.
-    """
+    """Cap on unit count; 0 means unlimited. Config wins, else MAX_UNITS from env."""
     value = _cfg_value(_loaded_cfg(cfg), "max_units")
     if value is None:
         value = _int_env("MAX_UNITS", 20)
-    try:
-        v = int(value)
-    except (TypeError, ValueError):
-        v = 20
+    v = _coerce_int(value, 20)
     return 10**9 if v <= 0 else v
 
 
@@ -99,22 +100,21 @@ VENDOR_FILE_SUFFIXES = (".min.js", ".min.css", ".bundle.js", ".chunk.js",
 # --- P0.2 small-repo single unit --------------------------------------------
 
 def single_unit_enabled() -> bool:
-    """Permanently enabled: small repos whose app files fit the budget become one unit."""
+    """Permanently on: a small repo fitting the budget becomes one unit."""
     return True
 
 
 def single_unit_max_files() -> int:
-    """0 disables the small-repo rule; otherwise a repo whose app files fit
-    the byte budget AND this file count becomes ONE unit."""
+    """0 disables the small-repo rule; else app files must fit this count AND the
+    byte budget for a single unit."""
     return _int_env("PARTITION_SINGLE_UNIT_MAX_FILES", 50)
 
 
 # --- P1.3 misc policy --------------------------------------------------------
 
 def misc_code_merge_enabled() -> bool:
-    """On: tiny CODE units merge into their most-coupled neighbour or stay
-    singletons; only non-code lands in misc. This is the default; explicitly
-    set PARTITION_MISC_CODE_MERGE=0 for legacy misc-absorbs-all behavior."""
+    """On by default: tiny code units couple or stay singletons, only non-code
+    lands in misc; =0 restores legacy misc-absorbs-all."""
     return _flag_on("PARTITION_MISC_CODE_MERGE", default="1")
 
 

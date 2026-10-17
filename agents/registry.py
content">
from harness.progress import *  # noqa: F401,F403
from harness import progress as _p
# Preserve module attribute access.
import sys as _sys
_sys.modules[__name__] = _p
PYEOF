@@ -1,5 +1,0 @@
-from harness.progress import *  # noqa: F401,F403
-from harness import progress as _p
-# Preserve module attribute access.
-import sys as _sys
-_sys.modules[__name__] = _p

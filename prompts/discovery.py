@@ -1,18 +1,8 @@
-"""Discovery prompts: unit hunter system prompt, numbered task builder, output
-contract, method, and candidate gate.
+from typing import Literal
 
-No vulnerability taxonomy is hardcoded here on purpose. Which classes matter
-is data, not prompt text: it comes from the unit's entry surfaces and the
-threat model, both interpolated into the task prompt. A hardcoded list would
-freeze one snapshot of "interesting bugs" into every scan.
-
-Structured output lives here too, next to the text that describes it: the
-Pydantic models ARE the contract the prose above asks for.
-"""
 from pydantic import BaseModel, Field
 
-# Finding shape. The prompt asks the model to establish rationale before it
-# assigns severity; the Pydantic field order remains the output contract.
+# The prompt asks for rationale before severity; Pydantic field order IS the output contract.
 FINDING_SPEC = (
     "reason through each finding in this order: rationale (why this is real: "
     "WHO controls the input, HOW it reaches "
@@ -39,9 +29,7 @@ FINDING_BAR = (
     "them, and whether it actually does."
 )
 
-# A repeatable procedure instead of an enumerated class list. The same steps
-# apply to every trust boundary, so this surfaces weaknesses no fixed taxonomy
-# would have listed -- including controls that are simply absent.
+# Repeatable per-entry-point procedure instead of a fixed class list.
 AUDIT_PROCEDURE = (
     "AT EACH ENTRY POINT, work through these four questions before moving on:\n"
     "1. REACH — what can the lower-trust caller fully control here: field values, "
@@ -60,7 +48,6 @@ AUDIT_PROCEDURE = (
     "which control is expected and where the code is silent."
 )
 
-# Method: read code at depth and exhaust all assigned files without stopping early.
 DISCOVERY_METHOD = (
     "READ EVERY ASSIGNED FILE AT DEPTH. Automated scanners are only supplemental pre-filters; "
     "you must inspect every assigned file in your starting paths before concluding. "
@@ -95,7 +82,6 @@ CANDIDATE_GATE = (
     "outdated third-party dependency versions (managed by SCA).\n"
 )
 
-# Unit hunter system prompt: environment facts, role, and surface-coverage directive.
 UNIT_SYSTEM = (
     "You are an expert defensive vulnerability hunter reviewing ONE logical unit of a "
     "codebase: a feature, service, or subsystem. Read source and ground claims in code. "
@@ -123,26 +109,12 @@ UNIT_SYSTEM = (
 
 
 def sandbox_system_section(backend=None, repo: str = ".") -> str:
-    """Prompt section describing the shell sandbox, or "" when absent.
-
-    Added only for backends that offer `execute`: the model cannot
-    capitalize on a tool surfacing it mid-run, it has to know up front
-    what is installed, where the offline rules live, and what the
-    container's egress posture is. Docker and sbx expose this protocol, so
-    the facts it needs come straight off the backend object.
-    """
     from deepagents.backends.protocol import SandboxBackendProtocol
     if not isinstance(backend, SandboxBackendProtocol):
         return ""
     rules = getattr(backend, "rules_dir", "/opt/scan-rules/harness")
-    # Skills live in the image; the agent reads them with `execute` because
-    # the file tools are repo-confined (they cannot serve files from
-    # outside the target repo, so the deepagents skills middleware --
-    # which reads through the same backend -- cannot serve them either).
-    skills = getattr(backend, "skills_dir", "/opt/harness-skills")
     timeout = getattr(backend, "command_timeout", 120)
-    # The prompt must match the container's real posture, or the model
-    # wastes commands (or worse, assumes a boundary that is not there).
+    # Must match the container's real posture, not an assumed one.
     mode = str(getattr(backend, "network", "bridge")).lower()
     if mode == "none":
         net = "Network egress is disabled."
@@ -163,12 +135,21 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
         "tests, builds, or scripts. Never install or download anything, make "
         "network requests, or send repository data externally. The repo is "
         "read-only; do not modify source or deploy. "
+        "SCAN PROTOCOL: 1) inventory the unit — `ls`/`glob` your starting "
+        "paths and note what each file does. 2) Run the preinstalled scanners "
+        "directly on the unit's files (semgrep/opengrep with the offline "
+        "rules, gitleaks for secrets, osv-scanner on manifests, checkov on "
+        "IaC), slice their JSON with jq, and cap output with head — never "
+        "paste raw scanner output. 3) Chase every lead into the source: read "
+        "the entry point down to the sink by hand and confirm the argument is "
+        "attacker-controlled before you report it. 4) Report findings with "
+        "file:line evidence. "
         "Installed: semgrep, opengrep, gitleaks, osv-scanner, checkov, "
         f"git, python, pytest. graphify is NOT installed — for structural "
         "questions (who calls what, entry-to-sink reachability) use the bound "
         "graph_* tools, never a graphify shell command. Offline custom rules "
         f"live at {rules} "
-        "(e.g. `semgrep scan --config %s --metrics off <files>`; opengrep "
+        f"(e.g. `semgrep scan --config {rules} --metrics off <files>`; opengrep "
         f"accepts the same rules). {net} "
         "SUPPLEMENTAL SAST PRE-FILTER: automated scanners (semgrep, opengrep) "
         "are fast, supplemental pre-filters — they only catch known, rule-based "
@@ -191,28 +172,16 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
         "so their misses differ from the semgrep family's. Atheris is a "
         "verification tool: use it to PROVE a finding you already suspect, "
         "not to scan. Run what the unit's language and shape justify, per "
-        "each tool's skill. "
-        f"SKILLS: scanner usage guides live at {skills}/ — "
-        f"`cat {skills}/semgrep/SKILL.md`, "
-        f"`cat {skills}/opengrep/SKILL.md`, "
-        f"`cat {skills}/bandit/SKILL.md`, "
-        f"`cat {skills}/bearer/SKILL.md`, "
-        f"`cat {skills}/trufflehog/SKILL.md`, "
-        f"`cat {skills}/gosec/SKILL.md`, "
-        f"`cat {skills}/njsscan/SKILL.md`, "
-        f"`cat {skills}/atheris/SKILL.md`, "
-        f"`cat {skills}/flawfinder/SKILL.md`, or "
-        f"`cat {skills}/graphify/SKILL.md` (plus references/ next to the "
-        "semgrep ones). Read one when you need that tool — do not read them "
-        "speculatively. "
-        "Keep commands short-lived: each is killed after ~%ds. "
-        "PATHS: your file tools use repo-relative paths; shell commands run "
-        "with the repo root as the working directory, so use relative paths "
-        "in shell commands — never prefix a file path with `/`." % (rules, timeout))
+        "each tool's skill in the Skills System section. "
+        f"Keep commands short-lived: each is killed after ~{timeout}s. "
+        "PATHS: your file tools use repo-relative paths; the scanner skill "
+        "docs are the one exception — read them with `read_file` at the "
+        "path the Skills System section lists. Shell commands run with the "
+        "repo root as the working directory, so use relative paths in "
+        "shell commands — never prefix a file path with `/`.")
 
 
 def build_unit_system_prompt(focus: str = "", backend=None) -> str:
-    """Unit hunter system prompt plus an optional run focus line."""
     prompt = UNIT_SYSTEM + sandbox_system_section(backend)
     if (focus or "").strip():
         return prompt + f" Focus for this run: {focus.strip()}"
@@ -223,12 +192,6 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
                          cand_ctx: str = "", threat_md: str = "",
                          peer_paths: list[str] | None = None,
                          focus: str = "") -> str:
-    """Assemble the unit hunter task prompt.
-
-    Part order: assignment, context, finding bar, method, gate, output
-    contract. Optional sections are omitted entirely when empty rather than
-    rendered as an empty heading.
-    """
     parts: list[str] = []
     if (focus or "").strip():
         parts.append(f"Focus for this run: {focus.strip()}.")
@@ -261,15 +224,16 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
             "## Mandatory File Review Checklist\n"
             "You MUST inspect every single file in your assigned Starting paths using your file reading tools "
             "(read_file / grep / glob) before concluding your review and emitting DiscoveryResult.\n"
+            "All paths must be repo-relative (e.g. `pages/index.js` or `package.json`, NOT `/Users/...` or `/app/...`).\n"
             "Checklist of assigned files that MUST be reviewed:\n"
             + "\n".join(f"- [ ] {p}" for p in paths[:200]) + "\n\n"
             "RULES FOR COMPLETION:\n"
-            "1. Do not assume or guess contents. Call `read_file` on each assigned file.\n"
+            "1. Do not assume or guess contents. Call `read_file` on each assigned file using its repo-relative path.\n"
             "2. Automated SAST scans (semgrep/opengrep) do NOT count as reviewing a file — you must inspect the source code of each assigned path.\n"
             "3. In your final output, list every assigned file in `inspected_files` to verify that all files have been reviewed."
         )
     parts.append("## Reading\nYour assigned files are not inlined here. Open every "
-                 "assigned path with your file tools (read_file / grep / glob).")
+                 "assigned path with your file tools (read_file / grep / glob) using repo-relative paths.")
     parts.append("## What counts\n" + FINDING_BAR)
     parts.append("## Procedure\n" + AUDIT_PROCEDURE)
     parts.append("## Method\n" + DISCOVERY_METHOD)
@@ -287,27 +251,50 @@ class TaintItem(BaseModel):
                             description="Intermediate steps, file:line each")
 
 
+class EvidenceRef(BaseModel):
+    """One structured file:line citation.
+
+    The audit schema's evidence objects are ``[{file, line, description}]``
+    and required: machine-checkable, never parsed out of prose. Hunters
+    attach these alongside the free-text evidence so ``evidence_gate`` and
+    the reporters can decide on typed data instead of heuristics.
+    """
+
+    file: str = Field(default="", description="Repo-relative file path")
+    line: int = Field(default=0, ge=0,
+                      description="Line number, 0 when unknown")
+    note: str = Field(default="",
+                      description="What this line shows for the claim")
+
+
 class FindingItem(BaseModel):
     """One candidate finding. Lenient by design: missing fields fall back to
     fail-open defaults downstream, so a thin-but-real claim is never lost to
-    schema strictness."""
+    schema strictness. Values that matter are constrained (Literal/bounds/
+    pattern) so a wrong one is re-prompted in-loop instead of being silently
+    clamped by the normalizer."""
 
     id: str = Field(default="", description="Stable finding id")
     title: str = Field(default="", description="Short vulnerability title")
-    cwe: str = Field(default="", description="CWE id, e.g. CWE-89, or empty")
-    severity: str = Field(default="medium",
-                          description="critical, high, medium, low, or info")
-    confidence: float = Field(default=0.3, description="Confidence 0-1")
+    cwe: str = Field(default="", pattern=r"^(CWE-\d{1,7})?$",
+                     description="CWE id, e.g. CWE-89, or empty")
+    severity: Literal["critical", "high", "medium", "low", "info"] = Field(
+        default="medium", description="Claimed severity; the validator re-rates it")
+    confidence: float = Field(default=0.3, ge=0.0, le=1.0,
+                              description="Confidence 0-1")
     path: str = Field(default="", description="Repo-relative file path")
-    start_line: int = Field(default=0, description="First line of the sink")
-    end_line: int = Field(default=0, description="Last line of the sink")
+    start_line: int = Field(default=0, ge=0, description="First line of the sink")
+    end_line: int = Field(default=0, ge=0, description="Last line of the sink")
     snippet: str = Field(default="", description="Code at the sink")
     taint: TaintItem = Field(default_factory=TaintItem,
                              description="Source-to-sink chain")
+    refs: list[EvidenceRef] = Field(
+        default_factory=list,
+        description="Structured file:line citations backing the claim")
     rationale: str = Field(default="", description="Why this is real: who controls the input, how it reaches the sink, what breaks")
     evidence: str = Field(default="", description="Supporting detail with file:line")
-    status: str = Field(default="needs-review",
-                        description="Always needs-review from discovery")
+    status: Literal["needs-review"] = Field(
+        default="needs-review", description="Always needs-review from discovery")
 
 
 class DiscoveryResult(BaseModel):
@@ -339,14 +326,14 @@ SYSTEM_PASS_SYSTEM = (
     "cross-unit path without file:line evidence at its entry, relevant transitions, "
     "and sink. For a missing-control claim, inspect the complete relevant set of "
     "handlers or callers; if coverage is incomplete, do not claim the control is absent. "
-    "Use source inspection only; do not execute the target in this pass. Return the "
-    "structured output contract exactly."
+    "In local mode, use static analysis only. In sandbox mode, follow the appended "
+    "sandbox execution posture for any bounded local checks. Return the structured "
+    "output contract exactly."
 )
 
 
 def build_system_pass_task(repo: str, scope: str, ctx: str,
                            files: list[str] | None = None) -> str:
-    """Assemble the system-pass task over merged findings and repository paths."""
     inventory = [str(path) for path in (files or []) if path]
     if inventory:
         inventory_text = "\n".join(inventory[:300])

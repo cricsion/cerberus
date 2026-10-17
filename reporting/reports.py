@@ -78,10 +78,7 @@ def write_html(findings: list[dict], out: Path) -> None:
         if n_dupe and not f.get("duplicate_of"):
             title = f"{title} (+{n_dupe} duplicate{'s' if n_dupe != 1 else ''})"
         cwe = html.escape(str(f.get("cwe", "")), quote=True)
-        try:
-            conf = float(f.get("confidence", 0) or 0)
-        except (TypeError, ValueError):
-            conf = 0.0
+        conf = safe_float(f.get("confidence", 0) or 0)
         loc = html.escape(f"{f.get('path', '')}:{f.get('start_line', 0)}-{f.get('end_line', 0)}", quote=True)
         evidence = html.escape(str(f.get("evidence", "")), quote=True)
         fix = html.escape(str(f.get("fix_suggestion", "")), quote=True)
@@ -137,10 +134,7 @@ def write_junit(findings: list[dict], out: Path) -> None:
         is_failure = SEVERITY_ORDER.get(sev, 2) <= SEVERITY_ORDER["high"] and str(f.get("status", "")) != "fp"
         if is_failure:
             failures += 1
-            try:
-                conf = float(f.get("confidence", 0) or 0)
-            except (TypeError, ValueError):
-                conf = 0.0
+            conf = safe_float(f.get("confidence", 0) or 0)
             msg = f"{title} ({cwe}) {sev} conf={conf} {loc}"
             fail = ET.SubElement(case, "failure", {"message": msg})
             evidence = str(f.get("evidence", "") or "")

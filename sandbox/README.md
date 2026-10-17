@@ -33,8 +33,9 @@ paths under Docker Desktop's file sharing work.
 
 Everything below is **image-only**: never installed on the host, so there is
 no host-side wrapper to keep in sync and no binary the agent cannot reach.
-The agent runs them through `execute`; usage is documented in the skills the
-prompt points at (`/opt/harness-skills/<name>/SKILL.md`). Pins and per-arch
+The agent runs them through `execute`; usage is documented in the skills at
+`/opt/harness-skills/<name>/SKILL.md`, served to the agent by the skills
+route on its backend (`harness/agents/deep.py`). Pins and per-arch
 sha256s live in `docker/versions.env` and are verified at build (a mismatch
 fails the build).
 

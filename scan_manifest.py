@@ -1,7 +1,5 @@
-"""Scan audit metadata for repository changes and credential files.
-
-This is scan bookkeeping, separate from sandbox lifecycle and confinement.
-"""
+"""Scan audit metadata: target-tree digests and credential files; bookkeeping
+only, not sandbox lifecycle or confinement."""
 from __future__ import annotations
 
 import hashlib
@@ -9,8 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Paths excluded from the target-source digest: VCS metadata, installed deps,
-# build caches, and scan outputs.
+# Excluded from the target-source digest: VCS, deps, build caches, scan outputs.
 SKIP_PARTS = frozenset({
     ".git", "node_modules", ".venv", "venv", "__pycache__",
     "dist", "build", ".tox", ".mypy_cache", ".pytest_cache",
@@ -65,8 +62,11 @@ def record_scan_manifest(repo_path: str | Path) -> dict[str, Any]:
         record["credential_files"] = files
         for line in credential_warning(key, files):
             print(line, file=sys.stderr)
-    except Exception:
+    except Exception as e:
+        # Fail open (bookkeeping only), but never silently claim zero
+        # credential files: record why the check could not run.
         record["credential_files"] = []
+        record["credential_files_error"] = f"{type(e).__name__}: {e}"
     _MANIFESTS[key] = record
     return dict(record)
 

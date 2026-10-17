@@ -1,20 +1,7 @@
-"""Triage: dedup by root cause, rank by exploitability rubric (plan-1345 M4).
+"""Triage: dedup by root cause, rank by exploitability rubric.
 
-Pipeline position: aggregator -> validator -> triage -> scorer.
-
-Stage A (deterministic, always): group by normalized path + CWE-family.
-  Same group -> provisional duplicates (duplicate_of=primary id, primary = max
-  confidence). Info context without a CWE is never grouped. Status untouched,
-  nothing dropped.
-Stage B+C (LLM, batched over eligible findings, default 30/call): the model
-  confirms/splits each provisional group per root-cause rules AND assigns
-  severity from evidence (rubric answers first, singletons included). Fail-open:
-  any error keeps the Stage-A verdict for dedup and the heuristic severity.
-
-Cost note: exactly one triage call per scan (plus N validator votes per finding
-from M3). Counts are logged (triage_llm_calls/n_duplicates) for the log-only
-observability follow-up; nothing gates on them.
-"""
+Stage A is deterministic (normalized path + CWE family); Stage B+C is batched
+LLM. Nothing is dropped."""
 from __future__ import annotations
 
 import logging as _logging
@@ -30,19 +17,15 @@ from harness.schemas import safe_int
 
 
 def _norm_path(path: str) -> str:
-    try:
-        return str(path or "").strip().lower().replace("\\", "/").lstrip("./")
-    except (AttributeError, TypeError):
-        return str(path or "")
+    return str(path or "").strip().lower().replace("\\", "/").lstrip("./")
 
 
 def _family(cwe: str) -> str:
     return str(cwe or "").strip().upper()
 
 
-# Same file + same class groups only when the sinks are close: distant sinks
-# are distinct instances, so they stay distinct primaries. Fixed policy, not
-# an operator knob: no env override, no config key.
+# Same file + same class groups only when the sinks are close; distant sinks
+# stay distinct primaries. Fixed policy: no env override, no config key.
 _LINE_GAP = 1
 
 
@@ -51,14 +34,10 @@ def _line_of(f: dict) -> int:
 
 
 def _group_key(f: dict) -> tuple[str, str] | None:
-    """Stage-A key, or None when the finding must never be grouped (info
-    context without a CWE claim)."""
-    try:
-        if not f.get("cwe") and str(f.get("severity", "medium")) == "info":
-            return None
-        return (_norm_path(f.get("path", "")), _family(f.get("cwe", "")))
-    except (AttributeError, TypeError):
+    """Stage-A key, or None when the finding must never be grouped."""
+    if not f.get("cwe") and str(f.get("severity", "medium")) == "info":
         return None
+    return (_norm_path(f.get("path", "")), _family(f.get("cwe", "")))
 
 
 def _elect_primary(out: list[dict], idxs: list[int]) -> None:
@@ -75,8 +54,8 @@ def _elect_primary(out: list[dict], idxs: list[int]) -> None:
 
 
 def stage_a(findings: list[dict]) -> list[dict]:
-    """Deterministic grouping. Returns new list; primaries get duplicate_of="",
-    rest duplicate_of=<primary id>. Original order preserved."""
+    """Deterministic grouping: primaries keep duplicate_of="", the rest point at
+    their id. Never drops."""
     out = [dict(f) for f in (findings or [])]
     for f in out:
         f.setdefault("duplicate_of", "")
@@ -89,8 +68,6 @@ def stage_a(findings: list[dict]) -> list[dict]:
     for idxs in groups.values():
         if len(idxs) < 2:
             continue
-        # Split by line proximity: same file + same class at distant lines
-        # are distinct sinks, not one instance.
         ordered = sorted(idxs, key=lambda i: _line_of(out[i]))
         run = [ordered[0]]
         for i in ordered[1:]:
@@ -129,10 +106,8 @@ def _slim_for_triage(f: dict) -> dict:
 
 
 def _triage_all_call(findings: list[dict], threat_md: str, cfg: dict) -> list[dict]:
-    """One LLM call over ALL eligible findings: confirm/split every provisional
-    group per root-cause rules + severity rubric for each finding (singletons
-    included — dedup is vacuous for them but the rubric still applies).
-    Returns verdict dicts; [] on any failure (caller keeps Stage-A)."""
+    """One LLM call over all eligible findings: confirm/split + severity rubric;
+    [] on any failure (caller keeps Stage A)."""
     from harness.agents.deep import sanitize_model_kwargs
     from harness.config import get_model_kwargs
 
@@ -140,41 +115,36 @@ def _triage_all_call(findings: list[dict], threat_md: str, cfg: dict) -> list[di
                 if isinstance(f, dict) and _group_key(f) is not None]
     if len(eligible) < 1:
         return []
-    model_kwargs = get_model_kwargs(cfg, "validator")
+    model_kwargs = get_model_kwargs(cfg, "validator", agent="triager")
     mk = sanitize_model_kwargs(model_kwargs)
+
     try:
-        try:
-            _timeout = max(int(mk.get("timeout", 180) or 180), 180)
-        except (TypeError, ValueError):
-            _timeout = 180
-        import json as _json
-        slim = [_slim_for_triage(f) for f in eligible]
-        scope = (("[THREAT MODEL]\n" + threat_md.strip() + "\n\n")
-                 if (threat_md or "").strip() else "")
+        _timeout = max(int(mk.get("timeout", 180) or 180), 180)
+    except (TypeError, ValueError):
+        _timeout = 180
+    import json as _json
+    slim = [_slim_for_triage(f) for f in eligible]
+    scope = (("[THREAT MODEL]\n" + threat_md.strip() + "\n\n")
+             if (threat_md or "").strip() else "")
+    from harness.agents.deep import run_structured
+    from harness.prompts.triage import (TRIAGE_SYSTEM, TriageBatch,
+                                        build_triage_batch_task)
+    msg = build_triage_batch_task(
+        scope, _json.dumps(slim, default=str))
+    def _call_triage_structured() -> tuple[Any, str, Any]:
         from harness.agents.deep import run_structured
-        from harness.prompts.triage import (TRIAGE_SYSTEM, TriageBatch,
-                                            build_triage_batch_task)
-        msg = build_triage_batch_task(
-            scope, _json.dumps(slim, default=str))
-        def _call_triage_structured() -> tuple[Any, str, Any]:
-            from harness.agents.deep import run_structured
 
-            return run_structured(
-                mk, TriageBatch, TRIAGE_SYSTEM, msg, timeout=_timeout,
-                max_retries=3, name="triage")
+        return run_structured(
+            mk, TriageBatch, TRIAGE_SYSTEM, msg, timeout=_timeout,
+            max_retries=3, name="triage")
 
-        parsed, raw_text, _ = run_fail_open(
-            "triage batch", _call_triage_structured,
-            default=EMPTY_STRUCTURED + ({},))
+    parsed, raw_text, _ = run_fail_open(
+        "triage batch", _call_triage_structured,
+        default=EMPTY_STRUCTURED + ({},))
 
-        verdicts: list[dict] = extract_structured_items(
-            parsed, raw_text, field="verdicts", require_id=True)
-        return verdicts
-    except Exception as e:
-        if is_fatal_error(e):
-            raise
-        _logger.debug("triage LLM call failed, keeping Stage-A: %s", e)
-        return []
+    verdicts: list[dict] = extract_structured_items(
+        parsed, raw_text, field="verdicts", require_id=True)
+    return verdicts
 
 
 def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
@@ -183,38 +153,34 @@ def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
     applied = 0
     valid_sev = ("critical", "high", "medium", "low")
     for v in verdicts:
-        try:
-            target = by_id.get(str(v.get("id", "")))
-            if target is None:
-                continue
-            dup = v.get("duplicate_of")
-            if dup is None:
-                target["duplicate_of"] = ""
-            elif str(dup) in by_id and str(dup) != str(target.get("id")):
-                target["duplicate_of"] = str(dup)
-            # else: unknown id — ignore, keep Stage-A verdict.
-            sev = str(v.get("severity", "") or "").strip().lower()
-            if sev in valid_sev:
-                target["severity"] = sev
-            tri = v.get("triage")
-            if isinstance(tri, dict) and tri:
-                target["triage"] = {k: tri[k] for k in
-                                    ("reachable", "control", "preconditions",
-                                     "auth", "rw", "blast", "rationale") if k in tri}
-            reason = str(v.get("reason", "") or "").strip()
-            if reason:
-                prev = str(target.get("evidence") or "")
-                target["evidence"] = (prev + f" | triage: {reason}")[:4000] if prev else reason
-            applied += 1
-        except Exception:
+        target = by_id.get(str(v.get("id", "")))
+        if target is None:
             continue
+        dup = v.get("duplicate_of")
+        if dup is None:
+            target["duplicate_of"] = ""
+        elif str(dup) in by_id and str(dup) != str(target.get("id")):
+            target["duplicate_of"] = str(dup)
+        # else: unknown id — ignore, keep Stage-A verdict.
+        sev = str(v.get("severity", "") or "").strip().lower()
+        if sev in valid_sev:
+            target["severity"] = sev
+        tri = v.get("triage")
+        if isinstance(tri, dict) and tri:
+            target["triage"] = {k: tri[k] for k in
+                                ("reachable", "control", "preconditions",
+                                 "auth", "rw", "blast", "rationale") if k in tri}
+        reason = str(v.get("reason", "") or "").strip()
+        if reason:
+            prev = str(target.get("evidence") or "")
+            target["evidence"] = (prev + f" | triage: {reason}")[:4000] if prev else reason
+        applied += 1
     return applied
 
 
 def _resolve_batch(cfg: dict | None) -> int:
-    """Max findings per triage LLM call. Default 30, env TRIAGE_BATCH via
-    config interpolation. 0 = unlimited (codebase convention), clamped to
-    1–200 otherwise. Never raises."""
+    """Max findings per triage LLM call (TRIAGE_BATCH, default 30; 0 = unlimited,
+    else clamped to 1-200). Never raises."""
     try:
         raw = ((cfg or {}).get("triage") or {}).get("batch_size", 30)
         n = int(str(raw).strip() or 30)
@@ -226,7 +192,7 @@ def _resolve_batch(cfg: dict | None) -> int:
 
 
 def _log_entry(f: dict, batch: int) -> dict:
-    """One written-log row per finding (reference-harness style audit trail)."""
+    """One written-log row per finding."""
     try:
         tri = f.get("triage") if isinstance(f.get("triage"), dict) else {}
         return {"id": str(f.get("id", "")), "batch": batch,
@@ -244,8 +210,7 @@ def _log_entry(f: dict, batch: int) -> dict:
 
 def render_triage_log(log: list[dict], n_calls: int = 0,
                       batch_size: int = 30) -> str:
-    """Render the written audit trail (reference-harness style): one row per
-    finding with verdict + reason + rubric, plus run totals. Pure function."""
+    """Render the audit trail: one row per finding plus run totals. Pure function."""
     try:
         log = [e for e in (log or []) if isinstance(e, dict)]
         n_dupe = sum(1 for e in log if e.get("duplicate_of"))
@@ -286,15 +251,8 @@ def render_triage_log(log: list[dict], n_calls: int = 0,
 
 
 def run_triage(findings: list[dict], cfg: dict, threat_md: str = "") -> dict:
-    """Stage A always; Stage B+C as LLM calls over batches of eligible findings.
-
-    Batching: eligible findings sort by (CWE-family, path, line) so same-family
-    items share a batch when possible, then chunk to batch_size (default 30).
-    Returns {"findings": [...], "triage_llm_calls": int, "n_duplicates": int,
-    "triage_log": [...]} — the log is the written audit trail (one row per
-    finding: verdict + reason + rubric). Never drops findings; fail-open keeps
-    Stage-A on any LLM error.
-    """
+    """Stage A always; Stage B+C as batched LLM calls. Returns findings +
+    triage_llm_calls + n_duplicates + triage_log; never drops, fails open to Stage A."""
     staged = stage_a(findings)
     stats: dict = {"triage_llm_calls": 0, "n_duplicates": 0, "triage_log": []}
     if not staged:
@@ -307,75 +265,50 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "") -> dict:
     eligible = [f for f in staged if _group_key(f) is not None]
     if not eligible:
         return {"findings": staged, **stats}
-    try:
-        order = sorted(eligible,
-                       key=lambda f: (_family(f.get("cwe", "")),
-                                      _norm_path(f.get("path", "")),
-                                      safe_int(f.get("start_line", 0))))
-    except Exception:
-        order = list(eligible)
+    order = sorted(eligible,
+                   key=lambda f: (_family(f.get("cwe", "")),
+                                  _norm_path(f.get("path", "")),
+                                  safe_int(f.get("start_line", 0))))
     batch_size = _resolve_batch(cfg)
     log: list[dict] = []
-    try:
-        from harness.config import get_concurrency as _gc
-        _tw = _gc(cfg)
-    except Exception:
-        _tw = 4
+    from harness.config import get_concurrency as _gc
+    _tw = _gc(cfg)
     chunks = [order[i:i + batch_size]
               for i in range(0, len(order), batch_size)]
     completed: list[int] = []
-    try:
-        import sys as _sys
-        print(f"[triage] {len(order)} findings in {len(chunks)} batch(es)...",
-              file=_sys.stderr, flush=True)
-    except Exception:
-        pass
+    import sys
+
+    print(f"[triage] {len(order)} findings in {len(chunks)} batch(es)...",
+          file=sys.stderr, flush=True)
 
     def _run_batch(args: tuple[int, list[dict]]) -> tuple[int, list[dict]]:
         b, chunk = args
-        try:
-            verdicts = _triage_all_call(chunk, threat_md or "", cfg or {})
-            try:
-                import sys as _s2
-                print(f"[triage] batch {b} done ({len(chunk)} findings)",
-                      file=_s2.stderr, flush=True)
-            except Exception:
-                pass
-            return b, verdicts if isinstance(verdicts, list) else []
-        except Exception as e:
-            if is_fatal_error(e):
-                raise
-            return b, []
+        verdicts = _triage_all_call(chunk, threat_md or "", cfg or {})
+        print(f"[triage] batch {b} done ({len(chunk)} findings)",
+              file=sys.stderr, flush=True)
+        return b, verdicts if isinstance(verdicts, list) else []
 
     try:
-        # Bounded concurrency, no stage-wide hard timeout. Work is bounded by
-        # ModelCallLimitMiddleware, recursion_limit, and provider timeouts.
+        # Bounded concurrency; no stage-wide timeout (call caps + recursion bound it).
         with worker_pool(_tw) as ex:
             futs = [ex.submit(_run_batch, (b, chunk))
                     for b, chunk in enumerate(chunks, start=1)]
             for i, fut in enumerate(futs):
                 b = i + 1
-                try:
-                    bb, verdicts = fut.result()
-                    completed.append(bb)  # call succeeded (verdicts may be empty)
-                    if verdicts:
-                        _apply_verdicts(staged, verdicts)
-                except Exception as e:
-                    if is_fatal_error(e):
-                        raise
-                # Log every batch, failed or not: a failed batch's findings
-                # keep their Stage-A verdicts in the audit trail.
+                bb, verdicts = fut.result()
+                completed.append(bb)  # call succeeded (verdicts may be empty)
+                if verdicts:
+                    _apply_verdicts(staged, verdicts)
+                # Log every batch (failed batches keep Stage-A verdicts).
                 for f in chunks[b - 1]:
-                    try:
-                        target = next(s for s in staged
-                                      if str(s.get("id")) == str(f.get("id")))
-                        log.append(_log_entry(target, b))
-                    except Exception:
-                        continue
+                    target = next(s for s in staged
+                                  if str(s.get("id")) == str(f.get("id")))
+                    log.append(_log_entry(target, b))
     except Exception as e:
         if is_fatal_error(e):
             raise
-        pass
+        # Pool entry/exit failure: Stage-A verdicts retained, do not sink the scan.
+        _logger.debug("triage pool failed; Stage-A retained: %s", e)
     stats["triage_llm_calls"] = len(completed)
     if not log:
         log = [_log_entry(f, 0) for f in staged]
