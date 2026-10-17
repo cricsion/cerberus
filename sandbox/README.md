@@ -79,11 +79,9 @@ versions.env pin each if a target mix demands them.
 
 **With egress on, treat everything the agent can read as exfiltrable** — the
 repo, and any credential file inside it (a target repo that is the harness
-checkout exposes its own `.env` with the live API key). The command deny-list
-does not hold this boundary (`python -c 'import socket...'` fetches with the
-same bytes curl would). Set `sandbox.network: none` when that is not
-acceptable. Unknown commands are passed to the sandbox without a quick
-refusal; the sandbox provides containment.
+checkout exposes its own `.env` with the live API key). Set
+`sandbox.network: none` when that is not acceptable. The agent has full
+control inside the sandbox; containment is the sandbox itself.
 
 **Credential files are masked, not just noticed**: Docker places a read-only
 `/dev/null` bind over each detected file's in-repo resolved target, so a
@@ -253,7 +251,6 @@ module and each backend supplies argv.
 |---|---|
 | `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of all three modes, and local mode itself) |
 | `cli_utils.py` | the two subprocess seams (bounded / fixed output), the exec tag, the agent-id slug — one monkeypatch point for both backends |
-| `command_policy.py` | a deny-only prefilter for obvious host/runtime commands. Not the boundary; see the docker section |
 | `validation.py` | setting validators that fail at construction, before any container or VM exists |
 | `run_base.py` | `RunSandboxBase`: the whole run-sandbox lifecycle (create-once, per-agent env, phase reset, mark-dead, remove) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
 | `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract, with hooks for the two recovery paths that genuinely differ |

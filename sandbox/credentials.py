@@ -1,8 +1,8 @@
-"""Credential files inside the target repo: detect, expose, and block.
+"""Credential files inside the target repo: detect and expose.
 
-find_credential_files()/credential_warning() report what is readable;
-blocked_paths() is the glob set the file tools refuse. Not a security
-boundary: an agent that reads a credential can still write it into an answer.
+find_credential_files()/credential_warning() report what is readable so the
+docker sandbox can mask it. Not a security boundary: an agent that reads a
+credential can still write it into an answer.
 """
 from __future__ import annotations
 
@@ -57,11 +57,6 @@ def find_credential_files(repo: str | Path,
             # credential warning) survives a failure mid-tree.
             continue
     return found
-
-
-def blocked_paths() -> tuple[str, ...]:
-    """Globs the repo-local file tools must refuse to read."""
-    return CREDENTIAL_GLOBS
 
 
 def looks_like_harness_checkout(repo: str | Path) -> bool:

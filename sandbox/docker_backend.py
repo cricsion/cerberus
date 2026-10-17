@@ -167,7 +167,6 @@ class DockerSandboxBackend(SandboxShellBackend):
                  docker_bin: str = "docker",
                  rules_dir: str = "/opt/scan-rules/harness",
                  run: RunSandbox | None = None, agent_id: str | None = None,
-                 denied_globs=None,
                  mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
         # Validated before super(): a bad image or network must fail at construction, not inside `docker run`; mask_paths None keeps discovery.
         self.mask_paths = None if mask_paths is None else tuple(mask_paths)
@@ -188,7 +187,7 @@ class DockerSandboxBackend(SandboxShellBackend):
                 cpus=self.cpus, pids_limit=self.pids_limit,
                 network=network_mode, docker_bin=self.docker_bin,
                 mask_paths=self.mask_paths),
-            run=run, agent_id=agent_id, denied_globs=denied_globs,
+            run=run, agent_id=agent_id,
             command_timeout=command_timeout,
             max_output_bytes=max_output_bytes,
             rules_dir=rules_dir,

@@ -182,8 +182,7 @@ class SbxBackend(SandboxShellBackend):
                  primary_dir: str | Path | None = None,
                  command_timeout: int = 120, max_output_bytes: int = 200_000,
                  sbx_bin: str = "sbx", rules_dir: str = "/opt/scan-rules/harness",
-                 run: SbxRun | None = None, agent_id: str | None = None,
-                 denied_globs=None) -> None:
+                 run: SbxRun | None = None, agent_id: str | None = None) -> None:
         # Validated before super(): a bad setting must fail at construction, not inside a `sbx create`.
         self.image = validate_image(str(image or DEFAULT_IMAGE))
         self.cpus = validate_cpus(cpus)
@@ -208,7 +207,7 @@ class SbxBackend(SandboxShellBackend):
                 command_timeout=command_timeout,
                 max_output_bytes=max_output_bytes,
                 sbx_bin=self.sbx_bin),
-            run=run, agent_id=agent_id, denied_globs=denied_globs,
+            run=run, agent_id=agent_id,
             command_timeout=command_timeout,
             max_output_bytes=max_output_bytes,
             rules_dir=rules_dir,

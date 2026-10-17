@@ -7,7 +7,7 @@ from typing import Callable
 
 from deepagents.backends.protocol import ExecuteResponse, SandboxBackendProtocol
 
-from . import cli_utils, command_policy
+from . import cli_utils
 from .local_backend import RepoLocalBackend
 from .run_base import RunSandboxBase
 
@@ -16,11 +16,10 @@ class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
 
     def __init__(self, *, repo_path: str | Path, run_factory: Callable[[], RunSandboxBase],
                  run: RunSandboxBase | None = None, agent_id: str | None = None,
-                 denied_globs: tuple[str, ...] | list[str] | None = None,
                  command_timeout: int = 120, max_output_bytes: int = 200_000,
                  rules_dir: str = "/opt/scan-rules/harness",
                  network: str = "") -> None:
-        super().__init__(repo_path=repo_path, denied_globs=denied_globs)
+        super().__init__(repo_path=repo_path)
         self.agent_id = cli_utils.safe_slug(agent_id or uuid.uuid4().hex[:12])
         self.command_timeout = max(1, int(command_timeout))
         self.max_output_bytes = max(0, int(max_output_bytes))
@@ -40,9 +39,6 @@ class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
     @property
     def network(self) -> str:
         return self._network
-
-    def _policy_error(self, command: str) -> str | None:
-        return command_policy.policy_error(command)
 
     def close(self) -> None:
         with self._lock:
@@ -67,9 +63,6 @@ class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
         if self._closed:
             return ExecuteResponse(
                 output="refused: this agent's sandbox is closed", exit_code=126)
-        denial = self._policy_error(command)
-        if denial:
-            return ExecuteResponse(output=denial, exit_code=126)
         t = (self.command_timeout if timeout is None
              else max(1, min(int(timeout), self.command_timeout * 4)))
 

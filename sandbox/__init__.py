@@ -153,9 +153,8 @@ def resolve_backend(cfg: dict | None, repo: str | Path,
         settings = build_settings(cfg, repo)
         run = getattr(module, getter)(repo, settings)
         return getattr(module, cls_name)(
-            repo_path=repo, run=run, agent_id=agent_id,
-            denied_globs=_deny_globs(repo), **settings)
-    return RepoLocalBackend(repo_path=repo, denied_globs=_deny_globs(repo))
+            repo_path=repo, run=run, agent_id=agent_id, **settings)
+    return RepoLocalBackend(repo_path=repo)
 
 def shutdown_run_sandbox(repo: str | Path | None = None) -> None:
     # Every backend reaps on every exit path; teardown never raises by
@@ -173,11 +172,6 @@ def reset_agent_scratch(repo: str | Path) -> list[str]:
         for err in module.RUNS.reset_agent_scratch(repo):
             errors.append(f"{row[0]} sandbox: {err}")
     return errors
-
-def _deny_globs(repo: str | Path) -> tuple[str, ...]:
-    # blocked_paths() cannot raise (constant lookup, module already on the import chain): swallowing an error here would silently drop the deny-list.
-    from harness.sandbox.credentials import blocked_paths
-    return blocked_paths()
 
 def sweep_orphans() -> list[str]:
     # Backends are fail-soft by contract (each returns [] on infra failure);

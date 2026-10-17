@@ -2,24 +2,15 @@
 ``ValueError`` at construction time, before a container or microVM exists."""
 from __future__ import annotations
 
-import re
-
-# A Docker image reference: registry/repo components plus one optional tag or
-# digest. A leading "-" is refused: docker would parse it as a FLAG.
-IMAGE_RE = re.compile(
-    r"^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*"
-    r"(?::[A-Za-z0-9_][A-Za-z0-9._-]*)?"
-    r"(?:@sha256:[a-f0-9]{64})?$"
-)
-
 
 def validate_image(image: str) -> str:
-    if not IMAGE_RE.match(image):
-        raise ValueError(
-            f"invalid docker image reference {image!r}: expected "
-            "'repo/name[:tag][@sha256:digest]' with no leading dash "
-            "(a leading dash would be parsed as a docker flag)")
-    return image
+    # Construction-time hazard: a leading dash is parsed by docker as a FLAG;
+    # anything else malformed is docker's own validation, with clearer errors.
+    i = str(image or "").strip()
+    if not i or i.startswith("-"):
+        raise ValueError(f"invalid docker image reference {image!r}: "
+                         "must not start with '-' (parsed as a docker flag)")
+    return i
 
 
 # The only two network modes the docker container runs: `host` is deliberately
