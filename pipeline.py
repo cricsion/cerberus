@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import inspect
 import logging
 import os
@@ -12,7 +11,7 @@ from typing import Any, TypedDict
 
 from langgraph.types import Overwrite
 
-from harness.schemas import SEVERITY_ORDER, safe_float
+from harness.schemas import SEVERITY_ORDER, safe_float, safe_int
 from harness.progress import AgentRegistry, AgentState
 
 try:
@@ -23,7 +22,7 @@ except Exception:  # observability module unavailable → tracing disabled (fail
 CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.0}
 
 # Channels that accumulate across stages (everything else is last-writer-wins).
-_ADD_KEYS = ("candidates", "findings", "tools_used")
+_ADD_KEYS = ("candidates", "findings", "tools_used", "hunter_coverage")
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +55,7 @@ class ScanState(TypedDict, total=False):
     # Two writers (hunter workers, then validator_node); append-only — aggregator joins against it so nothing validates twice.
     verified: list[dict]
     pending: list[dict]
+    hunter_coverage: list[str]
 
 
 def apply_update(state: dict, update: dict | None) -> dict:
@@ -451,7 +451,6 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
     if isinstance(_focus, str):
         _focus = [f.strip() for f in _focus.split(",") if f.strip()]
     units: list[dict] = []
-    units: list[dict] = []
     if agent_registry is not None:
         agent_registry.create("partitioner", "partitioner", parent_stage="partition",
                               state=AgentState.queued)
@@ -538,11 +537,13 @@ def hunter_worker(state: dict) -> dict:
     threat_md = state.get("threat_model_md", "") or ""
     focus = state.get("focus", []) or []
     _tools: list = []
+    _coverage: list = []
     t0 = _time.time()
     label = state.get("unit") or "unit"
     try:
         out = _run_unit({"name": label}, repo, files, candidates, cfg,
-                        threat_md=threat_md, focus=focus, _tools_out=_tools)
+                        threat_md=threat_md, focus=focus, _tools_out=_tools,
+                        _coverage_out=_coverage)
         # Stamp the partition so validation runs one validator per unit.
         for f in out:
             if isinstance(f, dict) and not f.get("unit"):
@@ -552,8 +553,11 @@ def hunter_worker(state: dict) -> dict:
         validated = _validate_inline(out, cfg, threat_md,
                                      state.get("votes_override"), label,
                                      repo=repo)
-        return {"findings": out, "verified": validated,
-                "tools_used": sorted(set(str(t) for t in _tools))}
+        ret = {"findings": out, "verified": validated,
+               "tools_used": sorted(set(str(t) for t in _tools))}
+        if _coverage:
+            ret["hunter_coverage"] = _coverage
+        return ret
     except Exception as e:
         # A config error must sink the scan, not become a unit fallback finding.
         from harness.agents.deep import is_fatal_error
@@ -569,19 +573,13 @@ def hunter_worker(state: dict) -> dict:
 
 def _norm_key(f: dict) -> str:
     try:
-        path = str(f.get("path", "")).strip().lower().replace("\\", "/").lstrip("./")
-        cwe = str(f.get("cwe", "")).strip().upper()
-        try:
-            line = int(f.get("start_line", 0) or 0)
-        except (TypeError, ValueError):
-            line = 0
-        if not cwe and line == 0:
-            # Context items (prefilter/routes/threat-model/manifest): keep distinct.
-            title = str(f.get("title", "")).strip().lower()
-            snip = " ".join(str(f.get("snippet", "")).split())[:500]
-            digest = hashlib.sha256(snip.encode()).hexdigest()[:12]
-            return f"{path}|{cwe}|{line}|{title[:80]}|{digest}"
-        return f"{path}|{cwe}|{line}"
+        fid = str(f.get("id", "") or "").strip()
+        if fid:
+            return f"id:{fid}"
+        path = (str(f.get("path", "")).strip().lower()
+                .replace("\\", "/").lstrip("./"))
+        return (f"{path}|{safe_int(f.get('start_line'))}"
+                f"|{safe_int(f.get('end_line'))}")
     except (AttributeError, TypeError, ValueError):
         # Non-dict payloads: the fallback must hold the same never-raises
         # contract as the body above it.

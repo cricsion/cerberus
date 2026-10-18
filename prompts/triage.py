@@ -47,8 +47,7 @@ def build_triage_batch_task(scope: str, slim_json: str) -> str:
         "No prose. The threat model may clarify actors and assets. It moves severity DOWN never up: "
         "an explicitly deprioritized threat in section 5 keeps its status and takes severity low, but "
         "never acquits anything on its own. Unnamed or in-scope threats must be scored strictly according to "
-        "their earned exploitability evidence from the severity rubric above, evaluated on concrete reachability, "
-        "attacker control, preconditions, authentication, effect, and blast-radius evidence. "
+        "their earned exploitability evidence from the severity rubric above. "
         "If the threat model conflicts with that evidence, note the conflict in reason for human review."
     )
 

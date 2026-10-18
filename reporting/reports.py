@@ -39,7 +39,8 @@ def write_sarif(findings: list[dict], out: Path) -> None:
     out.write_text(json.dumps(sarif, indent=2))
 
 
-def write_markdown(findings: list[dict], out: Path) -> None:
+def write_markdown(findings: list[dict], out: Path,
+                   coverage: list[str] | None = None) -> None:
     rows = sorted(findings, key=lambda f: (SEVERITY_ORDER.get(f.get("severity", "medium"), 2), -(safe_float(f.get("confidence", 0)))))
     dupes: dict[str, list] = {}
     for f in rows:
@@ -58,6 +59,10 @@ def write_markdown(findings: list[dict], out: Path) -> None:
         if collapsed:
             locs = ", ".join(f"`{d.get('path','')}:{d.get('start_line',0)}`" for d in collapsed)
             lines += [f"  +{len(collapsed)} duplicate(s): {locs}", ""]
+    if coverage:
+        lines += ["## Coverage gaps", ""]
+        lines += [f"- {note}" for note in coverage]
+        lines.append("")
     out.write_text("\n".join(lines))
 
 

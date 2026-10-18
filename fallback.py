@@ -10,6 +10,12 @@ _logger = logging.getLogger(__name__)
 EMPTY_STRUCTURED: tuple[None, str] = (None, "")
 
 
+def _append_note(prev: str, text: str) -> str:
+    """Append a note to evidence text, newest tag last, capped like every site
+    that splices evidence. One shape for all verdict/evidence notes."""
+    return (prev + " | " + text) if prev else text
+
+
 def needs_review_verdicts(items: list[dict], note: str) -> list[dict]:
     """One needs-review verdict per item, to fail open a batch/round; omitted ids
     would otherwise become false consensus downstream."""

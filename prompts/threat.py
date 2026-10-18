@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-# Output contract for both swarm stages and the synthesizer; mirrors defending-code-reference-harness/.claude/skills/threat-model/schema.md.
+# Output contract for both swarm stages and the synthesizer; mirrors the threat-model skill's schema contract.
 SCHEMA_CONTRACT = (
     "Emit markdown with these eight sections, headings exactly:\n"
     "# Threat Model: <name>\n"
@@ -390,8 +390,7 @@ def build_synth_task(repo: str, draft_md: str, research_json: str,
         "materially shrinks a whole threat cluster regardless of which "
         "instance is found next (e.g. 'sandbox the decoder process', "
         "'parameterized queries everywhere') — prefer a control that "
-        "survives the next bug over a patch for the last one. "
-        "threat_numbers are 1-based positions in YOUR threats list.\n\n"
+        "survives the next bug over a patch for the last one.\n\n"
         "INVARIANTS (checked by code): every entry point must be named by "
         "at least one threat surface; at least one threat row must have an "
         "EMPTY evidence cell (the gap-fill ran). Order does not matter — "
@@ -414,8 +413,7 @@ def build_interview_task(draft_md: str, history_text: str, max_questions: int) -
         "biggest open doubts: trust boundaries (what is TRUSTED and why), "
         "what is out of scope and why, entry points, crown-jewel assets, "
         "dependency policies. Skip anything the draft + history already "
-        'answer. Return {"questions": []} when nothing material is left open. '
-        'Return exactly one JSON object shaped as {"questions": ["..."]}, no prose.'
+        'answer. Return {"questions": []} when nothing material is left open.'
     )
 
 
@@ -435,6 +433,5 @@ def build_finalize_task(draft_md: str, history_text: str) -> str:
         "move answered doubts out of section 6, record parked threats in "
         "section 5 with reasons (a threat model prioritizes, it never "
         "excludes), and append an 'Owner notes (interview)' section quoting "
-        f"the Q&A.\n\n{SCHEMA_CONTRACT}\n"
-        "Reply ONLY with the full markdown document."
+        f"the Q&A.\n\n{SCHEMA_CONTRACT}"
     )

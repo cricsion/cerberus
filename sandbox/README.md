@@ -21,7 +21,7 @@ No setup.
 Build the scan-toolchain image (pins live in `versions.env`):
 
 ```bash
-cp docker/versions.env.example docker/versions.env   # fill versions + sha256s
+cp docker/versions.env.example docker/versions.env
 ./docker/build.sh cyber-sandbox:local
 ```
 
@@ -173,7 +173,7 @@ identity and can access each other's paths.
 
 Consequences to plan for:
 
-* `memory`, `cpus` and `pids_limit` now bound the **whole run** — 30 parallel
+* `memory`, `cpus` and `pids_limit` now bound the **whole run** — 8 parallel
   agents (default `concurrency`) share one 2g budget. Raise
   `sandbox.memory` if agents thrash.
 * a runaway agent (memory, pids, a stray `rm -rf` in the shared tmpfs,
@@ -229,7 +229,7 @@ What the backend guarantees:
 | one sandbox per run | created on the first agent command, removed at scan teardown (`shutdown_run_sandbox()`, CLI `finally` + atexit) |
 | per-agent scratch | `HOME=/work/agent-<agent-id>`, `TMPDIR=/tmp/agent-<agent-id>`, pycache per agent (the `agent-` prefix is what the phase reset above matches) |
 | shared package caches | `/work/_shared/pip`, `/work/_shared/npm` (downloads shared, installs per-agent) |
-| egress | the machine policy (`balanced`); the harness **never** mutates global policy — only per-sandbox `--deny-network` hosts from `sandbox.sbx.deny_network` |
+| egress | the machine policy (`balanced`); the harness **never** mutates global policy — only per-sandbox rules: `--deny-network` hosts from `sandbox.sbx.deny_network` and allow rules from `sandbox.sbx.allow_network` (default `osv.dev,api.osv.dev`) |
 
 Accepted deltas vs the docker backend: **no** `--cap-drop`/seccomp/
 `--read-only`/`--pids-limit` (the microVM replaces them); the toolchain image
@@ -272,3 +272,12 @@ framework level. At scan teardown the run registry shuts the sandbox down and
 that scratch state is discarded. Do not design agents to rely on files
 persisting beyond a single scan, and do not treat sandbox scratch as an
 audit trail.
+
+## Coverage gaps
+
+Per hunter unit, the assigned files that were never listed as inspected are
+recorded as **coverage gaps**: the per-unit notes ride `hunter_coverage` in
+`scan_meta.json`, appear in `report.md` under `## Coverage gaps`, and are
+logged per unit to stderr as
+`[hunters] unit-<name> coverage: k/n listed; missing: …`. Gaps are reported,
+never turned into findings — an unlisted file is a signal, not a finding.

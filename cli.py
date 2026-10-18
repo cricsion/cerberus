@@ -60,7 +60,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         min_conf = args.min_confidence
         write_json(findings, out / "findings.json")
         write_sarif(findings, out / "results.sarif")
-        write_markdown(findings, out / "report.md")
+        write_markdown(findings, out / "report.md",
+                       coverage=state.get("hunter_coverage", []) or [])
         write_html(findings, out / "report.html")
         write_junit(findings, out / "junit.xml")
         # Threat-model artifact (single writer: CLI; full text, never truncated).
@@ -147,6 +148,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         "votes": args.votes,
         "n_duplicates": sum(1 for f in findings if f.get("duplicate_of")),
         "triage_log": "triage.log" if (out / "triage.log").is_file() else "",
+        "hunter_coverage": state.get("hunter_coverage", []) or [],
         "tools_used": sorted(set(str(t) for t in state.get("tools_used", []))),
         "manifest": scan_record,
         "scan_id": state.get("scan_id", ""),
