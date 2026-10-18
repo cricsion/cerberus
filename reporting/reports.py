@@ -12,7 +12,7 @@ SEV_TO_SARIF = {"critical": "error", "high": "error", "medium": "warning", "low"
 
 
 def write_json(findings: list[dict], out: Path) -> None:
-    out.write_text(json.dumps(findings, indent=2))
+    out.write_text(json.dumps(findings, indent=2), encoding="utf-8")
 
 
 def write_sarif(findings: list[dict], out: Path) -> None:
@@ -36,7 +36,7 @@ def write_sarif(findings: list[dict], out: Path) -> None:
         })
     sarif = {"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
              "runs": [{"tool": {"driver": {"name": "vuln-harness", "rules": rules}}, "results": results}]}
-    out.write_text(json.dumps(sarif, indent=2))
+    out.write_text(json.dumps(sarif, indent=2), encoding="utf-8")
 
 
 def write_markdown(findings: list[dict], out: Path,
@@ -50,20 +50,20 @@ def write_markdown(findings: list[dict], out: Path,
     lines = ["# Vuln Harness Report", "", f"Total findings: {len(rows)}",
              f"Primaries: {len(primaries)} (+{len(rows) - len(primaries)} duplicates)", ""]
     for f in primaries:
-        lines += [f"## {f.get('severity','?').upper()} {f.get('title','')}",
+        lines += [f"## {f.get('severity','?').upper()} {_md_safe(f.get('title',''))}",
                   f"- CWE: {f.get('cwe','')} | confidence: {f.get('confidence',0)} | status: {f.get('status','')}",
-                  f"- Location: `{f.get('path','')}:{f.get('start_line',0)}-{f.get('end_line',0)}`",
-                  f"- Evidence: {f.get('evidence','')}",
-                  f"- Fix: {f.get('fix_suggestion','')}", ""]
+                  f"- Location: `{_md_safe(f.get('path',''))}:{f.get('start_line',0)}-{f.get('end_line',0)}`",
+                  f"- Evidence: {_md_safe(f.get('evidence',''))}",
+                  f"- Fix: {_md_safe(f.get('fix_suggestion',''))}", ""]
         collapsed = dupes.get(str(f.get("id", "")), [])
         if collapsed:
-            locs = ", ".join(f"`{d.get('path','')}:{d.get('start_line',0)}`" for d in collapsed)
+            locs = ", ".join(f"`{_md_safe(d.get('path',''))}:{d.get('start_line',0)}`" for d in collapsed)
             lines += [f"  +{len(collapsed)} duplicate(s): {locs}", ""]
     if coverage:
         lines += ["## Coverage gaps", ""]
         lines += [f"- {note}" for note in coverage]
         lines.append("")
-    out.write_text("\n".join(lines))
+    out.write_text("\n".join(lines), encoding="utf-8")
 
 
 def write_html(findings: list[dict], out: Path) -> None:
@@ -88,6 +88,8 @@ def write_html(findings: list[dict], out: Path) -> None:
         evidence = html.escape(str(f.get("evidence", "")), quote=True)
         fix = html.escape(str(f.get("fix_suggestion", "")), quote=True)
         status = html.escape(str(f.get("status", "")), quote=True)
+        if f.get("duplicate_of"):
+            status = f"(duplicate of {html.escape(str(f['duplicate_of']), quote=True)})"
         trs.append(
             "<tr><td>{sev}</td><td>{title}</td><td>{cwe}</td>"
             "<td>{conf:.2f}</td><td>{loc}</td><td>{status}</td>"
@@ -115,6 +117,12 @@ def write_html(findings: list[dict], out: Path) -> None:
         "</tbody>\n</table>\n</body>\n</html>\n"
     )
     out.write_text(doc, encoding="utf-8")
+
+
+def _md_safe(value: object) -> str:
+    """Neutralize markdown structure in an untrusted report field."""
+    parts = str(value if value is not None else "").replace("`", "'").splitlines()
+    return " ".join(p.lstrip("#>|").lstrip() for p in parts)
 
 
 def write_junit(findings: list[dict], out: Path) -> None:

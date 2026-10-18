@@ -14,6 +14,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from harness.schemas import SEVERITY_ORDER
+
 try:
     from rich.console import Console
     from rich.panel import Panel
@@ -78,9 +80,7 @@ def render_findings(console: Any, findings: list[dict], *, limit: int = 200) -> 
     rows = sorted(
         (f for f in findings if isinstance(f, dict)),
         key=lambda f: (
-            {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}.get(
-                str(f.get("severity", "medium")).lower(), 5
-            ),
+            SEVERITY_ORDER.get(str(f.get("severity", "medium")).lower(), 5),
             -float(f.get("confidence", 0) or 0),
         ),
     )[:limit]
@@ -178,7 +178,8 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
     header_lines = [f"run: {run_dir}"]
     if isinstance(meta, dict):
         for key in ("repo", "files", "findings", "fail_on", "min_confidence",
-                    "threat_model_source", "threat_quality", "tools_used"):
+                    "threat_model_source", "threat_quality", "tools_used",
+                    "hunter_coverage"):
             if key in meta and meta[key] is not None:
                 header_lines.append(f"{key}: {meta[key]}")
     console.print(Panel(Text(clean_untrusted("\n".join(header_lines))),
@@ -252,10 +253,14 @@ def doctor(config_path: str, *, console: Any = None) -> int:
     except Exception as e:
         lines.append(f"config: error ({type(e).__name__}: {e})")
 
-    # Binaries.
-    for binary in ("semgrep", "opengrep", "gitleaks", "osv-scanner", "checkov", "docker", "sbx"):
+    lines.append("pipeline binaries:")
+    for binary in ("docker", "sbx", "gitleaks", "osv-scanner", "checkov"):
         path = shutil.which(binary)
-        lines.append(f"{binary}: {path if path else 'not found'}")
+        lines.append(f"  {binary}: {path if path else 'not found'}")
+    lines.append("sandbox-image tools (validated by the image build's self-test):")
+    for binary in ("semgrep", "opengrep"):
+        path = shutil.which(binary)
+        lines.append(f"  {binary}: {path if path else 'not on host'}")
 
     # Rich.
     lines.append(f"rich: {'available' if RICH_AVAILABLE else 'not installed'}")

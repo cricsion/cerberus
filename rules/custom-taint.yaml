@@ -93,7 +93,6 @@ rules:
       - pattern: flask.send_from_directory(...)
     pattern-sanitizers:
       - pattern: werkzeug.utils.safe_join(...)
-      - pattern: os.path.realpath(...)
     message: Possible path traversal via untrusted data reaching a file sink.
     metadata:
       cwe: CWE-22
@@ -239,11 +238,26 @@ rules:
       - pattern: system(...)
       - pattern: mysql_query(...)
       - pattern: mysqli_query(...)
-      - pattern: unserialize(...)
     message: Possible injection via superglobal reaching dangerous sink.
     metadata:
       cwe: CWE-78
       owasp: "A03:2021 - Injection"
+      source: custom-harness
+
+  - id: custom-php-deser-taint
+    languages: [php]
+    severity: ERROR
+    mode: taint
+    pattern-sources:
+      - pattern: $_GET[...]
+      - pattern: $_POST[...]
+      - pattern: $_REQUEST[...]
+    pattern-sinks:
+      - pattern: unserialize(...)
+    message: Possible insecure deserialization of untrusted input.
+    metadata:
+      cwe: CWE-502
+      owasp: "A08:2021 - Software and Data Integrity Failures"
       source: custom-harness
 
   # ---------------- Open redirect ----------------
@@ -344,76 +358,6 @@ rules:
     metadata:
       cwe: CWE-601
       owasp: "A01:2021 - Broken Access Control"
-      source: custom-harness
-
-  # ---------------- Log injection ----------------
-  - id: custom-loginject-taint-py
-    languages: [python]
-    severity: WARNING
-    mode: taint
-    pattern-sources:
-      - patterns:
-          - pattern-inside: "def $F(..., $SRC, ...): ..."
-          - pattern: $SRC
-      - pattern: flask.request.$ATTR
-      - pattern: request.$ATTR
-    pattern-sinks:
-      - pattern: logging.$F(...)
-    message: Possible log injection via untrusted data in log output.
-    metadata:
-      cwe: CWE-117
-      owasp: "A09:2021 - Logging Failures"
-      source: custom-harness
-
-  - id: custom-loginject-taint-java
-    languages: [java]
-    severity: WARNING
-    mode: taint
-    pattern-sources:
-      - pattern: $REQ.getParameter(...)
-    pattern-sinks:
-      - pattern: $LOG.info(...)
-      - pattern: $LOG.error(...)
-      - pattern: System.out.println(...)
-    message: Possible log injection via untrusted data in log output.
-    metadata:
-      cwe: CWE-117
-      owasp: "A09:2021 - Logging Failures"
-      source: custom-harness
-
-  - id: custom-loginject-taint-js
-    languages: [javascript, typescript]
-    severity: WARNING
-    mode: taint
-    pattern-sources:
-      - pattern: req.query.$ATTR
-      - pattern: req.params.$ATTR
-      - patterns:
-          - pattern-inside: "function $F(..., $SRC, ...) {...}"
-          - pattern: $SRC
-    pattern-sinks:
-      - pattern: console.log(...)
-      - pattern: console.error(...)
-    message: Possible log injection via untrusted data in log output.
-    metadata:
-      cwe: CWE-117
-      owasp: "A09:2021 - Logging Failures"
-      source: custom-harness
-
-  - id: custom-loginject-taint-go
-    languages: [go]
-    severity: WARNING
-    mode: taint
-    pattern-sources:
-      - pattern: $R.URL.Query().Get(...)
-      - pattern: $R.FormValue(...)
-    pattern-sinks:
-      - pattern: log.Printf(...)
-      - pattern: log.Println(...)
-    message: Possible log injection via untrusted data in log output.
-    metadata:
-      cwe: CWE-117
-      owasp: "A09:2021 - Logging Failures"
       source: custom-harness
 
   # ---------------- Unrestricted upload ----------------
@@ -565,7 +509,11 @@ rules:
     pattern-sources:
       - pattern: $REQ.getParameter(...)
     pattern-sinks:
-      - pattern: MessageDigest.getInstance(...)
+      - patterns:
+          - pattern: MessageDigest.getInstance($A, ...)
+          - metavariable-regex:
+              metavariable: $A
+              regex: "(?i)[\"']?(md5|sha-?1)[\"']?"
     message: Possible weak password hashing (fast unsalted hash of a password).
     metadata:
       cwe: CWE-916
@@ -610,6 +558,7 @@ rules:
       - pattern: pickle.load(...)
       - pattern: _pickle.loads(...)
       - pattern: yaml.load(..., Loader=yaml.Loader)
+      - pattern: yaml.load($D)
       - pattern: yaml.unsafe_load(...)
       - pattern: marshal.loads(...)
       - pattern: jsonpickle.decode(...)
