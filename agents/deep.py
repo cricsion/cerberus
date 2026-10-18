@@ -91,7 +91,6 @@ def _cap_openai_retry_delays(max_delay: float = 5.0) -> None:
 
 
 def _apply_model_profile(llm: Any, mk: dict) -> Any:
-    # init_chat_model caches instances process-wide: never mutate the cached LLM in place.
     raw = mk.get("model_profile")
     if not isinstance(raw, dict):
         return llm
@@ -150,11 +149,6 @@ def _model_provider(llm: Any) -> str:
     return provider
 
 
-def _model_name(llm: Any) -> str:
-    name = str(getattr(llm, "model_name", "") or getattr(llm, "model", "") or "")
-    return name.strip()
-
-
 def _supports_shell(backend: Any) -> bool:
     from deepagents.backends import CompositeBackend
     from deepagents.backends.protocol import SandboxBackendProtocol
@@ -200,31 +194,24 @@ def _with_skills_route(backend: Any) -> Any:
 
 def _register_profile(llm: Any) -> None:
     provider = _model_provider(llm)
-    name = _model_name(llm)
-    keys = [provider]
-    if name:
-        keys.append(f"{provider}:{name}")
+    if provider in _registered:
+        return
     with _reg_lock:
         from deepagents import (GeneralPurposeSubagentProfile, HarnessProfile,
                                 register_harness_profile)
-
-        for key in keys:
-            if key in _registered:
-                continue
-            try:
-                register_harness_profile(
-                    key,
-                    HarnessProfile(
-                        excluded_tools=BASE_EXCLUDED_TOOLS,
-                        general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
-                    ),
-                )
-            except Exception as e:
-                # Registration must never sink the scan; layer 2 (fs allowlist + deny-write) still applies.
-                print(f"[deep] harness profile skipped for key {key!r}: "
-                      f"{type(e).__name__}: {e}", file=sys.stderr)
-                continue
-            _registered.add(key)
+        try:
+            register_harness_profile(
+                provider,
+                HarnessProfile(
+                    excluded_tools=BASE_EXCLUDED_TOOLS,
+                    general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False),
+                ),
+            )
+        except Exception as e:
+            print(f"[deep] harness profile skipped for key {provider!r}: "
+                  f"{type(e).__name__}: {e}", file=sys.stderr)
+            return
+        _registered.add(provider)
 
 
 def _tool_error_message(exc: Exception, request: Any) -> str | None:
@@ -291,8 +278,7 @@ def _sandbox_permissions(backend: Any) -> list:
 
 def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                      response_format: Any = None, name: str | None = None,
-                     backend: Any = None, root_dir: Any = None,
-                     callbacks: Any = None):
+                     backend: Any = None, root_dir: Any = None):
     from deepagents import create_deep_agent
     from harness.prompts import UNTRUSTED_CONTEXT_NOTE
 
@@ -356,14 +342,6 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         from langchain.agents.structured_output import ToolStrategy
         response_format = ToolStrategy(response_format, handle_errors=True)
 
-    _visibility_callbacks = []
-    if callbacks:
-        _visibility_callbacks.extend(list(callbacks))
-    if _obs is not None:
-        _handler = _obs.get_handler()
-        if _handler is not None and _handler not in _visibility_callbacks:
-            _visibility_callbacks.append(_handler)
-
     kwargs: dict[str, Any] = dict(
         model=llm, tools=list(tools or []), system_prompt=system_prompt,
         middleware=_scan_middleware(backend),
@@ -375,14 +353,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         kwargs["response_format"] = response_format
     if name:
         kwargs["name"] = name
-    agent = create_deep_agent(**kwargs)
-    try:
-        agent._visibility_callbacks = list(_visibility_callbacks)
-    except Exception:
-        # Memo write onto an attr-hostile agent object (test fakes, pydantic-
-        # strict graphs) must never sink the build.
-        pass
-    return agent
+    return create_deep_agent(**kwargs)
 
 
 def message_text(msg: Any, *, sep: str = " ") -> str:
@@ -435,8 +406,7 @@ def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
             _cb_list.append(_handler)
     agent = build_deep_agent(llm, system_prompt=system, tools=tools,
                              response_format=model, name=name,
-                             backend=backend, root_dir=root_dir,
-                             callbacks=_cb_list)
+                             backend=backend, root_dir=root_dir)
     kwargs: dict[str, Any] = {"config": {"recursion_limit": recursion_limit}}
     if _cb_list:
         kwargs["config"]["callbacks"] = list(_cb_list)

@@ -8,13 +8,12 @@ from typing import Any
 # Prompt text lives in harness/prompts/validation.py; re-exported for `v.<name>` imports.
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
 from harness.agents.pool import worker_pool
-from harness.fallback import (EMPTY_STRUCTURED, needs_review_verdicts,
-                              run_fail_open)
-from harness.llmjson import extract_structured_items, parse_verdict_array
-from harness.prompts.validation import (FALSIFY_INSTRUCTIONS, OMITTED_NOTE,
-                                        REFUTE_METHOD, ROUND_FAILED_NOTE,
-                                        UNPARSEABLE_NOTE, VALIDATOR_SYSTEM,
-                                        _validator_message)
+from harness.fallback import (EMPTY_STRUCTURED, _append_note,
+                              needs_review_verdicts, run_fail_open)
+from harness.llmjson import extract_structured_items
+from harness.prompts.validation import (OMITTED_NOTE, REFUTE_METHOD,
+                                        ROUND_FAILED_NOTE, UNPARSEABLE_NOTE,
+                                        VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
 
@@ -39,9 +38,7 @@ def _merge_verdict(base: dict, data: dict) -> dict:
             note = f"refute: {reason}" if reason else ""
         if note:
             prev = str(merged.get("evidence") or "")
-            merged["evidence"] = (
-                (prev + " | " + note) if prev else note
-            )[:4000]
+            merged["evidence"] = _append_note(prev, note)
     if not merged.get("taint") and base.get("taint"):
         merged["taint"] = base["taint"]
     if merged.get("status") not in ("confirmed", "fp", "needs-review"):
@@ -58,55 +55,6 @@ def _merge_verdict(base: dict, data: dict) -> dict:
             f"at {base.get('path','')}"
         )[:4000]
     return merged
-
-
-def _validate_single(finding: dict, cfg: dict, instructions: str | None = None,
-                     threat_md: str = "", trace_suffix: str | None = None,
-                     meta_extra: dict | None = None) -> dict:
-    from harness.config import get_model_kwargs
-
-    base = dict(finding)
-    if instructions is None:
-        instructions = FALSIFY_INSTRUCTIONS
-    model_kwargs = get_model_kwargs(cfg, "validator")
-    mk = sanitize_model_kwargs(model_kwargs)
-    reason = "no structured verdict"
-    try:
-        from harness.agents.deep import run_structured
-        from harness.prompts.validation import VerdictUpdate
-        msg = _validator_message(base, instructions, threat_md)
-        parsed, raw_text, _ = run_structured(
-            mk, VerdictUpdate, VALIDATOR_SYSTEM, msg,
-            timeout=_int_setting(mk, "timeout", 60),
-            max_retries=_int_setting(mk, "max_retries", 3), name="validator",
-            trace_suffix=trace_suffix, meta_extra=meta_extra)
-        data = parsed.model_dump() if hasattr(parsed, "model_dump") else dict(parsed or {})
-        if not isinstance(data, dict) or not data or not data.get("status"):
-            # Structured path refused the schema: prose fallback from the SAME reply (no second LLM call).
-            data = _verdict_from_text(base, raw_text)
-        if data:
-            return _merge_verdict(dict(base), data)
-    except Exception as e:
-        if is_fatal_error(e):
-            raise
-        reason = type(e).__name__
-    fail = dict(base)
-    fail["status"] = "needs-review"
-    note = f"validator fail-open ({reason})"
-    prev = str(fail.get("evidence") or "")
-    fail["evidence"] = (prev + f" | {note}")[:4000] if prev else note
-    return fail
-
-
-def _verdict_from_text(base: dict, raw_text: str) -> dict:
-    items = parse_verdict_array(raw_text, require_id=False)
-    if not items:
-        return {}
-    fid = str(base.get("id", ""))
-    for it in items:
-        if fid and str(it.get("id", "")) == fid:
-            return it
-    return items[0] if len(items) == 1 else {}
 
 
 def evidence_gate(finding: dict) -> bool:
@@ -155,7 +103,7 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
             g["status"] = winner
             prev = str(g.get("evidence") or "")
             tag = f"consensus: {counts[winner]}/{n} {winner}"
-            g["evidence"] = (prev + f" | {tag}")[:4000] if prev else tag
+            g["evidence"] = _append_note(prev, tag)
             return g
     g = dict(by_status.get("needs-review") or by_status.get("confirmed")
              or by_status.get("fp") or base)
@@ -163,7 +111,7 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
     prev = str(g.get("evidence") or "")
     tag = (f"consensus: tie/no-majority "
            f"({counts['confirmed']}c/{counts['fp']}f/{counts['needs-review']}n of {n})")
-    g["evidence"] = (prev + f" | {tag}")[:4000] if prev else tag
+    g["evidence"] = _append_note(prev, tag)
     return g
 
 
@@ -207,13 +155,15 @@ def _apply_fp_guardrail(verdict: dict) -> dict:
         g["status"] = "needs-review"
         prev = str(g.get("evidence") or "")
         note = "guardrail: auth-only acquittal, no sanitizer proof"
-        g["evidence"] = (prev + f" | {note}")[:4000] if prev else note
+        g["evidence"] = _append_note(prev, note)
         return g
     return verdict
 
 
 def _route_finding(f: dict) -> tuple[str, dict]:
-    if f.get("status") == "fp" and "evidence_gate" in str(f.get("evidence", "")):
+    if (f.get("status") == "fp"
+            and (f.get("gated")
+                 or "evidence_gate" in str(f.get("evidence", "")))):
         return "passthrough", f
     # Info context without a CWE is scan context, not a vulnerability claim.
     if not f.get("cwe") and f.get("severity", "medium") == "info":
@@ -363,7 +313,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
 
                 parsed, raw_text, _ = run_fail_open(
                     "validator batch", _call_validator_structured,
-                    default=EMPTY_STRUCTURED + ({},))
+                    default=EMPTY_STRUCTURED + ({},), logger=_logger)
                 verdicts: list[dict] = extract_structured_items(
                     parsed, raw_text, field="verdicts", require_id=True)
                 covered: set[str] = set()
@@ -408,7 +358,7 @@ def _one_fallback(f: dict, note: str) -> dict:
     fb = dict(f) if isinstance(f, dict) else {}
     fb["status"] = "needs-review"
     prev = str(fb.get("evidence") or "")
-    fb["evidence"] = (prev + f" | {note}")[:4000] if prev else note
+    fb["evidence"] = _append_note(prev, note)
     return fb
 
 
@@ -425,9 +375,10 @@ def _evidence_gate_findings(findings: list[dict]) -> list[dict]:
             gated.append(g)
         else:
             g["status"] = "fp"
+            g["gated"] = True
             prev = str(g.get("evidence") or "")
             reason = "evidence_gate: missing path/snippet/sink evidence"
-            g["evidence"] = (prev + f" | {reason}")[:4000] if prev else reason
+            g["evidence"] = _append_note(prev, reason)
             gated.append(g)
     return gated
 
@@ -466,31 +417,10 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
     except Exception as e:
         if is_fatal_error(e):
             raise
-        # Batch failed: per-finding singles, fail-open each.
-        out = []
-        for f in cell_items:
-            try:
-                out.append(_validate_single(
-                    f, cfg, None, threat_md,
-                    trace_suffix=f"{name}:c{ci + 1}:v1",
-                    meta_extra={"unit": str(name), "cell": str(ci + 1),
-                                "vote": "1"}))
-            except Exception as e2:
-                if is_fatal_error(e2):
-                    raise
-                out.append(_one_fallback(
-                    f, f"cell fallback ({type(e2).__name__})"))
-        return out
-
-
-def _plan_validation_groups(groups: list[tuple[str, list[dict]]]
-                            ) -> list[tuple[str, list[dict], dict[int, dict],
-                                           list[tuple[list[int], list[dict]]]]]:
-    planned: list[tuple[str, list[dict], dict[int, dict],
-                        list[tuple[list[int], list[dict]]]]] = []
-    for pair in groups:
-        planned.append(_classify_group(pair))
-    return planned
+        # Batch failed and its own retries are exhausted: the cell fails open
+        # to needs-review per finding (never dropped)
+        return [_one_fallback(f, f"cell fallback ({type(e).__name__})")
+                for f in cell_items]
 
 
 def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
@@ -531,10 +461,12 @@ def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
     except Exception as e:
         if is_fatal_error(e):
             raise
-        # No parallel bonus: rerun cells sequentially, still fail-open.
-        cell_out = {}
+        # Pool-level failure: only the cells with no collected result are
+        # re-run, sequentially and still fail-open (completed work is kept).
         for gi, (_name, _items, _direct, cells) in enumerate(planned):
             for cidx in range(len(cells)):
+                if (gi, cidx) in cell_out:
+                    continue
                 try:
                     cell_out[(gi, cidx)] = _run_one(gi, cidx)
                 except Exception as e:
@@ -587,7 +519,7 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     print(f"[validator] {len(todo)} findings across {len(groups)} partition(s)",
           file=sys.stderr, flush=True)
 
-    planned = _plan_validation_groups(groups)
+    planned = [_classify_group(pair) for pair in groups]
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
         repo=repo)

@@ -140,7 +140,7 @@ def _triage_all_call(findings: list[dict], threat_md: str, cfg: dict) -> list[di
 
     parsed, raw_text, _ = run_fail_open(
         "triage batch", _call_triage_structured,
-        default=EMPTY_STRUCTURED + ({},))
+        default=EMPTY_STRUCTURED + ({},), logger=_logger)
 
     verdicts: list[dict] = extract_structured_items(
         parsed, raw_text, field="verdicts", require_id=True)
