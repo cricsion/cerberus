@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from langchain_core.runnables import RunnableLambda
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -301,22 +301,30 @@ def indexer_node(state: ScanState) -> dict:
     return {"files": files, "candidates": cands, "tools_used": sorted(set(_tools_used))}
 
 
-def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
-    repo = state.get("repo", ".") or "."
-    cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
-    files = [f for f in (state.get("files") or []) if f]
+def threat_summary(repo: str, cands: list[dict]) -> str:
+    """One-line STRIDE summary from indexer candidates. Shared by the scan's
+    threat_model_node and `harness threat-model` so the CLI bootstrap sees the
+    same stack/route context the scan path does."""
+    cands = [c for c in (cands or []) if isinstance(c, dict)]
     pre = next((c.get("snippet", "") for c in cands if c.get("id") == "prefilter"), "")
     classes = [line[3:] for line in str(pre).splitlines() if line.startswith("## ")]
     routes = next((c.get("snippet", "") for c in cands if c.get("id") == "routes"), "")
     n_routes = len([l for l in str(routes).splitlines() if l.strip()]) if routes else 0
     man = next((c.get("snippet", "") for c in cands if c.get("id") == "manifest"), "")
     stack = (str(man).splitlines() or ["unknown stack"])[0][:200]
-    summary = (
+    return (
         f"Threat model for {repo} | stack: {stack} | entry points: ~{n_routes} routes | "
         f"prefilter signal classes: {', '.join(classes) or 'none'} | "
         "STRIDE focus: spoofing (auth), tampering (injection), repudiation (logging), "
         "info-disclosure (secrets/XSS), DoS (eval/exec), elevation (authz/IDOR)."
     )
+
+
+def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
+    repo = state.get("repo", ".") or "."
+    cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
+    files = [f for f in (state.get("files") or []) if f]
+    summary = threat_summary(repo, cands)
     out: dict = {"threat_model": summary,
                  "candidates": [_info_candidate("threat-model", "STRIDE-lite threat model", repo, summary)]}
     if agent_registry is not None:
@@ -777,7 +785,8 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
         logger.debug("triage config load failed; using defaults: %s", _cfg4_err)
     try:
         from harness.agents.triage import run_triage
-        res = run_triage(verified, _cfg4, state.get("threat_model_md", "") or "")
+        res = run_triage(verified, _cfg4, state.get("threat_model_md", "") or "",
+                         repo=state.get("repo", "."))
         out = res.get("findings", verified)
         if agent_registry is not None:
             agent_registry.transition("triage:1", AgentState.succeeded,
@@ -954,10 +963,13 @@ def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) 
                                           model=model, error=str(e))
             return {"findings": [fb]}
 
-    with ThreadPoolExecutor(max_workers=max(1, int(max_workers))) as ex:
-        futures = [ex.submit(_one, p) for p in payloads]
-        for fut in futures:
-            apply_update(state, fut.result())
+    results = RunnableLambda(_one).batch(
+        payloads, config={"max_concurrency": max(1, int(max_workers))},
+        return_exceptions=True)
+    for res in results:
+        if isinstance(res, BaseException):
+            raise res
+        apply_update(state, res)
 
 
 def run_scan(repo: str, confirm_critical: bool = False,

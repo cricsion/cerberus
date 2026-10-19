@@ -49,7 +49,7 @@ from .render import (_SCOPE_SEMANTICS_RE, _backticked_paths, _cell,
                      _md_escape_cell, _parse_entry_points, _parse_threats,
                      _replace_section, _row_enum_gaps, _section, _table_rows)
 from .swarm import (_bound_json, _history_text, _json_default, _llm_structured,
-                    _llm_text, _model_dump, _parse_json_array, _swarm_history,
+                    _llm_text, _model_dump, _swarm_history,
                     _swarm_plan, _swarm_research, _synth_task, _threat_mk,
                     _threat_timeout)
 from .util import (_GIT_SAFE_OPTS, _SURFACE_FAMILY, _as_bool, _attack_surfaces,

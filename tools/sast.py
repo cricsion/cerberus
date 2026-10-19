@@ -1,37 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 import re
-import shutil
-import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
-from ._compat import env_int, tool
-
-
-# Never inherited by SAST child processes: they parse untrusted source.
-_SECRET_ENV = frozenset({
-    "API_KEY",
-    "OPENAI_API_KEY",
-    "ANTHROPIC_API_KEY",
-    "GOOGLE_API_KEY",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_SESSION_TOKEN",
-    "GITHUB_TOKEN",
-    "GITLAB_TOKEN",
-})
-
-_SECRET_SUFFIXES = ("_API_KEY", "_APIKEY", "_SECRET_KEY", "_PRIVATE_KEY")
-
-
-def _is_secret_key(name: str) -> bool:
-    return name in _SECRET_ENV or name.endswith(_SECRET_SUFFIXES)
-
-
-def scrubbed_env() -> dict[str, str]:
-    return {k: v for k, v in os.environ.items() if not _is_secret_key(k)}
+from ._compat import env_int, run_cli, tool
 
 
 def _resolve_targets(target: str) -> list[str]:
@@ -63,22 +37,7 @@ def _scan_json(build_cmd: Callable[[list[str]], list[str]], target: str,
     return _paginate(json.dumps(_run(build_cmd(resolved))), max_chars)
 
 
-def _run(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) -> dict:
-    if max_bytes is None:
-        max_bytes = env_int("SAST_BYTES", 200000)
-    if shutil.which(cmd[0]) is None:
-        return {"tool": cmd[0], "skipped": True, "reason": f"binary not found: {cmd[0]}"}
-    env = scrubbed_env()
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
-        out = proc.stdout if max_bytes <= 0 else proc.stdout[:max_bytes]
-        return {"tool": cmd[0], "returncode": proc.returncode,
-                "stdout": out, "stderr": proc.stderr[:20000],
-                "truncated": bool(max_bytes > 0 and len(proc.stdout) > max_bytes)}
-    except subprocess.TimeoutExpired:
-        return {"tool": cmd[0], "skipped": True, "reason": "timeout"}
-    except OSError as e:
-        return {"tool": cmd[0], "skipped": True, "reason": str(e)}
+_run = run_cli
 
 
 @tool(parse_docstring=True)

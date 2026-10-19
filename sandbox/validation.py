@@ -17,9 +17,11 @@ def validate_image(image: str) -> str:
 # not one -- it would put the agent in the host netns, beside our own services.
 NETWORK_MODES = ("none", "bridge")
 
+DEFAULT_NETWORK = "bridge"
+
 
 def validate_network(network: str) -> str:
-    mode = str(network or "bridge").strip().lower()
+    mode = str(network or DEFAULT_NETWORK).strip().lower()
     if mode not in NETWORK_MODES:
         raise ValueError(
             f"invalid sandbox network {network!r}: expected one of "

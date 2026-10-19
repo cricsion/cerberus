@@ -241,6 +241,37 @@ def scan_metadata(*, role: str = "", stage: str = "", unit: str = "",
         return {}
 
 
+def run_config(cfg: dict, *, name: str | None = None,
+               role: str | None = None, stage: str | None = None,
+               unit: str | None = None, extra: dict | None = None,
+               trace_suffix: str | None = None) -> dict:
+    """The per-call runtime config assembled here once (mutable ``cfg``).
+
+    Adds the singleton langfuse callback, then the stage/role metadata and a
+    run name that nests the sanitized trace scope when one is given. Non-
+    tracing keys (``recursion_limit``, ``max_concurrency``) are seeded by the
+    caller. With ``name`` the role defaults to ``stable_role(name)`` and the
+    stage to that role; explicit ``role``/``stage``/``unit`` override for the
+    hunters shape. Every caller used to re-roll this dance and they had
+    drifted; observability wiring itself is unchanged. Never raises.
+    """
+    try:
+        handler = get_handler()
+        if handler is not None:
+            cfg.setdefault("callbacks", []).append(handler)
+        resolved = role or (stable_role(name) if name else "")
+        if resolved:
+            meta = scan_metadata(stage=stage or resolved, role=resolved,
+                                 unit=unit or "", extra=extra)
+            if meta:
+                cfg["metadata"] = meta
+                scope = scope_path(trace_suffix)
+                cfg["run_name"] = f"{resolved}:{scope}" if scope else resolved
+    except Exception:
+        pass
+    return cfg
+
+
 def finish_scan() -> None:
     """Durable-export flush only (D10); idempotent, no-op when inactive.
 

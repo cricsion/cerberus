@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from harness.sandbox.local_backend import RepoLocalBackend
+from harness.sandbox.run_base import (DEFAULT_COMMAND_TIMEOUT,
+                                      DEFAULT_MAX_OUTPUT_BYTES,
+                                      DEFAULT_MEMORY, DEFAULT_RULES_DIR)
+from harness.sandbox.validation import DEFAULT_NETWORK
 
 __all__ = [
     "RepoLocalBackend",
@@ -65,14 +69,14 @@ def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
 
     return {
         "image": str(_sandbox_setting(cfg, "image", _IMAGE)),
-        "command_timeout": _int("command_timeout", 120),
-        "max_output_bytes": _int("max_output_bytes", 200_000),
-        "memory": str(_sandbox_setting(cfg, "memory", "2g")),
+        "command_timeout": _int("command_timeout", DEFAULT_COMMAND_TIMEOUT),
+        "max_output_bytes": _int("max_output_bytes", DEFAULT_MAX_OUTPUT_BYTES),
+        "memory": str(_sandbox_setting(cfg, "memory", DEFAULT_MEMORY)),
         "cpus": str(_sandbox_setting(cfg, "cpus", "2")),
         "pids_limit": _int("pids_limit", 512),
-        "network": str(_sandbox_setting(cfg, "network", "bridge")),
+        "network": str(_sandbox_setting(cfg, "network", DEFAULT_NETWORK)),
         # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- harness/agents/deep.py.
-        "rules_dir": str(_sandbox_setting(cfg, "rules_dir", "/opt/scan-rules/harness")),
+        "rules_dir": str(_sandbox_setting(cfg, "rules_dir", DEFAULT_RULES_DIR)),
         "mask_paths": mask_paths,
     }
 
@@ -106,18 +110,18 @@ def _sbx_settings(cfg: dict | None, repo: str | Path | None = None) -> dict:
         "image": str(section.get("image")
                      or _sandbox_setting(cfg, "image", _SBX_IMAGE)),
         "cpus": str(section.get("cpus", "0")),
-        "memory": str(section.get("memory", "2g")),
+        "memory": str(section.get("memory", DEFAULT_MEMORY)),
         "skills": str(section.get("skills", "off")),
         "pull": str(section.get("pull", "never")),
         "deny_network": hosts,
         "allow_network": allowed,
         "disable_telemetry": disable_telemetry,
         "primary_dir": section.get("primary_dir") or None,
-        "command_timeout": _int("command_timeout", 120),
-        "max_output_bytes": _int("max_output_bytes", 200_000),
+        "command_timeout": _int("command_timeout", DEFAULT_COMMAND_TIMEOUT),
+        "max_output_bytes": _int("max_output_bytes", DEFAULT_MAX_OUTPUT_BYTES),
         "sbx_bin": str(section.get("bin", "sbx")),
         # Same in-image rules dir as the docker settings above (read via `execute`); scanner skills need no setting (image-baked + served by the route).
-        "rules_dir": str(_shared("rules_dir", "/opt/scan-rules/harness")),
+        "rules_dir": str(_shared("rules_dir", DEFAULT_RULES_DIR)),
     }
 
 # One row per backend: name, `sandbox.backend` aliases, settings builder

@@ -65,7 +65,7 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     if root is None or not root.is_dir():
         raise ValueError("threat-stage repository is not a directory")
 
-    from harness.agents.deep import run_structured
+    from harness.agents.deep import is_fatal_error, run_structured
     from harness.config import load_config
     from harness.sandbox import close_backend, resolve_backend
     from harness.sandbox.local_backend import RepoLocalBackend
@@ -74,11 +74,13 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     # Same configured backend the Deep Agent factory uses: `execute` only for Docker/sbx, never local.
     try:
         backend = resolve_backend(load_config(), root)
-    except ValueError:
+    except Exception as e:
+        if is_fatal_error(e):
+            raise
         backend = RepoLocalBackend(repo_path=root)
 
     runtime_note = "No shell tool is available; continue with static analysis."
-    if isinstance(backend, SandboxBackendProtocol):
+    if agent_name != "threat:synthesizer" and isinstance(backend, SandboxBackendProtocol):
         network = str(getattr(backend, "network", "unknown")).lower()
         if network == "none":
             egress = (
@@ -106,7 +108,17 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     try:
         _mk = _threat_mk(cfg or {})
         _retries = int(_mk.get("max_retries", 5))
-        parsed, _, _ = run_structured(
+        if agent_name == "threat:synthesizer":
+            from harness.agents.deep import run_structured_batch
+            out = run_structured_batch(
+                _mk, model, system, [human],
+                timeout=_threat_timeout(cfg or {}), max_retries=_retries,
+                name=agent_name)
+            parsed = out[0] if out else RuntimeError("empty synth batch")
+            if isinstance(parsed, BaseException):
+                raise parsed
+            return parsed
+        parsed, _ = run_structured(
             _mk, model, system, human,
             timeout=_threat_timeout(cfg or {}), max_retries=_retries,
             name=agent_name, backend=backend, root_dir=root)
@@ -120,16 +132,10 @@ def _llm_text(cfg: dict, system: str, human: str,
               root_dir: str | None = None) -> str:
     from harness.agents.deep import run_structured
 
-    _, text, _ = run_structured(
+    _, text = run_structured(
         _threat_mk(cfg), None, system, human, timeout=_threat_timeout(cfg),
         max_retries=1, name="threat", root_dir=root_dir)
     return str(text or "")
-
-
-def _parse_json_array(text: str) -> list | None:
-    from harness.llmjson import extract_string_array
-
-    return extract_string_array(text, field="questions")
 
 
 def _history_text(history: list[tuple[str, str]]) -> str:
@@ -141,31 +147,25 @@ def _history_text(history: list[tuple[str, str]]) -> str:
 
 def interview_questions(draft_md: str, history: list[tuple[str, str]],
                         cfg: dict, max_questions: int = 5) -> list | None:
+    from harness.agents.deep import run_structured_batch
+    from harness.fallback import run_fail_open
     from harness.prompts.threat import (INTERVIEWER_SYSTEM, QuestionList,
                                         build_interview_task)
-    system = INTERVIEWER_SYSTEM
     human = build_interview_task(draft_md, _history_text(history),
                                  max_questions)
 
-    from harness.agents.deep import run_structured
-    from harness.fallback import run_fail_open
-
-    parsed, raw_text, _ = run_fail_open(
-        "threat:interviewer",
-        lambda: run_structured(
-            _threat_mk(cfg or {}), QuestionList, system, human,
+    def _ask() -> list:
+        out = run_structured_batch(
+            _threat_mk(cfg or {}), QuestionList, INTERVIEWER_SYSTEM, [human],
             timeout=_threat_timeout(cfg or {}), max_retries=1,
-            name="threat:interviewer"),
-        default=(None, "", ""), logger=_logger)
-    if parsed is not None:
+            name="threat:interviewer")
+        parsed = out[0] if out else RuntimeError("empty interview batch")
+        if isinstance(parsed, BaseException):
+            raise parsed
         return parsed.questions[:max_questions]
 
-    if not raw_text:
-        return None
-    parsed = _parse_json_array(raw_text)
-    if parsed is None:
-        return None
-    return parsed[:max_questions]
+    return run_fail_open("threat:interviewer", _ask, default=None,
+                         logger=_logger)
 
 
 def finalize_threat(draft_md: str, history: list[tuple[str, str]], cfg: dict,

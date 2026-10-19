@@ -67,6 +67,11 @@ class AgentState(str, Enum):
 TERMINAL_STATES = {AgentState.succeeded, AgentState.failed,
                    AgentState.canceled, AgentState.timed_out}
 
+def _state_str(state) -> str:
+    """One canonical value-string for normalized AgentState handles/events."""
+    return state.value if hasattr(state, "value") else str(state)
+
+
 @dataclass
 class AgentStats:
     tool_calls: int = 0
@@ -126,16 +131,13 @@ class AgentHandle:
             "agent_id": self.agent_id,
             "role": self.role,
             "unit": self.unit,
-            "state": (self.state.value if hasattr(self.state, "value")
-                      else str(self.state)),
+            "state": _state_str(self.state),
             "model": self.model,
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "elapsed_s": round(self.elapsed_s, 3),
             "thread_id": self.thread_id,
-            "stats": self.stats.to_dict() if hasattr(self.stats, "to_dict")
-            else asdict(self.stats) if hasattr(self.stats, "__dataclass_fields__")
-            else dict(self.stats or {}),
+            "stats": self.stats.to_dict(),
             "error": self.error,
             "parent_stage": self.parent_stage,
             "run_id": self.run_id,
@@ -182,8 +184,7 @@ class AgentEvent:
             "parent_stage": self.parent_stage,
             "role": self.role,
             "unit": self.unit,
-            "state": (self.state.value if hasattr(self.state, "value")
-                      else str(self.state)),
+            "state": _state_str(self.state),
             "message": self.message,
             "progress": self.progress or {},
             "model": self.model,
@@ -279,7 +280,7 @@ class AgentRegistry:
                 handle.error = None if error is None else str(error)
             if new_state == AgentState.running and handle.started_at is None:
                 handle.started_at = now
-            if new_state in TERMINAL_STATES and handle.finished_at is None:
+            if new_state.terminal and handle.finished_at is None:
                 handle.finished_at = now
             if handle.thread_id is None:
                 handle.thread_id = threading.get_ident()
@@ -318,13 +319,12 @@ class AgentRegistry:
         by_state = {}
         by_role = {}
         for h in handles:
-            st = h.state.value if hasattr(h.state, "value") else str(h.state)
+            st = _state_str(h.state)
             by_state[st] = by_state.get(st, 0) + 1
             by_role[h.role] = by_role.get(h.role, 0) + 1
-        failed = [h.agent_id for h in handles
-                  if (h.state.value if hasattr(h.state, "value") else str(h.state)) == AgentState.failed.value]
+        failed = [h.agent_id for h in handles if h.state is AgentState.failed]
         running = [h.agent_id for h in handles
-                   if (h.state.value if hasattr(h.state, "value") else str(h.state)) == AgentState.running.value]
+                   if h.state is AgentState.running]
         return {
             "total": len(handles),
             "by_state": by_state,

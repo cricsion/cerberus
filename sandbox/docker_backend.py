@@ -9,9 +9,11 @@ from typing import Iterable
 
 from . import cli_utils
 from .backend_base import SandboxShellBackend
-from .run_base import (DEFAULT_IMAGE, ORPHAN_IDLE_SECONDS, RunRegistry,
+from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
+                       DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
+                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS, RunRegistry,
                        RunSandboxBase, install_crash_hooks, sweep_orphans_via)
-from .validation import validate_image, validate_network
+from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
 
 __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
            "get_run_sandbox", "shutdown_run_sandbox", "reap_orphans",
@@ -25,7 +27,9 @@ def _last_exec_age(name: str, *, docker_bin: str = "docker") -> float | None:
     try:
         proc = cli_utils.run_cli(
             [docker_bin, "events", "--since", "0", "--until", "0s",
-             "--filter", f"container={name}", "--format", "json"], timeout=60)
+             "--filter", f"container={name}",
+             "--filter", "event=exec_start",
+             "--format", "json"], timeout=60)
     except Exception:
         return None
     newest = 0.0
@@ -75,10 +79,12 @@ class RunSandbox(RunSandboxBase):
     DESTROY_TIMEOUT: float = 30
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 user: str = "1000:1000", command_timeout: int = 120,
-                 max_output_bytes: int = 200_000, memory: str = "2g",
-                 cpus: str = "2", pids_limit: int = 512,
-                 network: str = "bridge",
+                 user: str = "1000:1000",
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
+                 memory: str = DEFAULT_MEMORY, cpus: str = "2",
+                 pids_limit: int = 512,
+                 network: str = DEFAULT_NETWORK,
                  docker_bin: str = "docker",
                  mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
         self.user = str(user)
@@ -117,6 +123,7 @@ class RunSandbox(RunSandboxBase):
             "--security-opt", "no-new-privileges",
             "--pids-limit", str(self.pids_limit),
             "--memory", self.memory,
+            "--memory-swap", self.memory,
             "--cpus", self.cpus,
             "--read-only",
             "--tmpfs", "/tmp:rw,size=1g,mode=1777",
@@ -161,11 +168,13 @@ class RunSandbox(RunSandboxBase):
 class DockerSandboxBackend(SandboxShellBackend):
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
                  user: str = "1000:1000",
-                 command_timeout: int = 120, max_output_bytes: int = 200_000,
-                 memory: str = "2g", cpus: str = "2", pids_limit: int = 512,
-                 network: str = "bridge",
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
+                 memory: str = DEFAULT_MEMORY, cpus: str = "2",
+                 pids_limit: int = 512,
+                 network: str = DEFAULT_NETWORK,
                  docker_bin: str = "docker",
-                 rules_dir: str = "/opt/scan-rules/harness",
+                 rules_dir: str = DEFAULT_RULES_DIR,
                  run: RunSandbox | None = None, agent_id: str | None = None,
                  mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
         # Validated before super(): a bad image or network must fail at construction, not inside `docker run`; mask_paths None keeps discovery.

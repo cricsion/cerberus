@@ -9,7 +9,7 @@ from deepagents.backends.protocol import ExecuteResponse, SandboxBackendProtocol
 
 from . import cli_utils
 from .local_backend import RepoLocalBackend
-from .run_base import RunSandboxBase
+from .run_base import DEFAULT_RULES_DIR, RunSandboxBase
 
 class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
     HANG_NOTE = "exec client hang"
@@ -17,13 +17,13 @@ class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
     def __init__(self, *, repo_path: str | Path, run_factory: Callable[[], RunSandboxBase],
                  run: RunSandboxBase | None = None, agent_id: str | None = None,
                  command_timeout: int = 120, max_output_bytes: int = 200_000,
-                 rules_dir: str = "/opt/scan-rules/harness",
+                 rules_dir: str = DEFAULT_RULES_DIR,
                  network: str = "") -> None:
         super().__init__(repo_path=repo_path)
         self.agent_id = cli_utils.safe_slug(agent_id or uuid.uuid4().hex[:12])
         self.command_timeout = max(1, int(command_timeout))
         self.max_output_bytes = max(0, int(max_output_bytes))
-        self.rules_dir = str(rules_dir or "/opt/scan-rules/harness")
+        self.rules_dir = str(rules_dir or DEFAULT_RULES_DIR)
         # `run_factory` is only called when there is no shared run, keeping the run's validated settings in the backend that checked them.
         self._owns_run = run is None
         self._run = run or run_factory()
@@ -93,7 +93,7 @@ class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
             # The in-sandbox `timeout` fires at t, so the CLI client is hanging: kill ONLY this exec's tagged shell, never a blanket pkill.
             try:
                 cli_utils.run_cli(self._run.pkill_argv(self._run.name, marker),
-                                  timeout=30)
+                                  timeout=30, env=self._run._child_env())
             except Exception:
                 pass
             return ExecuteResponse(

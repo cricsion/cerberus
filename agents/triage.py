@@ -5,13 +5,10 @@ LLM. Nothing is dropped."""
 from __future__ import annotations
 
 import logging as _logging
-from typing import Any
 
 _logger = _logging.getLogger(__name__)
 
 from harness.agents.deep import is_fatal_error
-from harness.agents.pool import worker_pool
-from harness.fallback import EMPTY_STRUCTURED, run_fail_open
 from harness.llmjson import extract_structured_items
 from harness.schemas import safe_int
 
@@ -105,46 +102,18 @@ def _slim_for_triage(f: dict) -> dict:
             "evidence": str(f.get("evidence", ""))[:2000]}
 
 
-def _triage_all_call(findings: list[dict], threat_md: str, cfg: dict) -> list[dict]:
-    """One LLM call over all eligible findings: confirm/split + severity rubric;
-    [] on any failure (caller keeps Stage A)."""
-    from harness.agents.deep import sanitize_model_kwargs
-    from harness.config import get_model_kwargs
-
-    eligible = [f for f in (findings or [])
-                if isinstance(f, dict) and _group_key(f) is not None]
-    if len(eligible) < 1:
-        return []
-    model_kwargs = get_model_kwargs(cfg, "validator", agent="triager")
-    mk = sanitize_model_kwargs(model_kwargs)
-
-    try:
-        _timeout = max(int(mk.get("timeout", 180) or 180), 180)
-    except (TypeError, ValueError):
-        _timeout = 180
+def _triage_messages(chunks: list[list[dict]], threat_md: str) -> list[str]:
+    """One prompt per chunk: threat-model scope prefix + the slimmed findings."""
     import json as _json
-    slim = [_slim_for_triage(f) for f in eligible]
+
     scope = (("[THREAT MODEL]\n" + threat_md.strip() + "\n\n")
              if (threat_md or "").strip() else "")
-    from harness.agents.deep import run_structured
-    from harness.prompts.triage import (TRIAGE_SYSTEM, TriageBatch,
-                                        build_triage_batch_task)
-    msg = build_triage_batch_task(
-        scope, _json.dumps(slim, default=str))
-    def _call_triage_structured() -> tuple[Any, str, Any]:
-        from harness.agents.deep import run_structured
+    from harness.prompts.triage import build_triage_batch_task
 
-        return run_structured(
-            mk, TriageBatch, TRIAGE_SYSTEM, msg, timeout=_timeout,
-            max_retries=3, name="triage")
-
-    parsed, raw_text, _ = run_fail_open(
-        "triage batch", _call_triage_structured,
-        default=EMPTY_STRUCTURED + ({},), logger=_logger)
-
-    verdicts: list[dict] = extract_structured_items(
-        parsed, raw_text, field="verdicts", require_id=True)
-    return verdicts
+    return [build_triage_batch_task(
+                scope, _json.dumps([_slim_for_triage(f) for f in chunk],
+                                   default=str))
+            for chunk in chunks]
 
 
 def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
@@ -250,8 +219,10 @@ def render_triage_log(log: list[dict], n_calls: int = 0,
         return "# Triage log\n\n(unavailable)\n"
 
 
-def run_triage(findings: list[dict], cfg: dict, threat_md: str = "") -> dict:
-    """Stage A always; Stage B+C as batched LLM calls. Returns findings +
+def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
+               repo: str = "") -> dict:
+    """Stage A always; Stage B+C as per-chunk agent calls (each chunk's agent
+    may re-read the contested code it is judging). Returns findings +
     triage_llm_calls + n_duplicates + triage_log; never drops, fails open to Stage A."""
     staged = stage_a(findings)
     stats: dict = {"triage_llm_calls": 0, "n_duplicates": 0, "triage_log": []}
@@ -275,41 +246,106 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "") -> dict:
     _tw = _gc(cfg)
     chunks = [order[i:i + batch_size]
               for i in range(0, len(order), batch_size)]
-    completed: list[int] = []
+    completed = 0
     import sys
 
     print(f"[triage] {len(order)} findings in {len(chunks)} batch(es)...",
           file=sys.stderr, flush=True)
 
-    def _run_batch(args: tuple[int, list[dict]]) -> tuple[int, list[dict]]:
-        b, chunk = args
-        verdicts = _triage_all_call(chunk, threat_md or "", cfg or {})
-        print(f"[triage] batch {b} done ({len(chunk)} findings)",
-              file=sys.stderr, flush=True)
-        return b, verdicts if isinstance(verdicts, list) else []
+    from harness.agents.deep import run_structured, sanitize_model_kwargs
+    from harness.config import get_model_kwargs
+    from harness.prompts.triage import TRIAGE_SYSTEM, TriageBatch
 
     try:
-        # Bounded concurrency; no stage-wide timeout (call caps + recursion bound it).
-        with worker_pool(_tw) as ex:
-            futs = [ex.submit(_run_batch, (b, chunk))
-                    for b, chunk in enumerate(chunks, start=1)]
-            for i, fut in enumerate(futs):
-                b = i + 1
-                bb, verdicts = fut.result()
-                completed.append(bb)  # call succeeded (verdicts may be empty)
-                if verdicts:
-                    _apply_verdicts(staged, verdicts)
-                # Log every batch (failed batches keep Stage-A verdicts).
-                for f in chunks[b - 1]:
-                    target = next(s for s in staged
-                                  if str(s.get("id")) == str(f.get("id")))
-                    log.append(_log_entry(target, b))
+        mk = sanitize_model_kwargs(
+            get_model_kwargs(cfg, "validator", agent="triager"))
+        try:
+            _timeout = max(int(mk.get("timeout", 180) or 180), 180)
+        except (TypeError, ValueError):
+            _timeout = 180
     except Exception as e:
         if is_fatal_error(e):
             raise
-        # Pool entry/exit failure: Stage-A verdicts retained, do not sink the scan.
-        _logger.debug("triage pool failed; Stage-A retained: %s", e)
-    stats["triage_llm_calls"] = len(completed)
+        _logger.debug("triage model config failed; Stage-A retained: %s", e)
+        stats["n_duplicates"] = sum(1 for f in staged if f.get("duplicate_of"))
+        return {"findings": staged, **stats}
+    messages = _triage_messages(chunks, threat_md or "")
+    by_id: dict[str, dict] = {}
+    for s in staged:
+        by_id.setdefault(str(s.get("id")), s)  # first match, like the old lookup
+
+    from harness.agents.toolsets import graph_tools
+    from harness.sandbox.local_backend import RepoLocalBackend
+    from pathlib import Path
+
+    tools = graph_tools()
+    backend = None
+    if repo:
+        try:
+            root = Path(repo).resolve()
+            backend = RepoLocalBackend(repo_path=root)
+        except Exception as e:
+            if is_fatal_error(e):
+                raise
+            backend = None
+
+    try:
+        try:
+            from langchain_core.runnables import RunnableLambda
+
+            def _one(message):
+                parsed, _ = run_structured(
+                    mk, TriageBatch, TRIAGE_SYSTEM, message,
+                    tools=tools, timeout=_timeout, max_retries=3,
+                    name="triage", backend=backend, root_dir=repo or None)
+                return parsed
+
+            results = RunnableLambda(_one).batch(
+                messages,
+                config={"max_concurrency": _tw} if _tw else None,
+                return_exceptions=True)
+        except Exception as e:
+            if is_fatal_error(e):
+                raise
+            _logger.debug("triage batch failed; Stage-A retained: %s", e)
+            results = []
+            chunks = []
+
+        for b, chunk in enumerate(chunks, start=1):
+            res = (results[b - 1] if b - 1 < len(results)
+                   else RuntimeError("no batch result"))
+            verdicts: list[dict] = []
+            if isinstance(res, BaseException):
+                if is_fatal_error(res):
+                    raise res
+                _logger.debug("triage batch %s failed; Stage-A retained: %s: %s",
+                              b, type(res).__name__, res)
+            else:
+                completed += 1
+                try:
+                    verdicts = extract_structured_items(
+                        res, "", field="verdicts", require_id=True)
+                except Exception as e:
+                    if is_fatal_error(e):
+                        raise
+                    _logger.debug("triage batch %s unparseable: %s", b, e)
+            try:
+                if verdicts:
+                    _apply_verdicts(staged, verdicts)
+                for f in chunk:
+                    log.append(_log_entry(by_id.get(str(f.get("id")), f), b))
+            except Exception as e:
+                if is_fatal_error(e):
+                    raise
+                _logger.debug("triage batch %s apply/log failed: %s", b, e)
+            print(f"[triage] batch {b} done ({len(chunk)} findings)",
+                  file=sys.stderr, flush=True)
+    finally:
+        if backend is not None:
+            from harness.sandbox import close_backend
+            close_backend(backend)
+
+    stats["triage_llm_calls"] = completed
     if not log:
         log = [_log_entry(f, 0) for f in staged]
     stats["triage_log"] = log

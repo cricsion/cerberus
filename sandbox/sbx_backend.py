@@ -13,17 +13,17 @@ from typing import Iterable
 
 from . import cli_utils
 from .backend_base import SandboxShellBackend
-from .run_base import (DEFAULT_IMAGE, ORPHAN_IDLE_SECONDS, SHARED_CACHE_DIRS,
-                       RunRegistry, RunSandboxBase, install_crash_hooks,
-                       sweep_orphans_via)
+from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
+                       DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
+                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS,
+                       SHARED_CACHE_DIRS, RunRegistry, RunSandboxBase,
+                       install_crash_hooks, sweep_orphans_via)
 from .validation import (validate_cpus, validate_image, validate_memory,
                          validate_pull, validate_skills)
 
 __all__ = ["SbxBackend", "SbxRun", "get_sbx_run", "shutdown_sbx",
            "sweep_orphans", "DEFAULT_IMAGE"]
 
-# The operator's own telemetry preference, captured before we ever touch it, so "disable_telemetry: 0" restores their value instead of erasing it.
-_TELEMETRY_PREEXISTING = os.environ.get("SBX_NO_TELEMETRY")
 
 def _dedupe(hosts) -> tuple[str, ...]:
     return tuple(dict.fromkeys(str(h).strip() for h in (hosts or [])
@@ -38,13 +38,14 @@ class SbxRun(RunSandboxBase):
     EXTRA_EXEC_MKDIR_DIRS: tuple[str, ...] = SHARED_CACHE_DIRS
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 cpus: str = "0", memory: str = "2g", skills: str = "off",
+                 cpus: str = "0", memory: str = DEFAULT_MEMORY, skills: str = "off",
                  pull: str = "never",
                  deny_network: tuple[str, ...] | list[str] = (),
                  allow_network: tuple[str, ...] | list[str] = (),
                  disable_telemetry: bool = True,
                  primary_dir: str | Path | None = None,
-                 command_timeout: int = 120, max_output_bytes: int = 200_000,
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
                  sbx_bin: str = "sbx") -> None:
         self.cpus = validate_cpus(cpus)
         self.memory = validate_memory(memory)
@@ -53,11 +54,6 @@ class SbxRun(RunSandboxBase):
         self.deny_network = _dedupe(deny_network)
         self.allow_network = _dedupe(allow_network)
         self.disable_telemetry = bool(disable_telemetry)
-        # Config value wins over the operator's exported SBX_NO_TELEMETRY; turning it off restores theirs, so no leakage between configurations.
-        if self.disable_telemetry:
-            os.environ["SBX_NO_TELEMETRY"] = "1"
-        elif _TELEMETRY_PREEXISTING is not None:
-            os.environ["SBX_NO_TELEMETRY"] = _TELEMETRY_PREEXISTING
         self.sbx_bin = str(sbx_bin or "sbx")
         # The throwaway read-write primary workspace sbx requires; created lazily (first ensure_started) so constructing has no fs side effects.
         self._primary_dir: Path | None = (
@@ -72,6 +68,13 @@ class SbxRun(RunSandboxBase):
     @property
     def cli_bin(self) -> str:
         return self.sbx_bin
+
+    def _child_env(self) -> dict[str, str]:
+        if not self.disable_telemetry:
+            return dict(os.environ)
+        env = dict(os.environ)
+        env["SBX_NO_TELEMETRY"] = "1"
+        return env
 
     def _workdir_args(self) -> list[str]:
         return ["--workdir", str(self.repo_path)]
@@ -111,7 +114,7 @@ class SbxRun(RunSandboxBase):
         argv = [self.sbx_bin, "policy", "allow", "network",
                 "--sandbox", self._name, ",".join(self.allow_network)]
         try:
-            proc = cli_utils.run_cli(argv, timeout=60)
+            proc = cli_utils.run_cli(argv, timeout=60, env=self._child_env())
         except (FileNotFoundError, subprocess.TimeoutExpired) as e:
             # never fail the run over a policy add; these are run_cli's only
             # raises (a non-zero exit is handled just below)
@@ -126,7 +129,8 @@ class SbxRun(RunSandboxBase):
             # A missing CLI binary raises past here: the execute() boundary in
             # backend_base converts it once for every backend.
             proc = cli_utils.run_cli(self._create_args(),
-                                     timeout=self.CREATE_TIMEOUT)
+                                     timeout=self.CREATE_TIMEOUT,
+                                     env=self._child_env())
             out = (proc.stdout or "").strip()
             if proc.returncode == 0:
                 self._started = True
@@ -174,14 +178,15 @@ class SbxBackend(SandboxShellBackend):
     HANG_NOTE = "sbx exec client hang"
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 cpus: str = "0", memory: str = "2g", skills: str = "off",
+                 cpus: str = "0", memory: str = DEFAULT_MEMORY, skills: str = "off",
                  pull: str = "never",
                  deny_network: tuple[str, ...] | list[str] = (),
                  allow_network: tuple[str, ...] | list[str] = (),
                  disable_telemetry: bool = True,
                  primary_dir: str | Path | None = None,
-                 command_timeout: int = 120, max_output_bytes: int = 200_000,
-                 sbx_bin: str = "sbx", rules_dir: str = "/opt/scan-rules/harness",
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
+                 sbx_bin: str = "sbx", rules_dir: str = DEFAULT_RULES_DIR,
                  run: SbxRun | None = None, agent_id: str | None = None) -> None:
         # Validated before super(): a bad setting must fail at construction, not inside a `sbx create`.
         self.image = validate_image(str(image or DEFAULT_IMAGE))
@@ -297,13 +302,19 @@ def _ls_payload(raw: str):
         except (TypeError, ValueError):
             return None
 
+def _admin_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env["SBX_NO_TELEMETRY"] = "1"
+    return env
+
 def sweep_orphans(*, sbx_bin: str = "sbx",
                   live: Iterable[str] | None = None,
                   idle_seconds: float = ORPHAN_IDLE_SECONDS) -> list[str]:
     entries: dict[str, dict] = {}
 
     def list_names() -> list[str]:
-        proc = cli_utils.run_cli([sbx_bin, "ls", "--json"], timeout=120)
+        proc = cli_utils.run_cli([sbx_bin, "ls", "--json"], timeout=120,
+                                 env=_admin_env())
         payload = _ls_payload(proc.stdout or "")
         if payload is None:
             return []
@@ -324,7 +335,7 @@ def sweep_orphans(*, sbx_bin: str = "sbx",
 
     def remove(targets: list[str]) -> bool:
         proc = cli_utils.run_cli([sbx_bin, "rm", "--force", *targets],
-                                 timeout=300)
+                                 timeout=300, env=_admin_env())
         if proc.returncode != 0:
             return False
         for name in targets:

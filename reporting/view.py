@@ -14,18 +14,16 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from harness.schemas import SEVERITY_ORDER
+from harness.schemas import sort_findings
 
 try:
     from rich.console import Console
-    from rich.panel import Panel
     from rich.table import Table
     from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:  # pragma: no cover - environment without rich
     Console = None  # type: ignore[assignment]
-    Panel = None  # type: ignore[assignment]
     Table = None  # type: ignore[assignment]
     Text = None  # type: ignore[assignment]
     RICH_AVAILABLE = False
@@ -62,6 +60,18 @@ def clean_untrusted(text: Any) -> str:
     return _TERMINAL_ESCAPE_RE.sub("", str(text))
 
 
+def print_panel(console, lines: list[str], *, title: str,
+                border_style: str = "cyan") -> None:
+    """One panel shell for every view print: a cleaned, titled text box."""
+    from rich.panel import Panel
+    from rich.text import Text
+
+    body = "\n".join(lines) if lines else "(no events)"
+    console.print(Panel(Text(clean_untrusted(body)),
+                        title=Text(clean_untrusted(str(title))),
+                        border_style=border_style))
+
+
 def _read_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -77,13 +87,7 @@ def render_findings(console: Any, findings: list[dict], *, limit: int = 200) -> 
             print("no findings")
         return
 
-    rows = sorted(
-        (f for f in findings if isinstance(f, dict)),
-        key=lambda f: (
-            SEVERITY_ORDER.get(str(f.get("severity", "medium")).lower(), 5),
-            -float(f.get("confidence", 0) or 0),
-        ),
-    )[:limit]
+    rows = sort_findings(list(findings))[:limit]
 
     if not RICH_AVAILABLE or console is None:
         for f in rows:
@@ -154,7 +158,7 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
                 print(clean_untrusted(
                     f"{e.get('ts')} {e.get('agent_id')} {e.get('state')} {e.get('message')}"))
             return 0
-        from rich.panel import Panel as _Panel
+        from rich.text import Text
         lines = []
         for e in filtered:
             parts = [str(e.get("agent_id", "?")), str(e.get("state", "?"))]
@@ -163,9 +167,8 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
             if e.get("elapsed_s") is not None:
                 parts.append(f"{e.get('elapsed_s')}s")
             lines.append(" ".join(parts))
-        title = Text(clean_untrusted(f"Timeline: {agent if agent is not None else 'all'}"))
-        console.print(_Panel(Text(clean_untrusted("\n".join(lines) if lines else "(no events)")),
-                            title=title, border_style="cyan"))
+        title = f"Timeline: {agent if agent is not None else 'all'}"
+        print_panel(console, lines, title=title)
         return 0
 
     if console is None:
@@ -182,15 +185,53 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
                     "hunter_coverage"):
             if key in meta and meta[key] is not None:
                 header_lines.append(f"{key}: {meta[key]}")
-    console.print(Panel(Text(clean_untrusted("\n".join(header_lines))),
-                        title="Run", border_style="cyan"))
+    print_panel(console, header_lines, title="Run")
     render_findings(console, findings)
 
     artifacts = [p.name for p in run_dir.iterdir() if p.is_file()] if run_dir.is_dir() else []
     if artifacts:
-        console.print(Panel(Text(clean_untrusted("\n".join(sorted(artifacts)))),
-                            title="Artifacts", border_style="dim"))
+        print_panel(console, sorted(artifacts), title="Artifacts",
+                    border_style="dim")
     return 0
+
+
+def agent_status(run_dir: Path, console: Any = None) -> int:
+    """One run's agent state report"""
+    run_dir = Path(run_dir)
+    summary_path = run_dir / "agent_summary.json"
+    events_path = run_dir / "agents.jsonl"
+    summary = None
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    if console is None or not RICH_AVAILABLE:
+        print(clean_untrusted(f"run: {run_dir}"))
+        if summary:
+            print(clean_untrusted(json.dumps(summary, indent=2)))
+        if events_path.is_file():
+            print(f"events: {sum(1 for _ in events_path.open())}")
+        return 0 if summary is not None or events_path.is_file() else 1
+    lines = [f"run: {run_dir}"]
+    if isinstance(summary, dict):
+        lines.append(f"total: {summary.get('total')}")
+        lines.append("by state: " + ", ".join(
+            f"{k}={v}" for k, v in (summary.get('by_state') or {}).items()))
+        lines.append("by role: " + ", ".join(
+            f"{k}={v}" for k, v in (summary.get('by_role') or {}).items()))
+        if summary.get("running"):
+            lines.append("running: " + ", ".join(summary.get("running", [])))
+        if summary.get("failed"):
+            lines.append("failed: " + ", ".join(summary.get("failed", [])))
+    else:
+        lines.append("no agent_summary.json found")
+    if events_path.is_file():
+        lines.append(f"events: {sum(1 for _ in events_path.open())} (agents.jsonl)")
+    pid_path = run_dir / "scan.pid"
+    if pid_path.is_file():
+        lines.append(f"pid: {pid_path.read_text().strip()}")
+    print_panel(console, lines, title="Agent status")
+    return 0 if (summary is not None or events_path.is_file()) else 1
 
 
 def list_runs(runs_dir: str | Path, *, limit: int = 50, console: Any = None) -> int:
@@ -275,6 +316,5 @@ def doctor(config_path: str, *, console: Any = None) -> int:
         for line in lines:
             print(clean_untrusted(line))
         return 0
-    console.print(Panel(Text(clean_untrusted("\n".join(lines))),
-                        title="Doctor", border_style="cyan"))
+    print_panel(console, lines, title="Doctor")
     return 0

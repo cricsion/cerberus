@@ -1945,7 +1945,7 @@ def _run_poc(root: str, test_file_name: str, test_source: str, image: str,
     ``harness.tools.sast._run``, because the container is executing
     attacker-reachable code.
     """
-    from harness.tools.sast import scrubbed_env
+    from harness.tools._compat import scrubbed_env
     max_bytes = _env_int("SAST_BYTES", MAX_SINK_BYTES)
     try:
         repo = _safe_path(str(root))

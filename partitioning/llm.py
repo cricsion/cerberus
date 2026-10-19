@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from pathlib import PurePosixPath
-import re
 
 from harness.config import get_model_kwargs
 from harness.fallback import run_fail_open
@@ -40,21 +39,6 @@ def _structure_context(repo: str, files: list[str],
         lines.append("\nTHREAT MODEL:")
         lines.append(threat_md.strip())
     return "\n".join(lines)
-
-
-def _parse_units(text: object) -> list[dict]:
-    if not isinstance(text, str) or not text.strip():
-        return []
-    s = text.strip()
-    if s.startswith("```"):
-        s = re.sub(r"^```(?:json)?\s*", "", s)
-        s = re.sub(r"\s*```$", "", s)
-    try:
-        parsed = json.loads(s)
-        candidates = parsed if isinstance(parsed, list) else (parsed.get("units") if isinstance(parsed, dict) else [])
-    except json.JSONDecodeError:
-        candidates = []
-    return [dict(item) for item in (candidates or []) if isinstance(item, dict)]
 
 
 def _enforce_coverage(units, files, repo=None) -> list[dict]:
@@ -232,28 +216,24 @@ def _build_partition_message(ctx: str, baseline: list[dict]) -> str:
     )
 
 
-def _agent_units(mk: dict, msg: str, repo: str, timeout: int) -> list[dict]:
-    """Run the Deep-Agent partitioner and extract parsed units; an empty result falls
-    back to deterministic grouping in `units._units_from_dirs`."""
+def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
+                 backend: Any = None) -> list[dict]:
+    """Run the Deep-Agent partitioner with hunter tools and extract parsed units;
+    an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
     from harness.agents.deep import run_structured
+    from harness.agents.toolsets import graph_tools
     from harness.llmjson import structured_items
     from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
 
-    parsed, raw_text, _ = run_fail_open(
-        "partitioner-llm",
-        lambda: run_structured(
-            mk, UnitList,
-            PARTITIONER_SYSTEM
-            + " Return exactly one JSON object matching UnitList and no prose; "
-            "do not call tools.",
-            msg, timeout=timeout, name="partitioner", tools=[], root_dir=repo,
-            recursion_limit=100),
-        default=(None, "", ""), logger=_logger)
+    def _partition_llm() -> list[dict]:
+        parsed, _ = run_structured(
+            mk, UnitList, PARTITIONER_SYSTEM, msg,
+            tools=graph_tools(), timeout=timeout, name="partitioner",
+            backend=backend, root_dir=repo, recursion_limit=100)
+        return structured_items(parsed, field="units")
 
-    units = structured_items(parsed, field="units")
-    if not units and str(raw_text).strip():
-        units = _parse_units(raw_text)
-    return units
+    return run_fail_open("partitioner-llm", _partition_llm, default=[],
+                         logger=_logger)
 
 
 def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
@@ -297,7 +277,19 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     baseline = _deterministic_baseline(repo, files, candidates)
     msg = _build_partition_message(ctx, baseline)
 
-    units = _agent_units(mk, msg, repo, timeout)
+    from harness.sandbox.local_backend import RepoLocalBackend
+    from pathlib import Path
+
+    root = Path(repo).resolve() if repo else Path(".").resolve()
+    backend = None
+    try:
+        backend = RepoLocalBackend(repo_path=root)
+    except Exception:
+        backend = None
+
+    units = _agent_units(mk, msg, repo=repo or ".", timeout=timeout,
+                         backend=backend)
+
     if not units:
         raise ValueError("agent returned no parseable units")
 

@@ -6,7 +6,8 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from harness.schemas import SEVERITY_ORDER, safe_float, safe_int
+from harness.schemas import (SEVERITY_ORDER, group_duplicates, safe_float,
+                             safe_int, sort_findings)
 
 SEV_TO_SARIF = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}
 
@@ -41,11 +42,8 @@ def write_sarif(findings: list[dict], out: Path) -> None:
 
 def write_markdown(findings: list[dict], out: Path,
                    coverage: list[str] | None = None) -> None:
-    rows = sorted(findings, key=lambda f: (SEVERITY_ORDER.get(f.get("severity", "medium"), 2), -(safe_float(f.get("confidence", 0)))))
-    dupes: dict[str, list] = {}
-    for f in rows:
-        if f.get("duplicate_of"):
-            dupes.setdefault(str(f["duplicate_of"]), []).append(f)
+    rows = sort_findings(findings)
+    dupes = group_duplicates(rows)
     primaries = [f for f in rows if not f.get("duplicate_of")]
     lines = ["# Vuln Harness Report", "", f"Total findings: {len(rows)}",
              f"Primaries: {len(primaries)} (+{len(rows) - len(primaries)} duplicates)", ""]
@@ -67,15 +65,9 @@ def write_markdown(findings: list[dict], out: Path,
 
 
 def write_html(findings: list[dict], out: Path) -> None:
-    rows = sorted(
-        findings,
-        key=lambda f: (SEVERITY_ORDER.get(str(f.get("severity", "medium")), 2), -(safe_float(f.get("confidence", 0)))),
-    )
+    rows = sort_findings(findings)
     trs = []
-    dupes: dict[str, int] = {}
-    for f in rows:
-        if f.get("duplicate_of"):
-            dupes[str(f["duplicate_of"])] = dupes.get(str(f["duplicate_of"]), 0) + 1
+    dupes: dict[str, int] = {k: len(v) for k, v in group_duplicates(rows).items()}
     for f in rows:
         sev = html.escape(str(f.get("severity", "")), quote=True)
         title = html.escape(str(f.get("title", "")), quote=True)
@@ -144,6 +136,8 @@ def write_junit(findings: list[dict], out: Path) -> None:
             "classname": cwe,
             "name": name,
         })
+        # failure-counting gate deliberately treats junk severity as >=medium;
+        # this is NOT schemas.UNKNOWN_SEVERITY_RANK (the sort rank) on purpose.
         is_failure = SEVERITY_ORDER.get(sev, 2) <= SEVERITY_ORDER["high"] and str(f.get("status", "")) != "fp"
         if is_failure:
             failures += 1

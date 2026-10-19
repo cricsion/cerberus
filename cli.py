@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -38,19 +39,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print(f"cannot create output dir {out}: {e}", file=sys.stderr)
         return 1
     confirm = bool(args.confirm_critical)
-    _focus = args.focus
-    _votes = args.votes
     # Manifest: record target tree at scan start, compare at teardown.
     from harness.sandbox import shutdown_run_sandbox
     from harness.scan_manifest import close_scan, record_scan_manifest
     scan_record: dict = {}
     try:
-        out.mkdir(parents=True, exist_ok=True)
         record_scan_manifest(args.repo)
-        (out / "scan.pid").write_text(str(__import__("os").getpid()))
+        (out / "scan.pid").write_text(str(os.getpid()))
         state = run_scan(args.repo, confirm_critical=confirm,
                          threat_model_override=args.threat_model,
-                         focus=_focus, votes=_votes,
+                         focus=args.focus, votes=args.votes,
                          vulns_file=args.vulns,
                          confirm=prompt_confirm if confirm else None,
                          agent_events_path=out / "agents.jsonl")
@@ -64,16 +62,20 @@ def cmd_scan(args: argparse.Namespace) -> int:
                        coverage=state.get("hunter_coverage", []) or [])
         write_html(findings, out / "report.html")
         write_junit(findings, out / "junit.xml")
-        # Threat-model artifact (single writer: CLI; full text, never truncated).
         threat_md = state.get("threat_model_md", "") or ""
+        from harness import threat
+        from harness.config import load_config_safe
+        # Shared config load feeds both the artifact check and the triage batch.
+        cfg, _cfg_err = {}, None
         try:
-            from harness import threat as _th2
-            from harness.config import load_config_safe
-            _write_cfg, _write_err = load_config_safe()
-            if _write_err is not None:
-                logger.debug("artifact config load failed; defaulting threat-model "
-                             "artifact on: %s", _write_err)
-            _write_tm = _th2.threat_enabled(_write_cfg, "write_artifact", True)
+            cfg, _cfg_err = load_config_safe()
+        except Exception as e:
+            _cfg_err = e
+        if _cfg_err is not None:
+            logger.debug("config load failed; using defaults: %s", _cfg_err)
+        _write_tm = True
+        try:
+            _write_tm = threat.threat_enabled(cfg, "write_artifact", True)
         except Exception:
             _write_tm = True
         # threat_update node already folded validator findings into state; CLI
@@ -86,13 +88,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if triage_log:
             try:
                 from harness.agents.triage import _resolve_batch, render_triage_log
-                from harness.config import load_config_safe
-                _batch_cfg, _batch_err = load_config_safe()
-                if _batch_err is not None:
-                    logger.debug("batch-config load failed for triage.log; "
-                                 "using the default batch: %s", _batch_err)
                 try:
-                    _batch = _resolve_batch(_batch_cfg)
+                    _batch = _resolve_batch(cfg)
                 except (TypeError, ValueError):
                     _batch = 30
                 _calls = max((int(e.get("batch", 0) or 0) for e in triage_log
@@ -104,10 +101,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
         # Persist only models this scan generated (floor/swarm/cache); owner files
         # and --threat-model overrides are never overwritten (cache: .harness/).
         try:
-            from harness import threat as _th4
             if (threat_md.strip() and _write_tm
                     and state.get("threat_model_source") not in ("override", "repo-file")):
-                threat_persisted = _th4.persist_threat(args.repo, threat_md) or ""
+                threat_persisted = threat.persist_threat(args.repo, threat_md) or ""
         except OSError as e:
             print(f"warning: could not persist threat model: {e}", file=sys.stderr)
             threat_persisted = ""
@@ -132,7 +128,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print(f"warning: could not write agent artifacts: {e}", file=sys.stderr)
     meta = {
         "repo": args.repo,
-        "format": args.format,
         "fail_on": args.fail_on,
         "min_confidence": args.min_confidence,
         "files": len(state.get("files", [])),
@@ -156,12 +151,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
     }
     (out / "scan_meta.json").write_text(json.dumps(meta, indent=2))
     print(f"files={len(state.get('files', []))} findings={len(findings)} out={out}")
+    # --fail-on honored in full; unknown severity strings default to info's
+    # rank (4), which no choice can reach, so they never fail CI either.
     failing = [f for f in findings
-               if SEVERITY_ORDER.get(f.get("severity", "medium"), 2) <= fail_at
+               if SEVERITY_ORDER.get(f.get("severity"), 4) <= fail_at
                and safe_float(f.get("confidence", 0)) >= min_conf
                and f.get("status") != "fp"]
-    # Scaffold phase: info/needs-review never fails CI.
-    failing = [f for f in failing if f.get("severity") in ("critical", "high")]
     return 1 if failing else 0
 
 
@@ -171,7 +166,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     offline); --interview asks on stdin; without a key it degrades to Shostack.
     """
     from harness import threat as _th
-    from harness.pipeline import indexer_node
+    from harness.pipeline import indexer_node, threat_summary
 
     repo = args.repo
     if bool(getattr(args, "verify", False)):
@@ -223,22 +218,19 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     except Exception as e:
         print(f"indexer failed: {e}", file=sys.stderr)
         files, cands = [], []
-    summary = next((c.get("snippet", "") for c in cands
-                    if c.get("id") == "threat-model"), "")
+    summary = threat_summary(repo, cands)
     _vulns_path = getattr(args, "vulns", None) or ""
     vulns = _th.parse_vulns_file(_vulns_path) if _vulns_path else []
     if _vulns_path and not vulns:
         print(f"warning: --vulns {_vulns_path} parsed to 0 rows "
               "(missing or unrecognized format); continuing on git history")
     if bool(getattr(args, "interview", False)):
-        import os as _os
-
         from harness.config import load_config_safe
         _cfg_tm, _cfg_tm_err = load_config_safe()
         if _cfg_tm_err is not None:
             logger.debug("threat-model config load failed; using defaults: %s",
                          _cfg_tm_err)
-        if not _os.environ.get("API_KEY"):
+        if not os.environ.get("API_KEY"):
             answers: dict[str, str] = {}
             print("Answer Shostack's four questions (empty = skip):")
             for key, question in _th.INTERVIEW_QUESTIONS:
@@ -273,8 +265,8 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"bootstrap failed: {e}", file=sys.stderr)
             return 1
         try:
-            from harness.config import load_config as _lc_enrich
-            _cfg_enrich = _lc_enrich()
+            from harness.config import load_config
+            _cfg_enrich = load_config()
             if _th.threat_enabled(_cfg_enrich, "llm_enrich", True):
                 enriched, meta = _th.enrich_threat(
                     repo, files, cands, summary, md, _cfg_enrich,
@@ -317,48 +309,9 @@ def cmd_runs(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    import json as _json
+    from harness.reporting.view import agent_status, make_console
 
-    from harness.reporting.view import clean_untrusted, make_console, RICH_AVAILABLE
-
-    console = make_console()
-    run_dir = Path(args.run)
-    summary_path = run_dir / "agent_summary.json"
-    events_path = run_dir / "agents.jsonl"
-    summary = None
-    try:
-        summary = _json.loads(summary_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        summary = None
-    if console is None or not RICH_AVAILABLE:
-        print(clean_untrusted(f"run: {run_dir}"))
-        if summary:
-            print(clean_untrusted(_json.dumps(summary, indent=2)))
-        if events_path.is_file():
-            print(f"events: {sum(1 for _ in events_path.open())}")
-        return 0 if summary is not None or events_path.is_file() else 1
-    from rich.panel import Panel
-    from rich.text import Text
-
-    lines = [f"run: {run_dir}"]
-    if isinstance(summary, dict):
-        lines.append(f"total: {summary.get('total')}")
-        lines.append("by state: " + ", ".join(f"{k}={v}" for k, v in (summary.get('by_state') or {}).items()))
-        lines.append("by role: " + ", ".join(f"{k}={v}" for k, v in (summary.get('by_role') or {}).items()))
-        if summary.get("running"):
-            lines.append("running: " + ", ".join(summary.get("running", [])))
-        if summary.get("failed"):
-            lines.append("failed: " + ", ".join(summary.get("failed", [])))
-    else:
-        lines.append("no agent_summary.json found")
-    if events_path.is_file():
-        lines.append(f"events: {sum(1 for _ in events_path.open())} (agents.jsonl)")
-    pid_path = run_dir / "scan.pid"
-    if pid_path.is_file():
-        lines.append(f"pid: {pid_path.read_text().strip()}")
-    console.print(Panel(Text(clean_untrusted("\n".join(lines))),
-                        title="Agent status", border_style="cyan"))
-    return 0 if (summary is not None or events_path.is_file()) else 1
+    return agent_status(Path(args.run), make_console())
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -371,7 +324,6 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 
 def cmd_cancel(args: argparse.Namespace) -> int:
-    import os as _os
     import signal
 
     run_or_agent = args.target
@@ -383,13 +335,13 @@ def cmd_cancel(args: argparse.Namespace) -> int:
             pid = int(pid_path.read_text().strip())
         except (OSError, ValueError):
             pid = None
-    if args.pid is not None:
-        pid = args.pid
+    elif run_or_agent.isdigit():
+        pid = int(run_or_agent)
     if pid is None:
         print(f"no running scan pid found for {run_or_agent}", file=sys.stderr)
         return 1
     try:
-        _os.kill(pid, signal.SIGTERM)
+        os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
         print(f"process {pid} not running", file=sys.stderr)
         return 1
@@ -401,15 +353,13 @@ def cmd_cancel(args: argparse.Namespace) -> int:
 
 
 def cmd_findings(args: argparse.Namespace) -> int:
-    import json as _json
-
     from harness.reporting.view import make_console, render_findings
 
     console = make_console()
     run_dir = Path(args.run)
     findings_path = run_dir / "findings.json" if run_dir.is_dir() else Path(args.run)
     try:
-        data = _json.loads(findings_path.read_text(encoding="utf-8"))
+        data = json.loads(findings_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
         print(f"cannot read findings: {e}", file=sys.stderr)
         return 1
@@ -435,35 +385,30 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("repo", help="path to repo or file")
+    common.add_argument("--vulns", default=None, metavar="PATH",
+                        help="past-vulnerabilities file (CVE id list, CSV, JSON "
+                             "array, or markdown report) used as EVIDENCE for "
+                             "section 4 threat rows")
     p = argparse.ArgumentParser(prog="harness", description="Agentic vuln harness (OpenAI-compatible)")
     sub = p.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("scan", help="scan a repo or directory")
-    s.add_argument("repo", help="path to repo or file")
+    s = sub.add_parser("scan", parents=[common], help="scan a repo or directory")
     s.add_argument("--out", default="runs/latest", help="output dir")
     s.add_argument("--fail-on", default="high", choices=["critical", "high", "medium", "low"])
     s.add_argument("--min-confidence", type=float, default=0.6)
     s.add_argument("--config", default="config/default.yaml")
-    s.add_argument("--format", default="all", help="compat only: ignored, all formats always written")
     s.add_argument("--confirm-critical", action="store_true",
                    help="pause for human approval when critical/high findings are confirmed")
     s.add_argument("--threat-model", default=None,
                    help="override THREAT_MODEL.md path (default: <repo>/THREAT_MODEL.md, else deterministic draft)")
-    s.add_argument("--vulns", default=None, metavar="PATH",
-                   help="past-vulnerabilities file (CVE id list, CSV, JSON "
-                        "array, or markdown report) used as EVIDENCE for "
-                        "section 4 threat rows")
     s.add_argument("--focus", default=None,
                    help="comma-separated focus hints, e.g. injection or CWE-89,CWE-78 (narrows hunter scope text only, never drops coverage)")
     s.add_argument("--votes", type=int, default=None,
                    help="verifier votes per finding 1-5 (default 1; majority-or-tie is final, no judge)")
     s.set_defaults(func=cmd_scan)
-    t = sub.add_parser("threat-model", help="bootstrap THREAT_MODEL.md for a repo")
-    t.add_argument("repo", help="path to repo or file")
+    t = sub.add_parser("threat-model", parents=[common], help="bootstrap THREAT_MODEL.md for a repo")
     t.add_argument("--out", default=None, help="output path (default: <repo>/THREAT_MODEL.md)")
-    t.add_argument("--vulns", default=None, metavar="PATH",
-                   help="past-vulnerabilities file (CVE id list, CSV, JSON "
-                        "array, or markdown report) used as EVIDENCE for "
-                        "section 4 threat rows")
     t.add_argument("--interview", action="store_true",
                    help="ask Shostack's four questions on stdin and append answers")
     t.add_argument("--verify", action="store_true",
@@ -503,7 +448,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     ca = sub.add_parser("cancel", help="request cancellation of a running scan")
     ca.add_argument("target", help="run dir or pid")
-    ca.add_argument("--pid", type=int, default=None)
     ca.set_defaults(func=cmd_cancel)
 
     return p

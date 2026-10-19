@@ -15,15 +15,17 @@ import time
 EXEC_TAG = "cyber_exec_tag"
 
 
-def run_cli(argv: list[str], *, timeout: float) -> subprocess.CompletedProcess:
+def run_cli(argv: list[str], *, timeout: float,
+            env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """subprocess.run seam (monkeypatched in tests). Small fixed output."""
     return subprocess.run(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, errors="replace", timeout=timeout,
+        text=True, errors="replace", timeout=timeout, env=env,
     )
 
 
-def run_bounded(argv: list[str], *, timeout: float, byte_cap: int
+def run_bounded(argv: list[str], *, timeout: float, byte_cap: int,
+                env: dict[str, str] | None = None
                 ) -> tuple[str, int | None, bool]:
     """Run a command reading AT MOST byte_cap bytes of combined output.
 
@@ -33,7 +35,7 @@ def run_bounded(argv: list[str], *, timeout: float, byte_cap: int
     """
     proc = subprocess.Popen(
         argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        stdin=subprocess.DEVNULL)
+        stdin=subprocess.DEVNULL, env=env)
     fd = proc.stdout.fileno()
     chunks: list[bytes] = []
     total = 0

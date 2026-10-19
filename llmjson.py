@@ -3,6 +3,20 @@ wrapped in a contract object). Stdlib only; fail-open."""
 from __future__ import annotations
 
 import json
+import re
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.+?)\s*```", re.DOTALL)
+
+
+def candidate_jsons(text: object) -> list[str]:
+    """Best-effort JSON candidates from an LLM reply: the whole reply first,
+    then every fenced block. Callers take the first candidate that parses, so
+    prose replies are tried (and fail) before their fenced payloads are tried
+    (and succeed)."""
+    s = str(text or "").strip()
+    if not s:
+        return []
+    return [s, *[m.group(1) for m in _FENCE_RE.finditer(s)]]
 
 
 def extract_json_array(text: object) -> list | None:
@@ -71,34 +85,3 @@ def extract_structured_items(parsed: object, raw_text: object, *,
     if items:
         return items
     return parse_verdict_array(raw_text, require_id=require_id)
-
-
-def extract_string_array(text: object,
-                         field: str = "questions") -> list[str] | None:
-    """Best-effort string array from raw LLM text (bare or wrapper object); never
-    raises, None when none decodes."""
-    if not text or not str(text).strip():
-        return None
-    s = str(text)
-    decoder = json.JSONDecoder()
-    best: list[str] | None = None
-    best_key: tuple[int, int, int, int] | None = None
-    for idx, char in enumerate(s):
-        if char not in "[{":
-            continue
-        try:
-            parsed, _ = decoder.raw_decode(s[idx:])
-        except ValueError:
-            continue
-        if isinstance(parsed, dict):
-            parsed = parsed.get(field)
-        if not isinstance(parsed, list):
-            continue
-        values = [str(x) for x in parsed if str(x).strip()]
-        # Prefer question-shaped payloads over citation arrays like `[1]`.
-        any_question = int(any(v.strip().endswith("?") for v in values))
-        key = (any_question, len(values), len(parsed), -idx)
-        if best_key is None or key > best_key:
-            best_key = key
-            best = values
-    return best

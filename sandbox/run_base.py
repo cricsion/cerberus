@@ -19,6 +19,11 @@ __all__ = ["RunSandboxBase", "RunRegistry", "install_crash_hooks",
 
 DEFAULT_IMAGE = "cyber-sandbox:local"
 
+DEFAULT_COMMAND_TIMEOUT = 120
+DEFAULT_MAX_OUTPUT_BYTES = 200_000
+DEFAULT_MEMORY = "2g"
+DEFAULT_RULES_DIR = "/opt/scan-rules/harness"
+
 # Keep this prefix in sync with RESET_COMMAND's glob (they cannot drift).
 AGENT_SCRATCH_PREFIX = "agent-"
 
@@ -54,8 +59,8 @@ class RunSandboxBase(ABC):
     cli_label: str = ""
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 command_timeout: int = 120,
-                 max_output_bytes: int = 200_000,
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
                  name_prefix: str = "cyber-sandbox") -> None:
         self.repo_path = Path(repo_path).resolve()
         self.image = validate_image(str(image or DEFAULT_IMAGE))
@@ -84,6 +89,9 @@ class RunSandboxBase(ABC):
     @abstractmethod
     def cli_bin(self) -> str:
         ...
+
+    def _child_env(self) -> dict[str, str] | None:
+        return None
 
     @abstractmethod
     def _workdir_args(self) -> list[str]:
@@ -133,7 +141,8 @@ class RunSandboxBase(ABC):
         try:
             cli_utils.run_cli(self.destroy_argv(),
                               timeout=(self.DESTROY_TIMEOUT
-                                       if timeout is None else timeout))
+                                        if timeout is None else timeout),
+                              env=self._child_env())
         except Exception:
             # Also runs on teardown/crash paths: never fail a scan.
             pass
@@ -146,7 +155,7 @@ class RunSandboxBase(ABC):
         argv = [*self._exec_prefix(), self._name,
                 "/bin/bash", "-c", RESET_COMMAND]
         try:
-            proc = cli_utils.run_cli(argv, timeout=120)
+            proc = cli_utils.run_cli(argv, timeout=120, env=self._child_env())
         except Exception as e:
             return f"{self.cli_label} agent-scratch reset failed: {e}"
         if proc.returncode != 0:
@@ -172,9 +181,9 @@ class RunSandboxBase(ABC):
                 "/bin/bash", "-c",
                 f"{cli_utils.EXEC_TAG}={marker}; "
                 f"mkdir -p {self._exec_mkdir_dirs()}; {command}"]
-        byte_cap = (max_output_bytes or 200_000) * _BYTE_CAP_FACTOR
+        byte_cap = (max_output_bytes or DEFAULT_MAX_OUTPUT_BYTES) * _BYTE_CAP_FACTOR
         return cli_utils.run_bounded(argv, timeout=timeout + 15,
-                                     byte_cap=byte_cap)
+                                     byte_cap=byte_cap, env=self._child_env())
 
     def pkill_argv(self, name: str, marker: str) -> list[str]:
         # Kill ONLY this exec's tagged shell (the sandbox is shared).

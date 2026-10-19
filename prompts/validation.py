@@ -115,6 +115,9 @@ FALSIFY_INSTRUCTIONS = (
     "In evidence, cite the specific neutralizing control or exclusion rule with file:line.\n"
     "- status='needs-review': Static evidence cannot settle reachability or control effectiveness "
     "(e.g., depends on uninspected external configuration or complex runtime state). Name the specific unsettled fact.\n"
+    "When status='fp', set control_type to the control kind: 'sanitizer' only with concrete input "
+    "neutralization, 'auth_check' if only an authentication gate stands between attacker and sink, "
+    "else 'none'.\n"
     "Return only the status, confidence, severity, and evidence you can support with file:line."
 )
 
@@ -158,6 +161,11 @@ class VerdictItem(VerdictUpdate):
     """One batch verdict: the update plus which finding it belongs to."""
 
     id: str = Field(default="", description="Finding id this verdict covers")
+    control_type: Literal["sanitizer", "auth_check", "none"] = Field(
+        default="none",
+        description="Named control that acquits this finding: sanitizer "
+                    "(input neutralization), auth_check (only an auth gate), "
+                    "or none")
 
 
 class VerdictBatch(BaseModel):

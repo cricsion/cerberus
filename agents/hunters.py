@@ -231,12 +231,9 @@ def _parse_findings_json(text: str, hunter: str, files: list[str], repo: str) ->
 def _inspected_files_from_text(text: str) -> list[str]:
     """Best-effort inspected_files from a text/JSON reply (contract object shape)."""
     import json as _json
-    import re as _re
 
-    if not text or not text.strip():
-        return []
-    for candidate in (text.strip(), *(_re.findall(r"```(?:json)?\s*(.+?)\s*```",
-                                                text, _re.DOTALL) or [])):
+    from harness.llmjson import candidate_jsons
+    for candidate in candidate_jsons(text):
         try:
             parsed = _json.loads(candidate)
         except Exception:
@@ -248,13 +245,12 @@ def _inspected_files_from_text(text: str) -> list[str]:
 
 def _parse_findings_with_status(text: str, hunter: str, files: list[str], repo: str) -> tuple[list[dict], bool]:
     import json as _json
-    import re as _re
 
+    from harness.llmjson import candidate_jsons
     if not text or not text.strip():
         return [], False
     parsed = None
-    for candidate in (text.strip(), *(_re.findall(r"```(?:json)?\s*(.+?)\s*```",
-                                                text, _re.DOTALL) or [])):
+    for candidate in candidate_jsons(text):
         try:
             parsed = _json.loads(candidate)
             break
@@ -262,12 +258,6 @@ def _parse_findings_with_status(text: str, hunter: str, files: list[str], repo: 
             continue
     if isinstance(parsed, dict):
         parsed = parsed.get("findings")
-    if parsed is None:
-        from harness.llmjson import extract_json_array
-        arr = extract_json_array(text)
-        if arr is None:
-            return [], False
-        parsed = arr
     if not isinstance(parsed, list):
         return [], False
     norm = []
@@ -291,7 +281,8 @@ def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
     return build_deep_agent(llm, system_prompt=prompt, tools=tools,
                             response_format=DiscoveryResult,
                             name=f"hunter-{unit_name}"[:60],
-                            root_dir=repo, backend=backend)
+                            root_dir=repo, backend=backend,
+                            scratchpad=True)
 
 
 def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
@@ -323,15 +314,8 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
                                         backend=backend)
         invoke_config = {"recursion_limit": rec_lim}
         if _obs is not None:
-            _handler = _obs.get_handler()
-            if _handler is not None:
-                invoke_config["callbacks"] = [_handler]
-                _meta = _obs.scan_metadata(stage="hunters", role="hunter", unit=name)
-                if _meta:
-                    invoke_config["metadata"] = _meta
-                    _scope = _obs.scope_path(name)
-                    invoke_config["run_name"] = (
-                        f"hunter:{_scope}" if _scope else "hunter")
+            _obs.run_config(invoke_config, role="hunter", stage="hunters",
+                            unit=name, trace_suffix=name)
         res = agent.invoke({"messages": [{"role": "user", "content": task}]},
                            config=invoke_config)
         if _tools_out is not None:
@@ -419,13 +403,14 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     from harness.agents.deep import run_structured
     msg = build_system_pass_task(repo, scope, ctx, files)
     try:
-        parsed, raw_text, _ = run_fail_open(
+        parsed, raw_text = run_fail_open(
             "system pass",
             lambda: run_structured(
                 mk, DiscoveryResult, sys_prompt, msg,
                 tools=graph_tools(), timeout=_timeout,
-                name="system-pass", backend=backend, root_dir=repo),
-            default=EMPTY_STRUCTURED + ({},), logger=_logger)
+                name="system-pass", backend=backend, root_dir=repo,
+                scratchpad=True),
+            default=EMPTY_STRUCTURED, logger=_logger)
     finally:
         # End this agent's sandbox session; the run container is torn down at scan teardown.
         if backend is not None:

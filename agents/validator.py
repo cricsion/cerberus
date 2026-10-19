@@ -5,9 +5,7 @@ import os
 import sys
 from typing import Any
 
-# Prompt text lives in harness/prompts/validation.py; re-exported for `v.<name>` imports.
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
-from harness.agents.pool import worker_pool
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, run_fail_open)
 from harness.llmjson import extract_structured_items
@@ -29,7 +27,7 @@ def _merge_verdict(base: dict, data: dict) -> dict:
     merged = dict(base)
     if isinstance(data, dict):
         for k in ("status", "confidence", "severity", "evidence",
-                  "cwe", "fix_suggestion", "snippet"):
+                  "cwe", "fix_suggestion", "snippet", "control_type"):
             if k in data and data[k] not in (None, ""):
                 merged[k] = data[k]
         note = str(data.get("fallback_note", "") or "")
@@ -101,6 +99,15 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
         if counts[winner] > n / 2:
             g = dict(by_status[winner])
             g["status"] = winner
+            if winner == "fp":
+                # Deterministic control_type: the strictest claim among the
+                # winning votes wins, so vote order can never hide an
+                # auth-only acquittal from the guardrail.
+                for vv in votes:
+                    if (isinstance(vv, dict) and vv.get("status") == "fp"
+                            and vv.get("control_type") == "auth_check"):
+                        g["control_type"] = "auth_check"
+                        break
             prev = str(g.get("evidence") or "")
             tag = f"consensus: {counts[winner]}/{n} {winner}"
             g["evidence"] = _append_note(prev, tag)
@@ -115,13 +122,16 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
     return g
 
 
-# findings per validator cell; _validate_unit_batch chunks by the same size so
-# one LLM call never grows unbounded.
-CELL_SIZE = 10
+def _cell_size(cfg: dict | None) -> int:
+    """Findings per validator cell (verification.cell_size, default CELL_SIZE,
+    clamped 1-100)."""
+    try:
+        raw = ((cfg or {}).get("verification") or {}).get("cell_size", CELL_SIZE)
+        return min(100, max(1, int(str(raw).strip() or CELL_SIZE)))
+    except (TypeError, ValueError):
+        return CELL_SIZE
 
-# Byte budget for one validator prompt's JSON: without it findings get
-# byte-sliced into invalid JSON, dropping trailing findings.
-MAX_BATCH_JSON_BYTES = 16000
+CELL_SIZE = 10
 
 # fp verdict stands only with a named control; auth-guard-only acquittals are downgraded.
 _SANITIZER_RES = (
@@ -147,6 +157,13 @@ def _apply_fp_guardrail(verdict: dict) -> dict:
     if not isinstance(verdict, dict) or verdict.get("status") != "fp":
         return verdict
     import re as _re
+    if verdict.get("control_type") == "auth_check":
+        g = dict(verdict)
+        g["status"] = "needs-review"
+        prev = str(g.get("evidence") or "")
+        note = "guardrail: auth-only acquittal, no sanitizer proof"
+        g["evidence"] = _append_note(prev, note)
+        return g
     ev = str(verdict.get("evidence") or "").lower()
     if any(_re.search(p, ev) for p in _SANITIZER_RES):
         return verdict
@@ -172,7 +189,10 @@ def _route_finding(f: dict) -> tuple[str, dict]:
 
 
 def _group_by_unit(findings: list[dict],
-                   units: list[dict] | None) -> list[tuple[str, list[dict]]]:
+                   units: list[dict] | None
+                   ) -> list[tuple[str, list[dict], list[int]]]:
+    """Group findings by partition unit, tracking each item's origin index in
+    ``findings`` so reassembly never needs object identity."""
     file_to_unit: dict[str, str] = {}
     try:
         for u in (units or []):
@@ -186,6 +206,7 @@ def _group_by_unit(findings: list[dict],
     except (TypeError, AttributeError):
         pass
     groups: dict[str, list[dict]] = {}
+    origins: dict[str, list[int]] = {}
     order: list[str] = []
 
     def _key(f: dict) -> str:
@@ -201,13 +222,15 @@ def _group_by_unit(findings: list[dict],
                 return name
         return "global"
 
-    for f in findings:
+    for oi, f in enumerate(findings):
         k = _key(f) if isinstance(f, dict) else "global"
         if k not in groups:
             groups[k] = []
+            origins[k] = []
             order.append(k)
         groups[k].append(f)
-    return [(k, groups[k]) for k in order]
+        origins[k].append(oi)
+    return [(k, groups[k], origins[k]) for k in order]
 
 
 def _compact_finding(f: dict) -> dict:
@@ -233,26 +256,6 @@ def _compact_finding(f: dict) -> dict:
         return {"id": f.get("id", ""), "title": f.get("title", "")}
 
 
-def _batch_chunks(items: list[dict]) -> list[list[dict]]:
-    import json as _json
-
-    chunks: list[list[dict]] = []
-    cur: list[dict] = []
-    cur_bytes = 2  # JSON array brackets
-    for f in items:
-        one = len(_json.dumps(_compact_finding(f), default=str))
-        if cur and (len(cur) >= CELL_SIZE
-                    or cur_bytes + one + 1 > MAX_BATCH_JSON_BYTES):
-            chunks.append(cur)
-            cur = []
-            cur_bytes = 2
-        cur.append(f)
-        cur_bytes += one + 1
-    if cur:
-        chunks.append(cur)
-    return chunks
-
-
 def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                           threat_md: str = "", n_votes: int = 1,
                           repo: str | None = None,
@@ -272,7 +275,9 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     ballots: dict[str, list[dict]] = {str(f.get("id")): [] for f in items
                                        if isinstance(f, dict)}
     n_votes = max(1, min(5, int(n_votes or 1)))
-    chunks = _batch_chunks(items)
+    # Cells are split upstream at cell_size; there is no further chunking:
+    # each cell is exactly one LLM call.
+    chunks = [items]
 
     # Backend resolved once like hunters._run_unit (fail-soft).
     from harness.agents.toolsets import graph_tools
@@ -287,6 +292,20 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     tools = graph_tools()
     tool_names = [getattr(t, "name", None) or getattr(t, "__name__", "tool")
                   for t in tools]
+    # One agent build for every vote/chunk of this cell group.
+    from harness.agents.deep import build_deep_agent, make_llm, run_structured
+    from harness.prompts.validation import VerdictBatch
+    agent = run_fail_open(
+        f"agent validator-{group_name}",
+        lambda: build_deep_agent(
+            make_llm(mk, timeout=_int_setting(mk, "timeout", 60),
+                     max_retries=_int_setting(mk, "max_retries", 3)),
+            system_prompt=VALIDATOR_SYSTEM, tools=tools,
+            response_format=VerdictBatch,
+            name=f"validator-{group_name}"[:60],
+            backend=backend, root_dir=repo,
+            scratchpad=True),
+        default=None, logger=_logger)
     try:
         for _round in range(n_votes):
             _vote = _round + 1
@@ -296,10 +315,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 msg = build_batch_task(group_name, threat_md, payload,
                                        repo=repo, tools=tool_names)
 
-                def _call_validator_structured() -> tuple[Any, str, Any]:
-                    from harness.agents.deep import run_structured
-                    from harness.prompts.validation import VerdictBatch
-
+                def _call_validator_structured() -> tuple[Any, str]:
                     return run_structured(
                         mk, VerdictBatch, VALIDATOR_SYSTEM, msg,
                         timeout=_int_setting(mk, "timeout", 60),
@@ -309,11 +325,12 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                         trace_suffix=f"{cell_scope}:v{_vote}",
                         meta_extra={"unit": str(group_name),
                                     "cell": str(cell_no + 1),
-                                    "vote": str(_vote)})
+                                    "vote": str(_vote)},
+                        agent=agent)
 
-                parsed, raw_text, _ = run_fail_open(
+                parsed, raw_text = run_fail_open(
                     "validator batch", _call_validator_structured,
-                    default=EMPTY_STRUCTURED + ({},), logger=_logger)
+                    default=EMPTY_STRUCTURED, logger=_logger)
                 verdicts: list[dict] = extract_structured_items(
                     parsed, raw_text, field="verdicts", require_id=True)
                 covered: set[str] = set()
@@ -383,10 +400,11 @@ def _evidence_gate_findings(findings: list[dict]) -> list[dict]:
     return gated
 
 
-def _classify_group(pair: tuple[str, list[dict]]
-                    ) -> tuple[str, list[dict], dict[int, dict],
+def _classify_group(pair: tuple[str, list[dict], list[int]],
+                    cell_size: int = CELL_SIZE
+                    ) -> tuple[str, list[dict], list[int], dict[int, dict],
                                list[tuple[list[int], list[dict]]]]:
-    name, items = pair
+    name, items, origins = pair
     batch_idx: list[int] = []
     direct: dict[int, dict] = {}
     for i, f in enumerate(items):
@@ -395,16 +413,16 @@ def _classify_group(pair: tuple[str, list[dict]]
             batch_idx.append(i)
         else:
             direct[i] = g
-    cells = [([batch_idx[k] for k in range(s, min(s + CELL_SIZE, len(batch_idx)))],
-               [items[batch_idx[k]] for k in range(s, min(s + CELL_SIZE, len(batch_idx)))])
-             for s in range(0, len(batch_idx), CELL_SIZE)]
-    return name, items, direct, [(c, ci) for c, ci in cells if c]
+    cells = [([batch_idx[k] for k in range(s, min(s + cell_size, len(batch_idx)))],
+               [items[batch_idx[k]] for k in range(s, min(s + cell_size, len(batch_idx)))])
+             for s in range(0, len(batch_idx), cell_size)]
+    return name, items, origins, direct, [(c, ci) for c, ci in cells if c]
 
 
 def _run_cell(name: str, cell_items: list[dict], ci: int,
               n_cells: int, *, cfg: dict, n_votes: int, threat_md: str,
               repo: str | None) -> list[dict]:
-    print(f"[validator] unit '{name}' chunk {ci + 1}/{n_cells}: "
+    print(f"[validator] unit '{name}' cell {ci + 1}/{n_cells}: "
           f"{len(cell_items)} findings, {n_votes} vote(s)...",
           file=sys.stderr, flush=True)
     try:
@@ -426,68 +444,71 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
 def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
                           threat_md: str, repo: str | None
                           ) -> dict[tuple[int, int], list[dict]]:
-    cell_out: dict[tuple[int, int], list[dict]] = {}
-
-    def _run_one(gi: int, cidx: int) -> list[dict]:
-        _name, _items, _direct, cells = planned[gi]
-        idx, cell_items = cells[cidx]
-        return _run_cell(_name, cell_items, cidx, len(cells),
-                         cfg=cfg, n_votes=n_votes, threat_md=threat_md,
-                         repo=repo)
+    tasks = [(gi, cidx)
+             for gi, g in enumerate(planned)
+             for cidx in range(len(g[4]))]
+    if not tasks:
+        return {}
 
     def _fallback(gi: int, cidx: int) -> list[dict]:
-        _name, items, _direct, cells = planned[gi]
+        _n, items, _o, _d, cells = planned[gi]
         idx = cells[cidx][0]
         return [_one_fallback(items[i], "validator fail-open") for i in idx]
 
+    def _safe(key: tuple[int, int]) -> list[dict]:
+        gi, cidx = key
+        _name, _items, _origins, _direct, cells = planned[gi]
+        idx, cell_items = cells[cidx]
+        try:
+            res = _run_cell(_name, cell_items, cidx, len(cells),
+                            cfg=cfg, n_votes=n_votes, threat_md=threat_md,
+                            repo=repo)
+            if not isinstance(res, list) or len(res) != len(idx):
+                raise ValueError("misaligned cell result")
+            return res
+        except Exception as e:
+            if is_fatal_error(e):
+                raise
+            return _fallback(gi, cidx)
+
     try:
-        with worker_pool(workers) as ex:
-            pending = [
-                ((gi, cidx), ex.submit(_run_one, gi, cidx))
-                for gi, (_n, _i, _d, cells) in enumerate(planned)
-                for cidx in range(len(cells))
-            ]
-            for (gi, cidx), fut in pending:
-                try:
-                    res = fut.result()
-                    idx = planned[gi][3][cidx][0]
-                    if not isinstance(res, list) or len(res) != len(idx):
-                        raise ValueError("misaligned cell result")
-                    cell_out[(gi, cidx)] = res
-                except Exception as e:
-                    if is_fatal_error(e):
-                        raise
-                    cell_out[(gi, cidx)] = _fallback(gi, cidx)
+        from langchain_core.runnables import RunnableLambda
+        results = RunnableLambda(_safe).batch(
+            tasks, config={"max_concurrency": max(1, int(workers))},
+            return_exceptions=True)
     except Exception as e:
         if is_fatal_error(e):
             raise
-        # Pool-level failure: only the cells with no collected result are
-        # re-run, sequentially and still fail-open (completed work is kept).
-        for gi, (_name, _items, _direct, cells) in enumerate(planned):
-            for cidx in range(len(cells)):
-                if (gi, cidx) in cell_out:
-                    continue
-                try:
-                    cell_out[(gi, cidx)] = _run_one(gi, cidx)
-                except Exception as e:
-                    if is_fatal_error(e):
-                        raise
-                    cell_out[(gi, cidx)] = _fallback(gi, cidx)
+        results = [_safe(t) for t in tasks]
+
+    cell_out: dict[tuple[int, int], list[dict]] = {}
+    for key, res in zip(tasks, results):
+        if isinstance(res, BaseException):
+            if is_fatal_error(res):
+                raise res
+            cell_out[key] = _fallback(*key)
+            continue
+        cell_out[key] = res if isinstance(res, list) else _fallback(*key)
     return cell_out
 
 
 def _reassemble_validation(planned, gated: list[dict],
                            cell_out: dict[tuple[int, int], list[dict]]
                            ) -> list[dict]:
-    pos: dict[int, dict] = {}
-    for gi, (_name, items, direct, cells) in enumerate(planned):
+    """Rebuild the gated list positionally: cell results overwrite their item
+    slots, then direct (passthrough) routes land. Every gated index belongs to
+    exactly one group, so ``out`` is fully covered without object identity."""
+    out = list(gated)
+    for gi, (_name, items, origins, direct, cells) in enumerate(planned):
+        results = list(items)
         for cidx, (idx, _cell_items) in enumerate(cells):
             for i, r in zip(idx, cell_out.get((gi, cidx), [])):
-                pos[id(items[i])] = r
-        for i, f in enumerate(items):
-            if id(f) not in pos and i in direct:
-                pos[id(f)] = direct[i]
-    return [pos.get(id(f), f) for f in gated]
+                results[i] = r
+        for i, r in direct.items():
+            results[i] = r
+        for oi, r in zip(origins, results):
+            out[oi] = r
+    return out
 
 
 def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
@@ -519,7 +540,8 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     print(f"[validator] {len(todo)} findings across {len(groups)} partition(s)",
           file=sys.stderr, flush=True)
 
-    planned = [_classify_group(pair) for pair in groups]
+    _cs = _cell_size(cfg)
+    planned = [_classify_group(pair, _cs) for pair in groups]
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
         repo=repo)

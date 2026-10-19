@@ -158,11 +158,10 @@ def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
         "timeout": int(os.environ.get("HARNESS_TIMEOUT", cfg.get("timeout", 60))),
         "max_retries": int(os.environ.get("HARNESS_MAX_RETRIES", cfg.get("max_retries", 5))),
         # Model-profile pins for a proxied base_url model (which ships no
-        # profile data); consumed by harness.agents.deep._apply_model_profile.
+        # profile data); consumed by make_llm as the ctor ``profile=``.
         "model_profile": (cfg.get("model_profile")
                           if isinstance(cfg.get("model_profile"), dict)
                           else {}),
     }
     out.update(get_reasoning_kwargs(cfg, agent or role))
     return out
-

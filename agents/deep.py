@@ -15,13 +15,13 @@ try:
 except Exception:  # observability module unavailable → tracing disabled (fail-open)
     _obs = None
 
-# Never-granted tools: write/edit/delete + subagent recursion (`task`); `execute` only for sandbox backends.
 BASE_EXCLUDED_TOOLS = frozenset({
-    "delete", "write_file", "edit_file", "task"
+    "delete", "task"
 })
 SHELL_TOOL = "execute"
-# The only built-in filesystem tools a scan agent needs (allowlist, layer 2).
-FS_TOOLS = ("read_file", "ls", "glob", "grep")
+FS_READ_TOOLS = ("read_file", "ls", "glob", "grep")
+FS_WRITE_TOOLS = ("write_file", "edit_file")
+FS_TOOLS = FS_READ_TOOLS
 # FilesystemMiddleware rejects unscoped permission rules on execution-capable backends; MODEL_CALL_LIMIT caps turns; recursion_limit: run_structured.
 MODEL_CALL_LIMIT = 100
 
@@ -34,6 +34,7 @@ MODEL_CALL_LIMIT = 100
 SKILLS_ROUTE = "/opt/harness-skills/"
 SKILLS_SOURCES = [(SKILLS_ROUTE, "Scanner")]
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
+SCRATCH_ROUTE = "/.harness/scratch/"
 
 # Fail-loud operator-config errors (never a needs-review verdict); ContextOverflowError deliberately excluded (oversized unit fails open).
 CONFIG_ERRORS = (ModelAuthenticationError, ModelPermissionDeniedError,
@@ -81,40 +82,7 @@ def sanitize_model_kwargs(model_kwargs: dict | None) -> dict:
     return mk
 
 
-def _cap_openai_retry_delays(max_delay: float = 5.0) -> None:
-    try:
-        import openai._base_client as _oac
-    except Exception:  # pragma: no cover - ships with langchain-openai
-        return
-    _oac.MAX_RETRY_DELAY = max_delay
-    _oac.MAX_RETRY_AFTER_DELAY = max_delay
-
-
-def _apply_model_profile(llm: Any, mk: dict) -> Any:
-    raw = mk.get("model_profile")
-    if not isinstance(raw, dict):
-        return llm
-    updates: dict[str, Any] = {}
-    for key in ("max_input_tokens", "structured_output"):
-        val = raw.get(key)
-        if val in (None, ""):
-            continue
-        if key == "max_input_tokens":
-            try:
-                updates[key] = int(val)
-            except (TypeError, ValueError):
-                continue
-        else:
-            updates[key] = str(val).strip().lower() in ("1", "true",
-                                                        "yes", "on")
-    if not updates:
-        return llm
-    try:
-        profile = dict(getattr(llm, "profile", {}) or {})
-        profile.update(updates)
-        return llm.model_copy(update={"profile": profile})
-    except (TypeError, ValueError):
-        return llm
+_CONNECT_TIMEOUT_S = 60.0
 
 
 def make_llm(mk: dict | None, *, timeout: int | None = None,
@@ -130,10 +98,36 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
         timeout=timeout if timeout is not None else mk.get("timeout", 60),
         max_retries=max_retries if max_retries is not None else mk.get("max_retries", 5),
     )
-    _cap_openai_retry_delays()
+    if mk.get("reasoning_effort"):
+        kwargs["reasoning_effort"] = str(mk["reasoning_effort"]).strip()
+    t = kwargs.get("timeout")
+    if isinstance(t, (int, float)) and not isinstance(t, bool):
+        t = max(1.0, float(t))
+        kwargs["timeout"] = (_CONNECT_TIMEOUT_S, t, t, t)
+
+    raw = mk.get("model_profile")
+    if isinstance(raw, dict):
+        profile = {}
+        for key in ("max_input_tokens", "structured_output"):
+            val = raw.get(key)
+            if val in (None, ""):
+                continue
+            if key == "max_input_tokens":
+                try:
+                    profile[key] = int(val)
+                except (TypeError, ValueError):
+                    continue
+            else:
+                profile[key] = str(val).strip().lower() in ("1", "true",
+                                                            "yes", "on")
+        if profile:
+            kwargs["profile"] = profile
+        elif raw:
+            print(f"[deep] model_profile pins unusable, registry profile kept: "
+                  f"{sorted(raw, key=str)}", file=sys.stderr)
 
     llm = init_chat_model(model_provider="openai", **kwargs)
-    return _apply_model_profile(llm, mk)
+    return llm
 
 
 def _model_provider(llm: Any) -> str:
@@ -158,8 +152,13 @@ def _supports_shell(backend: Any) -> bool:
     return isinstance(backend, SandboxBackendProtocol)
 
 
-def _fs_tools(backend: Any) -> tuple[str, ...]:
-    return FS_TOOLS + ((SHELL_TOOL,) if _supports_shell(backend) else ())
+def _fs_tools(backend: Any, *, scratchpad: bool = False) -> tuple[str, ...]:
+    tools = list(FS_READ_TOOLS)
+    if scratchpad:
+        tools.extend(FS_WRITE_TOOLS)
+    if _supports_shell(backend):
+        tools.append(SHELL_TOOL)
+    return tuple(tools)
 
 
 _skills_shadow_warned = False
@@ -168,16 +167,12 @@ _skills_shadow_warned = False
 def _with_skills_route(backend: Any) -> Any:
     # Skills live outside the repo, where the repo-confined file tools cannot
     # reach them: route harness/skills into the agent's own backend so
-    # SkillsMiddleware and `read_file` can serve the docs. The agent cannot
-    # write it -- no write tool exists, and `_sandbox_permissions` backstops
-    # the route with a scoped deny rule.
+    # SkillsMiddleware and `read_file` can serve the docs.
     global _skills_shadow_warned
     repo = getattr(backend, "repo_path", None)
     shadow = Path(repo) / SKILLS_ROUTE.lstrip("/") if repo else None
     if (shadow is not None and not _skills_shadow_warned
             and (shadow.exists() or shadow.is_symlink())):
-        # A repo owning this path would be shadowed for read_file/ls/grep;
-        # surface it once rather than silently mis-serving the harness docs.
         _skills_shadow_warned = True
         print(f"[deep] warning: {shadow} exists in the target repo and is "
               "shadowed by the skills route (read_file/ls/grep serve the "
@@ -185,11 +180,22 @@ def _with_skills_route(backend: Any) -> Any:
               file=sys.stderr)
     from deepagents.backends import CompositeBackend, FilesystemBackend
 
-    return CompositeBackend(
-        default=backend,
-        routes={SKILLS_ROUTE: FilesystemBackend(root_dir=str(SKILLS_DIR),
-                                                virtual_mode=True)},
-    )
+    routes = {SKILLS_ROUTE: FilesystemBackend(root_dir=str(SKILLS_DIR),
+                                              virtual_mode=True)}
+    if isinstance(backend, CompositeBackend):
+        routes.update(backend.routes)
+        return CompositeBackend(default=backend.default, routes=routes)
+    return CompositeBackend(default=backend, routes=routes)
+
+
+def _with_scratch_route(backend: Any) -> Any:
+    from deepagents.backends import CompositeBackend, StateBackend
+
+    routes = {SCRATCH_ROUTE: StateBackend()}
+    if isinstance(backend, CompositeBackend):
+        routes.update(backend.routes)
+        return CompositeBackend(default=backend.default, routes=routes)
+    return CompositeBackend(default=backend, routes=routes)
 
 
 def _register_profile(llm: Any) -> None:
@@ -227,58 +233,67 @@ def _tool_error_message(exc: Exception, request: Any) -> str | None:
             "and retry.")
 
 
-def _retryable_model_error(exc: BaseException) -> bool:
-    return bool(getattr(exc, "is_retryable", False))
-
-
-def _scan_middleware(backend: Any) -> list:
-    # fs allowlist + deny-write ride ONE FilesystemMiddleware (deepagents merges by .name); on_failure="error" so exhausted retries still raise.
+def _scan_middleware(backend: Any, *, scratchpad: bool = False) -> list:
     from deepagents.middleware import FilesystemMiddleware
     from langchain.agents.middleware import (ModelCallLimitMiddleware,
-                                             ModelRetryMiddleware,
                                              ToolErrorMiddleware,
                                              ToolRetryMiddleware)
 
-    permissions = (_sandbox_permissions(backend) if _supports_shell(backend)
-                   else _read_only_permissions())
+    permissions = (_sandbox_permissions(backend, scratchpad=scratchpad)
+                   if _supports_shell(backend)
+                   else _local_permissions(scratchpad=scratchpad))
     middleware = [
-        FilesystemMiddleware(backend=backend, tools=list(_fs_tools(backend)),
+        FilesystemMiddleware(backend=backend,
+                             tools=list(_fs_tools(backend, scratchpad=scratchpad)),
                              _permissions=permissions),
         ModelCallLimitMiddleware(run_limit=MODEL_CALL_LIMIT),
-        ModelRetryMiddleware(on_failure="error",
-                             retry_on=_retryable_model_error),
-        # Retry inner, error handler outer: the handler sees only exhausted retries.
-        ToolRetryMiddleware(on_failure="error"),
         ToolErrorMiddleware(on_error=_tool_error_message),
+        ToolRetryMiddleware(on_failure="error"),
     ]
     return middleware
 
 
-def _read_only_permissions() -> list:
+def _local_permissions(*, scratchpad: bool = False) -> list:
     from deepagents.middleware.filesystem import FilesystemPermission
 
-    return [FilesystemPermission(operations=["write"], paths=["/**"],
-                                 mode="deny")]
+    # `/.*` and `/.*/**` are load-bearing: globstar does not cross dot
+    # segments (`.env`, `.git/config`), and the permissive default allows
+    # any write no rule matches (first-match-wins; docs#permissions).
+    deny = FilesystemPermission(operations=["write"],
+                                paths=["/**", "/.*", "/.*/**"],
+                                mode="deny")
+    if scratchpad:
+        return [FilesystemPermission(operations=["write"],
+                                     paths=[f"{SCRATCH_ROUTE}**"],
+                                     mode="allow"), deny]
+    return [deny]
 
 
-def _sandbox_permissions(backend: Any) -> list:
-    # Unscoped deny rules are rejected on execution-capable backends; a rule
-    # scoped to the skills route is accepted (deepagents allows permissions
-    # whose paths stay inside composite routes) and keeps that host directory
-    # write-proof even if a write tool ever joins the allowlist.
+def _sandbox_permissions(backend: Any, *, scratchpad: bool = False) -> list:
+    # On execution-capable backends, DeepAgents requires all permission rules
+    # to be scoped strictly to composite route prefixes. (No catch-all by
+    # design: permissions don't govern `execute` backends — container
+    # isolation is the write boundary.)
     from deepagents.backends import CompositeBackend
     from deepagents.middleware.filesystem import FilesystemPermission
 
-    if isinstance(backend, CompositeBackend) and SKILLS_ROUTE in backend.routes:
-        return [FilesystemPermission(operations=["write"],
-                                     paths=[f"{SKILLS_ROUTE}**"],
-                                     mode="deny")]
-    return []
+    perms = []
+    if isinstance(backend, CompositeBackend):
+        if SKILLS_ROUTE in backend.routes:
+            perms.append(FilesystemPermission(operations=["write"],
+                                              paths=[f"{SKILLS_ROUTE}**"],
+                                              mode="deny"))
+        if scratchpad and SCRATCH_ROUTE in backend.routes:
+            perms.append(FilesystemPermission(operations=["write"],
+                                              paths=[f"{SCRATCH_ROUTE}**"],
+                                              mode="allow"))
+    return perms
 
 
 def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                      response_format: Any = None, name: str | None = None,
-                     backend: Any = None, root_dir: Any = None):
+                     backend: Any = None, root_dir: Any = None,
+                     scratchpad: bool = False):
     from deepagents import create_deep_agent
     from harness.prompts import UNTRUSTED_CONTEXT_NOTE
 
@@ -328,6 +343,9 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         skills = list(SKILLS_SOURCES)
         backend = _with_skills_route(backend)
 
+    if scratchpad:
+        backend = _with_scratch_route(backend)
+
     # Profile keyed on this model's provider: the no-subagent/no-mutating posture must hold for any model.
     _register_profile(llm)
 
@@ -344,7 +362,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
 
     kwargs: dict[str, Any] = dict(
         model=llm, tools=list(tools or []), system_prompt=system_prompt,
-        middleware=_scan_middleware(backend),
+        middleware=_scan_middleware(backend, scratchpad=scratchpad),
     )
     kwargs["backend"] = backend
     if skills:
@@ -397,29 +415,44 @@ def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
                    backend: Any = None, root_dir: Any = None,
                    trace_suffix: str | None = None,
                    meta_extra: dict | None = None,
-                   ) -> tuple[Any, str, Any]:
-    llm = make_llm(mk, timeout=timeout, max_retries=max_retries)
-    _cb_list = []
+                   agent: Any = None,
+                   scratchpad: bool = False,
+                   ) -> tuple[Any, str]:
+    if agent is None:
+        agent = build_deep_agent(
+            make_llm(mk, timeout=timeout, max_retries=max_retries),
+            system_prompt=system, tools=tools,
+            response_format=model, name=name,
+            backend=backend, root_dir=root_dir,
+            scratchpad=scratchpad)
+    config: dict[str, Any] = {"recursion_limit": recursion_limit}
     if _obs is not None:
-        _handler = _obs.get_handler()
-        if _handler is not None:
-            _cb_list.append(_handler)
-    agent = build_deep_agent(llm, system_prompt=system, tools=tools,
-                             response_format=model, name=name,
-                             backend=backend, root_dir=root_dir)
-    kwargs: dict[str, Any] = {"config": {"recursion_limit": recursion_limit}}
-    if _cb_list:
-        kwargs["config"]["callbacks"] = list(_cb_list)
-    if _obs is not None and name:
-        _role = _obs.stable_role(name)
-        _meta = (_obs.scan_metadata(stage=_role, role=_role, extra=meta_extra)
-                 if _role else {})
-        if _meta:
-            kwargs["config"]["metadata"] = _meta
-            _scope = _obs.scope_path(trace_suffix)
-            kwargs["config"]["run_name"] = (
-                f"{_role}:{_scope}" if _scope else _role)
+        _obs.run_config(config, name=name, extra=meta_extra,
+                        trace_suffix=trace_suffix)
     result = agent.invoke({"messages": [{"role": "user", "content": human}]},
-                          **kwargs)
+                          config=config)
     parsed = result.get("structured_response") if isinstance(result, dict) else None
-    return parsed, final_text(result), result
+    return parsed, final_text(result)
+
+
+def run_structured_batch(mk: dict | None, model: Any, system: str,
+                         humans: list[str], *, timeout: int | None = None,
+                         max_retries: int | None = None, name: str | None = None,
+                         max_concurrency: int | None = None,
+                         meta_extra: dict | None = None) -> list[Any]:
+    """Batched one-shot structured output : one LLM call per
+    input;"""
+    llm = make_llm(mk, timeout=timeout, max_retries=max_retries)
+    structured = llm.with_structured_output(model, method="function_calling")
+    msgs = [[{"role": "system", "content": system},
+             {"role": "user", "content": h}] for h in humans]
+    config: dict[str, Any] = (
+        {"max_concurrency": max_concurrency} if max_concurrency is not None else {})
+    if _obs is not None:
+        _obs.run_config(config, name=name, extra=meta_extra)
+    if not msgs:
+        return []
+    results = structured.batch(msgs, config=config, return_exceptions=True)
+    return [r if r is not None
+            else RuntimeError("structured reply contained no tool call")
+            for r in results]

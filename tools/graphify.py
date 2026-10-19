@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ._compat import tool
+from ._compat import run_cli, tool
 from .code import _resolve_limit
 
 
@@ -98,7 +98,7 @@ def needs_rebuild(root: str) -> bool:
 
 
 def graphify_build(root: str, timeout: int = 600) -> str:
-    from harness.tools.sast import scrubbed_env
+    from harness.tools._compat import scrubbed_env
     cmd = _cmd()
     if cmd is None:
         return ""
@@ -177,7 +177,6 @@ def _no_graph_msg() -> str:
 
 
 def _run_graph(args: list[str], root: str, timeout: int = 120) -> str:
-    from harness.tools.sast import scrubbed_env
     cmd = _cmd()
     if cmd is None:
         return "(graphify not available — use grep/glob codegraph instead)"
@@ -187,13 +186,10 @@ def _run_graph(args: list[str], root: str, timeout: int = 120) -> str:
         return f"ERROR: {e}"
     if not gp.is_file():
         return _no_graph_msg()
-    try:
-        proc = subprocess.run(cmd + args + ["--graph", str(gp)],
-                              capture_output=True, text=True, timeout=timeout,
-                              env=scrubbed_env())
-    except (subprocess.TimeoutExpired, OSError) as e:
-        return f"(graph query failed: {e})"
-    out = (proc.stdout or "").strip()
+    res = run_cli(cmd + args + ["--graph", str(gp)], timeout=timeout)
+    if res.get("skipped"):
+        return f"(graph query failed: {res.get('reason', 'unavailable')})"
+    out = (res.get("stdout") or "").strip()
     return _truncate(out) or "(no graph results)"
 
 
