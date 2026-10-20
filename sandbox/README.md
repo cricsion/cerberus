@@ -32,7 +32,9 @@ paths under Docker Desktop's file sharing work.
 ### Scan toolchain (image contents)
 
 Everything below is **image-only**: never installed on the host, so there is
-no host-side wrapper to keep in sync and no binary the agent cannot reach.
+no host toolchain to provision and no binary the agent cannot reach. The host
+indexer wrappers are thin `subprocess` calls that run only when the host
+happens to have the binary; the agent always uses the image.
 The agent runs them through `execute`; usage is documented in the skills at
 `/opt/harness-skills/<name>/SKILL.md`, served to the agent by the skills
 route on its backend (`harness/agents/deep.py`). Pins and per-arch
@@ -50,14 +52,15 @@ fails the build).
 | `bearer` | dataflow + privacy/PII flows | static binary |
 | `trufflehog` | verified secrets (current tree, `--no-update`) | static binary |
 | `atheris` | Python fuzzing — **proves** a finding, not a scanner | pip |
-| `gitleaks` | fast secret regex (indexer path, host-side wrapper) | — |
-| `osv-scanner` | dependency vulns (needs osv.dev egress) | google |
-| `checkov` | IaC (indexer path, host-side wrapper) | bridgecrew |
+| `gitleaks` | fast secret regex (in-container via `execute`, plus indexer wrapper) | — |
+| `osv-scanner` | dependency vulns (needs osv.dev egress; plus indexer wrapper) | google |
+| `checkov` | IaC (in-container via `execute`, plus indexer wrapper) | bridgecrew |
 
-The first nine are **agent-driven** (run per unit via `execute`, one skill
-each under `harness/skills/`); the last three are indexer wrappers that run
-in the harness process on the host and degrade gracefully when their binary
-is absent. `bandit`/`njsscan`/`atheris`/`flawfinder` ride the pip line with
+All image scanners are **agent-driven** (run per unit via `execute`, one skill
+each under `harness/skills/`); the indexer path additionally calls the
+`gitleaks`/`osv-scanner`/`checkov` wrappers in the harness process on the
+host, degrading gracefully when a binary is absent.
+`bandit`/`njsscan`/`atheris`/`flawfinder` ride the pip line with
 `semgrep`/`checkov`; `gosec`/`bearer`/`trufflehog` are release binaries with
 per-arch sha256 verification.
 

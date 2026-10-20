@@ -62,9 +62,10 @@ ARG GO_VERSION
 # --- OS layer ---------------------------------------------------------------
 # git (repo context/history), build-essential (native wheels + PoC builds),
 # clang builds Atheris from source on arm64, where PyPI publishes no wheel;
-# curl is only a build-time fetcher (purged below).
+# jq: agent JSON slicing of scanner output; curl is only a build-time fetcher
+# (purged below).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git ca-certificates curl build-essential clang libclang-rt-dev \
+        git ca-certificates curl build-essential clang libclang-rt-dev jq \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Node (opt-in) -----------------------------------------------------------
@@ -90,14 +91,16 @@ RUN if [ "$WITH_GO" = "1" ]; then \
 # opengrep_scan    -> opengrep    (NOT on PyPI: built from its own repo tag)
 # secrets_scan     -> gitleaks (no network ever needed)
 # sca_scan         -> osv-scanner (needs osv.dev egress at scan time)
-# iac_check        -> checkov (offline by default)
+# iac_check        -> checkov (the in-container skill passes --skip-download; the
+#                     image also sets BC_SKIP_MAPPING=TRUE and
+#                     CKV_SKIP_PACKAGE_UPDATE_CHECK=True. Without --skip-download
+#                     checkov calls Prisma Cloud's API to enrich remediation links.
+#                     The host indexer wrapper is left as-is.)
 # Extra agent-driven scanners (semgrep/opengrep siblings, run via `execute`,
 # one skill each under harness/skills/): bandit (pip), bearer (dataflow),
 # trufflehog (verified secrets), gosec (Go), njsscan (Node), atheris
 # (verification fuzzing), flawfinder (C/C++). NEVER installed on the host: these are
-# image-only, so the only consumer is the in-sandbox agent. (trivy was
-# considered and dropped: with vuln off it duplicated checkov/gitleaks/
-# trufflehog coverage.)
+# image-only, so the only consumer is the in-sandbox agent.
 #
 # Python scanners + test runners (pip resolves interpreter-compatible wheels).
 # setuptools is pinned <81 on purpose: 84 removed the legacy pkg_resources
@@ -252,6 +255,6 @@ RUN apt-get purge -y curl && apt-get autoremove -y \
 USER 1000:1000
 ENV HOME=/work TMPDIR=/tmp GIT_PAGER=cat PAGER=cat TERM=dumb
 # Never try to phone home.
-ENV SEMGREP_SEND_METRICS=off CHECKOV_OFFLINE=1
+ENV SEMGREP_SEND_METRICS=off BC_SKIP_MAPPING=TRUE CKV_SKIP_PACKAGE_UPDATE_CHECK=True
 
 CMD ["sleep", "infinity"]

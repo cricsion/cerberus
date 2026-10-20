@@ -72,12 +72,25 @@ docker run --rm "$IMAGE_TAG" gitleaks version
 docker run --rm "$IMAGE_TAG" osv-scanner --version
 docker run --rm "$IMAGE_TAG" checkov --version
 
+echo "[smoke] jq + skills"
+docker run --rm "$IMAGE_TAG" jq --version
+docker run --rm "$IMAGE_TAG" sh -c 'test -f /opt/harness-skills/gitleaks/SKILL.md && test -f /opt/harness-skills/osv-scanner/SKILL.md && test -f /opt/harness-skills/checkov/SKILL.md'
+docker run --rm "$IMAGE_TAG" sh -c 'for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done'
+docker run --rm "$IMAGE_TAG" cat /opt/harness-skills/gitleaks/SKILL.md | diff -q - harness/skills/gitleaks/SKILL.md
+
 echo "[smoke] offline rule scan with no network (must succeed)"
 TMP_REPO="$(mktemp -d)"
 printf 'import os\nos.system("echo " + input())\n' > "$TMP_REPO/evil.py"
 docker run --rm --network none -v "$TMP_REPO:/scan:ro" "$IMAGE_TAG" \
     semgrep scan --config /opt/scan-rules/harness --metrics off --quiet /scan
 rm -rf "$TMP_REPO"
+
+echo "[smoke] checkov JSON parses offline"
+TMP_IAC="$(mktemp -d)"
+printf 'FROM alpine:3.20\nRUN echo hi\n' > "$TMP_IAC/Dockerfile"
+docker run --rm --network none -v "$TMP_IAC:/scan:ro" "$IMAGE_TAG" sh -c \
+    'checkov -d /scan -o json --skip-download --quiet --output-file-path /work >/dev/null 2>&1; rc=$?; [ "$rc" = 1 ] && jq -e ".results.failed_checks | length > 0" /work/results_json.json >/dev/null'
+rm -rf "$TMP_IAC"
 
 echo "[smoke] network must be unreachable (curl is not in the image)"
 # d/k has /dev/tcp, dash does not; run the probe under bash explicitly.
