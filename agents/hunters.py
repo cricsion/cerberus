@@ -118,13 +118,13 @@ def focus_hint(focus: list[str] | str | None) -> str:
 def _norm_refs(raw, repo: str | None = None) -> list:
     out: list = []
     try:
-        for r in (raw or [])[:50]:
+        for r in (raw or []):
             if not isinstance(r, dict):
                 continue
             file = str(r.get("file") or "")
             out.append({"file": to_repo_relative(file, repo) if repo and file else file,
                         "line": max(0, safe_int(r.get("line"))),
-                        "note": str(r.get("note") or "")[:2000]})
+                        "note": str(r.get("note") or "")})
     except Exception:
         return []
     return out
@@ -164,15 +164,15 @@ def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = ""
         "path": to_repo_relative(path, repo) if repo else path,
         "start_line": safe_int(d.get("start_line")),
         "end_line": safe_int(d.get("end_line"), safe_int(d.get("start_line"))),
-        "snippet": str(d.get("snippet") or d.get("evidence") or "")[:4000],
+        "snippet": str(d.get("snippet") or d.get("evidence") or ""),
         "taint": {
             "source": str(taint.get("source") or ""),
             "sink": str(taint.get("sink") or ""),
-            "path": [_norm_taint_path(x, repo) for x in tpath][:20],
+            "path": [_norm_taint_path(x, repo) for x in tpath],
         },
         "refs": _norm_refs(d.get("refs"), repo),
-        "evidence": str(d.get("evidence") or d.get("snippet") or f"{hunter} hunter")[:4000],
-        "rationale": str(d.get("rationale") or "")[:2000],
+        "evidence": str(d.get("evidence") or d.get("snippet") or f"{hunter} hunter"),
+        "rationale": str(d.get("rationale") or ""),
         "status": "needs-review",
     }
     try:
@@ -184,7 +184,7 @@ def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = ""
         out["severity"] = "medium"
     # path/evidence need no repair: fallback_path and the `or` defaults above keep them non-empty.
     if not out["snippet"]:
-        out["snippet"] = out["evidence"][:4000] or f"{hunter} needs review"
+        out["snippet"] = out["evidence"] or f"{hunter} needs review"
     return out
 
 
@@ -408,7 +408,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     sys_prompt = SYSTEM_PASS_SYSTEM + sandbox_system_section(backend)
     import json as _json
     signals = []
-    for finding in findings[:500]:
+    for finding in findings:
         signals.append({
             "title": str(finding.get("title", "")),
             "cwe": finding.get("cwe"),
@@ -417,6 +417,9 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
             "end_line": finding.get("end_line"),
         })
     slim = _json.dumps(signals, default=str)
+    print(f"[system-pass] {len(signals)} signals, "
+          f"{len(slim.encode('utf-8')) // 1024} KB",
+          file=sys.stderr, flush=True)
     scope = focus_hint(focus) or "ALL vulnerability classes in scope"
     if (threat_md or "").strip():
         from harness.prompts.untrusted import make_nonce, untrusted_block

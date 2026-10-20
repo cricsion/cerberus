@@ -25,11 +25,25 @@ def _int_setting(mk: dict, key: str, default: int) -> int:
 
 def _merge_verdict(base: dict, data: dict) -> dict:
     merged = dict(base)
+    # Preserve the hunter's original record before validator fields land. Both
+    # fields survive the vote merge (it copies the winning dict) but are never
+    # sent back to the validator or used by the report writers.
+    for src, dst in (("evidence", "hunter_evidence"),
+                     ("snippet", "hunter_snippet")):
+        if base.get(src) and not merged.get(dst):
+            merged[dst] = base[src]
     if isinstance(data, dict):
-        for k in ("status", "confidence", "severity", "evidence",
-                  "cwe", "fix_suggestion", "snippet", "control_type"):
+        for k in ("status", "confidence", "severity",
+                  "cwe", "fix_suggestion", "control_type"):
             if k in data and data[k] not in (None, ""):
                 merged[k] = data[k]
+        vsnip = data.get("snippet")
+        if vsnip not in (None, ""):
+            merged["snippet"] = vsnip
+        vev = str(data.get("evidence", "") or "").strip()
+        if vev:
+            prev = str(merged.get("evidence") or "")
+            merged["evidence"] = _append_note(prev, f"validator: {vev}")
         note = str(data.get("fallback_note", "") or "")
         if not note:
             reason = str(data.get("refute_reason", "") or "")
@@ -51,7 +65,7 @@ def _merge_verdict(base: dict, data: dict) -> dict:
         merged["evidence"] = (
             f"validator falsified: {base.get('title','')} "
             f"at {base.get('path','')}"
-        )[:4000]
+        )
     return merged
 
 
@@ -234,19 +248,24 @@ def _group_by_unit(findings: list[dict],
 
 
 def _compact_finding(f: dict) -> dict:
+    """Key filter, not a compactor: every listed field is sent in full.
+
+    ``rationale`` is deliberately absent — the validator must re-derive the
+    claim without the hunter's reasoning (see ``REFUTE_METHOD``).
+    """
     try:
         d = dict(f)
-        for k in ("title", "snippet", "evidence"):
-            v = d.get(k)
-            if isinstance(v, str) and len(v) > 800:
-                d[k] = v[:800]
         taint = d.get("taint")
         if isinstance(taint, dict):
             path = taint.get("path")
+            if path is None:
+                path = []
+            elif not isinstance(path, list):
+                path = [path]
             d["taint"] = {
-                "source": str(taint.get("source", ""))[:300],
-                "sink": str(taint.get("sink", ""))[:300],
-                "path": [str(p)[:300] for p in (path or [])][:20],
+                "source": str(taint.get("source", "")),
+                "sink": str(taint.get("sink", "")),
+                "path": [str(p) for p in path],
             }
         return {k: d.get(k) for k in (
             "id", "title", "cwe", "severity", "confidence", "path",
@@ -314,6 +333,11 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 from harness.prompts.validation import build_batch_task
                 msg = build_batch_task(group_name, threat_md, payload,
                                        repo=repo, tools=tool_names)
+                print(f"[validator] unit '{group_name}' cell {cell_no + 1}: "
+                      f"{len(payload)} findings, "
+                      f"{len(msg.encode('utf-8')) // 1024} KB, "
+                      f"vote {_vote}/{n_votes}...",
+                      file=sys.stderr, flush=True)
 
                 def _call_validator_structured() -> tuple[Any, str]:
                     return run_structured(

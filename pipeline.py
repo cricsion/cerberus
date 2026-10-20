@@ -612,8 +612,10 @@ def _merge_dup(a: dict, b: dict) -> dict:
         pass
     ev = str(g.get("evidence") or "")
     extra = str(drop.get("evidence") or "")
-    if extra and extra not in ev:
-        g["evidence"] = (ev + f" | alt: {extra}")[:4000]
+    if extra:
+        segments = ev.split(" | alt: ")
+        if extra not in segments:
+            g["evidence"] = f"{ev} | alt: {extra}" if ev else extra
     return g
 
 
@@ -767,7 +769,7 @@ def confirm_critical_step(state: ScanState,
         if isinstance(g, dict) and _is_hot(g):
             g["status"] = "needs-review"
             g["evidence"] = (str(g.get("evidence") or "")
-                             + " | held for human review (HIL declined)")[:4000]
+                             + " | held for human review (HIL declined)")
         out.append(g)
     return {"verified": Overwrite(out)}
 

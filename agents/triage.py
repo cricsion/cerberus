@@ -77,29 +77,42 @@ def stage_a(findings: list[dict]) -> list[dict]:
     return out
 
 
+def _capped_view(text: str, limit: int) -> str:
+    """Bound a display view, marking the cut so no truncation is silent."""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n... [truncated {len(text) - limit} chars]"
+
+
 def _slim_for_triage(f: dict) -> dict:
     taint = f.get("taint")
     if isinstance(taint, dict):
         trace = taint.get("path")
-        if not isinstance(trace, list):
+        if trace is None:
             trace = []
+        elif not isinstance(trace, list):
+            trace = [trace]
         taint = {
-            "source": str(taint.get("source", ""))[:300],
-            "sink": str(taint.get("sink", ""))[:300],
-            "path": [str(step)[:300] for step in trace[:12]],
+            "source": str(taint.get("source", "")),
+            "sink": str(taint.get("sink", "")),
+            "path": [str(step) for step in trace],
         }
     elif taint is not None:
-        taint = str(taint)[:800]
-    return {"id": f.get("id"), "path": f.get("path"),
-            "title": str(f.get("title", ""))[:300],
-            "cwe": f.get("cwe"),
+        taint = str(taint)
+    return {"id": f.get("id"),
+            "unit": f.get("unit", ""),
+            "path": f.get("path"),
             "start_line": f.get("start_line"), "end_line": f.get("end_line"),
+            "cwe": f.get("cwe"),
+            "title": str(f.get("title", "")),
             "severity": f.get("severity"), "confidence": f.get("confidence"),
-            "status": f.get("status"), "duplicate_of": f.get("duplicate_of", ""),
-            "snippet": str(f.get("snippet", ""))[:2000],
-            "rationale": str(f.get("rationale", ""))[:1000],
+            "status": f.get("status"),
+            "control_type": f.get("control_type", ""),
+            "duplicate_of": f.get("duplicate_of", ""),
+            "snippet": str(f.get("snippet", "")),
+            "rationale": _capped_view(str(f.get("rationale", "")), 2_000),
             "taint": taint,
-            "evidence": str(f.get("evidence", ""))[:2000]}
+            "evidence": _capped_view(str(f.get("evidence", "")), 2000)}
 
 
 def _triage_messages(chunks: list[list[dict]], threat_md: str) -> list[str]:
@@ -142,7 +155,7 @@ def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
         reason = str(v.get("reason", "") or "").strip()
         if reason:
             prev = str(target.get("evidence") or "")
-            target["evidence"] = (prev + f" | triage: {reason}")[:4000] if prev else reason
+            target["evidence"] = (prev + f" | triage: {reason}") if prev else reason
         applied += 1
     return applied
 
@@ -270,6 +283,10 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
         stats["n_duplicates"] = sum(1 for f in staged if f.get("duplicate_of"))
         return {"findings": staged, **stats}
     messages = _triage_messages(chunks, threat_md or "")
+    for b, (chunk, message) in enumerate(zip(chunks, messages), start=1):
+        print(f"[triage] batch {b}/{len(messages)}: {len(chunk)} findings, "
+              f"{len(message.encode('utf-8')) // 1024} KB",
+              file=sys.stderr, flush=True)
     by_id: dict[str, dict] = {}
     for s in staged:
         by_id.setdefault(str(s.get("id")), s)  # first match, like the old lookup

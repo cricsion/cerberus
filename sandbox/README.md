@@ -2,15 +2,15 @@
 
 Set `sandbox.backend` in `config/default.yaml` (or `SANDBOX_BACKEND`) to pick
 the execution environment for hunter agents. All modes keep the same harness
-posture: no subagent recursion, no `write_file`/`edit_file`/`delete`,
-file tools confined to the target repo, and the shell (when it exists) is
-the only extra capability.
+posture: no subagent recursion, no `delete`; `write_file`/`edit_file` are
+confined to the state scratch route; target-repo file tools are read-only;
+the shell (when it exists) is the only extra capability.
 
-| mode | file tools | shell | boundary |
-|---|---|---|---|
-| `local` (resolver fallback) | in-process, repo-confined | none | path containment |
-| `docker` (app-config default) | in-process, repo-confined | `execute` | one network-full container per run |
-| `sbx` | in-process, repo-confined | `execute` | one microVM per run |
+| mode | repo file tools | scratch writes | shell | boundary |
+|---|---|---|---|---|
+| `local` (resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
+| `docker` (app-config default) | read-only, in-process | same | `execute` | one network-full container per run |
+| `sbx` | read-only, in-process | same | `execute` | one microVM per run |
 
 ## local
 

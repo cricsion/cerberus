@@ -33,7 +33,7 @@ def write_sarif(findings: list[dict], out: Path) -> None:
             "locations": [{"physicalLocation": {"artifactLocation": {"uri": f.get("path", "")},
                 "region": {"startLine": max(1, safe_int(f.get("start_line", 1), 1)),
                            "endLine": max(1, safe_int(f.get("end_line", 1), 1)),
-                           "snippet": {"text": f.get("snippet", "")[:2000]}}}}],
+                           "snippet": {"text": f.get("snippet", "")}}}}],
         })
     sarif = {"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
              "runs": [{"tool": {"driver": {"name": "vuln-harness", "rules": rules}}, "results": results}]}
