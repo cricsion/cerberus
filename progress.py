@@ -248,7 +248,7 @@ class AgentRegistry:
 
     @_bookkeep_method
     def transition(self, agent_id, state, *, message="", error=None, model=None,
-                   progress=None, ts=None, **kw):
+                   progress=None, ts=None, if_changed: bool = False, **kw):
         aid = _agent_id(agent_id)
         handle = None
         evt = None
@@ -270,6 +270,8 @@ class AgentRegistry:
                 new_state = cur
             if cur.terminal and new_state.terminal and cur != new_state:
                 new_state = cur
+            if if_changed and new_state == cur:
+                return handle
             now = time.time() if ts is None else float(ts)
             handle.state = new_state
             if model is not None:

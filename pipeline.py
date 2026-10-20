@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from langchain_core.runnables import RunnableLambda
 from pathlib import Path
 from typing import Any, TypedDict
@@ -512,13 +513,14 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
 
 def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
                      votes: int | None, label: str,
-                     repo: str | None = None) -> list[dict]:
+                     repo: str | None = None,
+                     cell_offset: int = 0) -> list[dict]:
     from harness.agents.validator import run_validation
 
     try:
         return run_validation(findings, cfg or {}, threat_md or "", votes,
-                              units=[{"name": str(label)}], max_workers=3,
-                              repo=repo)
+                              units=[{"name": str(label)}], max_workers=1,
+                              repo=repo, cell_offset=cell_offset)
     except Exception as e:
         from harness.agents.deep import is_fatal_error
 
@@ -558,10 +560,7 @@ def hunter_worker(state: dict) -> dict:
                 f["unit"] = str(label)
         print(f"[hunters] {label}: {len(out)} findings in {_time.time()-t0:.0f}s",
               file=sys.stderr, flush=True)
-        validated = _validate_inline(out, cfg, threat_md,
-                                     state.get("votes_override"), label,
-                                     repo=repo)
-        ret = {"findings": out, "verified": validated,
+        ret = {"findings": out,
                "tools_used": sorted(set(str(t) for t in _tools))}
         if _coverage:
             ret["hunter_coverage"] = _coverage
@@ -668,7 +667,7 @@ def aggregator_node(state: ScanState) -> dict:
         key = _norm_key(f)
         seen[key] = _merge_dup(seen[key], f) if key in seen else f
     out: list[dict] = list(seen.values())
-    # Pipelined validation: queue only findings with no validated counterpart (same norm-key); never validated twice.
+    # Concurrent window: queue only findings with no validated counterpart (same norm-key); never validated twice.
     done_keys = {_norm_key(f) for f in (state.get("verified", []) or [])}
     pending = [f for f in out if _norm_key(f) not in done_keys]
     return {"pending": pending}
@@ -907,25 +906,39 @@ def _sweep_orphan_sandboxes() -> None:
         pass
 
 
-def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) -> None:
+def _fan_out_hunters(state: dict, max_workers: int,
+                     agent_registry: Any = None) -> dict[str, float]:
+    import time as _time
+
+    from harness.agents.validator import _cell_size
+
     payloads = list(state.get("fanout_payloads", []) or [])
+    busy = {"hunt": 0.0, "validation": 0.0, "system_pass": 0.0}
     if not payloads:
-        return
+        return busy
     shared = {k: state.get(k) for k in ("repo", "threat_model_md", "focus",
                                         "votes_override")}
+
+    seen_units: dict[str, int] = {}
+    for seq, p in enumerate(payloads):
+        unit = str(p.get("unit", "unit"))
+        n = seen_units.get(unit, 0)
+        seen_units[unit] = n + 1
+        p["_ukey"] = unit if n == 0 else f"{unit}:{n}"
+        p["_seq"] = seq
 
     if agent_registry is not None:
         for p in payloads:
             unit = str(p.get("unit", "unit"))
             cfg = p.get("cfg") or state.get("cfg") or {}
             model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
-            agent_registry.create("hunter:" + unit, "hunter", unit=unit,
+            agent_registry.create("hunter:" + p["_ukey"], "hunter", unit=unit,
                                   parent_stage="hunters", model=model,
                                   state=AgentState.queued)
 
     def _one(p: dict) -> dict:
         unit = str(p.get("unit", "unit"))
-        aid = "hunter:" + unit
+        aid = "hunter:" + p["_ukey"]
         cfg = p.get("cfg") or state.get("cfg") or {}
         model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
         if agent_registry is not None:
@@ -963,13 +976,155 @@ def _fan_out_hunters(state: dict, max_workers: int, agent_registry: Any = None) 
                                           model=model, error=str(e))
             return {"findings": [fb]}
 
-    results = RunnableLambda(_one).batch(
-        payloads, config={"max_concurrency": max(1, int(max_workers))},
-        return_exceptions=True)
-    for res in results:
-        if isinstance(res, BaseException):
-            raise res
-        apply_update(state, res)
+    def _ctx(p: dict) -> dict:
+        merged = dict(p)
+        for k, v in shared.items():
+            merged.setdefault(k, v)
+        return merged
+
+    def _timed(fn, *a, _on_start=None, **kw):
+        if _on_start is not None:
+            try:
+                _on_start()
+            except Exception:
+                pass
+        t0 = _time.perf_counter()
+        out = fn(*a, **kw)
+        return out, _time.perf_counter() - t0
+
+    def _flip_unit_running(unit_key: str) -> None:
+        if agent_registry is not None:
+            agent_registry.transition("validator:" + unit_key,
+                                      AgentState.running,
+                                      parent_stage="validation",
+                                      if_changed=True)
+
+    def _submit_bundles(p: dict, findings: list) -> None:
+        unit = str(p.get("unit", "unit"))
+        merged = _ctx(p)
+        cfg = merged.get("cfg") or state.get("cfg") or {}
+        size = _cell_size(cfg)
+        from harness.agents.validator import (_evidence_gate_findings,
+                                              _route_finding)
+
+        try:
+            gated = _evidence_gate_findings(list(findings))
+            if len(gated) != len(findings):
+                raise ValueError("gate/cardinality drift")
+            llm_items = [f for f, g in zip(findings, gated)
+                         if _route_finding(g)[0] == "llm"]
+            passthrough = [f for f, g in zip(findings, gated)
+                           if _route_finding(g)[0] != "llm"]
+        except Exception:
+            llm_items, passthrough = list(findings), []
+        chunks = [llm_items[i:i + size]
+                  for i in range(0, len(llm_items), size)]
+        if not chunks:
+            if not passthrough:
+                return
+            chunks = [passthrough]
+        elif passthrough:
+            chunks[0] = chunks[0] + passthrough
+        ukey = p["_ukey"]
+        aid = "validator:" + ukey
+        if agent_registry is not None:
+            agent_registry.create(aid, "validator", unit=unit,
+                                  parent_stage="validation",
+                                  state=AgentState.queued)
+        remaining_bundles[ukey] = len(chunks)
+        val_counts[p["_seq"]] = len(chunks)
+        threat_md = merged.get("threat_model_md") or ""
+        votes = merged.get("votes_override")
+        repo = merged.get("repo") or state.get("repo", ".")
+        for k, chunk in enumerate(chunks):
+            fut = executor.submit(_timed, _validate_inline, chunk, cfg,
+                                  threat_md, votes, unit, repo=repo,
+                                  cell_offset=k,
+                                  _on_start=lambda _u=ukey: _flip_unit_running(_u))
+            pending[fut] = ("validation", p, k)
+
+    executor = ThreadPoolExecutor(max_workers=max(1, int(max_workers)))
+    pending: dict = {}
+    remaining_bundles: dict[str, int] = {}
+    hunt_buf: dict[int, dict] = {}
+    hunt_next = 0
+    hunt_done: set[int] = set()
+    val_buf: dict[tuple[int, int], list] = {}
+    val_ptr = [0, 0]
+    val_counts: dict[int, int] = {}
+
+    def _flush_hunts() -> None:
+        nonlocal hunt_next
+        while hunt_next in hunt_buf:
+            apply_update(state, hunt_buf.pop(hunt_next))
+            hunt_next += 1
+
+    def _flush_validations() -> None:
+        while True:
+            seq, k = val_ptr
+            if seq not in val_counts:
+                if seq in hunt_done:
+                    val_ptr[0], val_ptr[1] = seq + 1, 0
+                    continue
+                return
+            if (seq, k) not in val_buf:
+                return
+            apply_update(state, {"verified": val_buf.pop((seq, k))})
+            if k + 1 < val_counts[seq]:
+                val_ptr[1] = k + 1
+            else:
+                val_ptr[0], val_ptr[1] = seq + 1, 0
+
+    try:
+        for p in payloads:
+            pending[executor.submit(_timed, RunnableLambda(_one).invoke, p)] = (
+                "hunt", p, None)
+        while pending:
+            done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
+            for fut in done:
+                kind, p, k = pending.pop(fut)
+                try:
+                    res, elapsed = fut.result()
+                except BaseException as e:
+                    if kind == "validation" and agent_registry is not None:
+                        agent_registry.transition(
+                            "validator:" + p["_ukey"],
+                            AgentState.failed, parent_stage="validation",
+                            error=str(e))
+                    for r in hunt_buf.values():
+                        apply_update(state, r)
+                    for r in val_buf.values():
+                        apply_update(state, {"verified": r})
+                    hunt_buf.clear()
+                    val_buf.clear()
+                    executor.shutdown(wait=True, cancel_futures=True)
+                    raise
+                busy[kind] += elapsed
+                if kind == "hunt":
+                    res = res if isinstance(res, dict) else {}
+                    hunt_buf[p["_seq"]] = res
+                    hunt_done.add(p["_seq"])
+                    _flush_hunts()
+                    _submit_bundles(p, list(res.get("findings") or []))
+                    if hunt_next == len(payloads):
+                        sfut = executor.submit(_timed, system_pass_node, state)
+                        pending[sfut] = ("system_pass", p, None)
+                elif kind == "validation":
+                    val_buf[(p["_seq"], k)] = res or []
+                    _flush_validations()
+                    ukey = p["_ukey"]
+                    remaining_bundles[ukey] -= 1
+                    if remaining_bundles[ukey] <= 0:
+                        del remaining_bundles[ukey]
+                        if agent_registry is not None:
+                            agent_registry.transition(
+                                "validator:" + ukey, AgentState.succeeded,
+                                parent_stage="validation", message="completed")
+                else:
+                    apply_update(state, res)
+    finally:
+        executor.shutdown(wait=True, cancel_futures=True)
+    return busy
 
 
 def run_scan(repo: str, confirm_critical: bool = False,
@@ -1026,8 +1181,13 @@ def run_scan(repo: str, confirm_critical: bool = False,
     _stage("threat_model", lambda: apply_update(state, _call_node(threat_model_node, state, agent_registry=_agent_registry)))
     _stage("hunters_router", lambda: apply_update(state, _call_node(hunters_router, state, agent_registry=_agent_registry)))
     if state.get("fanout_payloads"):
-        _stage("hunters", lambda: _fan_out_hunters(state, _safe_max_concurrency(), agent_registry=_agent_registry))
-    _stage("system_pass", lambda: apply_update(state, system_pass_node(state)))
+        _hunt_timings = _stage("hunters", lambda: _fan_out_hunters(
+            state, _safe_max_concurrency(), agent_registry=_agent_registry))
+        for _flavor in ("hunt", "validation", "system_pass"):
+            stage_timings[f"hunters:busy_{_flavor}"] = round(
+                float((_hunt_timings or {}).get(_flavor, 0.0)), 3)
+    else:
+        _stage("system_pass", lambda: apply_update(state, system_pass_node(state)))
     _stage("aggregator", lambda: apply_update(state, aggregator_node(state)))
     _reset_agent_scratch_phase(state.get("repo", "."))
     _stage("validator", lambda: apply_update(state, _call_node(validator_node, state, agent_registry=_agent_registry)))

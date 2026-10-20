@@ -421,14 +421,15 @@ def _classify_group(pair: tuple[str, list[dict], list[int]],
 
 def _run_cell(name: str, cell_items: list[dict], ci: int,
               n_cells: int, *, cfg: dict, n_votes: int, threat_md: str,
-              repo: str | None) -> list[dict]:
+              repo: str | None, cell_offset: int = 0) -> list[dict]:
     print(f"[validator] unit '{name}' cell {ci + 1}/{n_cells}: "
           f"{len(cell_items)} findings, {n_votes} vote(s)...",
           file=sys.stderr, flush=True)
     try:
         # repo passed only when known; 5-arg test fakes keep the shorter form.
         res = _validate_unit_batch(name, cell_items, cfg, threat_md,
-                                   n_votes, repo=repo, cell_no=ci)
+                                   n_votes, repo=repo,
+                                   cell_no=ci + cell_offset)
         if not isinstance(res, list) or len(res) != len(cell_items):
             raise ValueError("misaligned batch result")
         return res
@@ -442,7 +443,8 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
 
 
 def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
-                          threat_md: str, repo: str | None
+                          threat_md: str, repo: str | None,
+                          cell_offset: int = 0
                           ) -> dict[tuple[int, int], list[dict]]:
     tasks = [(gi, cidx)
              for gi, g in enumerate(planned)
@@ -462,7 +464,7 @@ def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
         try:
             res = _run_cell(_name, cell_items, cidx, len(cells),
                             cfg=cfg, n_votes=n_votes, threat_md=threat_md,
-                            repo=repo)
+                            repo=repo, cell_offset=cell_offset)
             if not isinstance(res, list) or len(res) != len(idx):
                 raise ValueError("misaligned cell result")
             return res
@@ -515,7 +517,8 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
                    votes: int | None = None,
                    units: list[dict] | None = None,
                    max_workers: int | None = None,
-                   repo: str | None = None) -> list[dict]:
+                   repo: str | None = None,
+                   cell_offset: int = 0) -> list[dict]:
     cfg = cfg or {}
     threat_md = threat_md or ""
     n_votes = _resolve_votes(cfg, votes)
@@ -544,5 +547,5 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     planned = [_classify_group(pair, _cs) for pair in groups]
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
-        repo=repo)
+        repo=repo, cell_offset=cell_offset)
     return _reassemble_validation(planned, gated, cell_out)
