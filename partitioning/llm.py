@@ -220,7 +220,7 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
                  backend: Any = None) -> list[dict]:
     """Run the Deep-Agent partitioner with hunter tools and extract parsed units;
     an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
-    from harness.agents.deep import run_structured
+    from harness.agents.deep import DEFAULT_RECURSION_LIMIT, run_structured
     from harness.agents.toolsets import graph_tools
     from harness.llmjson import structured_items
     from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
@@ -229,7 +229,8 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
         parsed, _ = run_structured(
             mk, UnitList, PARTITIONER_SYSTEM, msg,
             tools=graph_tools(), timeout=timeout, name="partitioner",
-            backend=backend, root_dir=repo, recursion_limit=100)
+            backend=backend, root_dir=repo,
+            recursion_limit=DEFAULT_RECURSION_LIMIT)
         return structured_items(parsed, field="units")
 
     return run_fail_open("partitioner-llm", _partition_llm, default=[],

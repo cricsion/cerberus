@@ -22,8 +22,10 @@ SHELL_TOOL = "execute"
 FS_READ_TOOLS = ("read_file", "ls", "glob", "grep")
 FS_WRITE_TOOLS = ("write_file", "edit_file")
 FS_TOOLS = FS_READ_TOOLS
-# FilesystemMiddleware rejects unscoped permission rules on execution-capable backends; MODEL_CALL_LIMIT caps turns; recursion_limit: run_structured.
-MODEL_CALL_LIMIT = 100
+# FilesystemMiddleware rejects unscoped permission rules on execution-capable
+# backends. MODEL_CALL_LIMIT is the real budget: each agent run may make at most 1000 model calls.
+DEFAULT_RECURSION_LIMIT = 4000
+MODEL_CALL_LIMIT = 1000
 
 # Scanner skill docs are served the deepagents way: routed into the agent's
 # own backend (no write tool exists for the agent, and a route-scoped deny
@@ -410,7 +412,8 @@ def final_text(result: Any, *, sep: str = " ") -> str:
 
 def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
                    tools: list | None = None, timeout: int | None = None,
-                   max_retries: int | None = None, recursion_limit: int = 1000,
+                   max_retries: int | None = None,
+                   recursion_limit: int = DEFAULT_RECURSION_LIMIT,
                    name: str | None = None,
                    backend: Any = None, root_dir: Any = None,
                    trace_suffix: str | None = None,

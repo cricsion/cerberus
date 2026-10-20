@@ -10,6 +10,8 @@ from pathlib import Path
 
 from deepagents.backends.filesystem import FilesystemBackend
 
+from harness.paths import resolve_tool_path
+
 
 class RepoLocalBackend(FilesystemBackend):
     def __init__(self, *, repo_path: str | Path) -> None:
@@ -23,12 +25,8 @@ class RepoLocalBackend(FilesystemBackend):
         super().__init__(root_dir=self.repo_path, virtual_mode=True)
 
     def _resolve_path(self, key: str) -> Path:
-        # Base resolver rejects ".." as a substring, false-positiving on
-        # legit names like pages/api/auth/[...nextauth].js.
-        repo = self.repo_path
-        candidate = (repo / ((key or ".").strip().lstrip("/") or ".")).resolve()
-        try:
-            candidate.relative_to(repo)
-        except ValueError:
-            return self._sentinel
-        return candidate
+        # One contract for every accepted spelling: repo-relative, host-absolute
+        # under the root, or a virtual leading-slash path whose repo-local
+        # target exists. Anything that escapes resolves to the sentinel.
+        resolved = resolve_tool_path(key, self.repo_path)
+        return resolved if resolved is not None else self._sentinel

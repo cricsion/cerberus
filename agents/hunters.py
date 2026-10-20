@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 
 # Prompt text lives in harness/prompts/discovery.py (re-exported for `h.<name>`).
-from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
+from harness.agents.deep import (DEFAULT_RECURSION_LIMIT, is_fatal_error,
+                                 sanitize_model_kwargs)
 from harness.fallback import EMPTY_STRUCTURED, run_fail_open
+from harness.paths import to_repo_relative
 from harness.schemas import safe_float, safe_int
 from harness.prompts.discovery import (DiscoveryResult, SYSTEM_PASS_SYSTEM,
                                        build_discovery_task,
@@ -28,6 +31,20 @@ def _agent_timeout(mk: dict, floor: int = 180) -> int:
         return floor
 
 
+def _hunter_recursion_limit(cfg: dict) -> int:
+    """Validated hunter superstep budget; invalid values fail back to 4000."""
+    raw = cfg.get("hunter_recursion_limit", DEFAULT_RECURSION_LIMIT)
+    try:
+        limit = int(raw or DEFAULT_RECURSION_LIMIT)
+    except (TypeError, ValueError):
+        return DEFAULT_RECURSION_LIMIT
+    if limit < 1:
+        _logger.warning("invalid hunter_recursion_limit=%r; using %d",
+                        raw, DEFAULT_RECURSION_LIMIT)
+        return DEFAULT_RECURSION_LIMIT
+    return limit
+
+
 def _unit_backend(cfg: dict, repo: str, label: str) -> object | None:
     """Sandbox backend for one agent session; None degrades to builder default."""
     from harness.sandbox import resolve_backend
@@ -43,38 +60,42 @@ def _sort_by_confidence(findings: list[dict]) -> list[dict]:
     return sorted(findings, key=lambda f: -safe_float(f.get("confidence", 0)))
 
 
-def _norm_cover_path(path: str) -> str:
-    """Repo-relative path normalization for coverage comparison (self-contained)."""
+def _norm_cover_path(path: str, repo: str | None = None) -> str:
+    """Repo-relative POSIX path normalization for coverage comparison."""
+    if repo:
+        return to_repo_relative(str(path or ""), repo).rstrip("/")
     s = str(path or "").strip().replace("\\", "/")
     while s.startswith("./"):
         s = s[2:]
     return s.lstrip("/").rstrip("/")
 
 
-def _coverage_gap(files: list[str], inspected: list[str]) -> tuple[int, list[str]]:
+def _coverage_gap(files: list[str], inspected: list[str],
+                  repo: str | None = None) -> tuple[int, list[str]]:
     """(listed_count, missing) — assigned files absent from the inspected set.
 
-    Both sides are normalized (./, leading /, backslashes, trailing /). An
-    empty assignment is not a gap, so it returns (0, []).
+    Both sides are normalized (./, leading /, backslashes, trailing /), and
+    host-absolute forms are mapped back to repo-relative when ``repo`` is
+    known. An empty assignment is not a gap, so it returns (0, []).
     """
-    assigned = [_norm_cover_path(f) for f in (files or [])
+    assigned = [_norm_cover_path(f, repo) for f in (files or [])
                 if str(f or "").strip()]
     if not assigned:
         return 0, []
-    seen = {_norm_cover_path(p) for p in (inspected or [])
+    seen = {_norm_cover_path(p, repo) for p in (inspected or [])
             if str(p or "").strip()}
     missing = [f for f in dict.fromkeys(assigned) if f not in seen]
     return len(assigned), missing
 
 
 def _record_coverage(unit: str, files: list[str], inspected: list[str],
-                     sink: list | None) -> str:
+                     sink: list | None, repo: str | None = None) -> str:
     """Per-unit coverage gap: log it and hand the note to `sink` (report channel).
 
     Never raises; never fabricates a finding. Empty assignment → no note.
     """
     try:
-        listed, missing = _coverage_gap(files, inspected)
+        listed, missing = _coverage_gap(files, inspected, repo)
         if listed and missing:
             note = (f"unit-{unit} coverage: {listed - len(missing)}/{listed} "
                     f"listed; missing: {', '.join(missing[:20])}")
@@ -94,13 +115,14 @@ def focus_hint(focus: list[str] | str | None) -> str:
     return "; ".join(fs)
 
 
-def _norm_refs(raw) -> list:
+def _norm_refs(raw, repo: str | None = None) -> list:
     out: list = []
     try:
         for r in (raw or [])[:50]:
             if not isinstance(r, dict):
                 continue
-            out.append({"file": str(r.get("file") or ""),
+            file = str(r.get("file") or "")
+            out.append({"file": to_repo_relative(file, repo) if repo and file else file,
                         "line": max(0, safe_int(r.get("line"))),
                         "note": str(r.get("note") or "")[:2000]})
     except Exception:
@@ -108,7 +130,23 @@ def _norm_refs(raw) -> list:
     return out
 
 
-def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = "") -> dict:
+_TAINT_PATH_RE = re.compile(r"^([^\s:]+):(\d+)(.*)$")
+
+
+def _norm_taint_path(item: object, repo: str | None = None) -> str:
+    """Best-effort `file:line` prefix normalization; prose is left alone."""
+    text = str(item)
+    if not repo:
+        return text
+    m = _TAINT_PATH_RE.match(text)
+    if not m:
+        return text
+    file, line, rest = m.groups()
+    return f"{to_repo_relative(file, repo)}:{line}{rest}"
+
+
+def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = "",
+                       repo: str | None = None) -> dict:
     d = dict(raw or {})
     taint = d.get("taint") or {}
     if not isinstance(taint, dict):
@@ -116,22 +154,23 @@ def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = ""
     tpath = taint.get("path") or []
     if not isinstance(tpath, list):
         tpath = [str(tpath)]
+    path = str(d.get("path") or fallback_path or "")
     out = {
         "id": str(d.get("id") or f"{hunter}-{idx}"),
         "title": str(d.get("title") or f"{hunter} suspicious pattern"),
         "cwe": str(d.get("cwe") or ""),
         "severity": str(d.get("severity") or "medium"),
         "confidence": d.get("confidence", 0.3),
-        "path": str(d.get("path") or fallback_path or ""),
+        "path": to_repo_relative(path, repo) if repo else path,
         "start_line": safe_int(d.get("start_line")),
         "end_line": safe_int(d.get("end_line"), safe_int(d.get("start_line"))),
         "snippet": str(d.get("snippet") or d.get("evidence") or "")[:4000],
         "taint": {
             "source": str(taint.get("source") or ""),
             "sink": str(taint.get("sink") or ""),
-            "path": [str(x) for x in tpath][:20],
+            "path": [_norm_taint_path(x, repo) for x in tpath][:20],
         },
-        "refs": _norm_refs(d.get("refs")),
+        "refs": _norm_refs(d.get("refs"), repo),
         "evidence": str(d.get("evidence") or d.get("snippet") or f"{hunter} hunter")[:4000],
         "rationale": str(d.get("rationale") or "")[:2000],
         "status": "needs-review",
@@ -151,6 +190,7 @@ def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = ""
 
 def _fallback_finding(hunter: str, repo: str, files: list, reason: str) -> dict:
     path = (files[0] if files else repo) or repo or "."
+    path = to_repo_relative(str(path), repo) if repo else str(path)
     return {
         "id": f"{hunter}-fallback",
         "title": f"{hunter}: manual review needed",
@@ -193,7 +233,8 @@ def _findings_from_discovery(parsed: object, hunter: str,
         norm = []
         for i, it in enumerate(items):
             d = it.model_dump() if hasattr(it, "model_dump") else dict(it)
-            norm.append(_normalize_finding(d, hunter, i, files[0] if files else repo))
+            norm.append(_normalize_finding(d, hunter, i,
+                                           files[0] if files else repo, repo))
         return norm
     except Exception:
         return []
@@ -263,7 +304,8 @@ def _parse_findings_with_status(text: str, hunter: str, files: list[str], repo: 
     norm = []
     for i, it in enumerate(parsed):
         if isinstance(it, dict):
-            norm.append(_normalize_finding(it, hunter, i, files[0] if files else repo))
+            norm.append(_normalize_finding(it, hunter, i,
+                                           files[0] if files else repo, repo))
     return norm, True
 
 
@@ -305,10 +347,7 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
               "falling back to the builder default")
     # Parse the recursion limit outside the agent try: a bad cfg value is a
     # config parse failure, not a unit hunt failure.
-    try:
-        rec_lim = int(cfg.get("hunter_recursion_limit", 1000) or 1000)
-    except (TypeError, ValueError):
-        rec_lim = 1000
+    rec_lim = _hunter_recursion_limit(cfg)
     try:
         agent = build_unit_hunter_agent(name, model_kwargs, focus, repo=repo,
                                         backend=backend)
@@ -324,14 +363,15 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
         if sr is not None and hasattr(sr, "findings"):
             _record_coverage(name, files or [],
                              list(getattr(sr, "inspected_files", None) or []),
-                             _coverage_out)
+                             _coverage_out, repo)
             norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
             return _sort_by_confidence(norm)
         text = _extract_agent_text(res)
         norm, ok = _parse_findings_with_status(text, f"unit-{name}", files or [], repo)
         if ok:
             _record_coverage(name, files or [],
-                             _inspected_files_from_text(text), _coverage_out)
+                             _inspected_files_from_text(text), _coverage_out,
+                             repo)
             return _sort_by_confidence(norm)
     except Exception as e:
         # Config-class failures must fail the scan loudly, not degrade to a fallback.

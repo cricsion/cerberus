@@ -222,6 +222,11 @@ def resolve_db_path(root: str = ".") -> Path:
                 base = base.parent
         except OSError:
             pass
+        # Force one addressability check on the root itself. The shared path
+        # resolver must allow writes to not-yet-existing children, so it does
+        # not stat every candidate; codegraph still needs a hostile root
+        # (NAME_MAX+, unreadable parent) to surface as ValueError here.
+        base.stat()
         return (base / DB_RELATIVE_PATH).resolve()
     except OSError as e:
         raise ValueError(

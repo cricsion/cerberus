@@ -26,6 +26,17 @@ DISCOVERY_CONTRACT = (
     "inspecting every assigned file."
 )
 
+PATH_CONTRACT = (
+    "## PATH CONTRACT\n"
+    "The absolute repo root in this task is context only. Every path you pass "
+    "to a file tool (read_file, grep, glob, ls) and every path you return in "
+    "DiscoveryResult (path, refs[].file, taint.path, inspected_files) must be "
+    "a repo-relative POSIX path such as `pages/index.js`. Do not use absolute "
+    "paths, a leading `/`, `./`, backslashes, or the repo directory name as a "
+    "prefix. Shell commands run with the repo root as their working "
+    "directory, so use relative paths in shell commands too."
+)
+
 FINDING_BAR = (
     "What counts as a finding is decided by the trust boundary this unit sits "
     "behind, not by any fixed list of bug types. Work out what an attacker of "
@@ -202,6 +213,7 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
         + ("Starting paths:\n" + "\n".join(paths[:200]) if paths
            else "No starting paths were assigned; find the code yourself.")
     )
+    parts.append(PATH_CONTRACT)
     if cand_ctx.strip():
         parts.append("## Prefilter signals\nThese are confirmed sink sites "
                      "worth verifying, not an exhaustive list.\n" + cand_ctx)
@@ -344,5 +356,6 @@ def build_system_pass_task(repo: str, scope: str, ctx: str,
         "the relevant application units and shared controls, then trace plausible "
         "entry-to-effect paths across them. Return an empty findings list only when "
         "no source-grounded cross-unit or global gap survives review.\n"
+        + PATH_CONTRACT + "\n"
         + DISCOVERY_CONTRACT
     )

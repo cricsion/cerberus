@@ -13,6 +13,7 @@ from typing import Any, TypedDict
 from langgraph.types import Overwrite
 
 from harness.schemas import SEVERITY_ORDER, safe_float, safe_int
+from harness.paths import canonical_repo
 from harness.progress import AgentRegistry, AgentState
 
 try:
@@ -110,6 +111,11 @@ def _call_tool(tool_fn, **kwargs) -> str:
 
 
 def _info_candidate(cid: str, title: str, path: str, body: str) -> dict:
+    # Aggregate signals are repo-level, not file findings: keep their path
+    # repo-relative even though run_scan now hands nodes the canonical
+    # absolute root.
+    if Path(path).is_absolute():
+        path = "."
     return {"id": cid, "title": title, "cwe": "", "severity": "info",
             "confidence": 0.0, "path": path, "start_line": 0, "end_line": 0,
             "snippet": body[:4000], "taint": {"source": "", "sink": "", "path": []},
@@ -1135,7 +1141,8 @@ def run_scan(repo: str, confirm_critical: bool = False,
              confirm: Callable[[dict], bool] | None = None,
              agent_events_path: Any = None,
              ) -> dict[str, Any]:
-    os.environ["TARGET_REPO"] = str(repo)
+    repo = str(canonical_repo(repo))
+    os.environ["TARGET_REPO"] = repo
     _sweep_orphan_sandboxes()
     state: dict[str, Any] = {"repo": repo}
     if _obs is not None:

@@ -40,13 +40,15 @@ def cmd_scan(args: argparse.Namespace) -> int:
         return 1
     confirm = bool(args.confirm_critical)
     # Manifest: record target tree at scan start, compare at teardown.
+    from harness.paths import canonical_repo
     from harness.sandbox import shutdown_run_sandbox
     from harness.scan_manifest import close_scan, record_scan_manifest
+    repo = str(canonical_repo(args.repo))
     scan_record: dict = {}
     try:
-        record_scan_manifest(args.repo)
+        record_scan_manifest(repo)
         (out / "scan.pid").write_text(str(os.getpid()))
-        state = run_scan(args.repo, confirm_critical=confirm,
+        state = run_scan(repo, confirm_critical=confirm,
                          threat_model_override=args.threat_model,
                          focus=args.focus, votes=args.votes,
                          vulns_file=args.vulns,
@@ -103,14 +105,14 @@ def cmd_scan(args: argparse.Namespace) -> int:
         try:
             if (threat_md.strip() and _write_tm
                     and state.get("threat_model_source") not in ("override", "repo-file")):
-                threat_persisted = threat.persist_threat(args.repo, threat_md) or ""
+                threat_persisted = threat.persist_threat(repo, threat_md) or ""
         except OSError as e:
             print(f"warning: could not persist threat model: {e}", file=sys.stderr)
             threat_persisted = ""
     finally:
         # Run-level sandbox container (docker mode): remove so no container leaks.
         shutdown_run_sandbox()
-        scan_record = close_scan(args.repo)
+        scan_record = close_scan(repo)
         try:
             (out / "scan.pid").unlink(missing_ok=True)
         except OSError:
@@ -127,7 +129,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     except OSError as e:
         print(f"warning: could not write agent artifacts: {e}", file=sys.stderr)
     meta = {
-        "repo": args.repo,
+        "repo": state.get("repo", repo),
         "fail_on": args.fail_on,
         "min_confidence": args.min_confidence,
         "files": len(state.get("files", [])),

@@ -8,6 +8,8 @@ import os
 import re
 from pathlib import Path
 
+from harness.paths import canonical_repo, resolve_tool_path
+
 from ._compat import env_int, tool
 
 
@@ -29,21 +31,15 @@ SKIP_DIRS = frozenset({
 def _safe_path(path: str, root: str = ".") -> Path:
     """Resolve path and enforce containment within root; symlinks are followed
     BEFORE the check, so an escape is refused, not followed. TARGET_REPO, when
-    set, is the only root ("/" maps to the repo when it has that counterpart).
+    set, is the only root (absolute and virtual leading-slash forms under it
+    are accepted by the shared path contract).
     """
     target = os.environ.get("TARGET_REPO")
-    base = Path(target).resolve() if target else Path(root).resolve()
-    p = (path or "").strip()
-    if p.startswith("/"):
-        virtual = (base / p.lstrip("/")).resolve()
-        if virtual.exists():
-            p = virtual  # the repo has this path: it is virtual, not host
-    p = (base / p).resolve()
-    try:
-        p.relative_to(base)
-    except ValueError:
+    base = canonical_repo(target) if target else canonical_repo(root)
+    resolved = resolve_tool_path(path, base)
+    if resolved is None:
         raise ValueError(f"path escapes repo: {path}")
-    return p
+    return resolved
 
 
 def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | None = None, offset: int = 0) -> str:
