@@ -368,27 +368,13 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     sys_prompt = SYSTEM_PASS_SYSTEM + sandbox_system_section(backend)
     import json as _json
     signals = []
-    for finding in findings[:200]:
-        taint = finding.get("taint")
-        if isinstance(taint, dict):
-            trace = taint.get("path")
-            if not isinstance(trace, list):
-                trace = []
-            taint = {
-                "source": str(taint.get("source", ""))[:300],
-                "sink": str(taint.get("sink", ""))[:300],
-                "path": [str(p)[:300] for p in trace[:12]],
-            }
+    for finding in findings[:500]:
         signals.append({
-            "id": finding.get("id"),
-            "title": str(finding.get("title", ""))[:300],
+            "title": str(finding.get("title", "")),
             "cwe": finding.get("cwe"),
             "path": finding.get("path"),
             "start_line": finding.get("start_line"),
             "end_line": finding.get("end_line"),
-            "rationale": str(finding.get("rationale", ""))[:800],
-            "evidence": str(finding.get("evidence", ""))[:800],
-            "taint": taint,
         })
     slim = _json.dumps(signals, default=str)
     scope = focus_hint(focus) or "ALL vulnerability classes in scope"
