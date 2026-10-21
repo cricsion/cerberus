@@ -11,18 +11,30 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+from harness.config import config_default
+
 from . import cli_utils
 from .backend_base import SandboxShellBackend
 from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
-                       DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
-                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS,
-                       SHARED_CACHE_DIRS, RunRegistry, RunSandboxBase,
-                       install_crash_hooks, sweep_orphans_via)
-from .validation import (validate_cpus, validate_image, validate_memory,
-                         validate_pull, validate_skills)
+                       DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_RULES_DIR,
+                       ORPHAN_IDLE_SECONDS, SHARED_CACHE_DIRS, RunRegistry,
+                       RunSandboxBase, install_crash_hooks, sweep_orphans_via)
+from .settings_defaults import (SBX_BIN, SBX_CPUS, SBX_IMAGE, SBX_MEMORY)
+from .validation import (DEFAULT_PULL, DEFAULT_SKILLS, validate_cpus,
+                         validate_image, validate_memory, validate_pull,
+                         validate_skills)
+
+DEFAULT_SBX_IMAGE = SBX_IMAGE
+DEFAULT_SBX_CPUS = SBX_CPUS
+DEFAULT_SBX_MEMORY = SBX_MEMORY
+DEFAULT_SBX_BIN = SBX_BIN
 
 __all__ = ["SbxBackend", "SbxRun", "get_sbx_run", "shutdown_sbx",
            "sweep_orphans", "DEFAULT_IMAGE"]
+
+
+def _sbx_bin(value: str | None = None) -> str:
+    return str(value or config_default("sandbox.sbx.bin") or DEFAULT_SBX_BIN)
 
 
 def _dedupe(hosts) -> tuple[str, ...]:
@@ -37,16 +49,17 @@ class SbxRun(RunSandboxBase):
     # sbx has no tmpfs: every exec must mkdir the shared cache dirs itself.
     EXTRA_EXEC_MKDIR_DIRS: tuple[str, ...] = SHARED_CACHE_DIRS
 
-    def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 cpus: str = "0", memory: str = DEFAULT_MEMORY, skills: str = "off",
-                 pull: str = "never",
+    def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_SBX_IMAGE,
+                 cpus: str = DEFAULT_SBX_CPUS, memory: str = DEFAULT_SBX_MEMORY,
+                 skills: str = DEFAULT_SKILLS,
+                 pull: str = DEFAULT_PULL,
                  deny_network: tuple[str, ...] | list[str] = (),
                  allow_network: tuple[str, ...] | list[str] = (),
                  disable_telemetry: bool = True,
                  primary_dir: str | Path | None = None,
                  command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
                  max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
-                 sbx_bin: str = "sbx") -> None:
+                 sbx_bin: str = DEFAULT_SBX_BIN) -> None:
         self.cpus = validate_cpus(cpus)
         self.memory = validate_memory(memory)
         self.skills = validate_skills(skills)
@@ -54,7 +67,7 @@ class SbxRun(RunSandboxBase):
         self.deny_network = _dedupe(deny_network)
         self.allow_network = _dedupe(allow_network)
         self.disable_telemetry = bool(disable_telemetry)
-        self.sbx_bin = str(sbx_bin or "sbx")
+        self.sbx_bin = _sbx_bin(sbx_bin)
         # The throwaway read-write primary workspace sbx requires; created lazily (first ensure_started) so constructing has no fs side effects.
         self._primary_dir: Path | None = (
             Path(primary_dir).expanduser() if primary_dir else None)
@@ -177,19 +190,20 @@ class SbxRun(RunSandboxBase):
 class SbxBackend(SandboxShellBackend):
     HANG_NOTE = "sbx exec client hang"
 
-    def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
-                 cpus: str = "0", memory: str = DEFAULT_MEMORY, skills: str = "off",
-                 pull: str = "never",
+    def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_SBX_IMAGE,
+                 cpus: str = DEFAULT_SBX_CPUS, memory: str = DEFAULT_SBX_MEMORY,
+                 skills: str = DEFAULT_SKILLS,
+                 pull: str = DEFAULT_PULL,
                  deny_network: tuple[str, ...] | list[str] = (),
                  allow_network: tuple[str, ...] | list[str] = (),
                  disable_telemetry: bool = True,
                  primary_dir: str | Path | None = None,
                  command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
                  max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
-                 sbx_bin: str = "sbx", rules_dir: str = DEFAULT_RULES_DIR,
+                 sbx_bin: str = DEFAULT_SBX_BIN, rules_dir: str = DEFAULT_RULES_DIR,
                  run: SbxRun | None = None, agent_id: str | None = None) -> None:
         # Validated before super(): a bad setting must fail at construction, not inside a `sbx create`.
-        self.image = validate_image(str(image or DEFAULT_IMAGE))
+        self.image = validate_image(str(image or DEFAULT_SBX_IMAGE))
         self.cpus = validate_cpus(cpus)
         self.memory = validate_memory(memory)
         self.skills = validate_skills(skills)
@@ -197,7 +211,7 @@ class SbxBackend(SandboxShellBackend):
         self.deny_network = _dedupe(deny_network)
         self.allow_network = _dedupe(allow_network)
         self.disable_telemetry = bool(disable_telemetry)
-        self.sbx_bin = str(sbx_bin or "sbx")
+        self.sbx_bin = _sbx_bin(sbx_bin)
         self._primary_dir = (Path(primary_dir).expanduser()
                              if primary_dir else None)
         super().__init__(
@@ -307,9 +321,11 @@ def _admin_env() -> dict[str, str]:
     env["SBX_NO_TELEMETRY"] = "1"
     return env
 
-def sweep_orphans(*, sbx_bin: str = "sbx",
+def sweep_orphans(*, sbx_bin: str | None = None,
                   live: Iterable[str] | None = None,
                   idle_seconds: float = ORPHAN_IDLE_SECONDS) -> list[str]:
+    if sbx_bin is None:
+        sbx_bin = _sbx_bin()
     entries: dict[str, dict] = {}
 
     def list_names() -> list[str]:

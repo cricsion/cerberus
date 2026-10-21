@@ -9,14 +9,16 @@ from deepagents.backends.protocol import ExecuteResponse, SandboxBackendProtocol
 
 from . import cli_utils
 from .local_backend import RepoLocalBackend
-from .run_base import DEFAULT_RULES_DIR, RunSandboxBase
+from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_MAX_OUTPUT_BYTES,
+                       DEFAULT_RULES_DIR, RunSandboxBase)
 
 class SandboxShellBackend(SandboxBackendProtocol, RepoLocalBackend):
     HANG_NOTE = "exec client hang"
 
     def __init__(self, *, repo_path: str | Path, run_factory: Callable[[], RunSandboxBase],
                  run: RunSandboxBase | None = None, agent_id: str | None = None,
-                 command_timeout: int = 120, max_output_bytes: int = 200_000,
+                 command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
+                 max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
                  rules_dir: str = DEFAULT_RULES_DIR,
                  network: str = "") -> None:
         super().__init__(repo_path=repo_path)

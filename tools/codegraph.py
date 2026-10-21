@@ -49,6 +49,7 @@ from harness.codegraph import (
     verify_exploit_poc_in_harness,
 )
 from harness.codegraph import _db
+from harness.config import get_default_config
 
 from ._compat import tool
 from .code import _resolve_limit, grep_files
@@ -79,7 +80,7 @@ CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
 # CodeGraph's uncertainty boundary (src/graph/dynamic-boundary-report.ts): below
 # it an edge is a name-only guess, not a proven call — a hop to follow only with
 # explicit scepticism.
-UNCERTAIN_BELOW = 0.6
+UNCERTAIN_BELOW = float(get_default_config("codegraph.partition.uncertain_below"))
 
 # Container kinds whose children count as affected when the container is reached
 # (getImpactRadius semantics: a class reaching its methods counts).

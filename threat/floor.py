@@ -21,7 +21,7 @@ def load_threat(repo: str, override: str | None = None,
         except OSError:
             return "none", ""
         return ("override", text) if text.strip() else ("none", "")
-    if not threat_enabled(cfg, "use_repo_file", True):
+    if not threat_enabled(cfg, "use_repo_file"):
         return "none", ""
     found = find_repo_file(repo)
     if found is None:

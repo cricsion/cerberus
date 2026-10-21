@@ -3,12 +3,13 @@ from __future__ import annotations
 import os
 import sys
 import threading
-import uuid
 from pathlib import Path
 from typing import Any
 
 from langchain_core.exceptions import (ModelAuthenticationError, ModelInvalidRequestError, ModelNotFoundError, ModelPermissionDeniedError)
 from langchain_core.language_models.chat_models import BaseChatModel
+
+from harness.config import as_bool, get_default_config, resolve_recursion_limit
 
 try:
     from harness import observability as _obs
@@ -23,9 +24,20 @@ FS_READ_TOOLS = ("read_file", "ls", "glob", "grep")
 FS_WRITE_TOOLS = ("write_file", "edit_file")
 FS_TOOLS = FS_READ_TOOLS
 # FilesystemMiddleware rejects unscoped permission rules on execution-capable
-# backends. MODEL_CALL_LIMIT is the real budget: each agent run may make at most 1000 model calls.
-DEFAULT_RECURSION_LIMIT = 4000
-MODEL_CALL_LIMIT = 1000
+# backends. model_call_limit is the real budget: each agent run may make at most
+# harness/config/default.yaml's model_call_limit model calls.
+MODEL_CALL_LIMIT = int(get_default_config("model_call_limit"))
+DEFAULT_RETRY_SLEEP_CAP = float(get_default_config("retry_sleep_cap"))
+
+
+def _model_call_limit() -> int:
+    """Runtime model-call budget: process env > .env > YAML default."""
+    from harness.config import config_default
+
+    try:
+        return max(1, int(config_default("model_call_limit")))
+    except (TypeError, ValueError):
+        return MODEL_CALL_LIMIT
 
 # Scanner skill docs are served the deepagents way: routed into the agent's
 # own backend (no write tool exists for the agent, and a route-scoped deny
@@ -84,12 +96,12 @@ def sanitize_model_kwargs(model_kwargs: dict | None) -> dict:
     return mk
 
 
-_CONNECT_TIMEOUT_S = 10.0
-
-
 def make_llm(mk: dict | None, *, timeout: int | None = None,
              max_retries: int | None = None) -> Any:
     from langchain.chat_models import init_chat_model
+
+    from harness.config import (config_default, get_harness_connect_timeout,
+                                resolve_call_retries, resolve_call_timeout)
 
     mk = sanitize_model_kwargs(mk)
     base_url = (mk.get("base_url", "") or "").removesuffix("/") or None
@@ -97,19 +109,24 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
         model=mk.get("model", ""),
         api_key=mk.get("api_key", "dummy"),
         base_url=base_url,
-        timeout=timeout if timeout is not None else mk.get("timeout", 60),
-        max_retries=max_retries if max_retries is not None else mk.get("max_retries", 5),
+        timeout=timeout if timeout is not None else resolve_call_timeout(mk),
+        max_retries=(max_retries if max_retries is not None
+                     else resolve_call_retries(mk)),
     )
     if mk.get("reasoning_effort"):
         kwargs["reasoning_effort"] = str(mk["reasoning_effort"]).strip()
     t = kwargs.get("timeout")
     if isinstance(t, (int, float)) and not isinstance(t, bool):
         t = max(1.0, float(t))
-        kwargs["timeout"] = (_CONNECT_TIMEOUT_S, t, t, t)
+        connect = float(get_harness_connect_timeout())
+        kwargs["timeout"] = (connect, t, t, t)
 
     try:
         from openai import _base_client as _oai_base
-        _cap = float(os.environ.get("HARNESS_RETRY_SLEEP_CAP", "2"))
+        try:
+            _cap = float(config_default("retry_sleep_cap"))
+        except (TypeError, ValueError):
+            _cap = DEFAULT_RETRY_SLEEP_CAP
         _oai_base.MAX_RETRY_DELAY = _cap
         _oai_base.MAX_RETRY_AFTER_DELAY = _cap
     except (ImportError, AttributeError, TypeError, ValueError):
@@ -128,8 +145,7 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
                 except (TypeError, ValueError):
                     continue
             else:
-                profile[key] = str(val).strip().lower() in ("1", "true",
-                                                            "yes", "on")
+                profile[key] = as_bool(val)
         if profile:
             kwargs["profile"] = profile
         elif raw:
@@ -256,7 +272,7 @@ def _scan_middleware(backend: Any, *, scratchpad: bool = False) -> list:
         FilesystemMiddleware(backend=backend,
                              tools=list(_fs_tools(backend, scratchpad=scratchpad)),
                              _permissions=permissions),
-        ModelCallLimitMiddleware(run_limit=MODEL_CALL_LIMIT),
+        ModelCallLimitMiddleware(run_limit=_model_call_limit()),
         ToolErrorMiddleware(on_error=_tool_error_message),
         ToolRetryMiddleware(on_failure="error"),
     ]
@@ -321,29 +337,22 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                 "refusing to default to the harness working directory"
             )
         from harness.config import load_config_safe
-        from harness.sandbox import resolve_backend
+        from harness.sandbox import _acquire_backend
+        from harness.sandbox.local_backend import RepoLocalBackend
+
         cfg, cfg_err = load_config_safe()
-        backend_ready = False
         if cfg_err is not None:
             # Config failure is operator-facing: loud, then the same repo-confined
             # degrade as an unbuildable sandbox (never a silent {} resolve).
             print(f"[deep] config load failed ({cfg_err}); "
                   "using the local backend", file=sys.stderr)
-        else:
-            try:
-                # All agents of the run share ONE container; unbuildable sandbox degrades to the repo-confined local backend.
-                backend = resolve_backend(
-                    cfg, rd.resolve(),
-                    agent_id=f"{name or 'agent'}-{uuid.uuid4().hex[:8]}")
-                backend_ready = True
-            except Exception as e:
-                if is_fatal_error(e):
-                    raise
-                print(f"[deep] sandbox backend refused ({e}); "
-                      "using the local backend", file=sys.stderr)
-        if not backend_ready:
-            from harness.sandbox.local_backend import RepoLocalBackend
             backend = RepoLocalBackend(repo_path=rd.resolve())
+        else:
+            # All agents of the run share ONE container; unbuildable sandbox degrades to the repo-confined local backend.
+            backend = _acquire_backend(
+                cfg, rd.resolve(), label=name or "agent", fallback="local",
+                refused_msg="[deep] sandbox backend refused ({exc}); "
+                            "using the local backend")
 
     # Scanner skill docs ride the deepagents skills mechanism (index injected
     # by SkillsMiddleware, full SKILL.md on demand via read_file); local mode
@@ -421,7 +430,7 @@ def final_text(result: Any, *, sep: str = " ") -> str:
 def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
                    tools: list | None = None, timeout: int | None = None,
                    max_retries: int | None = None,
-                   recursion_limit: int = DEFAULT_RECURSION_LIMIT,
+                   recursion_limit: int | None = None,
                    name: str | None = None,
                    backend: Any = None, root_dir: Any = None,
                    trace_suffix: str | None = None,
@@ -436,6 +445,8 @@ def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
             response_format=model, name=name,
             backend=backend, root_dir=root_dir,
             scratchpad=scratchpad)
+    if recursion_limit is None:
+        recursion_limit = resolve_recursion_limit()
     config: dict[str, Any] = {"recursion_limit": recursion_limit}
     if _obs is not None:
         _obs.run_config(config, name=name, extra=meta_extra,

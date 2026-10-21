@@ -226,6 +226,21 @@ def _inventory_files(base: Path) -> list[str]:
     return sorted(files)
 
 
+def _node_cfg(state: dict) -> dict:
+    """The cfg ``run_scan`` threaded into ``state``; nodes never re-parse the file.
+
+    A direct caller that invokes a node without the threaded cfg (tests) still
+    gets a config: one load, with no per-node log (run_scan owns the one report).
+    """
+    cfg = state.get("cfg") if isinstance(state, dict) else None
+    if isinstance(cfg, dict):
+        return cfg
+    from harness.config import load_config_safe
+
+    loaded, _error = load_config_safe()
+    return loaded
+
+
 def indexer_node(state: ScanState) -> dict:
     from harness.fallback import run_fail_open
     from harness.tools.sast import (iac_check, sca_scan, secrets_scan,
@@ -285,15 +300,13 @@ def indexer_node(state: ScanState) -> dict:
     _tools_used.extend(_used)
 
     def _graphify_stage() -> tuple[list[dict], list[str]]:
-        from harness.config import load_config_safe
+        from harness.config import as_bool, config_default
         from harness.tools import graphify as _gf
 
-        _gcfg, _gcfg_err = load_config_safe()
-        if _gcfg_err is not None:
-            logger.debug("graphify config load failed; defaulting to enabled: %s",
-                         _gcfg_err)
-        _gen = str(((_gcfg.get("graphify") or {}).get("enabled", "1"))).lower()
-        if _gen in ("1", "true", "yes") and base.is_dir():
+        _gcfg = _node_cfg(state)
+        enabled = config_default("graphify.enabled")
+        _gen = str(((_gcfg.get("graphify") or {}).get("enabled", enabled))).lower()
+        if as_bool(_gen) and base.is_dir():
             _gpath = _gf.graphify_build(repo)
             if _gpath:
                 return [_info_candidate(
@@ -328,6 +341,8 @@ def threat_summary(repo: str, cands: list[dict]) -> str:
 
 
 def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
+    from harness.config import effective_model
+
     repo = state.get("repo", ".") or "."
     cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
     files = [f for f in (state.get("files") or []) if f]
@@ -335,21 +350,19 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     out: dict = {"threat_model": summary,
                  "candidates": [_info_candidate("threat-model", "STRIDE-lite threat model", repo, summary)]}
     if agent_registry is not None:
+        _model = effective_model(state.get("cfg") or {}, "hunter", "threat")
         for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
             agent_registry.create(_r, _r, parent_stage="threat_model",
-                                  state=AgentState.queued)
+                                  model=_model, state=AgentState.queued)
             agent_registry.transition(_r, AgentState.running,
                                       parent_stage="threat_model")
     # Artifact writing stays in the CLI (single writer).
 
     def _threat_doc_stage() -> dict:
         from harness import threat as _th
-        from harness.config import load_config_safe
+        from harness.config import api_key_present
 
-        _cfg2, _cfg2_err = load_config_safe()
-        if _cfg2_err is not None:
-            logger.debug("threat model config load failed; using defaults: %s",
-                         _cfg2_err)
+        _cfg2 = _node_cfg(state)
         override = state.get("threat_model_override") or ""
         vulns_path = state.get("vulns_file") or ""
         try:
@@ -373,8 +386,12 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
                   "(missing or unrecognized format); continuing on git history",
                   file=sys.stderr)
         enrich_meta: dict = {}
-        if (source not in ("override", "repo-file")
-                and _th.threat_enabled(_cfg2, "llm_enrich", True)):
+        _enrich_wanted = (
+            source not in ("override", "repo-file")
+            and _th.threat_enabled(_cfg2, "llm_enrich"))
+        if _enrich_wanted and not api_key_present(_cfg2):
+            enrich_meta = {"skipped": "API_KEY not set"}
+        elif _enrich_wanted:
             try:
                 enriched, enrich_meta = _th.enrich_threat(
                     repo, files, cands, summary, md, _cfg2,
@@ -439,15 +456,9 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
 
 
 def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
-    from harness.config import api_key_present, load_config_safe
+    from harness.config import api_key_present, effective_model
 
-    cfg, cfg_err = load_config_safe()
-    if cfg_err is not None:
-        # Operator error at the user-fixable layer: degrade gracefully but LOUDLY.
-        print(f"warning: config load failed ({cfg_err}); the LLM layer is "
-              "unconfigured — continuing in degraded no-key mode",
-              file=sys.stderr, flush=True)
-        cfg = {"concurrency": 8}
+    cfg = _node_cfg(state)
     if not api_key_present(cfg):
         out = []
         for i, f in enumerate(state.get("files", [])):
@@ -468,6 +479,7 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
     units: list[dict] = []
     if agent_registry is not None:
         agent_registry.create("partitioner", "partitioner", parent_stage="partition",
+                              model=effective_model(cfg, "hunter", "partitioner"),
                               state=AgentState.queued)
         agent_registry.transition("partitioner", AgentState.running,
                                   parent_stage="partition")
@@ -499,7 +511,7 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
                                       parent_stage="partition")
     if not units:
         from harness.partitioning import partition_units
-        units = partition_units(state.get("repo", "."), payload_files)
+        units = partition_units(state.get("repo", "."), payload_files, cfg)
     if not units:
         return {"findings": [], "fanout_payloads": []}
     from harness.partitioning import verify_partition
@@ -619,19 +631,24 @@ def _merge_dup(a: dict, b: dict) -> dict:
     return g
 
 
-def system_pass_node(state: ScanState) -> dict:
+def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    from harness.config import api_key_present, load_config_safe
+    from harness.config import (api_key_present, as_bool, config_default,
+                                effective_model)
 
-    _cfg_sys, _cfg_err = load_config_safe()
-    if _cfg_err is not None:
-        logger.debug("system_pass config load failed; using defaults: %s",
-                     _cfg_err)
+    _cfg_sys = _node_cfg(state)
     if not api_key_present(_cfg_sys):
         return {}
-    _enabled = str(((_cfg_sys.get("discovery") or {}).get("system_pass", True))).lower()
-    if _enabled not in ("1", "true", "yes"):
+    enabled = config_default("discovery.system_pass")
+    _enabled = str(((_cfg_sys.get("discovery") or {}).get("system_pass", enabled))).lower()
+    if not as_bool(_enabled):
         return {}
+    if agent_registry is not None:
+        agent_registry.create(
+            "system-pass", "system-pass", parent_stage="system_pass",
+            model=effective_model(_cfg_sys, "hunter"), state=AgentState.queued)
+        agent_registry.transition("system-pass", AgentState.running,
+                                  parent_stage="system_pass")
     import time as _time
     t0 = _time.time()
 
@@ -659,10 +676,23 @@ def system_pass_node(state: ScanState) -> dict:
 
     from harness.fallback import run_fail_open
 
-    out, _sys_tools = run_fail_open("system_pass", _system_pass_probe,
-                                    default=([], []), logger=logger)
+    try:
+        out, _sys_tools = run_fail_open("system_pass", _system_pass_probe,
+                                        default=([], []), logger=logger)
+    except Exception as e:
+        if agent_registry is not None:
+            agent_registry.transition("system-pass", AgentState.failed,
+                                      parent_stage="system_pass", error=str(e))
+        raise
     if _sysfail.get("fail"):
+        if agent_registry is not None:
+            agent_registry.transition("system-pass", AgentState.failed,
+                                      parent_stage="system_pass",
+                                      error="system pass failed open")
         return {}
+    if agent_registry is not None:
+        agent_registry.transition("system-pass", AgentState.succeeded,
+                                  parent_stage="system_pass")
     ret: dict = {"findings": out or []}
     if _sys_tools:
         ret["tools_used"] = _sys_tools
@@ -683,18 +713,16 @@ def aggregator_node(state: ScanState) -> dict:
 
 def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
     from harness.agents.validator import run_validation
+    from harness.config import effective_model
 
+    cfg = _node_cfg(state)
     pending = [dict(f) for f in (state.get("pending", []) or [])]
     if agent_registry is not None:
         agent_registry.create("validator", "validator", parent_stage="validation",
+                              model=effective_model(cfg, "validator"),
                               state=AgentState.queued)
         agent_registry.transition("validator", AgentState.running,
                                   parent_stage="validation")
-    from harness.config import load_config_safe
-
-    cfg, cfg_err = load_config_safe()
-    if cfg_err is not None:
-        logger.debug("validator config load failed; using defaults: %s", cfg_err)
     import time as _time
     t0 = _time.time()
     print(f"[validator] validating {len(pending)} remaining findings "
@@ -776,20 +804,19 @@ def confirm_critical_step(state: ScanState,
 
 def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
     import time as _time
+    from harness.config import effective_model
+
     t0 = _time.time()
     verified = list(state.get("verified", []))
     if not verified:
         return {}
+    _cfg4 = _node_cfg(state)
     if agent_registry is not None:
         agent_registry.create("triage:1", "triage:1", parent_stage="triage",
+                              model=effective_model(_cfg4, "validator", "triager"),
                               state=AgentState.queued)
         agent_registry.transition("triage:1", AgentState.running,
                                   parent_stage="triage")
-    from harness.config import load_config_safe
-
-    _cfg4, _cfg4_err = load_config_safe()
-    if _cfg4_err is not None:
-        logger.debug("triage config load failed; using defaults: %s", _cfg4_err)
     try:
         from harness.agents.triage import run_triage
         res = run_triage(verified, _cfg4, state.get("threat_model_md", "") or "",
@@ -858,19 +885,16 @@ def scorer_node(state: ScanState) -> dict:
     return {"verified": Overwrite(out)}
 
 
-def _safe_max_concurrency() -> int:
-    from harness.config import get_concurrency, load_config_safe
+def _safe_max_concurrency(state: dict) -> int:
+    from harness.config import get_concurrency
 
-    cfg, cfg_err = load_config_safe()
-    if cfg_err is not None:
-        logger.debug("concurrency config load failed; using default: %s", cfg_err)
-    return get_concurrency(cfg)
+    return get_concurrency(_node_cfg(state))
 
 
 def _reset_agent_scratch_phase(repo: str) -> None:
     # Hygiene only: config-gated, best-effort — NOT a security boundary.
     try:
-        from harness.config import load_config
+        from harness.config import as_bool, config_default, load_config
         from harness.sandbox import reset_agent_scratch
 
         # NOTE: load_config() must stay a zero-arg call here — tests pin a
@@ -882,8 +906,8 @@ def _reset_agent_scratch_phase(repo: str) -> None:
             cfg = {}
         sandbox = cfg.get("sandbox")
         sandbox = sandbox if isinstance(sandbox, dict) else {}
-        if str(sandbox.get("reset_agent_scratch", 1)).strip().lower() not in (
-                "1", "true", "yes"):
+        enabled = config_default("sandbox.reset_agent_scratch")
+        if not as_bool(sandbox.get("reset_agent_scratch", enabled)):
             return
         for err in reset_agent_scratch(repo):
             print(f"[sandbox] {err}", file=sys.stderr)
@@ -893,7 +917,7 @@ def _reset_agent_scratch_phase(repo: str) -> None:
 
 def _sweep_orphan_sandboxes() -> None:
     try:
-        from harness.config import load_config
+        from harness.config import as_bool, config_default, load_config
         from harness.sandbox import sweep_orphans
 
         # Zero-arg load_config() — see note in _reset_agent_scratch_phase.
@@ -903,8 +927,8 @@ def _sweep_orphan_sandboxes() -> None:
             cfg = {}
         sandbox = cfg.get("sandbox")
         sandbox = sandbox if isinstance(sandbox, dict) else {}
-        if str(sandbox.get("sweep_orphans", 1)).strip().lower() not in (
-                "1", "true", "yes"):
+        enabled = config_default("sandbox.sweep_orphans")
+        if not as_bool(sandbox.get("sweep_orphans", enabled)):
             return
         removed = sweep_orphans()
         if removed:
@@ -919,6 +943,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
     import time as _time
 
     from harness.agents.validator import _cell_size
+    from harness.config import effective_model
 
     payloads = list(state.get("fanout_payloads", []) or [])
     busy = {"hunt": 0.0, "validation": 0.0, "system_pass": 0.0}
@@ -939,7 +964,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         for p in payloads:
             unit = str(p.get("unit", "unit"))
             cfg = p.get("cfg") or state.get("cfg") or {}
-            model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
+            model = effective_model(cfg, "hunter")
             agent_registry.create("hunter:" + p["_ukey"], "hunter", unit=unit,
                                   parent_stage="hunters", model=model,
                                   state=AgentState.queued)
@@ -948,7 +973,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         unit = str(p.get("unit", "unit"))
         aid = "hunter:" + p["_ukey"]
         cfg = p.get("cfg") or state.get("cfg") or {}
-        model = cfg.get("hunter_model") if isinstance(cfg, dict) else None
+        model = effective_model(cfg, "hunter")
         if agent_registry is not None:
             agent_registry.transition(aid, AgentState.running,
                                       parent_stage="hunters", model=model,
@@ -1038,6 +1063,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         if agent_registry is not None:
             agent_registry.create(aid, "validator", unit=unit,
                                   parent_stage="validation",
+                                  model=effective_model(cfg, "validator"),
                                   state=AgentState.queued)
         remaining_bundles[ukey] = len(chunks)
         val_counts[p["_seq"]] = len(chunks)
@@ -1115,7 +1141,9 @@ def _fan_out_hunters(state: dict, max_workers: int,
                     _flush_hunts()
                     _submit_bundles(p, list(res.get("findings") or []))
                     if hunt_next == len(payloads):
-                        sfut = executor.submit(_timed, system_pass_node, state)
+                        sfut = executor.submit(
+                            _timed, _call_node, system_pass_node, state,
+                            agent_registry=agent_registry)
                         pending[sfut] = ("system_pass", p, None)
                 elif kind == "validation":
                     val_buf[(p["_seq"], k)] = res or []
@@ -1144,76 +1172,92 @@ def run_scan(repo: str, confirm_critical: bool = False,
              agent_events_path: Any = None,
              ) -> dict[str, Any]:
     repo = str(canonical_repo(repo))
+    _prev_target_repo = os.environ.get("TARGET_REPO")
     os.environ["TARGET_REPO"] = repo
-    _sweep_orphan_sandboxes()
-    state: dict[str, Any] = {"repo": repo}
-    if _obs is not None:
-        _scan_id = _obs.start_scan(repo)
-        if _scan_id:
-            state["scan_id"] = _scan_id
-
     try:
-        _agent_registry = AgentRegistry(run_id=str(repo), events_path=agent_events_path)
-    except Exception:
-        _agent_registry = None
-    if confirm_critical:
-        state["confirm_critical"] = True
-    if threat_model_override:
-        state["threat_model_override"] = threat_model_override
-    if vulns_file:
-        state["vulns_file"] = vulns_file
-    if isinstance(focus, str):
-        focus = [f.strip() for f in focus.split(",") if f.strip()]
-    if focus:
-        state["focus"] = list(focus)
-    if votes is not None:
-        state["votes_override"] = votes
+        _sweep_orphan_sandboxes()
+        from harness.config import load_config_safe
+        cfg, cfg_err = load_config_safe()
+        if cfg_err is not None:
+            print(f"warning: config load failed ({type(cfg_err).__name__}: "
+                  f"{cfg_err}); continuing with packaged defaults",
+                  file=sys.stderr, flush=True)
+            logger.debug("config load failed; using defaults: %s", cfg_err)
+        state: dict[str, Any] = {"repo": repo, "cfg": cfg}
+        if _obs is not None:
+            _scan_id = _obs.start_scan(repo, cfg=cfg)
+            if _scan_id:
+                state["scan_id"] = _scan_id
 
-    import time as _stage_time
-    stage_timings = {}
-    def _stage(name, fn):
-        print(f"[pipeline] >>> Stage '{name}' starting...", file=sys.stderr, flush=True)
-        _t0 = _stage_time.time()
         try:
-            res = fn()
-            elapsed = round(_stage_time.time() - _t0, 3)
-            print(f"[pipeline] <<< Stage '{name}' completed in {elapsed}s", file=sys.stderr, flush=True)
-            return res
-        except Exception as exc:
-            elapsed = round(_stage_time.time() - _t0, 3)
-            print(f"[pipeline] !!! Stage '{name}' failed after {elapsed}s: {exc}", file=sys.stderr, flush=True)
-            raise
-        finally:
-            stage_timings[name] = round(_stage_time.time() - _t0, 3)
+            _agent_registry = AgentRegistry(run_id=str(repo), events_path=agent_events_path)
+        except Exception:
+            _agent_registry = None
+        if confirm_critical:
+            state["confirm_critical"] = True
+        if threat_model_override:
+            state["threat_model_override"] = threat_model_override
+        if vulns_file:
+            state["vulns_file"] = vulns_file
+        if isinstance(focus, str):
+            focus = [f.strip() for f in focus.split(",") if f.strip()]
+        if focus:
+            state["focus"] = list(focus)
+        if votes is not None:
+            state["votes_override"] = votes
 
-    _stage("indexer", lambda: apply_update(state, indexer_node(state)))
-    _stage("threat_model", lambda: apply_update(state, _call_node(threat_model_node, state, agent_registry=_agent_registry)))
-    _stage("hunters_router", lambda: apply_update(state, _call_node(hunters_router, state, agent_registry=_agent_registry)))
-    if state.get("fanout_payloads"):
-        _hunt_timings = _stage("hunters", lambda: _fan_out_hunters(
-            state, _safe_max_concurrency(), agent_registry=_agent_registry))
-        for _flavor in ("hunt", "validation", "system_pass"):
-            stage_timings[f"hunters:busy_{_flavor}"] = round(
-                float((_hunt_timings or {}).get(_flavor, 0.0)), 3)
-    else:
-        _stage("system_pass", lambda: apply_update(state, system_pass_node(state)))
-    _stage("aggregator", lambda: apply_update(state, aggregator_node(state)))
-    _reset_agent_scratch_phase(state.get("repo", "."))
-    _stage("validator", lambda: apply_update(state, _call_node(validator_node, state, agent_registry=_agent_registry)))
-    if state.get("confirm_critical"):
-        _stage("confirm_critical", lambda: apply_update(state, confirm_critical_step(state, confirm)))
-    _stage("triage", lambda: apply_update(state, _call_node(triage_node, state, agent_registry=_agent_registry)))
-    _stage("threat_update", lambda: apply_update(state, threat_update_node(state)))
-    _stage("scorer", lambda: apply_update(state, scorer_node(state)))
-    try:
-        if _agent_registry is not None:
-            state["agent_events"] = [e.to_dict() if hasattr(e, "to_dict") else dict(e)
-                                     for e in getattr(_agent_registry, "events", [])]
-            state["agent_handles"] = _agent_registry.dump()
-            state["agent_summary"] = _agent_registry.summary()
-        state["stage_timings"] = dict(stage_timings)
-    except Exception:
-        pass
-    if _obs is not None:
-        _obs.finish_scan()
-    return dict(state)
+        import time as _stage_time
+        stage_timings = {}
+        def _stage(name, fn):
+            print(f"[pipeline] >>> Stage '{name}' starting...", file=sys.stderr, flush=True)
+            _t0 = _stage_time.time()
+            try:
+                res = fn()
+                elapsed = round(_stage_time.time() - _t0, 3)
+                print(f"[pipeline] <<< Stage '{name}' completed in {elapsed}s", file=sys.stderr, flush=True)
+                return res
+            except Exception as exc:
+                elapsed = round(_stage_time.time() - _t0, 3)
+                print(f"[pipeline] !!! Stage '{name}' failed after {elapsed}s: {exc}", file=sys.stderr, flush=True)
+                raise
+            finally:
+                stage_timings[name] = round(_stage_time.time() - _t0, 3)
+
+        _stage("indexer", lambda: apply_update(state, indexer_node(state)))
+        _stage("threat_model", lambda: apply_update(state, _call_node(threat_model_node, state, agent_registry=_agent_registry)))
+        _stage("hunters_router", lambda: apply_update(state, _call_node(hunters_router, state, agent_registry=_agent_registry)))
+        if state.get("fanout_payloads"):
+            _hunt_timings = _stage("hunters", lambda: _fan_out_hunters(
+                state, _safe_max_concurrency(state), agent_registry=_agent_registry))
+            for _flavor in ("hunt", "validation", "system_pass"):
+                stage_timings[f"hunters:busy_{_flavor}"] = round(
+                    float((_hunt_timings or {}).get(_flavor, 0.0)), 3)
+        else:
+            _stage("system_pass", lambda: apply_update(
+                state, _call_node(system_pass_node, state,
+                                  agent_registry=_agent_registry)))
+        _stage("aggregator", lambda: apply_update(state, aggregator_node(state)))
+        _reset_agent_scratch_phase(state.get("repo", "."))
+        _stage("validator", lambda: apply_update(state, _call_node(validator_node, state, agent_registry=_agent_registry)))
+        if state.get("confirm_critical"):
+            _stage("confirm_critical", lambda: apply_update(state, confirm_critical_step(state, confirm)))
+        _stage("triage", lambda: apply_update(state, _call_node(triage_node, state, agent_registry=_agent_registry)))
+        _stage("threat_update", lambda: apply_update(state, threat_update_node(state)))
+        _stage("scorer", lambda: apply_update(state, scorer_node(state)))
+        try:
+            if _agent_registry is not None:
+                state["agent_events"] = [e.to_dict() if hasattr(e, "to_dict") else dict(e)
+                                         for e in getattr(_agent_registry, "events", [])]
+                state["agent_handles"] = _agent_registry.dump()
+                state["agent_summary"] = _agent_registry.summary()
+            state["stage_timings"] = dict(stage_timings)
+        except Exception:
+            pass
+        if _obs is not None:
+            _obs.finish_scan()
+        return dict(state)
+    finally:
+        if _prev_target_repo is None:
+            os.environ.pop("TARGET_REPO", None)
+        else:
+            os.environ["TARGET_REPO"] = _prev_target_repo

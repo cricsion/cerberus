@@ -2,6 +2,10 @@
 ``ValueError`` at construction time, before a container or microVM exists."""
 from __future__ import annotations
 
+from harness.config import config_default
+
+from .settings_defaults import NETWORK, SBX_PULL, SBX_SKILLS
+
 
 def validate_image(image: str) -> str:
     # Construction-time hazard: a leading dash is parsed by docker as a FLAG;
@@ -17,7 +21,9 @@ def validate_image(image: str) -> str:
 # not one -- it would put the agent in the host netns, beside our own services.
 NETWORK_MODES = ("none", "bridge")
 
-DEFAULT_NETWORK = "bridge"
+DEFAULT_NETWORK = NETWORK
+DEFAULT_SKILLS = SBX_SKILLS
+DEFAULT_PULL = SBX_PULL
 
 
 def validate_network(network: str) -> str:
@@ -50,7 +56,7 @@ def validate_memory(memory: str) -> str:
     """sbx takes binary units: 512m, 2g, 8g, or a bare MiB count."""
     m = str(memory or "").strip().lower()
     if not m:
-        return "2g"
+        return str(config_default("sandbox.memory"))
     if not ((m[-1] in "gmk" and m[:-1].isdigit()) or m.isdigit()):
         raise ValueError(
             f"invalid sandbox.sbx.memory {memory!r}: expected binary units "
@@ -59,7 +65,7 @@ def validate_memory(memory: str) -> str:
 
 
 def validate_skills(mode: str) -> str:
-    m = str(mode or "off").strip().lower()
+    m = str(mode or DEFAULT_SKILLS).strip().lower()
     if m not in ("off", "readonly", "readwrite"):
         raise ValueError(
             f"invalid sandbox.sbx.skills {mode!r}: expected off|readonly|readwrite")
@@ -67,7 +73,7 @@ def validate_skills(mode: str) -> str:
 
 
 def validate_pull(policy: str) -> str:
-    p = str(policy or "never").strip().lower()
+    p = str(policy or DEFAULT_PULL).strip().lower()
     if p not in ("always", "missing", "never"):
         raise ValueError(
             f"invalid sandbox.sbx.pull {policy!r}: expected always|missing|never")

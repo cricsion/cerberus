@@ -122,15 +122,17 @@ def _dominant_top_dir(files: list[str], weight_of: dict[str, int]) -> str:
 def small_repo_unit(app_files: list[str],
                     weight_of: dict[str, int] | None = None,
                     target: int = 0,
-                    repo: str = ".") -> dict | None:
+                    repo: str = ".",
+                    cfg: dict | None = None) -> dict | None:
     """One unit when the repo fits both the file count and byte budget; None otherwise."""
-    if single_unit_max_files() <= 0:
+    max_files = single_unit_max_files(cfg)
+    if max_files <= 0:
         return None
     fs = sorted({f for f in (app_files or []) if _is_path(f)})
-    if not fs or len(fs) > single_unit_max_files():
+    if not fs or len(fs) > max_files:
         return None
     w = weight_of if weight_of is not None else _file_weights(repo, fs)
-    t = target if target > 0 else partition_target(w)
+    t = target if target > 0 else partition_target(w, cfg)
     total = sum(int(w.get(f, 0) or 0) for f in fs)
     if total <= 0:
         return None  # no measured bytes: cannot certify the budget, decline
@@ -571,28 +573,22 @@ def _file_weights(repo: str, files: list[str]) -> dict[str, int]:
     return out
 
 
-def partition_target(weight_of: dict[str, int]) -> int:
+def partition_target(weight_of: dict[str, int], cfg: dict | None = None) -> int:
     """Per-unit byte ceiling: max(loc_budget x bytes_per_loc, code_bytes / MAX_UNITS);
     binary assets excluded."""
-    from harness.config import load_config_safe
+    from harness.config import config_default
 
-    cfg, err = load_config_safe()
-    if err is not None:
-        from harness.fallback import is_fatal_error
-
-        if is_fatal_error(err):
-            raise err
-        _logger.warning("scan config unreadable, partition target falls back "
-                        "to env defaults: %s: %s", type(err).__name__, err)
+    loc_default = int(config_default("partition.loc_budget"))
+    bpl_default = float(config_default("partition.bytes_per_loc"))
     try:
         _part = (cfg or {}).get("partition") or {}
-        loc = int(_part.get("loc_budget", 10000) or 0)
-        bpl = float(_part.get("bytes_per_loc", 40) or 40)
+        loc = int(_part.get("loc_budget", loc_default) or 0)
+        bpl = float(_part.get("bytes_per_loc", bpl_default) or bpl_default)
     except (TypeError, ValueError):
-        loc, bpl = 10000, 40.0
+        loc, bpl = loc_default, bpl_default
     nominal = int(loc * bpl) if loc > 0 and bpl > 0 else 0
     total = sum(v for f, v in weight_of.items() if support_file_kind(f) != "asset")
-    cap = max_units()  # MAX_UNITS (env), <= 0 meaning unlimited
+    cap = max_units(cfg)  # MAX_UNITS (env), <= 0 meaning unlimited
     derived = -(-total // cap) if total > 0 else 0  # ceil division
     return max(nominal, derived)
 
@@ -985,7 +981,8 @@ def _load_partition_edges(repo: str, files: list[str]) -> dict:
     return dict(edges or {})
 
 
-def partition_units(repo: str, files: list[str]) -> list[dict]:
+def partition_units(repo: str, files: list[str],
+                    cfg: dict | None = None) -> list[dict]:
     """Logical units for per-unit hunting: vendor splits off into one budget-exempt
     unit; a repo that fits the budget collapses to a single unit."""
     files = [f for f in (files or []) if f]
@@ -1004,10 +1001,10 @@ def partition_units(repo: str, files: list[str]) -> list[dict]:
     if not app_files:  # all-vendor repo: just the vendor unit
         return _finish([])
     weight_of = _file_weights(repo, app_files)
-    target = partition_target(weight_of)
+    target = partition_target(weight_of, cfg)
     # P0.2 small-repo single unit (file count AND byte budget must both fit).
     if single_unit_enabled():
-        single = small_repo_unit(app_files, weight_of, target)
+        single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
         if single is not None:
             return _finish([single])
     edges = _load_partition_edges(repo, app_files)

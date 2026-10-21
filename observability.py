@@ -24,8 +24,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-
 # D2: all three must be non-empty for auto-enable.
 _ENV_KEYS = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL")
 _FALSE_VALUES = frozenset({"false", "0", "no", "off"})
@@ -58,25 +56,17 @@ def _log(msg: str) -> None:
 
 
 def _load_env_files() -> None:
-    """Load env files needed by the gate and the Langfuse client (plan §3 C3).
+    """Load the single shared dotenv
 
-    Order: existing cwd-relative ``.env`` (unchanged behavior) → repo-root
-    ``.env`` → ``harness/.env`` (where the user's keys live). Each loader is
-    missing-only and never overrides already-set vars; missing files no-op.
-    All paths are ``Path(__file__)``-anchored so tracing works from any cwd.
+    ``config._load_dotenv`` is ``Path(__file__)``-anchored, missing-only, and
+    never overrides already-set vars, so this works from any cwd.
     """
     try:
         from harness.config import _load_dotenv
+
+        _load_dotenv()
     except Exception:
-        return
-    for path in (None, REPO_ROOT / ".env", REPO_ROOT / "harness" / ".env"):
-        try:
-            if path is None:
-                _load_dotenv()  # cwd .env — existing behavior preserved
-            else:
-                _load_dotenv(path)
-        except Exception:
-            pass
+        pass
 
 
 def _keys_present() -> bool:
@@ -85,7 +75,7 @@ def _keys_present() -> bool:
 
 
 def _try_load_config() -> dict:
-    """Best-effort ``load_config()``; {} when unavailable (e.g. other cwd)."""
+    """Best-effort anchored ``load_config()``; {} when unavailable."""
     try:
         from harness.config import load_config
 
@@ -104,7 +94,9 @@ def enabled(cfg: dict | None = None) -> bool:
         obs = cfg.get("observability", {}) if isinstance(cfg, dict) else {}
         if not isinstance(obs, dict):
             obs = {}
-        raw = str(obs.get("enabled", "auto")).strip().lower()
+        from harness.config import config_default
+
+        raw = str(obs.get("enabled", config_default("observability.enabled"))).strip().lower()
         keys_ok = _keys_present()
         if raw in _FALSE_VALUES:
             return False

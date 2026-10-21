@@ -67,6 +67,7 @@ except ImportError:  # pragma: no cover
     QueryCursor = None  # type: ignore
 
 from harness.codegraph import _db, _ts, summaries
+from harness.config import get_default_config
 from harness.tools.code import SKIP_DIRS, _safe_path
 
 # ---------------------------------------------------------------------------
@@ -89,7 +90,7 @@ DEFAULT_SITES = 50
 # module keeps ("hard-clamped at _db.HARD_MAX_ROWS"). The DEFAULT_* values
 # below are the env defaults and are unchanged — only the ceiling moved.
 HARD_MAX = _db.HARD_MAX_ROWS   # matches / rows / sites: limit <= 0 clamps to this
-CHAR_CAP = 20000         # overall output cap, same as every other tool here
+CHAR_CAP = int(get_default_config("codegraph.chars"))  # same cap as every other tool here
 TEXT_CAP = 160           # per-match / per-comment text truncation
 MAX_PATTERN = 20000      # mirrors summaries.record_variant_rule's own limit
 MAX_SCAN_BYTES = 10_000_000  # same "large file" threshold grep_files uses

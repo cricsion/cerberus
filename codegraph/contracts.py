@@ -40,6 +40,7 @@ import re
 from pathlib import Path
 
 from harness.codegraph import _db, _ts, sinks, summaries
+from harness.config import get_default_config
 from harness.tools.code import _safe_path
 
 try:
@@ -59,7 +60,7 @@ except ImportError:  # pragma: no cover - langchain absent
 # ---------------------------------------------------------------------------
 
 HARD_MAX_SECTION = 200   # per-section ceiling before _db.HARD_MAX_ROWS applies
-CHAR_CAP = 20000         # overall output cap (CODEGRAPH_CHARS, 0 = unlimited)
+CHAR_CAP = int(get_default_config("codegraph.chars"))  # CODEGRAPH_CHARS, 0 = unlimited
 ENV_CHARS = "CODEGRAPH_CHARS"
 
 ENV_FIELDS = "CODEGRAPH_FIELDS_LIMIT"

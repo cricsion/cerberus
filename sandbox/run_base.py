@@ -11,18 +11,20 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from . import cli_utils
+from .settings_defaults import (COMMAND_TIMEOUT, IMAGE, MAX_OUTPUT_BYTES,
+                                MEMORY, RULES_DIR)
 from .validation import validate_image
 
 __all__ = ["RunSandboxBase", "RunRegistry", "install_crash_hooks",
            "AGENT_SCRATCH_PREFIX", "RESET_COMMAND", "DEFAULT_IMAGE",
            "agent_env", "orphan_targets", "sweep_orphans_via"]
 
-DEFAULT_IMAGE = "cyber-sandbox:local"
+DEFAULT_IMAGE = IMAGE
 
-DEFAULT_COMMAND_TIMEOUT = 120
-DEFAULT_MAX_OUTPUT_BYTES = 200_000
-DEFAULT_MEMORY = "2g"
-DEFAULT_RULES_DIR = "/opt/scan-rules/harness"
+DEFAULT_COMMAND_TIMEOUT = COMMAND_TIMEOUT
+DEFAULT_MAX_OUTPUT_BYTES = MAX_OUTPUT_BYTES
+DEFAULT_MEMORY = MEMORY
+DEFAULT_RULES_DIR = RULES_DIR
 
 # Keep this prefix in sync with RESET_COMMAND's glob (they cannot drift).
 AGENT_SCRATCH_PREFIX = "agent-"

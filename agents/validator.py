@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from typing import Any
 
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
+from harness.config import get_default_config, int_setting
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, run_fail_open)
 from harness.llmjson import extract_structured_items
@@ -14,13 +14,6 @@ from harness.prompts.validation import (OMITTED_NOTE, REFUTE_METHOD,
                                         VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
-
-
-def _int_setting(mk: dict, key: str, default: int) -> int:
-    try:
-        return int(mk.get(key, default) or default)
-    except (TypeError, ValueError):
-        return default
 
 
 def _merge_verdict(base: dict, data: dict) -> dict:
@@ -88,15 +81,11 @@ def evidence_gate(finding: dict) -> bool:
 def _resolve_votes(cfg: dict | None, override: int | None = None) -> int:
     if override is not None:
         try:
-            n = int(override)
-            return min(5, max(1, n))
+            return min(5, max(1, int(override)))
         except (TypeError, ValueError):
             pass
-    try:
-        raw = ((cfg or {}).get("verification") or {}).get("votes", 1)
-        return min(5, max(1, int(str(raw).strip() or 1)))
-    except (TypeError, ValueError):
-        return 1
+    return int_setting(cfg, "verification.votes",
+                       fallback_path="verification.votes", minimum=1, maximum=5)
 
 
 def _majority_verdict(base: dict, votes: list[dict]) -> dict:
@@ -137,15 +126,12 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
 
 
 def _cell_size(cfg: dict | None) -> int:
-    """Findings per validator cell (verification.cell_size, default CELL_SIZE,
-    clamped 1-100)."""
-    try:
-        raw = ((cfg or {}).get("verification") or {}).get("cell_size", CELL_SIZE)
-        return min(100, max(1, int(str(raw).strip() or CELL_SIZE)))
-    except (TypeError, ValueError):
-        return CELL_SIZE
+    """Findings per validator cell (clamped 1-100)."""
+    return int_setting(cfg, "verification.cell_size",
+                       fallback_path="verification.cell_size", minimum=1,
+                       maximum=100)
 
-CELL_SIZE = 10
+CELL_SIZE = int(get_default_config("verification.cell_size"))
 
 # fp verdict stands only with a named control; auth-guard-only acquittals are downgraded.
 _SANITIZER_RES = (
@@ -279,7 +265,8 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                           threat_md: str = "", n_votes: int = 1,
                           repo: str | None = None,
                           cell_no: int = 0) -> list[dict]:
-    from harness.config import get_model_kwargs
+    from harness.config import (get_model_kwargs, resolve_call_retries,
+                                resolve_call_timeout)
 
     if not items:
         return []
@@ -290,6 +277,8 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     cell_scope = f"{group_name}:c{cell_no + 1}"
     model_kwargs = get_model_kwargs(cfg, "validator")
     mk = sanitize_model_kwargs(model_kwargs)
+    _timeout = resolve_call_timeout(mk, cfg)
+    _max_retries = resolve_call_retries(mk, cfg)
 
     ballots: dict[str, list[dict]] = {str(f.get("id")): [] for f in items
                                        if isinstance(f, dict)}
@@ -300,14 +289,9 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
 
     # Backend resolved once like hunters._run_unit (fail-soft).
     from harness.agents.toolsets import graph_tools
-    from harness.sandbox import close_backend, resolve_backend
-    import uuid
-    backend = (run_fail_open(
-        f"backend validator-{group_name}",
-        lambda: resolve_backend(
-            cfg, repo,
-            agent_id=f"validator-{group_name[:30]}_{uuid.uuid4().hex[:6]}"),
-        default=None, logger=_logger) if repo else None)
+    from harness.sandbox import _acquire_backend, close_backend
+    backend = (_acquire_backend(cfg, repo,
+                                label=f"validator-{group_name}") if repo else None)
     tools = graph_tools()
     tool_names = [getattr(t, "name", None) or getattr(t, "__name__", "tool")
                   for t in tools]
@@ -317,8 +301,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     agent = run_fail_open(
         f"agent validator-{group_name}",
         lambda: build_deep_agent(
-            make_llm(mk, timeout=_int_setting(mk, "timeout", 60),
-                     max_retries=_int_setting(mk, "max_retries", 3)),
+            make_llm(mk, timeout=_timeout, max_retries=_max_retries),
             system_prompt=VALIDATOR_SYSTEM, tools=tools,
             response_format=VerdictBatch,
             name=f"validator-{group_name}"[:60],
@@ -342,8 +325,8 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 def _call_validator_structured() -> tuple[Any, str]:
                     return run_structured(
                         mk, VerdictBatch, VALIDATOR_SYSTEM, msg,
-                        timeout=_int_setting(mk, "timeout", 60),
-                        max_retries=_int_setting(mk, "max_retries", 3),
+                        timeout=_timeout,
+                        max_retries=_max_retries,
                         name=f"validator-{group_name}"[:60],
                         root_dir=repo, tools=tools, backend=backend,
                         trace_suffix=f"{cell_scope}:v{_vote}",
@@ -378,8 +361,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                     if vid in ballots:
                         ballots[vid].append(ballot)
     finally:
-        if backend is not None:
-            close_backend(backend)
+        close_backend(backend)
     out: list[dict] = []
     for f in items:
         vid = str(f.get("id"))
@@ -553,8 +535,8 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     if not gated:
         return []
     # No API key: fail open, return gated as-is.
-    key_env = str(cfg.get("api_key_env", "API_KEY"))
-    if not os.environ.get(key_env) and not os.environ.get("API_KEY"):
+    from harness.config import api_key_present
+    if not api_key_present(cfg):
         return gated
     todo = list(gated)
 

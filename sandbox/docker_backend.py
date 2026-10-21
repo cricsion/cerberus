@@ -13,7 +13,18 @@ from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
                        DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
                        DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS, RunRegistry,
                        RunSandboxBase, install_crash_hooks, sweep_orphans_via)
+from .settings_defaults import (CPUS as DEFAULT_CPUS,
+                                DOCKER_BIN as DEFAULT_DOCKER_BIN,
+                                PIDS_LIMIT as DEFAULT_PIDS_LIMIT)
 from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
+
+from harness.config import config_default
+
+
+def _docker_bin(value: str | None = None) -> str:
+    return str(value or config_default("sandbox.docker_bin")
+               or DEFAULT_DOCKER_BIN)
+
 
 __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
            "get_run_sandbox", "shutdown_run_sandbox", "reap_orphans",
@@ -23,7 +34,7 @@ __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
 _RUN_LABEL = "cyber.agent.sandbox=run"
 
 # `exec_start` timestamps are the only liveness source; keep no harness-side state.
-def _last_exec_age(name: str, *, docker_bin: str = "docker") -> float | None:
+def _last_exec_age(name: str, *, docker_bin: str = DEFAULT_DOCKER_BIN) -> float | None:
     try:
         proc = cli_utils.run_cli(
             [docker_bin, "events", "--since", "0", "--until", "0s",
@@ -82,10 +93,11 @@ class RunSandbox(RunSandboxBase):
                  user: str = "1000:1000",
                  command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
                  max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
-                 memory: str = DEFAULT_MEMORY, cpus: str = "2",
-                 pids_limit: int = 512,
+                 memory: str = DEFAULT_MEMORY,
+                 cpus: str = DEFAULT_CPUS,
+                 pids_limit: int = DEFAULT_PIDS_LIMIT,
                  network: str = DEFAULT_NETWORK,
-                 docker_bin: str = "docker",
+                 docker_bin: str | None = None,
                  mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
         self.user = str(user)
         self.memory = str(memory)
@@ -93,7 +105,7 @@ class RunSandbox(RunSandboxBase):
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress (Docker NAT), none = none; host is refused (host netns). Validated here: a bad sandbox.network fails first.
         self.network = validate_network(network)
-        self.docker_bin = str(docker_bin or "docker")
+        self.docker_bin = _docker_bin(docker_bin)
         # Credential files to hide from the shell (egress is live, so a key must not be readable): each gets a read-only /dev/null bind.
         if mask_paths is None:
             # No guard on purpose: find_credential_files is already fail-soft and a catch-all could only fail OPEN (mask_paths = ()).
@@ -170,10 +182,11 @@ class DockerSandboxBackend(SandboxShellBackend):
                  user: str = "1000:1000",
                  command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
                  max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
-                 memory: str = DEFAULT_MEMORY, cpus: str = "2",
-                 pids_limit: int = 512,
+                 memory: str = DEFAULT_MEMORY,
+                 cpus: str = DEFAULT_CPUS,
+                 pids_limit: int = DEFAULT_PIDS_LIMIT,
                  network: str = DEFAULT_NETWORK,
-                 docker_bin: str = "docker",
+                 docker_bin: str | None = None,
                  rules_dir: str = DEFAULT_RULES_DIR,
                  run: RunSandbox | None = None, agent_id: str | None = None,
                  mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
@@ -186,7 +199,7 @@ class DockerSandboxBackend(SandboxShellBackend):
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress, none = none; host refused (host netns).
         network_mode = validate_network(network)
-        self.docker_bin = str(docker_bin or "docker")
+        self.docker_bin = _docker_bin(docker_bin)
         super().__init__(
             repo_path=repo_path,
             run_factory=lambda: RunSandbox(
@@ -230,9 +243,11 @@ def get_run_sandbox(repo: str | Path, settings: dict | None = None) -> RunSandbo
 def shutdown_run_sandbox(repo: str | Path | None = None) -> None:
     RUNS.shutdown(repo)
 
-def sweep_orphans(*, docker_bin: str = "docker",
+def sweep_orphans(*, docker_bin: str | None = None,
                   live: Iterable[str] | None = None,
                   idle_seconds: float = ORPHAN_IDLE_SECONDS) -> list[str]:
+    docker_bin = _docker_bin(docker_bin)
+
     def list_names() -> list[str]:
         proc = cli_utils.run_cli(
             [docker_bin, "ps", "-a", "--filter", f"label={_RUN_LABEL}",

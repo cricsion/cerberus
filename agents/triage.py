@@ -9,6 +9,7 @@ import logging as _logging
 _logger = _logging.getLogger(__name__)
 
 from harness.agents.deep import is_fatal_error
+from harness.config import int_setting
 from harness.llmjson import extract_structured_items
 from harness.schemas import safe_int
 
@@ -161,16 +162,11 @@ def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
 
 
 def _resolve_batch(cfg: dict | None) -> int:
-    """Max findings per triage LLM call (TRIAGE_BATCH, default 30; 0 = unlimited,
-    else clamped to 1-200). Never raises."""
-    try:
-        raw = ((cfg or {}).get("triage") or {}).get("batch_size", 30)
-        n = int(str(raw).strip() or 30)
-        if n <= 0:
-            return 10**9
-        return min(200, max(1, n))
-    except (TypeError, ValueError):
-        return 30
+    """Max findings per triage LLM call;
+    0 = unlimited, else clamped to 1-200). Never raises."""
+    return int_setting(cfg, "triage.batch_size",
+                       fallback_path="triage.batch_size", minimum=1,
+                       maximum=200, zero_is_unlimited=True)
 
 
 def _log_entry(f: dict, batch: int) -> dict:
@@ -266,15 +262,15 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
           file=sys.stderr, flush=True)
 
     from harness.agents.deep import run_structured, sanitize_model_kwargs
-    from harness.config import (get_harness_max_retries, get_harness_timeout,
-                                get_model_kwargs)
+    from harness.config import (get_model_kwargs, resolve_call_retries,
+                                resolve_call_timeout)
     from harness.prompts.triage import TRIAGE_SYSTEM, TriageBatch
 
     try:
         mk = sanitize_model_kwargs(
             get_model_kwargs(cfg, "validator", agent="triager"))
-        _timeout = get_harness_timeout(mk.get("timeout", 60) or 60)
-        _max_retries = get_harness_max_retries(3)
+        _timeout = resolve_call_timeout(mk, cfg)
+        _max_retries = resolve_call_retries(mk, cfg)
     except Exception as e:
         if is_fatal_error(e):
             raise
@@ -291,21 +287,15 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
         by_id.setdefault(str(s.get("id")), s)  # first match, like the old lookup
 
     from harness.agents.toolsets import graph_tools
-    from harness.sandbox.local_backend import RepoLocalBackend
+    from harness.sandbox import acquired_backend
     from pathlib import Path
+    from contextlib import nullcontext
 
     tools = graph_tools()
-    backend = None
-    if repo:
-        try:
-            root = Path(repo).resolve()
-            backend = RepoLocalBackend(repo_path=root)
-        except Exception as e:
-            if is_fatal_error(e):
-                raise
-            backend = None
-
-    try:
+    root = Path(repo).resolve() if repo else None
+    backend_ctx = (acquired_backend(cfg, root, label="triage")
+                   if root is not None else nullcontext(None))
+    with backend_ctx as backend:
         try:
             from langchain_core.runnables import RunnableLambda
 
@@ -356,10 +346,6 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                 _logger.debug("triage batch %s apply/log failed: %s", b, e)
             print(f"[triage] batch {b} done ({len(chunk)} findings)",
                   file=sys.stderr, flush=True)
-    finally:
-        if backend is not None:
-            from harness.sandbox import close_backend
-            close_backend(backend)
 
     stats["triage_llm_calls"] = completed
     if not log:

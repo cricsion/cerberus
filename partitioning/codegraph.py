@@ -32,6 +32,8 @@ import json
 import logging
 import sqlite3
 
+from harness.config import get_default_config
+
 _logger = logging.getLogger(__name__)
 
 # --- D7 weight map (plan §5) -------------------------------------------------
@@ -50,7 +52,9 @@ _RELATION_WEIGHT: dict[str, int] = {
 }
 
 # CodeGraph's UNCERTAIN_BELOW: below it an edge is a name-only guess, not a call.
-UNCERTAIN_BELOW = 0.6
+# The value is the harness/config/default.yaml default; the partitioner can override it
+# per scan via codegraph.partition.uncertain_below.
+UNCERTAIN_BELOW = float(get_default_config("codegraph.partition.uncertain_below"))
 
 # --- F3 split constants (ported from graphify/cluster.py:179-182) ------------
 _MAX_COMMUNITY_FRACTION = 0.25   # split communities larger than 25% of the graph

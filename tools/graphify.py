@@ -4,11 +4,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+from harness.config import get_default_config
+
 from ._compat import run_cli, tool
 from .code import _resolve_limit
 
 
 _graph_cache: dict[str, tuple[float, object]] = {}
+
+DEFAULT_BUILD_TIMEOUT = int(get_default_config("graphify.build_timeout"))
+DEFAULT_SUMMARY_TIMEOUT = int(get_default_config("graphify.summary_timeout"))
+DEFAULT_GRAPH_CHARS = int(get_default_config("graphify.chars"))
 
 # Kept in sync with the scan inventory: excluded from Graphify's source graph.
 GRAPHIFY_SKIP_DIRS = frozenset({
@@ -40,10 +46,11 @@ def graph_path_for(root: str) -> Path:
 def _graph_chars() -> int:
     import os as _os
     try:
-        v = int(_os.environ.get("GRAPH_CHARS", "20000") or 20000)
-        return v if v >= 0 else 20000
+        raw = _os.environ.get("GRAPH_CHARS", str(DEFAULT_GRAPH_CHARS))
+        v = int(raw or DEFAULT_GRAPH_CHARS)
+        return v if v >= 0 else DEFAULT_GRAPH_CHARS
     except (TypeError, ValueError):
-        return 20000
+        return DEFAULT_GRAPH_CHARS
 
 
 def _truncate(s: str) -> str:
@@ -97,7 +104,7 @@ def needs_rebuild(root: str) -> bool:
     return False
 
 
-def graphify_build(root: str, timeout: int = 600) -> str:
+def graphify_build(root: str, timeout: int = DEFAULT_BUILD_TIMEOUT) -> str:
     from harness.tools._compat import scrubbed_env
     cmd = _cmd()
     if cmd is None:
@@ -176,7 +183,7 @@ def _no_graph_msg() -> str:
             "use grep codegraph instead)")
 
 
-def _run_graph(args: list[str], root: str, timeout: int = 120) -> str:
+def _run_graph(args: list[str], root: str, timeout: int = DEFAULT_SUMMARY_TIMEOUT) -> str:
     cmd = _cmd()
     if cmd is None:
         return "(graphify not available — use grep/glob codegraph instead)"

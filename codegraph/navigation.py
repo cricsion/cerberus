@@ -34,6 +34,7 @@ import re
 from pathlib import Path
 
 from harness.codegraph import _db, _ts, summaries
+from harness.config import get_default_config
 from harness.tools.code import _safe_path
 
 try:
@@ -85,7 +86,8 @@ def _cap_rows(limit, env_key: str, default: int) -> int:
 
 def _cap_chars(text: str) -> str:
     """The overall character budget. ``CODEGRAPH_CHARS``, 0 = unlimited."""
-    lim = _env_int("CODEGRAPH_CHARS", 20000)
+    lim = _env_int("CODEGRAPH_CHARS",
+                   int(get_default_config("codegraph.chars")))
     if lim <= 0 or len(text) <= lim:
         return text
     return text[:lim] + f"\n… +{len(text) - lim} more chars (total {len(text)})"
@@ -1322,7 +1324,9 @@ def _render_ref(conn, position: int, ref: dict, root: str, src_cache: dict,
         lines.append(f"   call-site arity: {call_arity} (parsed from "
                      f"{from_path}:{ref.get('line')})")
 
-    cap = min(_env_int("CODEGRAPH_CANDIDATES", 200), _db.HARD_MAX_ROWS)
+    cap = min(_env_int("CODEGRAPH_CANDIDATES",
+                       int(get_default_config("codegraph.candidates"))),
+              _db.HARD_MAX_ROWS)
     pool = [c for c in _candidate_pool(conn, ref, cap)
             if str(c.get("id")) != str(ref.get("from_node_id"))]
     scored: list[tuple[int, int, str, dict, list[str]]] = []
@@ -1349,4 +1353,3 @@ def _render_ref(conn, position: int, ref: dict, root: str, src_cache: dict,
         lines.append(f"      node_id: {candidate.get('id')}")
         lines.append(f"      why: {'; '.join(why) if why else 'name match only'}")
     return lines
-

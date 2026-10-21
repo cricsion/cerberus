@@ -22,30 +22,22 @@ def _now_iso() -> str:
     return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
 
 
-def _coerce_timeout(value: object) -> int:
-    """Resolved timeout -> int seconds, minimum 1; unparseable -> 60.
-    Only the numeric coercion is guarded: callers must resolve model kwargs
-    (operator config errors) outside this helper so those failures stay loud."""
-    try:
-        return max(int(value or 60), 1)
-    except (TypeError, ValueError):
-        return 60
-
-
 def _as_bool(value: object, default: bool = True) -> bool:
-    """Lenient bool: real bools, "1/true/yes" strings (env interpolation
-    stringifies YAML), numbers. Unparseable -> default.
-    """
-    if isinstance(value, bool):
-        return value
-    if value is None or value == "":
-        return default
-    return str(value).strip().lower() in ("1", "true", "yes", "on")
+    from harness.config import as_bool
+    return as_bool(value, default)
 
 
-def threat_enabled(cfg: dict | None, key: str, default: bool = True) -> bool:
+def threat_enabled(cfg: dict | None, key: str, default: bool | None = None) -> bool:
     """Read `threat.<key>` from config with lenient bool parsing. For
     ``llm_enrich`` an explicit ``HARNESS_THREAT_LLM`` value overrides config."""
+    if default is None:
+        try:
+            from harness.config import config_default
+
+            value = config_default(f"threat.{key}")
+            default = value if isinstance(value, bool) else _as_bool(value, True)
+        except Exception:
+            default = True
     if key == "llm_enrich":
         env = _os.environ.get("HARNESS_THREAT_LLM")
         if env is not None and str(env).strip() != "":

@@ -50,6 +50,7 @@ import tempfile
 from pathlib import Path
 
 from harness.codegraph import _db, _ts, sinks
+from harness.config import get_default_config
 from harness.tools.code import _safe_path
 
 try:
@@ -69,7 +70,7 @@ except ImportError:  # pragma: no cover - langchain absent
 # ---------------------------------------------------------------------------
 
 HARD_MAX_SECTION = 200   # per-section ceiling before _db.HARD_MAX_ROWS applies
-CHAR_CAP = 20000         # overall output cap (CODEGRAPH_CHARS, 0 = unlimited)
+CHAR_CAP = int(get_default_config("codegraph.chars"))  # CODEGRAPH_CHARS, 0 = unlimited
 ENV_CHARS = "CODEGRAPH_CHARS"
 
 ENV_LLM_CALLS = "CODEGRAPH_LLM_CALLS_LIMIT"
@@ -88,7 +89,7 @@ MAX_MISMATCHES = 12         # type/arity mismatches rendered per bridge
 MAX_FIELDS = 12             # attacker-controlled fields bounded in a PoC
 MAX_TEST_CHARS = 6000       # generated test source bound (overall cap still applies)
 MAX_MOCK_CHARS = 2000       # the embedded mock-request literal bound
-MAX_SINK_BYTES = 200000     # stdout bound for the docker run (SAST_BYTES, 0 = unlimited)
+MAX_SINK_BYTES = int(get_default_config("sandbox.max_output_bytes"))  # SAST_BYTES, 0 = unlimited
 MAX_STDERR_BYTES = 20000    # stderr bound for the docker run
 MAX_SPAN_TEXT = 20000       # the wrapper/field scan is bounded, like every read here
 

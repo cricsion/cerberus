@@ -8,8 +8,7 @@ from .floor import _bug_shapes, _measured_blocks, bootstrap_threat
 from .render import (FPS_HEADING, OBSERVED_HEADING, PROPOSALS_HEADING,
                      _coverage_gaps, _replace_section, _section,
                      validate_threat_md)
-from .util import (CACHE_DIRNAME, CACHE_HEADER, FILENAME, _coerce_timeout,
-                   _now_iso, _repo_root)
+from .util import (CACHE_DIRNAME, CACHE_HEADER, FILENAME, _now_iso, _repo_root)
 
 _logger = _logging.getLogger(__name__)
 
@@ -41,14 +40,12 @@ def _threat_mk(cfg: dict) -> dict:
 
 
 
-def _threat_timeout(cfg: dict) -> int:
-    from harness.config import get_harness_timeout
+def _threat_timeout(cfg: dict, mk: dict | None = None) -> int:
+    from harness.config import resolve_call_timeout
 
     # _threat_mk resolves operator config and raises config-shaped ValueErrors
-    # loudly; HARNESS_TIMEOUT is authoritative, with _coerce_timeout keeping
-    # the result numeric and at least 1 second.
-    return _coerce_timeout(
-        get_harness_timeout(_threat_mk(cfg).get("timeout", 60) or 60))
+    # loudly; resolve_call_timeout then returns a numeric value of at least 1.
+    return resolve_call_timeout(mk if mk is not None else _threat_mk(cfg), cfg)
 
 
 def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
@@ -69,22 +66,19 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     if root is None or not root.is_dir():
         raise ValueError("threat-stage repository is not a directory")
 
-    from harness.agents.deep import is_fatal_error, run_structured
-    from harness.config import load_config
-    from harness.sandbox import close_backend, resolve_backend
-    from harness.sandbox.local_backend import RepoLocalBackend
+    from harness.agents.deep import run_structured
+    from harness.config import resolve_call_retries
+    from harness.sandbox import _acquire_backend, close_backend
     from deepagents.backends.protocol import SandboxBackendProtocol
 
-    # Same configured backend the Deep Agent factory uses: `execute` only for Docker/sbx, never local.
-    try:
-        backend = resolve_backend(load_config(), root)
-    except Exception as e:
-        if is_fatal_error(e):
-            raise
-        backend = RepoLocalBackend(repo_path=root)
+    backend = None
+    if agent_name != "threat:synthesizer":
+        # A refused sandbox falls back to the repo-confined local backend.
+        backend = _acquire_backend(cfg, root, label=agent_name,
+                                   fallback="local")
 
     runtime_note = "No shell tool is available; continue with static analysis."
-    if agent_name != "threat:synthesizer" and isinstance(backend, SandboxBackendProtocol):
+    if isinstance(backend, SandboxBackendProtocol):
         network = str(getattr(backend, "network", "unknown")).lower()
         if network == "none":
             egress = (
@@ -111,12 +105,13 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
 
     try:
         _mk = _threat_mk(cfg or {})
-        _retries = int(_mk.get("max_retries", 5))
+        _timeout = _threat_timeout(cfg or {}, _mk)
+        _retries = resolve_call_retries(_mk, cfg or {})
         if agent_name == "threat:synthesizer":
             from harness.agents.deep import run_structured_batch
             out = run_structured_batch(
                 _mk, model, system, [human],
-                timeout=_threat_timeout(cfg or {}), max_retries=_retries,
+                timeout=_timeout, max_retries=_retries,
                 name=agent_name)
             parsed = out[0] if out else RuntimeError("empty synth batch")
             if isinstance(parsed, BaseException):
@@ -124,7 +119,7 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
             return parsed
         parsed, _ = run_structured(
             _mk, model, system, human,
-            timeout=_threat_timeout(cfg or {}), max_retries=_retries,
+            timeout=_timeout, max_retries=_retries,
             name=agent_name, backend=backend, root_dir=root)
         return parsed
     finally:
@@ -135,12 +130,21 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
 def _llm_text(cfg: dict, system: str, human: str,
               root_dir: str | None = None) -> str:
     from harness.agents.deep import run_structured
-    from harness.config import get_harness_max_retries
+    from harness.config import resolve_call_retries
+    from harness.sandbox import _acquire_backend, close_backend
 
-    _, text = run_structured(
-        _threat_mk(cfg), None, system, human, timeout=_threat_timeout(cfg),
-        max_retries=get_harness_max_retries(1), name="threat",
-        root_dir=root_dir)
+    _mk = _threat_mk(cfg)
+    backend = None
+    if root_dir:
+        backend = _acquire_backend(cfg or {}, root_dir, label="threat",
+                                   fallback="local")
+    try:
+        _, text = run_structured(
+            _mk, None, system, human, timeout=_threat_timeout(cfg, _mk),
+            max_retries=resolve_call_retries(_mk, cfg), name="threat",
+            backend=backend, root_dir=root_dir)
+    finally:
+        close_backend(backend)
     return str(text or "")
 
 
@@ -161,9 +165,13 @@ def interview_questions(draft_md: str, history: list[tuple[str, str]],
                                  max_questions)
 
     def _ask() -> list:
+        from harness.config import resolve_call_retries
+
+        _mk = _threat_mk(cfg or {})
         out = run_structured_batch(
-            _threat_mk(cfg or {}), QuestionList, INTERVIEWER_SYSTEM, [human],
-            timeout=_threat_timeout(cfg or {}), max_retries=1,
+            _mk, QuestionList, INTERVIEWER_SYSTEM, [human],
+            timeout=_threat_timeout(cfg or {}, _mk),
+            max_retries=resolve_call_retries(_mk, cfg or {}),
             name="threat:interviewer")
         parsed = out[0] if out else RuntimeError("empty interview batch")
         if isinstance(parsed, BaseException):

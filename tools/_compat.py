@@ -6,6 +6,10 @@ import os
 import shutil
 import subprocess
 
+from harness.config import get_default_config
+
+SAST_MAX_BYTES = int(get_default_config("sandbox.max_output_bytes"))
+
 try:
     from langchain_core.tools import tool
 except ImportError:  # pragma: no cover - allow import without langchain installed
@@ -56,7 +60,7 @@ def run_cli(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) ->
     scan: the SAST phase is defined by which binaries the image carries.
     """
     if max_bytes is None:
-        max_bytes = env_int("SAST_BYTES", 200000)
+        max_bytes = env_int("SAST_BYTES", SAST_MAX_BYTES)
     if shutil.which(cmd[0]) is None:
         return {"tool": cmd[0], "skipped": True, "reason": f"binary not found: {cmd[0]}"}
     env = scrubbed_env()

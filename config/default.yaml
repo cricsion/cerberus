@@ -1,0 +1,181 @@
+provider: openai_compatible
+base_url: ${BASE_URL}
+hunter_model: ${HUNTER_MODEL}
+validator_model: ${VALIDATOR_MODEL}
+# Per-agent model overrides. Role keys above are the fallback; an agent key
+# (or its env var) wins.
+triager_model: ${TRIAGER_MODEL:-}
+partitioner_model: ${PARTITIONER_MODEL:-}
+threat_model: ${THREAT_MODEL:-}
+# Effort: low | medium | high | xhigh | max (max while testing).
+# Thinking effort for models ONLY: reasoning_effort (low/medium/high/
+# xhigh/max passed through verbatim — backend-verified). No token
+# caps anywhere: the model always uses its full output budget. The pipeline
+# always runs full depth regardless of effort — effort never drops coverage.
+effort: ${EFFORT:-max}
+# Per-agent thinking effort (each: low|medium|high|xhigh|max). Empty falls
+# back to global effort. E.g. fast hunters + deep validator.
+effort_by_agent:
+  hunter: ${HUNTER_EFFORT:-}
+  validator: ${VALIDATOR_EFFORT:-}
+  triager: ${TRIAGER_EFFORT:-}
+  partitioner: ${PARTITIONER_EFFORT:-}
+  threat: ${THREAT_EFFORT:-}
+timeout: ${HARNESS_TIMEOUT:-300}
+max_retries: ${HARNESS_MAX_RETRIES:-3}
+# Cap on the SDK's retry backoff (seconds), so a throttled backend cannot
+# stall an agent for minutes between attempts.
+retry_sleep_cap: ${HARNESS_RETRY_SLEEP_CAP:-2}
+# Connect-leg timeout (seconds) for the LLM HTTP client; the read/write legs
+# use `timeout`. Clamped to >= 1 in harness.config.get_harness_connect_timeout.
+connect_timeout: ${HARNESS_CONNECT_TIMEOUT:-10}
+# Model-profile pins (docs: langchain models, "Model profiles"). A model
+# behind a custom base_url carries no profile, so deepagents would fall
+# back to its 170k-token summarization trigger and ProviderStrategy has no
+# structured_output flag to read. Pin the real values here; empty = the
+# framework default. max_input_tokens calibrates context compression for
+# long hunter units.
+model_profile:
+  max_input_tokens: ${MODEL_MAX_INPUT_TOKENS:-400000}
+  structured_output: ${MODEL_STRUCTURED_OUTPUT:-}
+# Concurrency: THE single knob = max parallel agents at a time (hunter
+# fan-out, validator pool, legacy pool). Values are clamped to 1-32 in
+# harness.config.get_concurrency. Applies from the next run.
+concurrency: ${CONCURRENCY:-8}
+# Max LangGraph supersteps per agent.
+recursion_limit: ${RECURSION_LIMIT:-4000}
+# Model-call budget per agent run. This is the real
+# budget: each agent run may make at most this many model calls.
+model_call_limit: ${MODEL_CALL_LIMIT:-1000}
+# Per-agent review budget. Units are weighted by file BYTES (stat-only, no
+# reads); loc_budget is converted at bytes_per_loc (measured: source code
+# averages ~40 bytes/line, so 10k LOC ~= 400k bytes ~= 100k tokens).
+# Effective ceiling = max(loc_budget x bytes_per_loc, ceil(total_bytes /
+# max_units)): a repo too big to fit max_units units at the nominal budget
+# spreads across max_units equal units instead of collapsing into one blob.
+partition:
+  loc_budget: ${PARTITION_LOC_BUDGET:-10000}
+  bytes_per_loc: ${PARTITION_BYTES_PER_LOC:-40}
+  # Edge-scan caps (read by harness/partitioning/graph.py): files over the byte
+  # cap, and reads past the total cap, contribute no framework edges.
+  edge_max_file_bytes: ${PARTITION_EDGE_MAX_FILE_BYTES:-262144}
+  edge_read_cap_bytes: ${PARTITION_EDGE_READ_CAP_BYTES:-20000000}
+  # Hard cap on unit count, each unit one hunter agent (0 = unlimited). The
+  # cap is a soft bound: the byte budget above is the asserted invariant.
+  max_units: ${MAX_UNITS:-20}
+  # Minimum files for a group to stand alone; smaller groups merge upward
+  min_files: ${MIN_FILES:-10}
+  # Partition policy switches (read via harness/partitioning/config.py).
+  vendor_unit: ${PARTITION_VENDOR_UNIT:-0}
+  single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-50}
+  misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
+  framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
+  same_dir_edges: ${PARTITION_SAME_DIR_EDGES:-1}
+# codegraph is the index provider, and the graphify
+# file-graph is deprecated pending removal (P4).
+codegraph:
+  enabled: ${CODEGRAPH_ENABLED:-1}
+  # Tool output caps (env-overridable). 0 = unlimited where supported.
+  chars: ${CODEGRAPH_CHARS:-20000}
+  candidates: ${CODEGRAPH_CANDIDATES:-200}
+  # Partitioning source (P2.5, shadow-first rollout; roll back with a config
+  # edit, never code):
+  #   shadow  = default. BOTH partitions computed every scan; the served units
+  #             are graphify's (today's behavior byte-for-byte) and one
+  #             bounded structural diff is logged at DEBUG for parity review.
+  #   primary = serve codegraph-derived units (Louvain over index-derived
+  #             file coupling); flip only after the shadow diff shows parity.
+  #   off     = today's behavior exactly; the codegraph partition path never
+  #             reads the index (rollback = set mode: off).
+  partition:
+    mode: ${CODEGRAPH_PARTITION_MODE:-shadow}
+    # Louvain resolution for the codegraph community path (networkx
+    # semantics: higher -> more, smaller communities). DORMANT: the P4 tuning
+    # sweep found NO (resolution, threshold) combo passing the revised gate
+    # corpus-wide, so no tuned value was landed — 1.0 is networkx's default and
+    # is byte-identical to the pre-knob clustering. Do not treat this default
+    # as sweep-validated.
+    resolution: ${CODEGRAPH_PARTITION_RESOLUTION:-1.0}
+    # Confidence floor for coupling edges: below this, an edge is treated as
+    # uncertain rather than structural.
+    uncertain_below: ${CODEGRAPH_PARTITION_UNCERTAIN_BELOW:-0.6}
+graphify:
+  # Deprecated pending removal (P4); the codegraph stage replaces this build.
+  enabled: ${GRAPHIFY_ENABLED:-0}
+  # Subprocess budgets (seconds) for the build and query paths.
+  build_timeout: ${GRAPHIFY_BUILD_TIMEOUT:-600}
+  summary_timeout: ${GRAPHIFY_SUMMARY_TIMEOUT:-120}
+  # Tool output cap (chars; 0 = unlimited).
+  chars: ${GRAPH_CHARS:-20000}
+sandbox:
+  # local = repo-confined file tools only, NO shell (no `execute` tool;
+  # SAST wrappers are the only scanner surface in this mode).
+  # docker/sbx = an `execute` shell tool appears: ONE container/microVM for
+  # the whole run, shared by every agent (hunters, validators, triage,
+  # partitioner), repo mounted read-only, agent-specific HOME/TMPDIR paths
+  # in shared writable scratch
+  backend: ${SANDBOX_BACKEND:-local}
+  # Runner image for docker/sbx
+  image: ${SANDBOX_IMAGE:-cyber-sandbox:local}
+  # Container runtime binary
+  docker_bin: ${SANDBOX_DOCKER_BIN:-docker}
+  # The runner container is started once per scan; commands are exec'd in
+  # it via `docker exec` (or `sbx exec`). The container is torn down at scan
+  # exit (success, failure, or SIGINT/SIGTERM).
+  # Bridge network policy: none = no network inside the sandbox (default);
+  # host/bridge = allow network (e.g. for dependency fetching if needed).
+  network: ${SANDBOX_NETWORK:-none}
+  # Per-command stdout+stderr capture cap (bytes). Output past the cap is
+  # truncated; exit code still reflects the command, so a chatty command cannot grow the
+  # harness process unbounded. 0 = unlimited.
+  max_output_bytes: ${SANDBOX_MAX_OUTPUT_BYTES:-200000}
+  # Per-command timeout (seconds) for commands executed in the sandbox.
+  command_timeout: ${SANDBOX_COMMAND_TIMEOUT:-120}
+  # The three below bound the ONE shared run container, not a container per
+  # agent: all agents of the run share this budget (default concurrency is
+  # 8-30 parallel agents), so a runaway agent affects the whole run.
+  memory: ${SANDBOX_MEMORY:-2g}
+  cpus: ${SANDBOX_CPUS:-2}
+  pids_limit: ${SANDBOX_PIDS_LIMIT:-512}
+  # In-image directory holding the custom scanner rules (read via `execute`,
+  # since file tools are repo-confined).
+  rules_dir: /opt/scan-rules/harness
+  # Clear conventional per-agent scratch paths between hunter and verifier
+  # phases to reduce accidental carryover. This is hygiene, not isolation:
+  # agents share a runtime identity and can write elsewhere. Shared package
+  # caches are preserved. No-op in local mode.
+  reset_agent_scratch: ${SANDBOX_RESET_AGENT_SCRATCH:-1}
+  # Reap at scan start the sandboxes a killed run left behind. A SIGKILL'd
+  # harness (kill -9, host OOM-kill) runs no teardown: atexit never fires and
+  # the SIGTERM handler never sees the signal, so its container or microVM
+  # outlives it and keeps costing host resources. Only sandboxes this harness
+  # created are candidates, and a run that is still alive on this machine
+  # (any harness process) is never touched. No-op in local mode.
+  sweep_orphans: ${SANDBOX_SWEEP_ORPHANS:-1}
+  sbx:
+    image: ${SBX_TEMPLATE:-cyber-sandbox:local}
+    cpus: ${SBX_CPUS:-2}
+    memory: ${SBX_MEMORY:-4g}
+    skills: ${SBX_SKILLS:-off}
+    pull: ${SBX_PULL:-never}
+    deny_network: ${SBX_DENY_NETWORK:-}
+    allow_network: ${SBX_ALLOW_NETWORK:-osv.dev,api.osv.dev}
+    primary_dir: ${SBX_PRIMARY_DIR:-}
+    bin: ${SBX_BIN:-sbx}
+sast:
+  # Scanner caps (env-overridable). The byte cap is the same one-budget value
+  # as sandbox.max_output_bytes; findings caps the template list.
+  findings: ${SAST_FINDINGS:-5000}
+threat:
+  use_repo_file: true
+  write_artifact: true
+  llm_enrich: true
+discovery:
+  system_pass: true
+verification:
+  votes: ${VERIFIER_VOTES:-1}
+  cell_size: ${VERIFIER_CELL_SIZE:-10}
+triage:
+  batch_size: ${TRIAGE_BATCH:-30}
+observability:
+  enabled: ${LANGFUSE_ENABLED:-auto}

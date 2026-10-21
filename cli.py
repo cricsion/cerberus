@@ -66,18 +66,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
         write_junit(findings, out / "junit.xml")
         threat_md = state.get("threat_model_md", "") or ""
         from harness import threat
-        from harness.config import load_config_safe
-        # Shared config load feeds both the artifact check and the triage batch.
-        cfg, _cfg_err = {}, None
-        try:
-            cfg, _cfg_err = load_config_safe()
-        except Exception as e:
-            _cfg_err = e
-        if _cfg_err is not None:
-            logger.debug("config load failed; using defaults: %s", _cfg_err)
+        cfg = state.get("cfg") or {}
         _write_tm = True
         try:
-            _write_tm = threat.threat_enabled(cfg, "write_artifact", True)
+            _write_tm = threat.threat_enabled(cfg, "write_artifact")
         except Exception:
             _write_tm = True
         # threat_update node already folded validator findings into state; CLI
@@ -227,12 +219,12 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
         print(f"warning: --vulns {_vulns_path} parsed to 0 rows "
               "(missing or unrecognized format); continuing on git history")
     if bool(getattr(args, "interview", False)):
-        from harness.config import load_config_safe
+        from harness.config import api_key_present, load_config_safe
         _cfg_tm, _cfg_tm_err = load_config_safe()
         if _cfg_tm_err is not None:
             logger.debug("threat-model config load failed; using defaults: %s",
                          _cfg_tm_err)
-        if not os.environ.get("API_KEY"):
+        if not api_key_present(_cfg_tm):
             answers: dict[str, str] = {}
             print("Answer Shostack's four questions (empty = skip):")
             for key, question in _th.INTERVIEW_QUESTIONS:
@@ -267,9 +259,12 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"bootstrap failed: {e}", file=sys.stderr)
             return 1
         try:
-            from harness.config import load_config
+            from harness.config import api_key_present, load_config
             _cfg_enrich = load_config()
-            if _th.threat_enabled(_cfg_enrich, "llm_enrich", True):
+            if not api_key_present(_cfg_enrich):
+                print("API_KEY not set: skipping swarm enrichment; kept "
+                      "deterministic threat model.")
+            elif _th.threat_enabled(_cfg_enrich, "llm_enrich"):
                 enriched, meta = _th.enrich_threat(
                     repo, files, cands, summary, md, _cfg_enrich,
                     vulns=vulns, vulns_path=_vulns_path,
@@ -379,13 +374,6 @@ def cmd_findings(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_doctor(args: argparse.Namespace) -> int:
-    from harness.reporting.view import make_console, doctor
-
-    console = make_console()
-    return int(doctor(args.config, console=console) or 0)
-
-
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("repo", help="path to repo or file")
@@ -399,7 +387,6 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--out", default="runs/latest", help="output dir")
     s.add_argument("--fail-on", default="high", choices=["critical", "high", "medium", "low"])
     s.add_argument("--min-confidence", type=float, default=0.6)
-    s.add_argument("--config", default="config/default.yaml")
     s.add_argument("--confirm-critical", action="store_true",
                    help="pause for human approval when critical/high findings are confirmed")
     s.add_argument("--threat-model", default=None,
@@ -432,10 +419,6 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--status", default=None)
     f.add_argument("--limit", type=int, default=200)
     f.set_defaults(func=cmd_findings)
-
-    d = sub.add_parser("doctor", help="diagnose config, binaries, and environment")
-    d.add_argument("--config", default="config/default.yaml")
-    d.set_defaults(func=cmd_doctor)
 
     st = sub.add_parser("status", help="show agent status for a run")
     st.add_argument("run", help="run dir")

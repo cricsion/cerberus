@@ -41,20 +41,20 @@ def _structure_context(repo: str, files: list[str],
     return "\n".join(lines)
 
 
-def _enforce_coverage(units, files, repo=None) -> list[dict]:
+def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[dict]:
     valid = [f for f in (files or []) if isinstance(f, str) and f]
     if not valid:
         return []
-    if vendor_unit_enabled():
+    if vendor_unit_enabled(cfg):
         app_files, vendor_files = isolate_vendor(valid, repo)
     else:
         app_files, vendor_files = list(valid), []
 
     weights = _file_weights(repo, app_files) if repo is not None else {}
-    pt = partition_target(weights) if weights else 0
+    pt = partition_target(weights, cfg) if weights else 0
 
     if single_unit_enabled() and app_files:
-        single = small_repo_unit(app_files, weights, pt, repo or ".")
+        single = small_repo_unit(app_files, weights, pt, repo or ".", cfg=cfg)
         if single is not None:
             out = [single]
             if vendor_files and vendor_unit_enabled():
@@ -155,7 +155,8 @@ def _files_signature(repo: str, files: list[str]) -> str:
 
 
 def _deterministic_baseline(repo: str, files: list[str],
-                            candidates: list[dict]) -> list[dict]:
+                            candidates: list[dict],
+                            cfg: dict | None = None) -> list[dict]:
     """Compute, cache, and return the deterministic partition baseline."""
     cache_dir = os.path.join(repo, ".harness")
     try:
@@ -178,7 +179,7 @@ def _deterministic_baseline(repo: str, files: list[str],
 
     baseline = run_fail_open(
         "partition-baseline",
-        lambda: _det_partition_units(repo, files),
+        lambda: _det_partition_units(repo, files, cfg),
         default=[], logger=_logger)
     if cache_path:
         try:
@@ -220,7 +221,7 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
                  backend: Any = None) -> list[dict]:
     """Run the Deep-Agent partitioner with hunter tools and extract parsed units;
     an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
-    from harness.agents.deep import DEFAULT_RECURSION_LIMIT, run_structured
+    from harness.agents.deep import run_structured
     from harness.agents.toolsets import graph_tools
     from harness.llmjson import structured_items
     from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
@@ -229,8 +230,7 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
         parsed, _ = run_structured(
             mk, UnitList, PARTITIONER_SYSTEM, msg,
             tools=graph_tools(), timeout=timeout, name="partitioner",
-            backend=backend, root_dir=repo,
-            recursion_limit=DEFAULT_RECURSION_LIMIT)
+            backend=backend, root_dir=repo)
         return structured_items(parsed, field="units")
 
     return run_fail_open("partitioner-llm", _partition_llm, default=[],
@@ -250,11 +250,11 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
         app_files, vendor_files = list(valid), []
 
     weights = _file_weights(repo, app_files) if repo is not None else {}
-    pt = partition_target(weights) if weights else 0
+    pt = partition_target(weights, cfg) if weights else 0
 
     # Small-repo collapse skips the LLM call entirely.
     if single_unit_enabled() and app_files:
-        single = small_repo_unit(app_files, weights, pt, repo or ".")
+        single = small_repo_unit(app_files, weights, pt, repo or ".", cfg=cfg)
         if single is not None:
             out = [single]
             if vendor_files and vendor_unit_enabled():
@@ -262,36 +262,31 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
             return out
 
     # Imported here so tests can monkeypatch harness.config.get_model_kwargs.
-    from harness.config import get_harness_timeout, get_model_kwargs
+    from harness.config import get_model_kwargs, resolve_call_timeout
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")
     mk = dict(model_kwargs or {})
     if not mk.get("api_key") or not mk.get("model"):
         raise ValueError("no model configured")
 
-    timeout = get_harness_timeout(mk.get("timeout", 60) or 60)
+    timeout = resolve_call_timeout(mk, cfg)
 
     ctx = _structure_context(repo, files, candidates, threat_md=threat_md)
-    baseline = _deterministic_baseline(repo, files, candidates)
+    baseline = _deterministic_baseline(repo, files, candidates, cfg)
     msg = _build_partition_message(ctx, baseline)
 
-    from harness.sandbox.local_backend import RepoLocalBackend
+    from harness.sandbox import acquired_backend
     from pathlib import Path
 
     root = Path(repo).resolve() if repo else Path(".").resolve()
-    backend = None
-    try:
-        backend = RepoLocalBackend(repo_path=root)
-    except Exception:
-        backend = None
-
-    units = _agent_units(mk, msg, repo=repo or ".", timeout=timeout,
-                         backend=backend)
+    with acquired_backend(cfg, root, label="partitioner") as backend:
+        units = _agent_units(mk, msg, repo=repo or ".", timeout=timeout,
+                             backend=backend)
 
     if not units:
         raise ValueError("agent returned no parseable units")
 
-    units = _enforce_coverage(units, files, repo)
+    units = _enforce_coverage(units, files, repo, cfg)
     if not units:
         raise ValueError("no units after coverage enforcement")
     return units

@@ -5,7 +5,11 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from ._compat import env_int, run_cli, tool
+from harness.config import get_default_config
+
+from ._compat import SAST_MAX_BYTES, env_int, run_cli, tool
+
+SAST_MAX_FINDINGS = int(get_default_config("sast.findings"))
 
 
 def _resolve_targets(target: str) -> list[str]:
@@ -21,7 +25,7 @@ def _resolve_targets(target: str) -> list[str]:
 
 
 def _paginate(s: str, max_chars: int | None, *, total: bool = False) -> str:
-    lim = env_int("SAST_BYTES", 200000) if max_chars is None else int(max_chars or 0)
+    lim = env_int("SAST_BYTES", SAST_MAX_BYTES) if max_chars is None else int(max_chars or 0)
     if lim <= 0 or len(s) <= lim:
         return s
     suffix = f" (total {len(s)})" if total else ""
@@ -224,7 +228,7 @@ def template_reflect_candidates(target: str = ".") -> list[dict]:
         return []
     base = Path(resolved[0])
     out: list[dict] = []
-    max_tpl = env_int("SAST_FINDINGS", 5000)
+    max_tpl = env_int("SAST_FINDINGS", SAST_MAX_FINDINGS)
     if max_tpl <= 0:
         max_tpl = 10**9
     try:

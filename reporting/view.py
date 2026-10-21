@@ -2,15 +2,13 @@
 degrades to a plain fallback when Rich is missing.
 
 View-only rendering and console utilities used by ``harness.cli`` subcommands
-(status/inspect/runs/findings/doctor). Nothing here runs a scan — the
+(status/inspect/runs/findings). Nothing here runs a scan — the
 interactive TUI was removed and ``harness scan`` is the single scan path.
 """
 from __future__ import annotations
 
 import json
-import os
 import re
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -274,47 +272,4 @@ def list_runs(runs_dir: str | Path, *, limit: int = 50, console: Any = None) -> 
             Text(clean_untrusted(f"crit/high gate: {meta.get('fail_on', '')}")),
         )
     console.print(table)
-    return 0
-
-
-def doctor(config_path: str, *, console: Any = None) -> int:
-    console = console or (Console() if RICH_AVAILABLE else None)
-    lines: list[str] = []
-    # Config load (best-effort, redacted).
-    try:
-        from harness.config import load_config
-
-        cfg = load_config(config_path)
-        if isinstance(cfg, dict):
-            lines.append(f"config: loaded from {config_path}")
-            for key in ("base_url", "hunter_model", "validator_model", "concurrency",
-                        "effort", "sandbox"):
-                if key in cfg:
-                    lines.append(f"  {key}: {cfg.get(key)}")
-    except Exception as e:
-        lines.append(f"config: error ({type(e).__name__}: {e})")
-
-    lines.append("pipeline binaries:")
-    for binary in ("docker", "sbx", "gitleaks", "osv-scanner", "checkov"):
-        path = shutil.which(binary)
-        lines.append(f"  {binary}: {path if path else 'not found'}")
-    lines.append("sandbox-image tools (validated by the image build's self-test):")
-    for binary in ("semgrep", "opengrep"):
-        path = shutil.which(binary)
-        lines.append(f"  {binary}: {path if path else 'not on host'}")
-
-    # Rich.
-    lines.append(f"rich: {'available' if RICH_AVAILABLE else 'not installed'}")
-
-    # Env presence (names only, never values).
-    for env_name in ("BASE_URL", "API_KEY", "HUNTER_MODEL", "VALIDATOR_MODEL",
-                     "EFFORT", "CONCURRENCY"):
-        present = bool(os.environ.get(env_name))
-        lines.append(f"env {env_name}: {'set' if present else 'unset'}")
-
-    if console is None or not RICH_AVAILABLE:
-        for line in lines:
-            print(clean_untrusted(line))
-        return 0
-    print_panel(console, lines, title="Doctor")
     return 0

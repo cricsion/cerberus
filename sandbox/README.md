@@ -1,16 +1,17 @@
 # Scan sandbox backends (operator setup)
 
-Set `sandbox.backend` in `config/default.yaml` (or `SANDBOX_BACKEND`) to pick
-the execution environment for hunter agents. All modes keep the same harness
+Set `sandbox.backend` in `harness/config/default.yaml` (or `SANDBOX_BACKEND`) to pick
+the execution environment for every agent in a scan (hunters, validators,
+triage, partitioner). All modes keep the same harness
 posture: no subagent recursion, no `delete`; `write_file`/`edit_file` are
 confined to the state scratch route; target-repo file tools are read-only;
 the shell (when it exists) is the only extra capability.
 
 | mode | repo file tools | scratch writes | shell | boundary |
 |---|---|---|---|---|
-| `local` (resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
-| `docker` (app-config default) | read-only, in-process | same | `execute` | one network-full container per run |
-| `sbx` | read-only, in-process | same | `execute` | one microVM per run |
+| `local` (default, resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
+| `docker` (opt-in) | read-only, in-process | same | `execute` | one container per run, egress per `sandbox.network` (default `none`) |
+| `sbx` (opt-in) | read-only, in-process | same | `execute` | one microVM per run |
 
 ## local
 
@@ -82,8 +83,8 @@ versions.env pin each if a target mix demands them.
 
 **With egress on, treat everything the agent can read as exfiltrable** — the
 repo, and any credential file inside it (a target repo that is the harness
-checkout exposes its own `.env` with the live API key). Set
-`sandbox.network: none` when that is not acceptable. The agent has full
+checkout exposes its own `.env` with the live API key). Keep
+`sandbox.network: none` unless egress is genuinely required. The agent has full
 control inside the sandbox; containment is the sandbox itself.
 
 **Credential files are masked, not just noticed**: Docker places a read-only

@@ -9,7 +9,7 @@ from typing import Any
 _logger = logging.getLogger(__name__)
 
 
-def _coerce_int(value: Any, default: int) -> int:
+def _num(value: Any, default: int) -> int:
     """int(value) or default: a malformed operator value degrades, never blocks."""
     try:
         return int(value)
@@ -17,29 +17,54 @@ def _coerce_int(value: Any, default: int) -> int:
         return default
 
 
-def _int_env(key: str, default: int) -> int:
-    v = _os.environ.get(key)
-    if v is None or v == "":
+def _float(value: Any, default: float) -> float:
+    """float(value) or default: a malformed operator value degrades, never blocks."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
         return default
-    return _coerce_int(v, default)
 
 
-def _env_flag(key: str, default: str = "0") -> str:
-    v = _os.environ.get(key)
-    return default if v is None or v == "" else str(v).lower()
-
-
-def _flag_on(key: str, default: str = "0") -> bool:
-    return _env_flag(key, default) in ("1", "true", "yes", "on")
-
-
-def _cfg_value(cfg: dict | None, key: str) -> Any:
-    """``partition.<key>`` from cfg, or None when unset (callers fall back to env)."""
-    section = cfg.get("partition") if isinstance(cfg, dict) else None
-    if not isinstance(section, dict):
+def _section_value(cfg: dict | None, key: str, section: str = "partition") -> Any:
+    """``<section>.<key>`` from cfg, or None when unset (callers fall back to env)."""
+    node: Any = cfg if isinstance(cfg, dict) else None
+    for part in section.split("."):
+        node = node.get(part) if isinstance(node, dict) else None
+    if not isinstance(node, dict):
         return None
-    value = section.get(key)
+    value = node.get(key)
     return None if value in (None, "") else value
+
+
+def _yaml_default(path: str) -> Any:
+    """The default for a path, from harness/config/default.yaml only."""
+    from harness.config import config_default
+
+    return config_default(path)
+
+
+def _policy_value(cfg: dict | None, key: str, *, section: str = "partition",
+                  env: str | None = None) -> Any:
+    """Resolve ``<section>.<key>``: scan cfg wins, then an env override, then
+    the YAML default.
+
+    The env override defaults to ``PARTITION_<KEY>`` (``PARTITION_MAX_UNITS``,
+    ``PARTITION_MIN_FILES``, ...). Those two are the legacy raw-env knobs and
+    match the YAML ``${MAX_UNITS:-}`` / ``${MIN_FILES:-}`` placeholders, so
+    both spellings reach the same value; pass ``env=`` explicitly anywhere the
+    documented name differs.
+    """
+    value = _section_value(_loaded_cfg(cfg), key, section)
+    if value is not None:
+        return value
+    env_value = _os.environ.get(env or f"PARTITION_{key.upper()}")
+    return env_value if env_value not in (None, "") else _yaml_default(f"{section}.{key}")
+
+
+def _as_flag(value: Any, default: bool) -> bool:
+    from harness.config import as_bool
+
+    return as_bool(value, default)
 
 
 def _loaded_cfg(cfg: dict | None) -> dict | None:
@@ -68,22 +93,21 @@ def _loaded_cfg(cfg: dict | None) -> dict | None:
 
 def max_units(cfg: dict | None = None) -> int:
     """Cap on unit count; 0 means unlimited. Config wins, else MAX_UNITS from env."""
-    value = _cfg_value(_loaded_cfg(cfg), "max_units")
-    if value is None:
-        value = _int_env("MAX_UNITS", 20)
-    v = _coerce_int(value, 20)
-    return 10**9 if v <= 0 else v
+    value = _num(_policy_value(cfg, "max_units"),
+                 int(_yaml_default("partition.max_units")))
+    return 10**9 if value <= 0 else value
 
 
-def min_files() -> int:
-    v = _int_env("MIN_FILES", 10)
-    return max(0, v)
+def min_files(cfg: dict | None = None) -> int:
+    """Minimum files for a group to stand alone; smaller groups merge upward."""
+    return max(0, _num(_policy_value(cfg, "min_files"),
+                       int(_yaml_default("partition.min_files"))))
 
 
 # --- P0.1 vendor isolation ---------------------------------------------------
 
-def vendor_unit_enabled() -> bool:
-    return _flag_on("PARTITION_VENDOR_UNIT")
+def vendor_unit_enabled(cfg: dict | None = None) -> bool:
+    return _as_flag(_policy_value(cfg, "vendor_unit"), False)
 
 
 VENDOR_UNIT_NAME = "vendor"
@@ -104,18 +128,19 @@ def single_unit_enabled() -> bool:
     return True
 
 
-def single_unit_max_files() -> int:
+def single_unit_max_files(cfg: dict | None = None) -> int:
     """0 disables the small-repo rule; else app files must fit this count AND the
     byte budget for a single unit."""
-    return _int_env("PARTITION_SINGLE_UNIT_MAX_FILES", 50)
+    return _num(_policy_value(cfg, "single_unit_max_files"),
+                int(_yaml_default("partition.single_unit_max_files")))
 
 
 # --- P1.3 misc policy --------------------------------------------------------
 
-def misc_code_merge_enabled() -> bool:
+def misc_code_merge_enabled(cfg: dict | None = None) -> bool:
     """On by default: tiny code units couple or stay singletons, only non-code
     lands in misc; =0 restores legacy misc-absorbs-all."""
-    return _flag_on("PARTITION_MISC_CODE_MERGE", default="1")
+    return _as_flag(_policy_value(cfg, "misc_code_merge"), True)
 
 
 NON_CODE_EXTS = frozenset({
@@ -130,23 +155,22 @@ NON_CODE_NAMES = frozenset({
 
 # --- P2 framework edges ------------------------------------------------------
 
-def framework_edges_enabled() -> bool:
-    return _flag_on("PARTITION_FRAMEWORK_EDGES", default="1")
+def framework_edges_enabled(cfg: dict | None = None) -> bool:
+    return _as_flag(_policy_value(cfg, "framework_edges"), True)
 
 
-def edge_max_file_bytes() -> int:
-    return _int_env("PARTITION_EDGE_MAX_FILE_BYTES", 262_144)
+def edge_max_file_bytes(cfg: dict | None = None) -> int:
+    return _num(_policy_value(cfg, "edge_max_file_bytes"),
+                int(_yaml_default("partition.edge_max_file_bytes")))
 
 
-def edge_read_cap_bytes() -> int:
-    return _int_env("PARTITION_EDGE_READ_CAP_BYTES", 20_000_000)
+def edge_read_cap_bytes(cfg: dict | None = None) -> int:
+    return _num(_policy_value(cfg, "edge_read_cap_bytes"),
+                int(_yaml_default("partition.edge_read_cap_bytes")))
 
 
-def same_dir_soft_edges() -> bool:
-    v = _os.environ.get("PARTITION_SAME_DIR_EDGES")
-    if v is None or v == "":
-        return True
-    return _flag_on("PARTITION_SAME_DIR_EDGES")
+def same_dir_soft_edges(cfg: dict | None = None) -> bool:
+    return _as_flag(_policy_value(cfg, "same_dir_edges"), True)
 
 
 # --- P2.5 codegraph partition source (shadow-first; §6) ----------------------
@@ -157,54 +181,34 @@ def same_dir_soft_edges() -> bool:
 # (config beats env), else the env var, else the documented default.
 
 PARTITION_MODES = ("off", "shadow", "primary")
-_DEFAULT_PARTITION_MODE = "shadow"
-_DEFAULT_PARTITION_RESOLUTION = 1.0
-_DEFAULT_UNCERTAIN_BELOW = 0.6
-
-
-def _coerce_float(value: Any, default: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _codegraph_partition_value(cfg: dict | None, key: str) -> Any:
-    """``codegraph.partition.<key>`` from cfg, or None when unset."""
-    section = cfg.get("codegraph") if isinstance(cfg, dict) else None
-    if not isinstance(section, dict):
-        return None
-    partition = section.get("partition")
-    if not isinstance(partition, dict):
-        return None
-    value = partition.get(key)
-    return None if value in (None, "") else value
 
 
 def partition_mode(cfg: dict | None = None) -> str:
-    """``codegraph.partition.mode`` — one of off|shadow|primary, default shadow.
+    """``codegraph.partition.mode`` — one of off|shadow|primary.
 
     An unrecognized value degrades to the default (never serves an unknown
     mode), so a typo can only ever keep the shadow rollout, not skip it.
     """
-    value = _codegraph_partition_value(_loaded_cfg(cfg), "mode")
-    if value is None:
-        value = _os.environ.get("CODEGRAPH_PARTITION_MODE")
+    value = _policy_value(cfg, "mode", section="codegraph.partition",
+                          env="CODEGRAPH_PARTITION_MODE")
     mode = str(value or "").strip().lower()
-    return mode if mode in PARTITION_MODES else _DEFAULT_PARTITION_MODE
+    if mode in PARTITION_MODES:
+        return mode
+    fallback = str(_yaml_default("codegraph.partition.mode")).strip().lower()
+    return fallback if fallback in PARTITION_MODES else "shadow"
 
 
 def partition_resolution(cfg: dict | None = None) -> float:
-    """Louvain resolution for the codegraph community path (default 1.0)."""
-    value = _codegraph_partition_value(_loaded_cfg(cfg), "resolution")
-    if value is None:
-        value = _os.environ.get("CODEGRAPH_PARTITION_RESOLUTION")
-    return _coerce_float(value, _DEFAULT_PARTITION_RESOLUTION)
+    """Louvain resolution for the codegraph community path."""
+    return _float(
+        _policy_value(cfg, "resolution", section="codegraph.partition",
+                      env="CODEGRAPH_PARTITION_RESOLUTION"),
+        float(_yaml_default("codegraph.partition.resolution")))
 
 
 def partition_uncertain_below(cfg: dict | None = None) -> float:
-    """Confidence floor for coupling edges (CodeGraph's UNCERTAIN_BELOW, 0.6)."""
-    value = _codegraph_partition_value(_loaded_cfg(cfg), "uncertain_below")
-    if value is None:
-        value = _os.environ.get("CODEGRAPH_PARTITION_UNCERTAIN_BELOW")
-    return _coerce_float(value, _DEFAULT_UNCERTAIN_BELOW)
+    """Confidence floor for coupling edges."""
+    return _float(
+        _policy_value(cfg, "uncertain_below", section="codegraph.partition",
+                      env="CODEGRAPH_PARTITION_UNCERTAIN_BELOW"),
+        float(_yaml_default("codegraph.partition.uncertain_below")))

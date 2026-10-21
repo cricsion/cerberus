@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import os
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
 from harness.sandbox.local_backend import RepoLocalBackend
-from harness.sandbox.run_base import (DEFAULT_COMMAND_TIMEOUT,
-                                      DEFAULT_MAX_OUTPUT_BYTES,
-                                      DEFAULT_MEMORY, DEFAULT_RULES_DIR)
-from harness.sandbox.validation import DEFAULT_NETWORK
 
 __all__ = [
     "RepoLocalBackend",
     "resolve_backend",
+    "acquired_backend",
     "close_backend",
     "shutdown_run_sandbox",
     "reset_agent_scratch",
     "sweep_orphans",
 ]
+
+_logger = logging.getLogger(__name__)
 
 def close_backend(backend: Any) -> None:
     # Backend close paths are fail-safe by construction (run teardown swallows,
@@ -27,6 +29,48 @@ def close_backend(backend: Any) -> None:
     close = getattr(backend, "close", None)
     if callable(close):
         close()
+
+def _acquire_backend(cfg: dict | None, root: str | Path, *, label: str,
+                     fallback: str = "none",
+                     refused_msg: str | None = None,
+                     agent_id: str | None = None) -> Any:
+    """Resolve a backend with the harness's one fail-open ladder.
+    """
+    from harness.fallback import is_fatal_error
+
+    try:
+        return resolve_backend(
+            cfg, root,
+            agent_id=agent_id or f"{label[:36]}-{uuid.uuid4().hex[:8]}")
+    except Exception as exc:
+        if is_fatal_error(exc):
+            raise
+        if refused_msg:
+            print(refused_msg.format(exc=exc), file=sys.stderr)
+        else:
+            _logger.debug("%s backend refused (%s); falling back to %s",
+                          label, exc, fallback)
+        if fallback == "local":
+            return RepoLocalBackend(repo_path=root)
+        return None
+
+
+@contextmanager
+def acquired_backend(cfg: dict | None, root: str | Path, *, label: str,
+                     fallback: str = "none",
+                     refused_msg: str | None = None,
+                     agent_id: str | None = None) -> Iterator[Any]:
+    """``resolve_backend`` + fail-open ladder + ``close_backend`` on exit.
+
+    One implementation for the per-session copy every LLM stage used to
+    hand-roll. ``close_backend`` is None-safe, so no caller needs a guard.
+    """
+    backend = _acquire_backend(cfg, root, label=label, fallback=fallback,
+                               refused_msg=refused_msg, agent_id=agent_id)
+    try:
+        yield backend
+    finally:
+        close_backend(backend)
 
 def _sandbox_section(cfg: dict | None) -> dict:
     section = (cfg if isinstance(cfg, dict) else {}).get("sandbox")
@@ -38,6 +82,15 @@ def _sandbox_setting(cfg: dict | None, key: str, default: Any) -> Any:
         env_value = os.environ.get(f"SANDBOX_{key.upper()}")
         return env_value if env_value not in (None, "") else default
     return value
+
+
+def _sandbox_defaults(*path: str) -> dict:
+    """Defaults from harness/config/default.yaml only; The file is a repo invariant, so this fallback path can rely on it.
+    """
+    from harness.config import config_default
+
+    value = config_default(".".join(path))
+    return value if isinstance(value, dict) else {}
 
 def _host_list(raw: Any) -> list[str]:
     # Config hosts arrive as list, comma/semicolon string, or a single value.
@@ -59,69 +112,75 @@ def _coerce_int(key: str, value: Any) -> int:
         raise ValueError(f"invalid sandbox {key}: {value!r}") from exc
 
 def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
-    from .docker_backend import DEFAULT_IMAGE as _IMAGE
     from .credentials import find_credential_files
+    defaults = _sandbox_defaults("sandbox")
     # No guard on purpose: find_credential_files is fail-soft; a catch-all could only fail OPEN (mask_paths = []).
     mask_paths: list[str] = find_credential_files(repo)
 
-    def _int(key: str, default: int) -> int:
-        return _coerce_int(key, _sandbox_setting(cfg, key, default))
+    def _int(key: str) -> int:
+        return _coerce_int(key, _sandbox_setting(cfg, key, defaults[key]))
 
     return {
-        "image": str(_sandbox_setting(cfg, "image", _IMAGE)),
-        "command_timeout": _int("command_timeout", DEFAULT_COMMAND_TIMEOUT),
-        "max_output_bytes": _int("max_output_bytes", DEFAULT_MAX_OUTPUT_BYTES),
-        "memory": str(_sandbox_setting(cfg, "memory", DEFAULT_MEMORY)),
-        "cpus": str(_sandbox_setting(cfg, "cpus", "2")),
-        "pids_limit": _int("pids_limit", 512),
-        "network": str(_sandbox_setting(cfg, "network", DEFAULT_NETWORK)),
+        "image": str(_sandbox_setting(cfg, "image", defaults["image"])),
+        "command_timeout": _int("command_timeout"),
+        "max_output_bytes": _int("max_output_bytes"),
+        "memory": str(_sandbox_setting(cfg, "memory", defaults["memory"])),
+        "cpus": str(_sandbox_setting(cfg, "cpus", defaults["cpus"])),
+        "pids_limit": _int("pids_limit"),
+        "network": str(_sandbox_setting(cfg, "network", defaults["network"])),
+        "docker_bin": str(_sandbox_setting(cfg, "docker_bin",
+                                           defaults["docker_bin"])),
         # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- harness/agents/deep.py.
-        "rules_dir": str(_sandbox_setting(cfg, "rules_dir", DEFAULT_RULES_DIR)),
+        "rules_dir": str(_sandbox_setting(cfg, "rules_dir",
+                                          defaults["rules_dir"])),
         "mask_paths": mask_paths,
     }
 
 def _sbx_settings(cfg: dict | None, repo: str | Path | None = None) -> dict:
+    defaults = _sandbox_defaults("sandbox")
+    sbx_defaults = _sandbox_defaults("sandbox", "sbx")
     section = _sandbox_section(cfg).get("sbx") or {}
     if not isinstance(section, dict):
         section = {}
 
-    def _shared(key: str, default: Any) -> Any:
-        value = _sandbox_setting(cfg, key, default)
+    def _shared(key: str) -> Any:
+        value = _sandbox_setting(cfg, key, defaults[key])
         return section.get(key, value)
 
-    def _int(key: str, default: int) -> int:
-        return _coerce_int(key, _shared(key, default))
+    def _sbx(key: str) -> Any:
+        """sandbox.sbx key -> direct SBX_<KEY> env -> harness/config/default.yaml."""
+        value = section.get(key)
+        if value not in (None, ""):
+            return value
+        env_value = os.environ.get(f"SBX_{key.upper()}")
+        return env_value if env_value not in (None, "") else sbx_defaults.get(key)
 
-    hosts = _host_list(section.get("deny_network") or "")
+    deny_network = _host_list(_sbx("deny_network") or "")
 
     # Per-sandbox egress allow rules (never global); default: the OSV API (the image no longer bundles the vuln DB).
     raw_allowed = section.get("allow_network")
     if raw_allowed in (None, ""):
-        raw_allowed = os.environ.get("SBX_ALLOW_NETWORK",
-                                     "osv.dev,api.osv.dev")
+        raw_allowed = (os.environ.get("SBX_ALLOW_NETWORK")
+                       or sbx_defaults.get("allow_network") or "")
     allowed = _host_list(raw_allowed)
-
-    raw_telem = section.get("disable_telemetry", True)
-    disable_telemetry = str(raw_telem).strip().lower() not in ("0", "false", "no", "off")
-
-    from .sbx_backend import DEFAULT_IMAGE as _SBX_IMAGE
 
     return {
         "image": str(section.get("image")
-                     or _sandbox_setting(cfg, "image", _SBX_IMAGE)),
-        "cpus": str(section.get("cpus", "0")),
-        "memory": str(section.get("memory", DEFAULT_MEMORY)),
-        "skills": str(section.get("skills", "off")),
-        "pull": str(section.get("pull", "never")),
-        "deny_network": hosts,
+                     or _sandbox_setting(cfg, "image", defaults["image"])),
+        "cpus": str(_sbx("cpus")),
+        "memory": str(_sbx("memory")),
+        "skills": str(_sbx("skills")),
+        "pull": str(_sbx("pull")),
+        "deny_network": deny_network,
         "allow_network": allowed,
-        "disable_telemetry": disable_telemetry,
-        "primary_dir": section.get("primary_dir") or None,
-        "command_timeout": _int("command_timeout", DEFAULT_COMMAND_TIMEOUT),
-        "max_output_bytes": _int("max_output_bytes", DEFAULT_MAX_OUTPUT_BYTES),
-        "sbx_bin": str(section.get("bin", "sbx")),
-        # Same in-image rules dir as the docker settings above (read via `execute`); scanner skills need no setting (image-baked + served by the route).
-        "rules_dir": str(_shared("rules_dir", DEFAULT_RULES_DIR)),
+        "disable_telemetry": True,
+        "primary_dir": _sbx("primary_dir") or None,
+        "command_timeout": _coerce_int("command_timeout",
+                                       _shared("command_timeout")),
+        "max_output_bytes": _coerce_int("max_output_bytes",
+                                        _shared("max_output_bytes")),
+        "sbx_bin": str(_sbx("bin")),
+        "rules_dir": str(_shared("rules_dir")),
     }
 
 # One row per backend: name, `sandbox.backend` aliases, settings builder
@@ -149,7 +208,9 @@ def _iter_backends() -> Iterator[tuple[tuple[Any, ...], Any]]:
 
 def resolve_backend(cfg: dict | None, repo: str | Path,
                     *, agent_id: str | None = None) -> RepoLocalBackend:
-    which = str(_sandbox_setting(cfg, "backend", "local")).strip().lower()
+    defaults = _sandbox_defaults("sandbox")
+    which = str(_sandbox_setting(cfg, "backend",
+                                 defaults["backend"])).strip().lower()
     for name, aliases, build_settings, cls_name, getter, _shutdown in _BACKENDS:
         if which not in aliases:
             continue
