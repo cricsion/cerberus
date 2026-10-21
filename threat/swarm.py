@@ -42,9 +42,13 @@ def _threat_mk(cfg: dict) -> dict:
 
 
 def _threat_timeout(cfg: dict) -> int:
+    from harness.config import get_harness_timeout
+
     # _threat_mk resolves operator config and raises config-shaped ValueErrors
-    # loudly; only the numeric coercion is lenient.
-    return _coerce_timeout(_threat_mk(cfg).get("timeout", 180))
+    # loudly; HARNESS_TIMEOUT is authoritative, with _coerce_timeout keeping
+    # the result numeric and at least 1 second.
+    return _coerce_timeout(
+        get_harness_timeout(_threat_mk(cfg).get("timeout", 60) or 60))
 
 
 def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
@@ -131,10 +135,12 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
 def _llm_text(cfg: dict, system: str, human: str,
               root_dir: str | None = None) -> str:
     from harness.agents.deep import run_structured
+    from harness.config import get_harness_max_retries
 
     _, text = run_structured(
         _threat_mk(cfg), None, system, human, timeout=_threat_timeout(cfg),
-        max_retries=1, name="threat", root_dir=root_dir)
+        max_retries=get_harness_max_retries(1), name="threat",
+        root_dir=root_dir)
     return str(text or "")
 
 

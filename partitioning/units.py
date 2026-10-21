@@ -1040,3 +1040,153 @@ def partition_units(repo: str, files: list[str]) -> list[dict]:
             [{"name": "all", "files": sorted(set(app_files)),
               "reason": "fallback-single-unit"}], weight_of, target, edges=edges)
     return _finish(units)
+
+
+# --- P2.5 codegraph partition source (shadow; §6) ----------------------------
+#
+# ADDITIVE only: nothing above this line changes. ``partition_units`` keeps
+# serving the graphify path byte-for-byte; the codegraph side is a separate
+# entry point the gate runners call explicitly. The codegraph module owns the
+# SQL coupling + Louvain + F3 split; this layer owns the units vocabulary and
+# the F1 dirs-equality rescue, so ``_units_from_graphify``'s signature and
+# output vocabulary (``community-N`` / ``codegraph-louvain-community`` /
+# ``unmapped-*``) carry over unchanged (§6.4).
+
+
+def _load_codegraph_edges(repo: str, files: list[str],
+                          uncertain_below: float | None = None) -> dict:
+    """Codegraph coupling edges, framework-augmented like the served path.
+
+    The index-derived pairs are the base; ``augment_edges`` (render/barrel/
+    loader/config/same-dir) adds the same structural hints the graphify path
+    gets, so the two sides are compared on comparable edge sets. Fail-open:
+    an absent index yields only the augmentation edges.
+    """
+    from harness.partitioning.codegraph import load_file_edges
+    from harness.partitioning.config import framework_edges_enabled
+    from harness.partitioning.graph import augment_edges
+
+    edges = load_file_edges(repo, files, uncertain_below=uncertain_below)
+    if framework_edges_enabled():
+        edges = augment_edges(repo, files, edges)
+    return dict(edges or {})
+
+
+def _codegraph_dirs_units(repo: str, files: list[str],
+                          weight_of: dict[str, int] | None = None,
+                          target: int = 0,
+                          edges: dict | None = None) -> list[dict]:
+    """The graph-absent fallback units, exactly as ``partition_units`` derives them.
+
+    F1's rescue target: the same support-split + attach + normalize chain the
+    serving path falls back to when the graph is unavailable, so a rescue is
+    true equality with that fallback by construction (never a degraded tiny-repo
+    answer). No ``community-*`` name can come out of here.
+    """
+    support_files = [
+        f for f in files
+        if support_file_kind(f) in {"template", "config"}]
+    if support_files:
+        support_set = set(support_files)
+        units = _units_from_dirs(
+            repo, [f for f in files if f not in support_set],
+            weight_of=weight_of, target=target, edges=edges)
+        unowned = _attach_linked_support(support_files, units, edges,
+                                         weight_of, target)
+        groups: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for f in unowned:
+            kind = support_file_kind(f)
+            if kind:
+                parent = str(PurePosixPath(f.replace("\\", "/")).parent)
+                groups[(kind, parent)].append(f)
+        units.extend(_support_group_units(groups, "unmapped", weight_of, target))
+        units = _normalize_units(units, weight_of, target, edges=edges)
+    else:
+        units = _units_from_dirs(repo, files, weight_of=weight_of,
+                                 target=target, edges=edges)
+    if not units:
+        units = _normalize_units(
+            [{"name": "all", "files": sorted(set(files)),
+              "reason": "fallback-single-unit"}], weight_of, target, edges=edges)
+    return units
+
+
+def _units_from_codegraph(repo: str, files: list[str],
+                          weight_of: dict[str, int] | None = None,
+                          target: int = 0,
+                          edges: dict | None = None,
+                          resolution: float | None = None,
+                          uncertain_below: float | None = None) -> list[dict]:
+    """Units from the codegraph index: Louvain communities + unmapped dirs units.
+
+    Same shape and vocabulary as ``_units_from_graphify`` (``community-N``,
+    ``reason: "codegraph-louvain-community"``, ``unmapped-*`` dirs units), but
+    F1 replaces the graphify ``None`` contract: when the index coupling yields
+    nothing or a single community, the dirs fallback units are served directly
+    (``_codegraph_dirs_units``) instead of returning ``None``.
+    """
+    from harness.partitioning import codegraph as _cg
+
+    if edges is None:
+        edges = _load_codegraph_edges(repo, files, uncertain_below=uncertain_below)
+    communities = _cg.louvain_file_communities(
+        repo, files, resolution=resolution, uncertain_below=uncertain_below)
+    if not communities or len(set(communities.values())) <= 1:
+        return _codegraph_dirs_units(repo, files, weight_of, target, edges)
+
+    by_comm: dict[int, list[str]] = defaultdict(list)
+    unmapped: list[str] = []
+    support_files: list[str] = []
+    for f in files:
+        if support_file_kind(f) in {"template", "config"}:
+            support_files.append(f)
+            continue
+        community = communities.get(f)
+        if community is None:
+            unmapped.append(f)
+        else:
+            by_comm[community].append(f)
+    units = [{"name": f"community-{c}", "files": sorted(fs),
+              "reason": "codegraph-louvain-community"}
+             for c, fs in sorted(by_comm.items())]
+    unowned_support = _attach_linked_support(support_files, units, edges,
+                                             weight_of, target)
+    unmapped.extend(unowned_support)
+    if unmapped:
+        units.extend(_raw_units_from_dirs(repo, unmapped, prefix="unmapped",
+                                          weight_of=weight_of, target=target))
+    return _normalize_units(units, weight_of, target, edges=edges)
+
+
+def _shadow_codegraph_side(repo: str, app_files: list[str],
+                           weight_of: dict[str, int],
+                           target: int,
+                           resolution: float | None = None,
+                           uncertain_below: float | None = None
+                           ) -> tuple[list[dict], dict]:
+    """Compute the codegraph-side units for the shadow comparator.
+
+    The gate runners (``scripts/compare_partition_sources.py``,
+    ``scripts/sweep_partition_grid.py``) import this at call time and read
+    ``result[0]`` as the codegraph-side unit list. Returns
+    ``(units, meta)``; ``units`` is never ``None`` because F1 rescues to the
+    dirs path — a rescue is visible as units with no ``community-*`` name.
+
+    Reads only the index; never writes the target repo (D6).
+    """
+    from harness.partitioning import codegraph as _cg
+
+    edges = _load_codegraph_edges(repo, app_files, uncertain_below=uncertain_below)
+    units = _units_from_codegraph(repo, app_files, weight_of, target,
+                                  edges=edges, resolution=resolution,
+                                  uncertain_below=uncertain_below)
+    community_units = [u for u in (units or [])
+                       if str(u.get("name", "")).startswith("community")]
+    meta = {
+        "index_available": _cg.index_available(repo),
+        "edges": len(edges),
+        "units": len(units or []),
+        "community_units": len(community_units),
+        "rescued": not community_units,
+    }
+    return (units or []), meta

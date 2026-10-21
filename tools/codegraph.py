@@ -1,16 +1,241 @@
+"""Code-intelligence tools bound on the shared agent surface (plan § D3, D4).
+
+This is the ONE binding module for the code-intelligence family. Two groups
+live here:
+
+- **The ``_db``-first graph tools** — :func:`callers`, :func:`callees`,
+  :func:`framework_routes`, :func:`affected`. Each answers from the prebuilt
+  CodeGraph index (``<root>/.codegraph/codegraph.db``, read-only) when it is
+  present AND the DB-visible half of the build gate passes (``pendingRefs`` is
+  zero); otherwise — and whenever the index yields nothing for the query — it
+  falls back to the deterministic grep implementation in the *same output
+  format* (``path:line:`` prefixes; ``## def`` / ``## calls`` markers; the
+  ``(no matches)`` sentinel). That format is load-bearing: ``threat_model_node``
+  counts lines and the pipeline's routes stage greps the text.
+- **The 18 ``harness.codegraph`` tools** (navigation / authz / contracts /
+  variants / supply / polyglot). They already answer ``_db``-first internally;
+  they are re-exported here so ``harness/agents/toolsets.py`` binds the whole
+  code-intelligence surface from one place (:func:`codegraph_tools`).
+
+Import law: this module imports only ``harness.codegraph`` (the 18 + ``_db``),
+stdlib, and the existing harness tool helpers (``harness.tools.code``) — no new
+dependencies. Nothing here shells ``codegraph``; the CLI is the indexer's tool,
+never an agent's.
+"""
 from __future__ import annotations
 
 import re
+from collections import deque
 from pathlib import Path
+
+from harness.codegraph import (
+    audit_llm_and_mcp_tool_sinks,
+    compare_sibling_route_security,
+    find_shared_state_readers_writers,
+    get_ast_slice,
+    get_function_security_summary,
+    inspect_config_and_secret_hygiene,
+    inspect_cross_language_bridge,
+    inspect_type_contract,
+    query_historical_triage_memory,
+    record_function_security_summary,
+    resolve_blind_spot,
+    synthesize_and_sweep_variant_rule,
+    trace_egress_and_ssrf_targets,
+    trace_interprocedural_hop,
+    trace_state_machine_transitions,
+    validate_remediation_patch,
+    verify_cve_symbol_reachability,
+    verify_exploit_poc_in_harness,
+)
+from harness.codegraph import _db
 
 from ._compat import tool
 from .code import _resolve_limit, grep_files
+
+# The 18 harness.codegraph tools, in the package's own order. Kept as names so
+# codegraph_tools() stays a single source of truth and __all__ is derived.
+CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
+    "get_ast_slice",
+    "trace_interprocedural_hop",
+    "resolve_blind_spot",
+    "compare_sibling_route_security",
+    "find_shared_state_readers_writers",
+    "trace_state_machine_transitions",
+    "inspect_type_contract",
+    "record_function_security_summary",
+    "get_function_security_summary",
+    "validate_remediation_patch",
+    "synthesize_and_sweep_variant_rule",
+    "query_historical_triage_memory",
+    "verify_cve_symbol_reachability",
+    "inspect_config_and_secret_hygiene",
+    "trace_egress_and_ssrf_targets",
+    "inspect_cross_language_bridge",
+    "audit_llm_and_mcp_tool_sinks",
+    "verify_exploit_poc_in_harness",
+)
+
+# CodeGraph's uncertainty boundary (src/graph/dynamic-boundary-report.ts): below
+# it an edge is a name-only guess, not a proven call — a hop to follow only with
+# explicit scepticism.
+UNCERTAIN_BELOW = 0.6
+
+# Container kinds whose children count as affected when the container is reached
+# (getImpactRadius semantics: a class reaching its methods counts).
+_CONTAINER_KINDS = frozenset({
+    "file", "class", "interface", "struct", "trait", "enum", "union",
+    "module", "namespace", "object", "record", "protocol", "impl",
+})
+
+# Definition kinds ``callers`` / ``callees`` will treat as the target symbol.
+_CALLABLE_KINDS = ("function", "method", "constructor", "macro")
+
+# The pinned route line, emitted by the ``_db``-first framework_routes path:
+#     <route_file>:<route_line>: [route] <url> -> <handler> (<handler_file>:<handler_line>)
+ROUTE_LINE_RE = re.compile(
+    r"^(?P<route_file>.+?):(?P<route_line>\d+): \[route\] "
+    r"(?P<url>.+?) -> (?P<handler>\S+) "
+    r"\((?P<handler_file>.+?):(?P<handler_line>\d+)\)$"
+)
+
+
+def codegraph_tools() -> list:
+    """The 18 ``harness.codegraph`` tools, in a stable order.
+
+    ``harness/agents/toolsets.py`` binds this list beside the ``_db``-first grep
+    tools, so the whole code-intelligence surface is defined once and the roles
+    cannot drift apart (plan § D3).
+    """
+    return [globals()[name] for name in CODEGRAPH_TOOL_NAMES]
 
 
 def _safe_root(root: str) -> Path:
     from harness.tools.code import _safe_path
     return _safe_path(root)
 
+
+# ---------------------------------------------------------------------------
+# index presence + the DB-visible half of the build gate (plan § D2/D4)
+# ---------------------------------------------------------------------------
+
+def _index_gate(root: str):
+    """(conn, ok): the read-only index handle and whether it may be trusted.
+
+    ``ok`` is False when the index is absent/unreadable OR when the DB-visible
+    half of CodeGraph's build gate fails — ``unresolved_refs`` still has
+    ``pending`` rows, i.e. the resolution pass has not finished. That mirrors
+    D2's fail-open contract: a build/gate failure sends the agents to the grep
+    tools instead of answering from a half-resolved graph.
+
+    ``conn`` is None whenever the index is unusable; callers only act on it when
+    ``ok`` is True. Never raises.
+    """
+    try:
+        state = _db.index_state(root)
+    except Exception:  # pragma: no cover - index_state already degrades
+        return None, False
+    if not state.get("available"):
+        return None, False
+    conn = _db.connect(root)
+    if conn is None:
+        return None, False
+    if int(state.get("refs_pending") or 0) > 0:
+        return conn, False
+    return conn, True
+
+
+def _contained_file(root: str, file_path: str) -> Path | None:
+    """Resolve an index-relative path under the repo root, or None."""
+    if not file_path:
+        return None
+    try:
+        base = _safe_root(root)
+        target = (base / file_path).resolve()
+        target.relative_to(base.resolve())
+    except (ValueError, OSError):
+        return None
+    try:
+        if target.is_file() and not target.is_symlink():
+            return target
+    except OSError:
+        return None
+    return None
+
+
+def _source_line(root: str, file_path: str, line: int) -> str:
+    """The raw source line (no newline, capped at 1000 chars) or ''.
+
+    The grep fallback emits ``rel:line: <raw text>``; the ``_db`` path reads the
+    same text back so the two paths share one line format.
+    """
+    if line <= 0:
+        return ""
+    path = _contained_file(root, file_path)
+    if path is None:
+        return ""
+    try:
+        if path.stat().st_size > 5_000_000:
+            return ""
+        lines = path.read_text(errors="replace").splitlines()
+    except OSError:
+        return ""
+    if 0 < line <= len(lines):
+        return lines[line - 1][:1000]
+    return ""
+
+
+def _file_matches(node_file, want: str) -> bool:
+    nf = str(node_file or "").replace("\\", "/")
+    w = str(want or "").replace("\\", "/").lstrip("./")
+    if not w:
+        return True
+    return (nf == want or nf == w or nf.endswith("/" + w)
+            or Path(nf).name == Path(w).name)
+
+
+def _def_nodes(conn, name: str, file: str | None, limit: int = 500) -> list[dict]:
+    """Definition nodes for ``name`` (tail), optionally disambiguated by ``file``.
+
+    Same-named symbols are common in scans, so ``file`` (the MCP-schema
+    disambiguator) narrows to one definition before the call edges are read.
+    """
+    tail = str(name).split(".")[-1]
+    if not tail:
+        return []
+    nodes = _db.find_nodes(conn, name=tail, limit=limit)
+    if not nodes:
+        return []
+    callables = [n for n in nodes if str(n.get("kind")) in _CALLABLE_KINDS]
+    if callables:
+        nodes = callables
+    if file:
+        matched = [n for n in nodes if _file_matches(n.get("file_path"), file)]
+        if matched:
+            nodes = matched
+    return nodes
+
+
+def _paginate(lines: list[str], limit, offset, env_key: str, default: int) -> str:
+    """The shared footer: ``… showing a-b of N (use offset=… to page)``."""
+    lim = _resolve_limit(limit, env_key, default)
+    off = max(int(offset or 0), 0)
+    total = len(lines)
+    page = lines[off:] if lim <= 0 else lines[off: off + lim]
+    body = "\n".join(page)[:20000]
+    if total > len(page) or off > 0:
+        body += (f"\n… showing {off + 1}-{off + len(page)} of {total} "
+                 f"(use offset={off + len(page)} to page)")
+    return body
+
+
+def _cap_section(lines: list[str], lim: int) -> list[str]:
+    return lines if lim <= 0 else lines[:lim]
+
+
+# ---------------------------------------------------------------------------
+# manifest_parse (unchanged: filesystem-only, no index)
+# ---------------------------------------------------------------------------
 
 @tool(parse_docstring=True)
 def manifest_parse(root: str = ".", limit: int | None = None) -> str:
@@ -95,15 +320,30 @@ def manifest_parse(root: str = ".", limit: int | None = None) -> str:
     return body
 
 
-@tool(parse_docstring=True)
-def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0) -> str:
-    """Grep for web-framework route declarations. Paginated via limit/offset (0=unlimited).
+# ---------------------------------------------------------------------------
+# framework_routes: route nodes from the index, regex elsewhere
+# ---------------------------------------------------------------------------
 
-    Args:
-        root: Directory to scan for route declarations.
-        limit: Max routes per page. 0 = unlimited.
-        offset: Route index to start from, for paging.
+def _routes_db(conn, limit, offset) -> str | None:
+    """The index's routing manifest in the pinned route format, or None.
+
+    None means "the index has no routes" — the caller then greps, so an
+    unindexed framework still shows up.
     """
+    rows = _db.routing_manifest(conn, limit=5000)
+    if not rows:
+        return None
+    lines = []
+    for r in rows:
+        lines.append(
+            f"{r.get('route_file')}:{r.get('route_line')}: [route] {r.get('url')} "
+            f"-> {r.get('handler')} ({r.get('handler_file')}:{r.get('handler_line')})"
+        )
+    return _paginate(lines, limit, offset, "ROUTES_LIMIT", 500)
+
+
+def _routes_grep(root: str, limit, offset: int) -> str:
+    """The deterministic regex route scan (today's implementation, verbatim)."""
     pattern = (
         r"(@(app|router|api)\.(get|post|put|delete|patch|route)\b"
         r"|@app\.route\b"
@@ -165,15 +405,29 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
 
     if not all_lines:
         return "(no matches)"
-    _lim = _resolve_limit(limit, "ROUTES_LIMIT", 500)
-    _off = int(offset or 0)
-    total = len(all_lines)
-    page = all_lines[_off:] if _lim <= 0 else all_lines[_off: _off + _lim]
-    body = "\n".join(page)[:20000]
-    if total > len(page) or _off > 0:
-        body += f"\n… showing {_off + 1}-{_off + len(page)} of {total} (use offset={_off + len(page)} to page)"
-    return body
+    return _paginate(all_lines, limit, offset, "ROUTES_LIMIT", 500)
 
+
+@tool(parse_docstring=True)
+def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0) -> str:
+    """Index-first web-framework routes (URL + handler file:line); regex fallback. Paginated via limit/offset.
+
+    Args:
+        root: Directory to scan for route declarations.
+        limit: Max routes per page. 0 = unlimited.
+        offset: Route index to start from, for paging.
+    """
+    conn, ok = _index_gate(root)
+    if ok:
+        db_out = _routes_db(conn, limit, offset)
+        if db_out is not None:
+            return db_out
+    return _routes_grep(root, limit, offset)
+
+
+# ---------------------------------------------------------------------------
+# callers / callees: edge tables first, regex elsewhere
+# ---------------------------------------------------------------------------
 
 def _sanitize_func_name(func_name: str) -> str:
     name = str(func_name or "").strip()
@@ -184,18 +438,45 @@ def _sanitize_func_name(func_name: str) -> str:
     return name
 
 
-@tool(parse_docstring=True)
-def callers(func_name: str, root: str = ".", limit: int | None = None) -> str:
-    """Find call sites of func_name (grep def + calls). Paginated via limit (0=unlimited).
+def _callers_db(conn, root: str, name: str, file: str | None, limit) -> str | None:
+    """Call sites from incoming ``calls`` edges, or None when no def is indexed."""
+    defs = _def_nodes(conn, name, file)
+    if not defs:
+        return None
+    _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
+    out: list[str] = []
+    def_lines: list[str] = []
+    for n in defs:
+        line = int(n.get("start_line") or 0)
+        src = _source_line(root, n.get("file_path") or "", line)
+        text = src or str(n.get("signature") or n.get("name") or name)
+        def_lines.append(f"{n.get('file_path')}:{line}: {text}")
+    call_lines: list[str] = []
+    seen: set[tuple] = set()
+    for n in defs:
+        for e in _db.incoming_edges(conn, n["id"], kinds=["calls"], limit=500):
+            caller = _db.get_node(conn, e.get("source"))
+            if caller is None:
+                continue
+            fp = caller.get("file_path") or ""
+            line = int(e.get("line") or caller.get("start_line") or 0)
+            key = (fp, line)
+            if key in seen:
+                continue
+            seen.add(key)
+            src = _source_line(root, fp, line)
+            call_lines.append(f"{fp}:{line}: {src or caller.get('name') or ''}")
+    if def_lines:
+        out.append("## def")
+        out.extend(_cap_section(def_lines, _lim))
+    if call_lines:
+        out.append("## calls")
+        out.extend(_cap_section(call_lines, _lim))
+    return "\n".join(out)[:20000] or "(no matches)"
 
-    Args:
-        func_name: Function name whose call sites to find.
-        root: Directory to search.
-        limit: Max call sites. 0 = unlimited.
-    """
-    name = _sanitize_func_name(func_name)
-    if not name:
-        return "(no matches)"
+
+def _callers_grep(name: str, root: str, limit) -> str:
+    """The deterministic grep call-site scan (today's implementation, verbatim)."""
     esc = re.escape(name)
     _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
     out: list[str] = []
@@ -218,17 +499,57 @@ def callers(func_name: str, root: str = ".", limit: int | None = None) -> str:
 
 
 @tool(parse_docstring=True)
-def callees(func_name: str, root: str = ".", limit: int | None = None) -> str:
-    """Find what func_name calls: locate def, list invoked identifiers. Paginated via limit (0=unlimited).
+def callers(func_name: str, root: str = ".", file: str | None = None,
+            limit: int | None = None) -> str:
+    """Find call sites of func_name (index edges first, grep fallback). Paginated via limit (0=unlimited).
 
     Args:
-        func_name: Function name whose body to scan.
+        func_name: Function name whose call sites to find.
         root: Directory to search.
-        limit: Max callees. 0 = unlimited.
+        file: Optional file path to disambiguate same-named definitions.
+        limit: Max call sites per section. 0 = unlimited.
     """
     name = _sanitize_func_name(func_name)
     if not name:
         return "(no matches)"
+    conn, ok = _index_gate(root)
+    if ok:
+        db_out = _callers_db(conn, root, name, file, limit)
+        if db_out is not None:
+            return db_out
+    return _callers_grep(name, root, limit)
+
+
+def _callees_db(conn, root: str, name: str, file: str | None, limit) -> str | None:
+    """Callees from outgoing ``calls`` edges, or None when no def is indexed."""
+    defs = _def_nodes(conn, name, file)
+    if not defs:
+        return None
+    _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
+    seen: list[str] = []
+    seen_set: set[str] = set()
+    for n in defs:
+        for e in _db.outgoing_edges(conn, n["id"], kinds=["calls"], limit=500):
+            target = _db.get_node(conn, e.get("target"))
+            if target is None:
+                continue
+            rel = target.get("file_path") or ""
+            label = f"{rel}:{target.get('name')}()"
+            if label in seen_set:
+                continue
+            seen_set.add(label)
+            seen.append(label)
+            if _lim > 0 and len(seen) >= _lim:
+                break
+        if _lim > 0 and len(seen) >= _lim:
+            break
+    if not seen:
+        return None
+    return _paginate(seen, limit, 0, "CALLERS_LIMIT", 100)
+
+
+def _callees_grep(name: str, root: str, limit) -> str:
+    """The deterministic grep callee scan (today's implementation, verbatim)."""
     try:
         base = _safe_root(root)
     except ValueError as e:
@@ -292,3 +613,141 @@ def callees(func_name: str, root: str = ".", limit: int | None = None) -> str:
     if len(seen) > len(page):
         body_out += f"\n… +{len(seen) - len(page)} more"
     return body_out
+
+
+@tool(parse_docstring=True)
+def callees(func_name: str, root: str = ".", file: str | None = None,
+            limit: int | None = None) -> str:
+    """Find what func_name calls (index edges first, grep fallback). Paginated via limit (0=unlimited).
+
+    Args:
+        func_name: Function name whose body to scan.
+        root: Directory to search.
+        file: Optional file path to disambiguate same-named definitions.
+        limit: Max callees. 0 = unlimited.
+    """
+    name = _sanitize_func_name(func_name)
+    if not name:
+        return "(no matches)"
+    conn, ok = _index_gate(root)
+    if ok:
+        db_out = _callees_db(conn, root, name, file, limit)
+        if db_out is not None:
+            return db_out
+    return _callees_grep(name, root, limit)
+
+
+# ---------------------------------------------------------------------------
+# affected: getImpactRadius semantics over the index (no grep equivalent)
+# ---------------------------------------------------------------------------
+
+def _edge_confidence(edge: dict) -> float:
+    meta = edge.get("metadata") or {}
+    try:
+        return float(meta.get("confidence", 1.0))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def _affected_db(conn, root: str, name: str, file: str | None, depth: int, limit) -> str | None:
+    seeds = _def_nodes(conn, name, file)
+    if not seeds:
+        return None
+    try:
+        depth_cap = int(depth)
+    except (TypeError, ValueError):
+        depth_cap = 3
+    depth_cap = min(max(depth_cap, 1), 10)
+    seed_label = ", ".join(f"{n.get('file_path')}:{n.get('start_line')}" for n in seeds[:5])
+    seen: set[str] = {n["id"] for n in seeds}
+    results: list[dict] = []
+    queue: deque = deque((n["id"], 0) for n in seeds)
+    while queue:
+        nid, hop = queue.popleft()
+        if hop >= depth_cap:
+            continue
+        for e in _db.incoming_edges(conn, nid, limit=500):
+            if e.get("kind") == "contains":
+                continue
+            src = _db.get_node(conn, e.get("source"))
+            if src is None or src["id"] in seen:
+                continue
+            seen.add(src["id"])
+            results.append({"node": src, "hop": hop + 1, "kind": e.get("kind"),
+                            "confidence": _edge_confidence(e),
+                            "via_line": e.get("line")})
+            queue.append((src["id"], hop + 1))
+            # getImpactRadius: a container reached by an incoming edge also
+            # contributes its children (class -> its methods count).
+            if str(src.get("kind")) in _CONTAINER_KINDS:
+                for child in _db.node_children(conn, src["id"], limit=200):
+                    if child["id"] in seen:
+                        continue
+                    seen.add(child["id"])
+                    results.append({"node": child, "hop": hop + 1, "kind": "contains",
+                                    "confidence": 1.0,
+                                    "via_line": child.get("start_line")})
+                    queue.append((child["id"], hop + 1))
+    header = (f"Affected nodes for {name} (depth<={depth_cap}, total {len(results)}; "
+              f"seeds: {seed_label})")
+    lines = [header]
+    _lim = _resolve_limit(limit, "AFFECTED_LIMIT", 100)
+    page = results if _lim <= 0 else results[:_lim]
+    for r in page:
+        node = r["node"]
+        loc = f"{node.get('file_path')}:{r.get('via_line') or node.get('start_line')}"
+        flag = ""
+        if r["kind"] != "contains" and float(r["confidence"]) < UNCERTAIN_BELOW:
+            flag = " UNCERTAIN (name-only guess; do not follow)"
+        lines.append(f"- {node.get('name')} [{node.get('kind')}] {loc} "
+                     f"(hop {r['hop']}, {r['kind']}, confidence {float(r['confidence']):.2f}){flag}")
+    if not results:
+        lines.append("- (nothing reaches this symbol within the depth cap)")
+    elif len(results) > len(page):
+        lines.append(f"… +{len(results) - len(page)} more")
+    return "\n".join(lines)[:20000]
+
+
+@tool(parse_docstring=True)
+def affected(node: str, root: str = ".", file: str | None = None,
+             depth: int = 3, limit: int | None = None) -> str:
+    """Who CAN reach this symbol: reverse BFS over call edges (proves reachability, not taint). Paginated via limit (0=unlimited).
+
+    Implements CodeGraph's getImpactRadius semantics: reverse BFS over ALL
+    incoming edges with kind != 'contains', container kinds additionally walked
+    down into their children, depth-capped (default 3). Call-site lines prove
+    REACHABILITY only, never taint flow — open the code and verify the argument.
+
+    Args:
+        node: Symbol to trace backwards from.
+        root: Repo root holding the index.
+        file: Optional file path to disambiguate same-named definitions.
+        depth: Max reverse hops (clamped to 1..10).
+        limit: Max affected nodes. 0 = unlimited.
+    """
+    name = _sanitize_func_name(node) or str(node or "").strip()[:200]
+    if not name:
+        return "(no matches)"
+    conn, ok = _index_gate(root)
+    if not ok:
+        # No grep equivalent for reachability: this is the success-shaped
+        # guidance the un-indexed contract uses everywhere else.
+        return _db.guidance_no_db(root)
+    db_out = _affected_db(conn, root, name, file, depth, limit)
+    if db_out is None:
+        return "(no matches)"
+    return db_out
+
+
+__all__ = [
+    "manifest_parse",
+    "framework_routes",
+    "callers",
+    "callees",
+    "affected",
+    "codegraph_tools",
+    "CODEGRAPH_TOOL_NAMES",
+    "ROUTE_LINE_RE",
+    "UNCERTAIN_BELOW",
+    *CODEGRAPH_TOOL_NAMES,
+]

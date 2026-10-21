@@ -135,6 +135,29 @@ def get_reasoning_kwargs(cfg: dict, agent: str | None = None) -> dict:
     return {"reasoning_effort": level}
 
 
+def _env_int(name: str, default: int, minimum: int = 0) -> int:
+    """Read an integer from the process environment, falling back safely."""
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        value = default
+    else:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            value = default
+    return max(minimum, int(value))
+
+
+def get_harness_timeout(default: int = 60) -> int:
+    """HARNESS_TIMEOUT in seconds, read directly from the environment."""
+    return _env_int("HARNESS_TIMEOUT", default, minimum=1)
+
+
+def get_harness_max_retries(default: int = 5) -> int:
+    """HARNESS_MAX_RETRIES, read directly from the environment."""
+    return _env_int("HARNESS_MAX_RETRIES", default, minimum=0)
+
+
 def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
     """ChatOpenAI kwargs for hunter|validator, incl. reasoning_effort; no
     langchain import happens here."""

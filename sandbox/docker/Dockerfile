@@ -54,8 +54,14 @@ ARG GOSEC_SHA256_ARM64
 ARG NJSSCAN_VERSION
 # Node/Go are OFF by default: add only when the targets you scan need their
 # test suites runnable. Each costs image size and startup time.
+# NODE_VERSION must be >= 22.5: the codegraph CLI reads its index through
+# node:sqlite, which does not exist on older Node (its package.json `engines`
+# field understates this -- see the codegraph version pin below).
 ARG WITH_NODE=0
-ARG NODE_VERSION=20
+ARG NODE_VERSION=22
+# codegraph CLI pin (no default -- see the install layer below). Required by
+# build.sh even when WITH_NODE=0, so a missing/empty pin fails the build loudly.
+ARG CODEGRAPH_VERSION
 ARG WITH_GO=0
 ARG GO_VERSION
 
@@ -73,6 +79,20 @@ RUN if [ "$WITH_NODE" = "1" ]; then \
         curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash - \
         && apt-get install -y --no-install-recommends nodejs \
         && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# --- codegraph CLI (opt-in with Node; pinned, no default) --------------------
+# The code-graph indexer lane (harness/codegraph/_index.py) runs this CLI in the
+# container. It rides the WITH_NODE opt-in because it needs Node >= 22.5 (reads
+# its DB via node:sqlite). npm registry integrity stands in for a sha256 binary
+# -- no standalone tarball exists (D10). Installed `-g` so `codegraph` is on
+# PATH; the layer asserts a real binary and prints its version (fail closed: a
+# missing/empty pin must not silently land no CLI).
+ARG CODEGRAPH_VERSION
+RUN if [ "$WITH_NODE" = "1" ]; then \
+        npm install -g --no-cache "@colbymchenry/codegraph@${CODEGRAPH_VERSION}" \
+        && command -v codegraph \
+        && codegraph version; \
     fi
 
 # --- Go (opt-in, official tarball; bookworm's golang is too old) ------------
@@ -256,5 +276,12 @@ USER 1000:1000
 ENV HOME=/work TMPDIR=/tmp GIT_PAGER=cat PAGER=cat TERM=dumb
 # Never try to phone home.
 ENV SEMGREP_SEND_METRICS=off BC_SKIP_MAPPING=TRUE CKV_SKIP_PACKAGE_UPDATE_CHECK=True
+# codegraph hygiene (D9): no daemon, no telemetry, no update check -- the CLI is
+# only ever the indexer lane's subprocess. Mirrors the metrics/update-check
+# switches above; `CODEGRAPH_NO_DAEMON` also keeps it from spawning a background
+# process in the read-only, network-restricted sandbox.
+ENV CODEGRAPH_NO_DAEMON=1 CODEGRAPH_TELEMETRY=0 DO_NOT_TRACK=1 CODEGRAPH_NO_UPDATE_CHECK=1
+# No bytecode writes: the runtime rootfs is read-only and /work is a tmpfs.
+ENV PYTHONDONTWRITEBYTECODE=1
 
 CMD ["sleep", "infinity"]

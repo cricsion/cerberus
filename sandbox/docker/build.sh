@@ -45,7 +45,7 @@ for v in GITLEAKS_VERSION GITLEAKS_SHA256_X64 GITLEAKS_SHA256_ARM64 \
          TRUFFLEHOG_VERSION TRUFFLEHOG_SHA256_X64 TRUFFLEHOG_SHA256_ARM64 \
          GOSEC_VERSION GOSEC_SHA256_X64 GOSEC_SHA256_ARM64 \
          NJSSCAN_VERSION ATHERIS_VERSION FLAWFINDER_VERSION \
-         WITH_NODE NODE_VERSION WITH_GO GO_VERSION; do
+         WITH_NODE NODE_VERSION CODEGRAPH_VERSION WITH_GO GO_VERSION; do
     if [[ -n "${!v:-}" ]]; then
         ARGS+=(--build-arg "$v=${!v}")
     else
@@ -77,6 +77,30 @@ docker run --rm "$IMAGE_TAG" jq --version
 docker run --rm "$IMAGE_TAG" sh -c 'test -f /opt/harness-skills/gitleaks/SKILL.md && test -f /opt/harness-skills/osv-scanner/SKILL.md && test -f /opt/harness-skills/checkov/SKILL.md'
 docker run --rm "$IMAGE_TAG" sh -c 'for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done'
 docker run --rm "$IMAGE_TAG" cat /opt/harness-skills/gitleaks/SKILL.md | diff -q - harness/skills/gitleaks/SKILL.md
+
+# codegraph CLI (D9/D10): only present on WITH_NODE=1 lanes.
+if [[ "${WITH_NODE:-0}" == "1" ]]; then
+    echo "[smoke] codegraph CLI present + telemetry disabled"
+    # `command -v` must resolve to a real executable, not a shell builtin/alias
+    # (an empty pin would otherwise "pass" a parse-only check with no CLI).
+    docker run --rm "$IMAGE_TAG" sh -c 'test -x "$(command -v codegraph)"'
+    docker run --rm "$IMAGE_TAG" sh -c 'codegraph version | grep -q .'
+    docker run --rm "$IMAGE_TAG" sh -c 'codegraph telemetry status | grep -qi disabled'
+
+    echo "[smoke] codegraph index + gate, offline on a tiny fixture (no network)"
+    # Fixture is generated in-container under the writable /work, so no host
+    # mount (and no repo fixture) is involved. Env hygiene comes from the image.
+    # The jq gate parse runs in-container too (jq is baked in), like the
+    # checkov smoke above -- no host jq dependency.
+    docker run --rm --network none "$IMAGE_TAG" sh -c '
+        set -eu
+        mkdir -p /work/cg/src
+        printf "def main():\n    return helper()\n\ndef helper():\n    return 1\n" > /work/cg/src/a.py
+        codegraph init /work/cg >/dev/null 2>&1
+        codegraph index -q /work/cg
+        codegraph status -j /work/cg | jq -e ".index.state == \"complete\" and .index.pendingRefs == 0" >/dev/null
+    '
+fi
 
 echo "[smoke] offline rule scan with no network (must succeed)"
 TMP_REPO="$(mktemp -d)"

@@ -23,13 +23,13 @@ def _now_iso() -> str:
 
 
 def _coerce_timeout(value: object) -> int:
-    """mk ``timeout`` value -> int seconds, floored at 180; unparseable -> 180.
+    """Resolved timeout -> int seconds, minimum 1; unparseable -> 60.
     Only the numeric coercion is guarded: callers must resolve model kwargs
     (operator config errors) outside this helper so those failures stay loud."""
     try:
-        return max(int(value or 180), 180)
+        return max(int(value or 60), 1)
     except (TypeError, ValueError):
-        return 180
+        return 60
 
 
 def _as_bool(value: object, default: bool = True) -> bool:

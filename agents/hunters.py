@@ -7,6 +7,7 @@ import sys
 # Prompt text lives in harness/prompts/discovery.py (re-exported for `h.<name>`).
 from harness.agents.deep import (DEFAULT_RECURSION_LIMIT, is_fatal_error,
                                  sanitize_model_kwargs)
+from harness.config import get_harness_timeout
 from harness.fallback import EMPTY_STRUCTURED, run_fail_open
 from harness.paths import to_repo_relative
 from harness.schemas import safe_float, safe_int
@@ -23,12 +24,9 @@ try:
 except Exception:  # observability module unavailable → tracing disabled (fail-open)
     _obs = None
 
-def _agent_timeout(mk: dict, floor: int = 180) -> int:
-    """Per-call LLM timeout, raised to the deep-agent floor; never raises."""
-    try:
-        return max(int(mk.get("timeout", floor) or floor), floor)
-    except (TypeError, ValueError):
-        return floor
+def _agent_timeout(mk: dict, default: int = 60) -> int:
+    """Per-call LLM timeout from HARNESS_TIMEOUT; defaults to 60 seconds."""
+    return get_harness_timeout(mk.get("timeout", default) or default)
 
 
 def _hunter_recursion_limit(cfg: dict) -> int:

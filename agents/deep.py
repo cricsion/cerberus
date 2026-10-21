@@ -84,7 +84,7 @@ def sanitize_model_kwargs(model_kwargs: dict | None) -> dict:
     return mk
 
 
-_CONNECT_TIMEOUT_S = 60.0
+_CONNECT_TIMEOUT_S = 10.0
 
 
 def make_llm(mk: dict | None, *, timeout: int | None = None,
@@ -106,6 +106,14 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
     if isinstance(t, (int, float)) and not isinstance(t, bool):
         t = max(1.0, float(t))
         kwargs["timeout"] = (_CONNECT_TIMEOUT_S, t, t, t)
+
+    try:
+        from openai import _base_client as _oai_base
+        _cap = float(os.environ.get("HARNESS_RETRY_SLEEP_CAP", "2"))
+        _oai_base.MAX_RETRY_DELAY = _cap
+        _oai_base.MAX_RETRY_AFTER_DELAY = _cap
+    except (ImportError, AttributeError, TypeError, ValueError):
+        pass
 
     raw = mk.get("model_profile")
     if isinstance(raw, dict):

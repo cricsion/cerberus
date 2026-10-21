@@ -147,3 +147,64 @@ def same_dir_soft_edges() -> bool:
     if v is None or v == "":
         return True
     return _flag_on("PARTITION_SAME_DIR_EDGES")
+
+
+# --- P2.5 codegraph partition source (shadow-first; §6) ----------------------
+#
+# Additive getters only: the mode is read at call time and DEFAULTS TO
+# ``shadow`` — the served units stay graphify's until the user approves the
+# ``primary`` flip. Read from ``codegraph.partition.*`` in the scan config
+# (config beats env), else the env var, else the documented default.
+
+PARTITION_MODES = ("off", "shadow", "primary")
+_DEFAULT_PARTITION_MODE = "shadow"
+_DEFAULT_PARTITION_RESOLUTION = 1.0
+_DEFAULT_UNCERTAIN_BELOW = 0.6
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _codegraph_partition_value(cfg: dict | None, key: str) -> Any:
+    """``codegraph.partition.<key>`` from cfg, or None when unset."""
+    section = cfg.get("codegraph") if isinstance(cfg, dict) else None
+    if not isinstance(section, dict):
+        return None
+    partition = section.get("partition")
+    if not isinstance(partition, dict):
+        return None
+    value = partition.get(key)
+    return None if value in (None, "") else value
+
+
+def partition_mode(cfg: dict | None = None) -> str:
+    """``codegraph.partition.mode`` — one of off|shadow|primary, default shadow.
+
+    An unrecognized value degrades to the default (never serves an unknown
+    mode), so a typo can only ever keep the shadow rollout, not skip it.
+    """
+    value = _codegraph_partition_value(_loaded_cfg(cfg), "mode")
+    if value is None:
+        value = _os.environ.get("CODEGRAPH_PARTITION_MODE")
+    mode = str(value or "").strip().lower()
+    return mode if mode in PARTITION_MODES else _DEFAULT_PARTITION_MODE
+
+
+def partition_resolution(cfg: dict | None = None) -> float:
+    """Louvain resolution for the codegraph community path (default 1.0)."""
+    value = _codegraph_partition_value(_loaded_cfg(cfg), "resolution")
+    if value is None:
+        value = _os.environ.get("CODEGRAPH_PARTITION_RESOLUTION")
+    return _coerce_float(value, _DEFAULT_PARTITION_RESOLUTION)
+
+
+def partition_uncertain_below(cfg: dict | None = None) -> float:
+    """Confidence floor for coupling edges (CodeGraph's UNCERTAIN_BELOW, 0.6)."""
+    value = _codegraph_partition_value(_loaded_cfg(cfg), "uncertain_below")
+    if value is None:
+        value = _os.environ.get("CODEGRAPH_PARTITION_UNCERTAIN_BELOW")
+    return _coerce_float(value, _DEFAULT_UNCERTAIN_BELOW)

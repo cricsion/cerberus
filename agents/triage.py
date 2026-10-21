@@ -266,16 +266,15 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
           file=sys.stderr, flush=True)
 
     from harness.agents.deep import run_structured, sanitize_model_kwargs
-    from harness.config import get_model_kwargs
+    from harness.config import (get_harness_max_retries, get_harness_timeout,
+                                get_model_kwargs)
     from harness.prompts.triage import TRIAGE_SYSTEM, TriageBatch
 
     try:
         mk = sanitize_model_kwargs(
             get_model_kwargs(cfg, "validator", agent="triager"))
-        try:
-            _timeout = max(int(mk.get("timeout", 180) or 180), 180)
-        except (TypeError, ValueError):
-            _timeout = 180
+        _timeout = get_harness_timeout(mk.get("timeout", 60) or 60)
+        _max_retries = get_harness_max_retries(3)
     except Exception as e:
         if is_fatal_error(e):
             raise
@@ -313,7 +312,7 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
             def _one(message):
                 parsed, _ = run_structured(
                     mk, TriageBatch, TRIAGE_SYSTEM, message,
-                    tools=tools, timeout=_timeout, max_retries=3,
+                    tools=tools, timeout=_timeout, max_retries=_max_retries,
                     name="triage", backend=backend, root_dir=repo or None)
                 return parsed
 

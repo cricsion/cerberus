@@ -262,17 +262,14 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
             return out
 
     # Imported here so tests can monkeypatch harness.config.get_model_kwargs.
-    from harness.config import get_model_kwargs
+    from harness.config import get_harness_timeout, get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")
     mk = dict(model_kwargs or {})
     if not mk.get("api_key") or not mk.get("model"):
         raise ValueError("no model configured")
 
-    try:
-        timeout = max(int(mk.get("timeout", 180) or 180), 180)
-    except (TypeError, ValueError):
-        timeout = 180
+    timeout = get_harness_timeout(mk.get("timeout", 60) or 60)
 
     ctx = _structure_context(repo, files, candidates, threat_md=threat_md)
     baseline = _deterministic_baseline(repo, files, candidates)
