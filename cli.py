@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from harness.schemas import safe_float
@@ -15,14 +16,17 @@ logger = logging.getLogger(__name__)
 
 def prompt_confirm(payload: dict) -> bool:
     """Show confirmed critical/high findings, ask on stdin; EOF (non-interactive
-    run) counts as a decline."""
-    print("HUMAN REVIEW REQUIRED (confirmed critical/high):")
+    run) counts as a decline. Single read, prompt-level "[y/N]" hint: empty
+    input declines, junk declines; rich's Confirm.ask was probed and REJECTED
+    — it re-prompts on "yes"/<Enter>, breaking this gate's convention."""
+    from harness.reporting.ui import render_confirmation
+    from harness.reporting.view import make_console
+
+    console = make_console()
+    render_confirmation(console, payload if isinstance(payload, dict) else {})
     try:
-        print(json.dumps(payload, indent=2)[:3000])
-    except (TypeError, ValueError):
-        print(str(payload)[:3000])
-    try:
-        ans = input("Proceed with these as confirmed? [y/N] ").strip().lower()
+        ans = console.input("Proceed with these as confirmed? [y/N] ",
+                            markup=False).strip().lower()
     except EOFError:
         ans = "n"
     return ans in ("y", "yes")
@@ -45,6 +49,29 @@ def cmd_scan(args: argparse.Namespace) -> int:
     from harness.scan_manifest import close_scan, record_scan_manifest
     repo = str(canonical_repo(args.repo))
     scan_record: dict = {}
+    agent_log = getattr(args, "agent_log", "normal")
+    no_color = bool(getattr(args, "no_color", False))
+    from harness.reporting.ui import build_reporter
+
+    reporter = build_reporter(no_color=no_color, agent_log=agent_log)
+    try:
+        from harness.config import load_config_safe
+
+        _cfg, _cfg_err = load_config_safe()
+        if not isinstance(_cfg, dict):
+            _cfg = {}
+    except Exception:
+        _cfg = {}
+    try:
+        reporter.header(repo, _cfg,
+                        fail_on=getattr(args, "fail_on", "high"),
+                        focus=getattr(args, "focus", None),
+                        vulns=getattr(args, "vulns", None),
+                        votes=getattr(args, "votes", None))
+    except Exception:
+        pass
+    scan_t0 = time.perf_counter()
+    scan_elapsed = 0.0
     try:
         record_scan_manifest(repo)
         (out / "scan.pid").write_text(str(os.getpid()))
@@ -53,7 +80,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
                          focus=args.focus, votes=args.votes,
                          vulns_file=args.vulns,
                          confirm=prompt_confirm if confirm else None,
-                         agent_events_path=out / "agents.jsonl")
+                         agent_events_path=out / "agents.jsonl",
+                         progress=reporter)
+        scan_elapsed = time.perf_counter() - scan_t0
         findings = state.get("verified", [])
         # CI gate: min-confidence + fail-on severity filter
         fail_at = SEVERITY_ORDER[args.fail_on]
@@ -109,6 +138,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
             (out / "scan.pid").unlink(missing_ok=True)
         except OSError:
             pass
+        try:
+            reporter.close()
+        except Exception:
+            pass
     try:
         _agent_events = state.get("agent_events", []) or []
         if isinstance(_agent_events, list):
@@ -144,13 +177,18 @@ def cmd_scan(args: argparse.Namespace) -> int:
         "stage_timings": state.get("stage_timings") or {},
     }
     (out / "scan_meta.json").write_text(json.dumps(meta, indent=2))
-    print(f"files={len(state.get('files', []))} findings={len(findings)} out={out}")
     # --fail-on honored in full; unknown severity strings default to info's
     # rank (4), which no choice can reach, so they never fail CI either.
     failing = [f for f in findings
                if SEVERITY_ORDER.get(f.get("severity"), 4) <= fail_at
                and safe_float(f.get("confidence", 0)) >= min_conf
                and f.get("status") != "fp"]
+    try:
+        reporter.done(findings=findings, out=out, fail_on=args.fail_on,
+                      min_confidence=min_conf, gated=failing,
+                      elapsed=scan_elapsed, state=state)
+    except Exception:
+        print(f"files={len(state.get('files', []))} findings={len(findings)} out={out}")
     return 1 if failing else 0
 
 
@@ -382,6 +420,10 @@ def build_parser() -> argparse.ArgumentParser:
                              "array, or markdown report) used as EVIDENCE for "
                              "section 4 threat rows")
     p = argparse.ArgumentParser(prog="harness", description="Agentic vuln harness (OpenAI-compatible)")
+    p.add_argument("--no-color", action="store_true",
+                   help="disable ANSI color (also honored via NO_COLOR/TERM=dumb)")
+    p.add_argument("--debug", action="store_true",
+                   help="print a full traceback when a command crashes")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("scan", parents=[common], help="scan a repo or directory")
     s.add_argument("--out", default="runs/latest", help="output dir")
@@ -395,6 +437,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="comma-separated focus hints, e.g. injection or CWE-89,CWE-78 (narrows hunter scope text only, never drops coverage)")
     s.add_argument("--votes", type=int, default=None,
                    help="verifier votes per finding 1-5 (default 1; majority-or-tie is final, no judge)")
+    s.add_argument("--agent-log", default="normal", choices=["normal", "quiet"],
+                   help="per-agent progress lines (quiet suppresses them; stages/receipt still render)")
     s.set_defaults(func=cmd_scan)
     t = sub.add_parser("threat-model", parents=[common], help="bootstrap THREAT_MODEL.md for a repo")
     t.add_argument("--out", default=None, help="output path (default: <repo>/THREAT_MODEL.md)")
@@ -441,7 +485,26 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     p = build_parser()
     args = p.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except KeyboardInterrupt:
+        print("cancelled", file=sys.stderr)
+        return 130
+    except Exception as exc:
+        print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        out = getattr(args, "out", None) or "<out>"
+        print(f"run 'harness inspect {out}'", file=sys.stderr)
+        if bool(getattr(args, "debug", False)):
+            try:
+                from rich.console import Console
+
+                Console(no_color=bool(getattr(args, "no_color", False))
+                        ).print_exception()
+            except Exception:
+                import traceback
+
+                traceback.print_exc()
+        return 1
 
 
 if __name__ == "__main__":

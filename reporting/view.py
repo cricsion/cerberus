@@ -1,9 +1,10 @@
-"""Rich-backed CLI viewer helpers (optional dependency): every public function
-degrades to a plain fallback when Rich is missing.
+"""Rich-backed CLI viewer helpers
 
 View-only rendering and console utilities used by ``harness.cli`` subcommands
 (status/inspect/runs/findings). Nothing here runs a scan — the
 interactive TUI was removed and ``harness scan`` is the single scan path.
+Non-TTY streams and ``NO_COLOR`` receive the same layout with styles stripped
+by rich.
 """
 from __future__ import annotations
 
@@ -14,33 +15,47 @@ from typing import Any
 
 from harness.schemas import sort_findings
 
-try:
-    from rich.console import Console
-    from rich.table import Table
-    from rich.text import Text
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich.theme import Theme
 
-    RICH_AVAILABLE = True
-except ImportError:  # pragma: no cover - environment without rich
-    Console = None  # type: ignore[assignment]
-    Table = None  # type: ignore[assignment]
-    Text = None  # type: ignore[assignment]
-    RICH_AVAILABLE = False
 
+THEME = Theme({
+    "meta": "dim",         # metadata weight: stamps, labels, durations, hints
+    "accent": "cyan",      # running glyph + panel borders
+    "ok": "green",         # succeeded
+    "err": "red",          # failed
+    "timeout": "magenta",  # timed-out
+    "warn": "yellow",      # canceled / warnings
+    "gate.pass": "green",
+    "gate.fail": "bold red",
+    "empty": "green dim",  # the zero-findings marker
+    "sev.critical": "bold red",
+    "sev.high": "red",
+    "sev.medium": "yellow",
+    "sev.low": "blue",
+    "sev.info": "dim",
+})
 
 SEVERITY_STYLE = {
-    "critical": "bold red",
-    "high": "red",
-    "medium": "yellow",
-    "low": "blue",
-    "info": "dim",
+    "critical": "sev.critical",
+    "high": "sev.high",
+    "medium": "sev.medium",
+    "low": "sev.low",
+    "info": "sev.info",
 }
 
+_HYGIENE = {"markup": False, "emoji": False, "highlight": False, "theme": THEME}
 
-def make_console() -> "Console":
-    """A Rich console when available, else ``None`` (plain print fallback)."""
-    if not RICH_AVAILABLE:
-        return None  # type: ignore[return-value]
-    return Console()
+
+def make_console(**kwargs) -> "Console":
+    """A themed Rich console
+    Extra kwargs pass through (e.g. ``width``, ``force_terminal``, ``file``)."""
+    base = dict(_HYGIENE)
+    base.update(kwargs)
+    return Console(**base)
 
 
 # Untrusted text must never reach the terminal raw: ANSI/OSC retitles the window,
@@ -59,11 +74,8 @@ def clean_untrusted(text: Any) -> str:
 
 
 def print_panel(console, lines: list[str], *, title: str,
-                border_style: str = "cyan") -> None:
+                border_style: str = "accent") -> None:
     """One panel shell for every view print: a cleaned, titled text box."""
-    from rich.panel import Panel
-    from rich.text import Text
-
     body = "\n".join(lines) if lines else "(no events)"
     console.print(Panel(Text(clean_untrusted(body)),
                         title=Text(clean_untrusted(str(title))),
@@ -79,24 +91,10 @@ def _read_json(path: Path) -> Any:
 
 def render_findings(console: Any, findings: list[dict], *, limit: int = 200) -> None:
     if not findings:
-        if console is not None:
-            console.print("[dim]no findings[/dim]")
-        else:
-            print("no findings")
+        console.print(Text("no findings", style="meta"))
         return
 
     rows = sort_findings(list(findings))[:limit]
-
-    if not RICH_AVAILABLE or console is None:
-        for f in rows:
-            print(clean_untrusted(
-                f"{f.get('severity','?').upper():8} "
-                f"{f.get('cwe','?')} "
-                f"{f.get('path','?')}:{f.get('start_line','?')} "
-                f"conf={float(f.get('confidence',0) or 0):.2f} "
-                f"status={f.get('status','?')}"
-            ))
-        return
 
     table = Table(title=f"Findings ({len(rows)} of {len(findings)})", expand=False)
     table.add_column("Sev", style="bold", no_wrap=True)
@@ -123,7 +121,7 @@ def render_findings(console: Any, findings: list[dict], *, limit: int = 200) -> 
 def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
               timeline: bool = False) -> int:
     run_dir = Path(run_dir)
-    console = console or (Console() if RICH_AVAILABLE else None)
+    console = console or Console()
     meta_path = run_dir / "scan_meta.json"
     findings_path = run_dir / "findings.json"
     meta = _read_json(meta_path) if meta_path.is_file() else None
@@ -151,12 +149,6 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
         if agent is not None:
             filtered = [e for e in filtered
                         if str(e.get("agent_id")) == str(agent)]
-        if console is None:
-            for e in filtered:
-                print(clean_untrusted(
-                    f"{e.get('ts')} {e.get('agent_id')} {e.get('state')} {e.get('message')}"))
-            return 0
-        from rich.text import Text
         lines = []
         for e in filtered:
             parts = [str(e.get("agent_id", "?")), str(e.get("state", "?"))]
@@ -167,13 +159,6 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
             lines.append(" ".join(parts))
         title = f"Timeline: {agent if agent is not None else 'all'}"
         print_panel(console, lines, title=title)
-        return 0
-
-    if console is None:
-        print(clean_untrusted(f"run: {run_dir}"))
-        if isinstance(meta, dict):
-            print(clean_untrusted(json.dumps(meta, indent=2)))
-        render_findings(None, findings)
         return 0
 
     header_lines = [f"run: {run_dir}"]
@@ -189,13 +174,14 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
     artifacts = [p.name for p in run_dir.iterdir() if p.is_file()] if run_dir.is_dir() else []
     if artifacts:
         print_panel(console, sorted(artifacts), title="Artifacts",
-                    border_style="dim")
+                    border_style="meta")
     return 0
 
 
 def agent_status(run_dir: Path, console: Any = None) -> int:
     """One run's agent state report"""
     run_dir = Path(run_dir)
+    console = console or Console()
     summary_path = run_dir / "agent_summary.json"
     events_path = run_dir / "agents.jsonl"
     summary = None
@@ -203,13 +189,6 @@ def agent_status(run_dir: Path, console: Any = None) -> int:
         summary = json.loads(summary_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         pass
-    if console is None or not RICH_AVAILABLE:
-        print(clean_untrusted(f"run: {run_dir}"))
-        if summary:
-            print(clean_untrusted(json.dumps(summary, indent=2)))
-        if events_path.is_file():
-            print(f"events: {sum(1 for _ in events_path.open())}")
-        return 0 if summary is not None or events_path.is_file() else 1
     lines = [f"run: {run_dir}"]
     if isinstance(summary, dict):
         lines.append(f"total: {summary.get('total')}")
@@ -234,7 +213,7 @@ def agent_status(run_dir: Path, console: Any = None) -> int:
 
 def list_runs(runs_dir: str | Path, *, limit: int = 50, console: Any = None) -> int:
     base = Path(runs_dir)
-    console = console or (Console() if RICH_AVAILABLE else None)
+    console = console or Console()
     runs: list[tuple[float, Path, dict]] = []
     if base.is_dir():
         for child in base.iterdir():
@@ -250,12 +229,6 @@ def list_runs(runs_dir: str | Path, *, limit: int = 50, console: Any = None) -> 
             runs.append((mtime, child, meta))
     runs.sort(key=lambda x: x[0], reverse=True)
     runs = runs[: max(1, int(limit))]
-
-    if console is None or not RICH_AVAILABLE:
-        for _, child, meta in runs:
-            print(clean_untrusted(
-                f"{child.name}\tfiles={meta.get('files')}\tfindings={meta.get('findings')}\t{meta.get('repo')}"))
-        return 0
 
     table = Table(title=f"Runs ({len(runs)})")
     table.add_column("Run", overflow="fold")

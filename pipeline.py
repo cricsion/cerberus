@@ -28,6 +28,19 @@ _ADD_KEYS = ("candidates", "findings", "tools_used", "hunter_coverage")
 
 logger = logging.getLogger(__name__)
 
+_PROGRESS: Any = None
+
+
+def _stage_detail(stage: str, text: str) -> None:
+    """Route a node's completion detail to the UI sink, else print as before."""
+    if _PROGRESS is None:
+        print(text, file=sys.stderr, flush=True)
+        return
+    try:
+        _PROGRESS.detail(stage, text)
+    except Exception:
+        pass
+
 
 def _verified_reducer(left: list[dict] | None,
                       right: list[dict] | None) -> list[dict]:
@@ -532,13 +545,15 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
 def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
                      votes: int | None, label: str,
                      repo: str | None = None,
-                     cell_offset: int = 0) -> list[dict]:
+                     cell_offset: int = 0,
+                     agent_registry: Any = None) -> list[dict]:
     from harness.agents.validator import run_validation
 
     try:
         return run_validation(findings, cfg or {}, threat_md or "", votes,
                               units=[{"name": str(label)}], max_workers=1,
-                              repo=repo, cell_offset=cell_offset)
+                              repo=repo, cell_offset=cell_offset,
+                              agent_registry=agent_registry)
     except Exception as e:
         from harness.agents.deep import is_fatal_error
 
@@ -576,8 +591,9 @@ def hunter_worker(state: dict) -> dict:
         for f in out:
             if isinstance(f, dict) and not f.get("unit"):
                 f["unit"] = str(label)
-        print(f"[hunters] {label}: {len(out)} findings in {_time.time()-t0:.0f}s",
-              file=sys.stderr, flush=True)
+        _stage_detail("hunters",
+                      f"[hunters] {label}: {len(out)} findings in "
+                      f"{_time.time()-t0:.0f}s")
         ret = {"findings": out,
                "tools_used": sorted(set(str(t) for t in _tools))}
         if _coverage:
@@ -589,8 +605,9 @@ def hunter_worker(state: dict) -> dict:
 
         if is_fatal_error(e):
             raise
-        print(f"[hunters] {label}: ERROR {type(e).__name__} after {_time.time()-t0:.0f}s",
-              file=sys.stderr, flush=True)
+        _stage_detail("hunters",
+                      f"[hunters] {label}: ERROR {type(e).__name__} after "
+                      f"{_time.time()-t0:.0f}s")
         fb = _fallback_finding(str(label), repo, files, str(e))
         fb["unit"] = str(label)
         return {"findings": [fb]}
@@ -665,12 +682,14 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
                                    findings,
                                    state.get("threat_model_md", "") or "",
                                    _cfg_sys, focus, _tools)
-            print(f"[system-pass] +{len(out)} cross-unit findings in {_time.time()-t0:.0f}s",
-                  file=sys.stderr, flush=True)
+            _stage_detail("system_pass",
+                          f"[system-pass] +{len(out)} cross-unit findings in "
+                          f"{_time.time()-t0:.0f}s")
             return out, sorted(set(str(t) for t in _tools))
         except Exception as e:
-            print(f"[system-pass] ERROR {type(e).__name__} after {_time.time()-t0:.0f}s",
-                  file=sys.stderr, flush=True)
+            _stage_detail("system_pass",
+                          f"[system-pass] ERROR {type(e).__name__} after "
+                          f"{_time.time()-t0:.0f}s")
             _sysfail["fail"] = True
             raise
 
@@ -725,9 +744,10 @@ def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
                                   parent_stage="validation")
     import time as _time
     t0 = _time.time()
-    print(f"[validator] validating {len(pending)} remaining findings "
-          f"({len(state.get('verified', []) or [])} already validated)...",
-          file=sys.stderr, flush=True)
+    _stage_detail("validator",
+                  f"[validator] validating {len(pending)} remaining findings "
+                  f"({len(state.get('verified', []) or [])} already "
+                  f"validated)...")
     try:
         units = []
         for p in (state.get("fanout_payloads", []) or []):
@@ -737,7 +757,7 @@ def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
         validated = run_validation(
             pending, cfg, state.get("threat_model_md", "") or "",
             state.get("votes_override"), units=units,
-            repo=state.get("repo"))
+            repo=state.get("repo"), agent_registry=agent_registry)
         if agent_registry is not None:
             agent_registry.transition("validator", AgentState.succeeded,
                                       parent_stage="validation")
@@ -759,9 +779,10 @@ def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
             fb.setdefault("status", "needs-review")
             validated.append(fb)
     from collections import Counter as _Counter
-    print(f"[validator] done: {len(validated)} in {_time.time()-t0:.0f}s "
-          f"{dict(_Counter(f.get('status') for f in validated))}",
-          file=sys.stderr, flush=True)
+    _stage_detail("validator",
+                  f"[validator] done: {len(validated)} in "
+                  f"{_time.time()-t0:.0f}s "
+                  f"{dict(_Counter(f.get('status') for f in validated))}")
     return {"verified": validated}
 
 
@@ -825,10 +846,11 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
         if agent_registry is not None:
             agent_registry.transition("triage:1", AgentState.succeeded,
                                       parent_stage="triage")
-        print(f"[triage] {len(out)} findings, "
-              f"{res.get('n_duplicates', 0)} duplicates, "
-              f"{res.get('triage_llm_calls', 0)} LLM calls in {_time.time()-t0:.0f}s",
-              file=sys.stderr, flush=True)
+        _stage_detail("triage",
+                      f"[triage] {len(out)} findings, "
+                      f"{res.get('n_duplicates', 0)} duplicates, "
+                      f"{res.get('triage_llm_calls', 0)} LLM calls in "
+                      f"{_time.time()-t0:.0f}s")
         ret: dict = {"verified": Overwrite(out)}
         if res.get("triage_log"):
             ret["triage_log"] = res["triage_log"]
@@ -844,8 +866,9 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
         if agent_registry is not None:
             agent_registry.transition("triage:1", AgentState.failed,
                                       parent_stage="triage", error=str(e))
-        print(f"[triage] ERROR {type(e).__name__} after {_time.time()-t0:.0f}s "
-              "(verified untouched)", file=sys.stderr, flush=True)
+        _stage_detail("triage",
+                      f"[triage] ERROR {type(e).__name__} after "
+                      f"{_time.time()-t0:.0f}s (verified untouched)")
         return {}
 
 
@@ -984,10 +1007,15 @@ def _fan_out_hunters(state: dict, max_workers: int,
                 merged.setdefault(k, v)
             res = hunter_worker(merged)
             if agent_registry is not None:
+                try:
+                    produced = len((res or {}).get("findings") or [])
+                except Exception:
+                    produced = 0
                 agent_registry.transition(aid, AgentState.succeeded,
                                          parent_stage="hunters",
                                          message="completed",
-                                         model=model)
+                                         model=model,
+                                         findings_produced=produced)
             return res
         except Exception as e:  # pragma: no cover - hunter_worker is fail-open
             from harness.agents.deep import is_fatal_error
@@ -1073,7 +1101,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         for k, chunk in enumerate(chunks):
             fut = executor.submit(_timed, _validate_inline, chunk, cfg,
                                   threat_md, votes, unit, repo=repo,
-                                  cell_offset=k,
+                                  cell_offset=k, agent_registry=agent_registry,
                                   _on_start=lambda _u=ukey: _flip_unit_running(_u))
             pending[fut] = ("validation", p, k)
 
@@ -1170,11 +1198,16 @@ def run_scan(repo: str, confirm_critical: bool = False,
              vulns_file: str | None = None,
              confirm: Callable[[dict], bool] | None = None,
              agent_events_path: Any = None,
+             progress: Any = None,
              ) -> dict[str, Any]:
-    repo = str(canonical_repo(repo))
+    global _PROGRESS
+
+    _prev_progress = _PROGRESS
+    _PROGRESS = progress
     _prev_target_repo = os.environ.get("TARGET_REPO")
-    os.environ["TARGET_REPO"] = repo
     try:
+        repo = str(canonical_repo(repo))
+        os.environ["TARGET_REPO"] = repo
         _sweep_orphan_sandboxes()
         from harness.config import load_config_safe
         cfg, cfg_err = load_config_safe()
@@ -1190,7 +1223,8 @@ def run_scan(repo: str, confirm_critical: bool = False,
                 state["scan_id"] = _scan_id
 
         try:
-            _agent_registry = AgentRegistry(run_id=str(repo), events_path=agent_events_path)
+            _agent_registry = AgentRegistry(run_id=str(repo), sink=progress,
+                                            events_path=agent_events_path)
         except Exception:
             _agent_registry = None
         if confirm_critical:
@@ -1209,26 +1243,51 @@ def run_scan(repo: str, confirm_critical: bool = False,
         import time as _stage_time
         stage_timings = {}
         def _stage(name, fn):
-            print(f"[pipeline] >>> Stage '{name}' starting...", file=sys.stderr, flush=True)
             _t0 = _stage_time.time()
             try:
                 res = fn()
                 elapsed = round(_stage_time.time() - _t0, 3)
-                print(f"[pipeline] <<< Stage '{name}' completed in {elapsed}s", file=sys.stderr, flush=True)
+                if _PROGRESS is not None:
+                    try:
+                        _PROGRESS.stage_done(name, elapsed, ok=True)
+                    except Exception:
+                        pass
+                else:
+                    print(f"[pipeline] <<< Stage '{name}' completed in {elapsed}s", file=sys.stderr, flush=True)
                 return res
             except Exception as exc:
                 elapsed = round(_stage_time.time() - _t0, 3)
-                print(f"[pipeline] !!! Stage '{name}' failed after {elapsed}s: {exc}", file=sys.stderr, flush=True)
+                if _PROGRESS is not None:
+                    try:
+                        _PROGRESS.stage_done(name, elapsed, ok=False,
+                                             error=f"{type(exc).__name__}: {exc}")
+                    except Exception:
+                        pass
+                else:
+                    print(f"[pipeline] !!! Stage '{name}' failed after {elapsed}s: {exc}", file=sys.stderr, flush=True)
                 raise
             finally:
                 stage_timings[name] = round(_stage_time.time() - _t0, 3)
+
+        def _hunters_stage():
+            result = _fan_out_hunters(
+                state, _safe_max_concurrency(state),
+                agent_registry=_agent_registry)
+            if _PROGRESS is not None:
+                try:
+                    units = len(state.get("fanout_payloads") or [])
+                    produced = len(state.get("findings") or [])
+                    _stage_detail(
+                        "hunters", f"{units} units · {produced} findings")
+                except Exception:
+                    pass
+            return result
 
         _stage("indexer", lambda: apply_update(state, indexer_node(state)))
         _stage("threat_model", lambda: apply_update(state, _call_node(threat_model_node, state, agent_registry=_agent_registry)))
         _stage("hunters_router", lambda: apply_update(state, _call_node(hunters_router, state, agent_registry=_agent_registry)))
         if state.get("fanout_payloads"):
-            _hunt_timings = _stage("hunters", lambda: _fan_out_hunters(
-                state, _safe_max_concurrency(state), agent_registry=_agent_registry))
+            _hunt_timings = _stage("hunters", _hunters_stage)
             for _flavor in ("hunt", "validation", "system_pass"):
                 stage_timings[f"hunters:busy_{_flavor}"] = round(
                     float((_hunt_timings or {}).get(_flavor, 0.0)), 3)
@@ -1257,6 +1316,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
             _obs.finish_scan()
         return dict(state)
     finally:
+        _PROGRESS = _prev_progress
         if _prev_target_repo is None:
             os.environ.pop("TARGET_REPO", None)
         else:

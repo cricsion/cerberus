@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from typing import Any
 
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
 from harness.config import get_default_config, int_setting
+from harness.progress import AgentState
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, run_fail_open)
 from harness.llmjson import extract_structured_items
@@ -14,6 +16,22 @@ from harness.prompts.validation import (OMITTED_NOTE, REFUTE_METHOD,
                                         VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
+
+
+def _stage_line(text: str) -> None:
+    """Print a ``[validator]`` progress line, routed through the UI stage sink
+    (``pipeline._stage_detail``) when one is installed so the reporter folds
+    # these lines into the stage line instead of double-printing.
+    """
+    try:
+        from harness import pipeline as _pipeline
+    except Exception:
+        _pipeline = None
+    sd = getattr(_pipeline, "_stage_detail", None)
+    if sd is not None:
+        sd("validator", text)
+        return
+    print(text, file=sys.stderr, flush=True)
 
 
 def _merge_verdict(base: dict, data: dict) -> dict:
@@ -264,7 +282,8 @@ def _compact_finding(f: dict) -> dict:
 def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                           threat_md: str = "", n_votes: int = 1,
                           repo: str | None = None,
-                          cell_no: int = 0) -> list[dict]:
+                          cell_no: int = 0,
+                          agent_registry: Any = None) -> list[dict]:
     from harness.config import (get_model_kwargs, resolve_call_retries,
                                 resolve_call_timeout)
 
@@ -316,11 +335,18 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 from harness.prompts.validation import build_batch_task
                 msg = build_batch_task(group_name, threat_md, payload,
                                        repo=repo, tools=tool_names)
-                print(f"[validator] unit '{group_name}' cell {cell_no + 1}: "
-                      f"{len(payload)} findings, "
-                      f"{len(msg.encode('utf-8')) // 1024} KB, "
-                      f"vote {_vote}/{n_votes}...",
-                      file=sys.stderr, flush=True)
+                _stage_line(f"[validator] unit '{group_name}' cell {cell_no + 1}: "
+                            f"{len(payload)} findings, "
+                            f"{len(msg.encode('utf-8')) // 1024} KB, "
+                            f"vote {_vote}/{n_votes}...")
+                # One registry handle per LLM call: validator:<unit>:cN:vM —
+                # mirrors trace_suffix so UI/trace use the same identity.
+                _aid = f"validator:{cell_scope}:v{_vote}"
+                if agent_registry is not None:
+                    agent_registry.transition(
+                        _aid, AgentState.running, role="validator",
+                        unit=group_name, parent_stage="validation",
+                        model=mk.get("model"))
 
                 def _call_validator_structured() -> tuple[Any, str]:
                     return run_structured(
@@ -335,11 +361,33 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                                     "vote": str(_vote)},
                         agent=agent)
 
-                parsed, raw_text = run_fail_open(
-                    "validator batch", _call_validator_structured,
-                    default=EMPTY_STRUCTURED, logger=_logger)
-                verdicts: list[dict] = extract_structured_items(
-                    parsed, raw_text, field="verdicts", require_id=True)
+                parsed, raw_text = EMPTY_STRUCTURED, ""
+                verdicts: list[dict] = []
+                try:
+                    parsed, raw_text = run_fail_open(
+                        "validator batch", _call_validator_structured,
+                        default=EMPTY_STRUCTURED, logger=_logger)
+                    verdicts = extract_structured_items(
+                        parsed, raw_text, field="verdicts", require_id=True)
+                except Exception as e:
+                    if agent_registry is not None:
+                        agent_registry.transition(
+                            _aid, AgentState.failed, role="validator",
+                            unit=group_name, parent_stage="validation",
+                            error=type(e).__name__)
+                    raise
+                if agent_registry is not None:
+                    if verdicts:
+                        agent_registry.transition(
+                            _aid, AgentState.succeeded, role="validator",
+                            unit=group_name, parent_stage="validation",
+                            message=f"{len(verdicts)} verdicts")
+                    else:
+                        agent_registry.transition(
+                            _aid, AgentState.failed, role="validator",
+                            unit=group_name, parent_stage="validation",
+                            error=("no reply" if not str(raw_text or "").strip()
+                                   else "unparseable reply"))
                 covered: set[str] = set()
                 for v in verdicts:
                     vid = str(v.get("id", ""))
@@ -427,15 +475,16 @@ def _classify_group(pair: tuple[str, list[dict], list[int]],
 
 def _run_cell(name: str, cell_items: list[dict], ci: int,
               n_cells: int, *, cfg: dict, n_votes: int, threat_md: str,
-              repo: str | None, cell_offset: int = 0) -> list[dict]:
-    print(f"[validator] unit '{name}' cell {ci + 1}/{n_cells}: "
-          f"{len(cell_items)} findings, {n_votes} vote(s)...",
-          file=sys.stderr, flush=True)
+              repo: str | None, cell_offset: int = 0,
+              agent_registry: Any = None) -> list[dict]:
+    _stage_line(f"[validator] unit '{name}' cell {ci + 1}/{n_cells}: "
+                f"{len(cell_items)} findings, {n_votes} vote(s)...")
     try:
         # repo passed only when known; 5-arg test fakes keep the shorter form.
         res = _validate_unit_batch(name, cell_items, cfg, threat_md,
                                    n_votes, repo=repo,
-                                   cell_no=ci + cell_offset)
+                                   cell_no=ci + cell_offset,
+                                   agent_registry=agent_registry)
         if not isinstance(res, list) or len(res) != len(cell_items):
             raise ValueError("misaligned batch result")
         return res
@@ -450,7 +499,8 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
 
 def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
                           threat_md: str, repo: str | None,
-                          cell_offset: int = 0
+                          cell_offset: int = 0,
+                          agent_registry: Any = None
                           ) -> dict[tuple[int, int], list[dict]]:
     tasks = [(gi, cidx)
              for gi, g in enumerate(planned)
@@ -470,7 +520,8 @@ def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
         try:
             res = _run_cell(_name, cell_items, cidx, len(cells),
                             cfg=cfg, n_votes=n_votes, threat_md=threat_md,
-                            repo=repo, cell_offset=cell_offset)
+                            repo=repo, cell_offset=cell_offset,
+                            agent_registry=agent_registry)
             if not isinstance(res, list) or len(res) != len(idx):
                 raise ValueError("misaligned cell result")
             return res
@@ -524,7 +575,8 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
                    units: list[dict] | None = None,
                    max_workers: int | None = None,
                    repo: str | None = None,
-                   cell_offset: int = 0) -> list[dict]:
+                   cell_offset: int = 0,
+                   agent_registry: Any = None) -> list[dict]:
     cfg = cfg or {}
     threat_md = threat_md or ""
     n_votes = _resolve_votes(cfg, votes)
@@ -546,12 +598,12 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     except Exception:
         _vw = 4
     groups = _group_by_unit(todo, units)
-    print(f"[validator] {len(todo)} findings across {len(groups)} partition(s)",
-          file=sys.stderr, flush=True)
+    _stage_line(f"[validator] {len(todo)} findings across "
+                f"{len(groups)} partition(s)")
 
     _cs = _cell_size(cfg)
     planned = [_classify_group(pair, _cs) for pair in groups]
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
-        repo=repo, cell_offset=cell_offset)
+        repo=repo, cell_offset=cell_offset, agent_registry=agent_registry)
     return _reassemble_validation(planned, gated, cell_out)

@@ -405,6 +405,9 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     norm = _findings_from_discovery(parsed, "system", files or [], repo)
     if not norm and raw_text.strip():
         norm = _parse_findings_json(raw_text, "system", files or [], repo)
+    for f in norm:
+        if isinstance(f, dict):
+            f.setdefault("unit", "system")
     seen = {(str(f.get("path", "")).lower(),
             str(f.get("cwe", "")).upper(),
             safe_int(f.get("start_line", 0))) for f in findings}
