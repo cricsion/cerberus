@@ -58,10 +58,6 @@ _ARTIFACTS = (("report.md", "report.md"), ("report.html", "report.html"),
               ("findings.json", "findings.json"),
               ("results.sarif", "sarif"), ("junit.xml", "junit"))
 
-_DOCKER_ALIASES = ("docker", "container")
-_SBX_ALIASES = ("sbx", "microvm", "docker-sandbox", "docker_sandbox")
-
-
 # Small formatting helpers ---------------------------------------------------
 
 
@@ -250,7 +246,7 @@ class ScanReporter:
             conc, effort = "?", "?"
         rows.append(("run", f"conc {conc} · effort {effort} · gate {fail_on}"))
         backend = _sandbox_backend(cfg)
-        if backend in _DOCKER_ALIASES or backend in _SBX_ALIASES:
+        if backend == "docker":
             rows.append(("sandbox", backend))
         options: list[str] = []
         if focus:

@@ -110,17 +110,17 @@ graphify:
 sandbox:
   # local = repo-confined file tools only, NO shell (no `execute` tool;
   # SAST wrappers are the only scanner surface in this mode).
-  # docker/sbx = an `execute` shell tool appears: ONE container/microVM for
-  # the whole run, shared by every agent (hunters, validators, triage,
-  # partitioner), repo mounted read-only, agent-specific HOME/TMPDIR paths
-  # in shared writable scratch
+  # docker = an `execute` shell tool appears: ONE container for the whole
+  # run, shared by every agent (hunters, validators, triage, partitioner),
+  # repo mounted read-only, agent-specific HOME/TMPDIR paths in shared
+  # writable scratch
   backend: ${SANDBOX_BACKEND:-local}
-  # Runner image for docker/sbx
+  # Runner image for docker
   image: ${SANDBOX_IMAGE:-cyber-sandbox:local}
   # Container runtime binary
   docker_bin: ${SANDBOX_DOCKER_BIN:-docker}
   # The runner container is started once per scan; commands are exec'd in
-  # it via `docker exec` (or `sbx exec`). The container is torn down at scan
+  # it via `docker exec`. The container is torn down at scan
   # exit (success, failure, or SIGINT/SIGTERM).
   # Bridge network policy: none = no network inside the sandbox (default);
   # host/bridge = allow network (e.g. for dependency fetching if needed).
@@ -147,21 +147,11 @@ sandbox:
   reset_agent_scratch: ${SANDBOX_RESET_AGENT_SCRATCH:-1}
   # Reap at scan start the sandboxes a killed run left behind. A SIGKILL'd
   # harness (kill -9, host OOM-kill) runs no teardown: atexit never fires and
-  # the SIGTERM handler never sees the signal, so its container or microVM
+  # the SIGTERM handler never sees the signal, so its container
   # outlives it and keeps costing host resources. Only sandboxes this harness
   # created are candidates, and a run that is still alive on this machine
   # (any harness process) is never touched. No-op in local mode.
   sweep_orphans: ${SANDBOX_SWEEP_ORPHANS:-1}
-  sbx:
-    image: ${SBX_TEMPLATE:-cyber-sandbox:local}
-    cpus: ${SBX_CPUS:-2}
-    memory: ${SBX_MEMORY:-4g}
-    skills: ${SBX_SKILLS:-off}
-    pull: ${SBX_PULL:-never}
-    deny_network: ${SBX_DENY_NETWORK:-}
-    allow_network: ${SBX_ALLOW_NETWORK:-osv.dev,api.osv.dev}
-    primary_dir: ${SBX_PRIMARY_DIR:-}
-    bin: ${SBX_BIN:-sbx}
 sast:
   # Scanner caps (env-overridable). The byte cap is the same one-budget value
   # as sandbox.max_output_bytes; findings caps the template list.

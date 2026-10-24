@@ -136,62 +136,15 @@ def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
         "mask_paths": mask_paths,
     }
 
-def _sbx_settings(cfg: dict | None, repo: str | Path | None = None) -> dict:
-    defaults = _sandbox_defaults("sandbox")
-    sbx_defaults = _sandbox_defaults("sandbox", "sbx")
-    section = _sandbox_section(cfg).get("sbx") or {}
-    if not isinstance(section, dict):
-        section = {}
-
-    def _shared(key: str) -> Any:
-        value = _sandbox_setting(cfg, key, defaults[key])
-        return section.get(key, value)
-
-    def _sbx(key: str) -> Any:
-        """sandbox.sbx key -> direct SBX_<KEY> env -> harness/config/default.yaml."""
-        value = section.get(key)
-        if value not in (None, ""):
-            return value
-        env_value = os.environ.get(f"SBX_{key.upper()}")
-        return env_value if env_value not in (None, "") else sbx_defaults.get(key)
-
-    deny_network = _host_list(_sbx("deny_network") or "")
-
-    # Per-sandbox egress allow rules (never global); default: the OSV API (the image no longer bundles the vuln DB).
-    raw_allowed = section.get("allow_network")
-    if raw_allowed in (None, ""):
-        raw_allowed = (os.environ.get("SBX_ALLOW_NETWORK")
-                       or sbx_defaults.get("allow_network") or "")
-    allowed = _host_list(raw_allowed)
-
-    return {
-        "image": str(section.get("image")
-                     or _sandbox_setting(cfg, "image", defaults["image"])),
-        "cpus": str(_sbx("cpus")),
-        "memory": str(_sbx("memory")),
-        "skills": str(_sbx("skills")),
-        "pull": str(_sbx("pull")),
-        "deny_network": deny_network,
-        "allow_network": allowed,
-        "disable_telemetry": True,
-        "primary_dir": _sbx("primary_dir") or None,
-        "command_timeout": _coerce_int("command_timeout",
-                                       _shared("command_timeout")),
-        "max_output_bytes": _coerce_int("max_output_bytes",
-                                        _shared("max_output_bytes")),
-        "sbx_bin": str(_sbx("bin")),
-        "rules_dir": str(_shared("rules_dir")),
-    }
-
-# One row per backend: name, `sandbox.backend` aliases, settings builder
-# (called as (cfg, repo) for every backend), and the module members the facade
-# drives it through (backend class, run getter, shutdown). A backend lives
-# entirely in its module; this table is the only place the facade names one.
+# One row per backend: name, settings builder (called as (cfg, repo) for every
+# backend), and the module members the facade drives it through (backend
+# class, run getter, shutdown). `sandbox.backend` must equal the name exactly;
+# anything else falls back to the local backend (resolve_backend). A backend
+# lives entirely in its module; this table is the only place the facade names
+# one.
 _BACKENDS: tuple[tuple[Any, ...], ...] = (
-    ("docker", ("docker", "container"), _docker_settings,
+    ("docker", _docker_settings,
      "DockerSandboxBackend", "get_run_sandbox", "shutdown_run_sandbox"),
-    ("sbx", ("sbx", "microvm", "docker-sandbox", "docker_sandbox"),
-     _sbx_settings, "SbxBackend", "get_sbx_run", "shutdown_sbx"),
 )
 
 def _backend_module(name: str) -> Any:
@@ -211,8 +164,8 @@ def resolve_backend(cfg: dict | None, repo: str | Path,
     defaults = _sandbox_defaults("sandbox")
     which = str(_sandbox_setting(cfg, "backend",
                                  defaults["backend"])).strip().lower()
-    for name, aliases, build_settings, cls_name, getter, _shutdown in _BACKENDS:
-        if which not in aliases:
+    for name, build_settings, cls_name, getter, _shutdown in _BACKENDS:
+        if which != name:
             continue
         module = _backend_module(name)
         settings = build_settings(cfg, repo)

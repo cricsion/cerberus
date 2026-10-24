@@ -52,11 +52,9 @@ def agent_env(agent_id: str) -> list[tuple[str, str]]:
 
 
 class RunSandboxBase(ABC):
-    # sbx must mkdir the shared cache dirs; docker mounts /work already.
-    EXTRA_EXEC_MKDIR_DIRS: tuple[str, ...] = ()
-    # How long removing the sandbox may take (sbx rm is a VM teardown).
+    # How long removing the sandbox may take (docker rm -f).
     DESTROY_TIMEOUT: float = 60
-    # How long a create may take (sbx boots a microVM).
+    # How long a create may take (docker run).
     CREATE_TIMEOUT: float = 120
     cli_label: str = ""
 
@@ -129,11 +127,6 @@ class RunSandboxBase(ABC):
             return
         if was_started:
             self.remove()
-        # sbx still cleans its throwaway primary workspace via _after_close.
-        self._after_close()
-
-    def _after_close(self) -> None:
-        ...
 
     @abstractmethod
     def destroy_argv(self) -> list[str]:
@@ -168,10 +161,6 @@ class RunSandboxBase(ABC):
     def _exec_prefix(self) -> list[str]:
         return [self.cli_bin, "exec", *self._workdir_args()]
 
-    def _exec_mkdir_dirs(self) -> str:
-        return " ".join(['"$HOME"', '"$TMPDIR"',
-                         *(f'"{d}"' for d in self.EXTRA_EXEC_MKDIR_DIRS)])
-
     def exec(self, *, agent_id: str, command: str, marker: str, timeout: int,
              max_output_bytes: int) -> tuple[str, int | None, bool]:
         argv = [*self._exec_prefix(),
@@ -182,7 +171,7 @@ class RunSandboxBase(ABC):
                 "timeout", "-k", "5", str(timeout),
                 "/bin/bash", "-c",
                 f"{cli_utils.EXEC_TAG}={marker}; "
-                f"mkdir -p {self._exec_mkdir_dirs()}; {command}"]
+                f"mkdir -p \"$HOME\" \"$TMPDIR\"; {command}"]
         byte_cap = (max_output_bytes or DEFAULT_MAX_OUTPUT_BYTES) * _BYTE_CAP_FACTOR
         return cli_utils.run_bounded(argv, timeout=timeout + 15,
                                      byte_cap=byte_cap, env=self._child_env())
@@ -251,7 +240,7 @@ class RunRegistry:
 ORPHAN_IDLE_SECONDS = 6 * 3600
 
 # Deliberately narrow: the sweep must match only sandboxes this harness created.
-RUN_NAME_RE = re.compile(r"^cyber-(?:sandbox-run|sbx)-[0-9a-f]{12}$")
+RUN_NAME_RE = re.compile(r"^cyber-sandbox-run-[0-9a-f]{12}$")
 
 
 def orphan_targets(listed: Iterable[str], *,

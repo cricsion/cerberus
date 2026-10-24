@@ -11,7 +11,6 @@ the shell (when it exists) is the only extra capability.
 |---|---|---|---|---|
 | `local` (default, resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
 | `docker` (opt-in) | read-only, in-process | same | `execute` | one container per run, egress per `sandbox.network` (default `none`) |
-| `sbx` (opt-in) | read-only, in-process | same | `execute` | one microVM per run |
 
 ## local
 
@@ -90,8 +89,7 @@ control inside the sandbox; containment is the sandbox itself.
 **Credential files are masked, not just noticed**: Docker places a read-only
 `/dev/null` bind over each detected file's in-repo resolved target, so a
 credential-named symlink does not expose its destination. Reads return EOF;
-writes fail on the read-only bind. Only Docker can mask paths this way — sbx
-mounts the workspace whole and can only warn. The mask cannot be a tmpfs:
+writes fail on the read-only bind. The mask cannot be a tmpfs:
 tmpfs mounts onto directories only, and Docker refuses the whole container
 ("not a directory") when a plain-file credential is masked.
 
@@ -99,22 +97,6 @@ tmpfs mounts onto directories only, and Docker refuses the whole container
 
 A harness that EXITS reaps its sandbox (CLI `finally`, `atexit`, SIGTERM). A
 harness that is **SIGKILL'd** — `kill -9`, a host OOM-kill, power loss — runs
-none of that, so its sandbox outlives it: a container nobody uses, or an idle
-microVM costing host CPU. Local sandboxes never expire on their own
-(`sbx settings list` has no TTL — that is cloud-only), so something has to reap.
-
-**The operator's answer is `sbx prune`**, which the CLI documents as *"safe to
-run habitually"* because it only ever removes **stopped** sandboxes (idle
-sandboxes auto-stop, and the next `sbx exec` restarts one in under a second):
-
-```bash
-sbx prune --filter until=168h     # remove anything stopped over a week ago
-sbx prune --dry-run               # see what it would take first
-```
-
-Docker has no equivalent for a *running* container, so the label is the
-operator's handle there:
-
 ```bash
 docker ps --filter label=cyber.agent.sandbox=run
 docker rm -f <name>
@@ -123,19 +105,18 @@ docker rm -f <name>
 **The harness's own sweep** runs at scan start (`sandbox.sweep_orphans`,
 default on) and is name-scoped, so it never touches a sandbox this harness did
 not create. It also spares any run still alive on this machine — any harness
-process, not just this one — and both backends establish that from what their
-daemon already publishes, because both publish it:
+process, not just this one — established from what the Docker daemon already
+publishes:
 
-| | liveness signal | query |
-|---|---|---|
-| `sbx` | `last_used_at` per sandbox (advances on every exec) | `sbx ls --json` |
-| `docker` | `exec_start` events, one per command the daemon ran | `docker events --filter container=NAME` |
+| liveness signal | query |
+|---|---|
+| `exec_start` events, one per command the daemon ran | `docker events --filter container=NAME` |
 
-So the rule is the same on both: our name pattern, not one this process owns
+So the rule: our name pattern, not one this process owns
 (that is what protects a concurrent scan — the registry, checked before any
 age), and idle past `ORPHAN_IDLE_SECONDS` (6h — longer than any live run's
 quiet gap, and a false positive self-heals because the sandbox is recreated on
-the next command). A container or sandbox whose history the daemon can no
+the next command). A container whose history the daemon can no
 longer report is left alone rather than removed: never delete what you cannot
 measure.
 
@@ -144,13 +125,6 @@ to forge, and nothing to lose when the harness is SIGKILL'd, which is the
 whole point, since the process that would have maintained it is exactly the one
 that died. The name pattern is also the only thing keeping the sweep off a
 sandbox this harness did not create, so it is not a security boundary either.
-
-**What a SIGKILL'd run leaves, and where it goes:** `sbx rm` deletes a
-sandbox's state, Git worktrees and scoped secrets, but never the throwaway
-workspace on the host — so a killed run leaks a pair. The sweep takes both:
-each workspace is named after its sandbox, so removing a dead sandbox removes
-`cyber-sbx-primary-<same id>` with it. A graceful run already removes its own
-(close → `_after_close`), which is why only the kill -9 case needs this.
 
 ### One container per run, shared by every agent
 
@@ -209,65 +183,28 @@ fresh sandbox for the verifier.
 Knob: `sandbox.reset_agent_scratch` (`SANDBOX_RESET_AGENT_SCRATCH`, default
 on). It is a **no-op in `local` mode**, where there is no sandbox to reset.
 
-## sbx (Docker Sandboxes)
-
-One **microVM** per run (own kernel, own Docker daemon inside, no path to the
-host), shared by every agent. Design + validated CLI facts:
-`sbx-sandbox-design.md`.
-
-Setup (once per machine):
-
-```bash
-brew install docker/tap/sbx && sbx login
-sbx policy init balanced          # egress: package managers/registries allowed
-docker image save cyber-sandbox:local -o /tmp/t.tar && sbx template load /tmp/t.tar
-```
-
-Then `sandbox.backend: sbx` (or `SANDBOX_BACKEND=sbx`).
-
-What the backend guarantees:
-
-| property | how |
-|---|---|
-| repo read-only | sbx refuses `:ro` on the primary workspace, so the repo is attached as an extra `<repo>:ro` workspace and every exec runs with `--workdir <repo>` |
-| one sandbox per run | created on the first agent command, removed at scan teardown (`shutdown_run_sandbox()`, CLI `finally` + atexit) |
-| per-agent scratch | `HOME=/work/agent-<agent-id>`, `TMPDIR=/tmp/agent-<agent-id>`, pycache per agent (the `agent-` prefix is what the phase reset above matches) |
-| shared package caches | `/work/_shared/pip`, `/work/_shared/npm` (downloads shared, installs per-agent) |
-| egress | the machine policy (`balanced`); the harness **never** mutates global policy — only per-sandbox rules: `--deny-network` hosts from `sandbox.sbx.deny_network` and allow rules from `sandbox.sbx.allow_network` (default `osv.dev,api.osv.dev`) |
-
-Accepted deltas vs the docker backend: **no** `--cap-drop`/seccomp/
-`--read-only`/`--pids-limit` (the microVM replaces them); the toolchain image
-must be loaded into the *sandbox runtime* with `sbx template load` (it does
-not share your host Docker image store); VM disk persists until `sbx rm`.
-
-Hardening the operator should apply once (the harness cannot):
-`sbx settings set ssh.agentForwardingEnabled false && sbx daemon restart` —
-sandbox processes can otherwise ask your host SSH agent to sign, which the
-scan agents never need.
-
 ## Code layout
 
-The two sandbox backends are deliberately thin: they differ in *which CLI*
-they drive and nothing else, so everything they share lives in its own
-module and each backend supplies argv.
+A sandbox backend is deliberately thin: it supplies *which CLI* it drives and
+the argv, while everything the backends share lives in its own module.
 
 | module | owns |
 |---|---|
-| `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of all three modes, and local mode itself) |
-| `cli_utils.py` | the two subprocess seams (bounded / fixed output), the exec tag, the agent-id slug — one monkeypatch point for both backends |
-| `validation.py` | setting validators that fail at construction, before any container or VM exists |
+| `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of both modes, and local mode itself) |
+| `cli_utils.py` | the two subprocess seams (bounded / fixed output), the exec tag, the agent-id slug — one monkeypatch point for the shell backend |
+| `validation.py` | setting validators that fail at construction, before any container exists |
 | `run_base.py` | `RunSandboxBase`: the whole run-sandbox lifecycle (create-once, per-agent env, phase reset, mark-dead, remove) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
 | `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract, with hooks for the two recovery paths that genuinely differ |
-| `docker_backend.py` / `sbx_backend.py` | the CLI argv, the create failure advice, and each backend's recovery hook |
+| `docker_backend.py` | the CLI argv, the create failure advice, and its recovery hook |
 
-Adding a third backend means one `RunSandboxBase` subclass, one
+Adding another backend means one `RunSandboxBase` subclass, one
 `SandboxShellBackend` subclass, and a registry line — no copy-pasted
 lifecycle.
 
 
 ## Run-sandbox filesystem continuity
 
-A `docker` or `sbx` run shares one sandboxed filesystem across all agents of
+A `docker` run shares one sandboxed filesystem across all agents of
 the scan: writes to sandbox scratch survive from one agent to the next until
 scan teardown. That state is **shared and mutable run state**, not durable
 agent memory. It never becomes LangGraph checkpointer/store state, thread

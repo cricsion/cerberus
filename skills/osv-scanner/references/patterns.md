@@ -77,7 +77,7 @@ SPDX and CycloneDX are both auto-detected. When scanning a directory recursively
 
 ### Pattern E — manifests, lockfiles, and `--experimental-no-resolve`
 
-Lockfiles and SBOMs list *resolved* versions, so they are the deterministic input. Manifest-only trees are weaker: at 1.9.2, Maven `pom.xml` transitive resolution is enabled by default and fetches package metadata from the deps.dev API. That API is outside the sbx allowlist (`osv.dev`, `api.osv.dev`) and may be unreachable under `network=none`, so resolution can fail with exit `129` (or produce a partial graph).
+Lockfiles and SBOMs list *resolved* versions, so they are the deterministic input. Manifest-only trees are weaker: at 1.9.2, Maven `pom.xml` transitive resolution is enabled by default and fetches package metadata from the deps.dev API. That API may be unreachable under `network=none`, so resolution can fail with exit `129` (or produce a partial graph).
 
 `--experimental-no-resolve` disables transitive resolution:
 
@@ -96,4 +96,4 @@ osv-scanner --experimental-licenses-summary <dir>
 osv-scanner --experimental-licenses="MIT,Apache-2.0,BSD-3-Clause" <dir>
 ```
 
-Because deps.dev is **not** in the sbx allowlist and may be unreachable under `network=none`, treat these commands as unavailable in the normal scan path; a deps.dev failure surfaces as exit `129`. If the flag does run, the output is a triage hint, not legal compliance — license strings in package metadata are inconsistent (`SEE LICENSE IN file`, mis-tagged dual licenses, vendored sub-deps with their own terms).
+Because deps.dev may be unreachable under `network=none`, treat these commands as unavailable in the normal scan path; a deps.dev failure surfaces as exit `129`. If the flag does run, the output is a triage hint, not legal compliance — license strings in package metadata are inconsistent (`SEE LICENSE IN file`, mis-tagged dual licenses, vendored sub-deps with their own terms).

@@ -11,6 +11,6 @@
 - Code-flaw / SAST → `semgrep` / `opengrep`.
 - Finding *unused* deps → `knip`, `depcheck`.
 - Container-filesystem and OS-package CVE scans → out of scope at this pin; image scanning needs a docker daemon the sandbox does not have.
-- License-policy enforcement → 1.9.2 only has *experimental* license flags, and they depend on the deps.dev API, which is not in the sbx allowlist and may be unreachable under `network=none`. Treat licensing as out of scope.
+- License-policy enforcement → 1.9.2 only has *experimental* license flags, and they depend on the deps.dev API, which may be unreachable under `network=none`. Treat licensing as out of scope.
 
 Scanning needs egress to `api.osv.dev` at run time. The target repo mount is read-only, so choose a lockfile/SBOM path and write output under `$HOME` (per-agent scratch; `/work` itself is shared by concurrent agents).

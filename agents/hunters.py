@@ -308,7 +308,7 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
     task = build_discovery_task(name, repo, files or [], cand_ctx, threat_md,
                                 focus=focus_hint(focus))
     from harness.sandbox import acquired_backend
-    # One backend per unit: local = no shell; docker/sbx = shared-container shell. Fail-soft.
+    # One backend per unit: local = no shell; docker = shared-container shell. Fail-soft.
     with acquired_backend(cfg, repo, label=f"unit-{name}") as backend:
         if backend is None:
             print(f"[hunters] {name}: no sandbox backend; "

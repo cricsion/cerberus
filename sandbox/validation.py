@@ -1,10 +1,8 @@
 """Setting validation shared by the backends: every function raises
-``ValueError`` at construction time, before a container or microVM exists."""
+``ValueError`` at construction time, before a container exists."""
 from __future__ import annotations
 
-from harness.config import config_default
-
-from .settings_defaults import NETWORK, SBX_PULL, SBX_SKILLS
+from .settings_defaults import NETWORK
 
 
 def validate_image(image: str) -> str:
@@ -22,8 +20,6 @@ def validate_image(image: str) -> str:
 NETWORK_MODES = ("none", "bridge")
 
 DEFAULT_NETWORK = NETWORK
-DEFAULT_SKILLS = SBX_SKILLS
-DEFAULT_PULL = SBX_PULL
 
 
 def validate_network(network: str) -> str:
@@ -35,46 +31,3 @@ def validate_network(network: str) -> str:
             "none = no egress; host would join the host network namespace "
             "and is refused)")
     return mode
-
-
-def validate_cpus(cpus: object) -> str:
-    """sbx cpu share: a bare count, 0 meaning "the runtime default"."""
-    try:
-        n = int(str(cpus or 0).strip() or 0)
-    except (TypeError, ValueError) as exc:
-        # Same contract as validate_memory/validate_image: garbage config
-        # fails the resolve (callers degrade to the local backend), it is
-        # never silently coerced to the runtime default.
-        raise ValueError(f"invalid sandbox.sbx.cpus {cpus!r}: expected a "
-                         "bare count (0 = runtime default)") from exc
-    if n < 0:
-        n = 0
-    return str(n)
-
-
-def validate_memory(memory: str) -> str:
-    """sbx takes binary units: 512m, 2g, 8g, or a bare MiB count."""
-    m = str(memory or "").strip().lower()
-    if not m:
-        return str(config_default("sandbox.memory"))
-    if not ((m[-1] in "gmk" and m[:-1].isdigit()) or m.isdigit()):
-        raise ValueError(
-            f"invalid sandbox.sbx.memory {memory!r}: expected binary units "
-            "such as 512m, 2g or 8g")
-    return m
-
-
-def validate_skills(mode: str) -> str:
-    m = str(mode or DEFAULT_SKILLS).strip().lower()
-    if m not in ("off", "readonly", "readwrite"):
-        raise ValueError(
-            f"invalid sandbox.sbx.skills {mode!r}: expected off|readonly|readwrite")
-    return m
-
-
-def validate_pull(policy: str) -> str:
-    p = str(policy or DEFAULT_PULL).strip().lower()
-    if p not in ("always", "missing", "never"):
-        raise ValueError(
-            f"invalid sandbox.sbx.pull {policy!r}: expected always|missing|never")
-    return p

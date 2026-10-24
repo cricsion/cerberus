@@ -132,11 +132,11 @@ class QuestionList(BaseModel):
                     "material is left open.")
 
 
-# Filesystem tools are confined to the target repo; local mode has no shell; `execute` (Docker/sbx) runs inside the sandbox only.
+# Filesystem tools are confined to the target repo; local mode has no shell; `execute` (Docker) runs inside the sandbox only.
 READ_ONLY_NOTE = (
     "The filesystem tools (read_file/grep/glob/ls) are confined to the target "
     "repository. If `execute` is available, it runs inside the configured "
-    "Docker or sbx sandbox. Run target-controlled code, tests, or fuzzers only "
+    "Docker sandbox. Run target-controlled code, tests, or fuzzers only "
     "when that sandbox has network egress disabled, and only as short, "
     "targeted checks after reading the exact command and relevant test script. "
     "Use dummy inputs, isolated loopback only, and keep every write in sandbox "
