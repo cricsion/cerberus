@@ -225,6 +225,92 @@ RUN set -eu; \
     rm -f /tmp/gosec.tar.gz; \
     gosec --version
 
+ARG PWNTOOLS_VERSION
+ARG CAPSTONE_VERSION
+ARG BINWALK_VERSION
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gdb afl++ valgrind qemu-user-static binutils file unzip \
+        dnsutils netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir "pwntools==${PWNTOOLS_VERSION}" \
+        "capstone==${CAPSTONE_VERSION}" \
+        "git+https://github.com/ReFirmLabs/binwalk@v${BINWALK_VERSION}" \
+    && command -v gdb afl-fuzz valgrind objdump binwalk
+
+ARG FFUF_VERSION
+ARG FFUF_SHA256_X64
+ARG FFUF_SHA256_ARM64
+ARG NUCLEI_VERSION
+ARG NUCLEI_SHA256_X64
+ARG NUCLEI_SHA256_ARM64
+ARG HTTPX_VERSION
+ARG HTTPX_SHA256_X64
+ARG HTTPX_SHA256_ARM64
+ARG KATANA_VERSION
+ARG KATANA_SHA256_X64
+ARG KATANA_SHA256_ARM64
+ARG GAU_VERSION
+ARG GAU_SHA256_X64
+ARG GAU_SHA256_ARM64
+RUN set -eu; \
+    case "${TARGETARCH}" in \
+      amd64) garch=amd64;; \
+      arm64) garch=arm64;; \
+      *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
+    esac; \
+    if [ "${garch}" = "amd64" ]; then \
+      ffuf_sha="${FFUF_SHA256_X64}"; nuclei_sha="${NUCLEI_SHA256_X64}"; \
+      httpx_sha="${HTTPX_SHA256_X64}"; katana_sha="${KATANA_SHA256_X64}"; \
+      gau_sha="${GAU_SHA256_X64}"; \
+    else \
+      ffuf_sha="${FFUF_SHA256_ARM64}"; nuclei_sha="${NUCLEI_SHA256_ARM64}"; \
+      httpx_sha="${HTTPX_SHA256_ARM64}"; katana_sha="${KATANA_SHA256_ARM64}"; \
+      gau_sha="${GAU_SHA256_ARM64}"; \
+    fi; \
+    curl -fsSL "https://github.com/ffuf/ffuf/releases/download/v${FFUF_VERSION}/ffuf_${FFUF_VERSION}_linux_${garch}.tar.gz" -o /tmp/ffuf.tgz; \
+    echo "${ffuf_sha}  /tmp/ffuf.tgz" | sha256sum -c -; \
+    tar -xzf /tmp/ffuf.tgz -C /usr/local/bin ffuf; \
+    curl -fsSL "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION}_linux_${garch}.zip" -o /tmp/nuclei.zip; \
+    echo "${nuclei_sha}  /tmp/nuclei.zip" | sha256sum -c -; \
+    unzip -o -q /tmp/nuclei.zip -d /tmp/nuclei-out nuclei; \
+    mv /tmp/nuclei-out/nuclei /usr/local/bin/nuclei; \
+    curl -fsSL "https://github.com/projectdiscovery/httpx/releases/download/v${HTTPX_VERSION}/httpx_${HTTPX_VERSION}_linux_${garch}.zip" -o /tmp/httpx.zip; \
+    echo "${httpx_sha}  /tmp/httpx.zip" | sha256sum -c -; \
+    unzip -o -q /tmp/httpx.zip -d /tmp/httpx-out httpx; \
+    mv /tmp/httpx-out/httpx /usr/local/bin/httpx; \
+    curl -fsSL "https://github.com/projectdiscovery/katana/releases/download/v${KATANA_VERSION}/katana_${KATANA_VERSION}_linux_${garch}.zip" -o /tmp/katana.zip; \
+    echo "${katana_sha}  /tmp/katana.zip" | sha256sum -c -; \
+    unzip -o -q /tmp/katana.zip -d /tmp/katana-out katana; \
+    mv /tmp/katana-out/katana /usr/local/bin/katana; \
+    curl -fsSL "https://github.com/lc/gau/releases/download/v${GAU_VERSION}/gau_${GAU_VERSION}_linux_${garch}.tar.gz" -o /tmp/gau.tgz; \
+    echo "${gau_sha}  /tmp/gau.tgz" | sha256sum -c -; \
+    tar -xzf /tmp/gau.tgz -C /usr/local/bin gau; \
+    chmod 0755 /usr/local/bin/ffuf /usr/local/bin/nuclei /usr/local/bin/httpx \
+             /usr/local/bin/katana /usr/local/bin/gau; \
+    rm -rf /tmp/ffuf.tgz /tmp/nuclei.zip /tmp/nuclei-out /tmp/httpx.zip \
+           /tmp/httpx-out /tmp/katana.zip /tmp/katana-out /tmp/gau.tgz; \
+    command -v ffuf nuclei httpx katana gau
+
+ARG SQLMAP_VERSION
+ARG ARJUN_VERSION
+RUN pip install --no-cache-dir \
+        "sqlmap==${SQLMAP_VERSION}" \
+        "arjun==${ARJUN_VERSION}" \
+    && command -v sqlmap arjun
+
+ARG MITMPROXY_VERSION
+RUN pip install --no-cache-dir --target /opt/mitmproxy \
+        "mitmproxy==${MITMPROXY_VERSION}" \
+        "bcrypt<5" \
+    && printf '%s\n' \
+        '#!/bin/sh' \
+        '# mitmdump runner: isolated deps (own mitmproxy tree), pinned deps untouched.' \
+        'exec env PYTHONPATH=/opt/mitmproxy python3 /opt/mitmproxy/bin/mitmdump "$@"' \
+        > /usr/local/bin/mitmdump \
+    && chmod 0755 /usr/local/bin/mitmdump \
+    && command -v mitmdump \
+    && env PYTHONPATH=/opt/mitmproxy python3 -c "import mitmproxy"
+
 # The harness's OWN custom rules (always applied by semgrep_scan on the
 # host). Copied in so an in-container `semgrep --config /opt/scan-rules/
 # harness` matches host behavior EXACTLY. Registry packs (p/...) are NOT

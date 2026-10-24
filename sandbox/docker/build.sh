@@ -45,6 +45,13 @@ for v in GITLEAKS_VERSION GITLEAKS_SHA256_X64 GITLEAKS_SHA256_ARM64 \
          TRUFFLEHOG_VERSION TRUFFLEHOG_SHA256_X64 TRUFFLEHOG_SHA256_ARM64 \
          GOSEC_VERSION GOSEC_SHA256_X64 GOSEC_SHA256_ARM64 \
          NJSSCAN_VERSION ATHERIS_VERSION FLAWFINDER_VERSION \
+         PWNTOOLS_VERSION CAPSTONE_VERSION BINWALK_VERSION \
+         FFUF_VERSION FFUF_SHA256_X64 FFUF_SHA256_ARM64 \
+         NUCLEI_VERSION NUCLEI_SHA256_X64 NUCLEI_SHA256_ARM64 \
+         HTTPX_VERSION HTTPX_SHA256_X64 HTTPX_SHA256_ARM64 \
+         KATANA_VERSION KATANA_SHA256_X64 KATANA_SHA256_ARM64 \
+         GAU_VERSION GAU_SHA256_X64 GAU_SHA256_ARM64 \
+         SQLMAP_VERSION ARJUN_VERSION MITMPROXY_VERSION \
          WITH_NODE NODE_VERSION CODEGRAPH_VERSION WITH_GO GO_VERSION; do
     if [[ -n "${!v:-}" ]]; then
         ARGS+=(--build-arg "$v=${!v}")
@@ -76,7 +83,20 @@ echo "[smoke] jq + skills"
 docker run --rm "$IMAGE_TAG" jq --version
 docker run --rm "$IMAGE_TAG" sh -c 'test -f /opt/harness-skills/gitleaks/SKILL.md && test -f /opt/harness-skills/osv-scanner/SKILL.md && test -f /opt/harness-skills/checkov/SKILL.md'
 docker run --rm "$IMAGE_TAG" sh -c 'for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done'
+docker run --rm "$IMAGE_TAG" sh -c 'cd /opt/harness-skills && for t in \
+    gdb afl valgrind pwntools binwalk httpx katana gau arjun; do \
+    test -s "$t/SKILL.md" || exit 1; done && echo "offensive runbooks ok"'
 docker run --rm "$IMAGE_TAG" cat /opt/harness-skills/gitleaks/SKILL.md | diff -q - harness/skills/gitleaks/SKILL.md
+
+echo "[smoke] Tier-1 analysis toolchain (debug/RE/fuzz/extract)"
+docker run --rm "$IMAGE_TAG" sh -c 'command -v gdb valgrind objdump afl-fuzz binwalk pwn'
+docker run --rm "$IMAGE_TAG" sh -c 'gdb --version | head -1 && valgrind --version && objdump --version | head -1'
+docker run --rm "$IMAGE_TAG" sh -c 'python3 -c "import pwn, binwalk; print(\"pwntools+binwalk ok\")"'
+docker run --rm "$IMAGE_TAG" sh -c 'binwalk --help >/dev/null 2>&1 && echo "binwalk CLI ok"'
+
+echo "[smoke] Tier-2 dynamic web/API binaries"
+docker run --rm "$IMAGE_TAG" sh -c 'ffuf -V && nuclei -version && httpx -version && katana -version'
+docker run --rm "$IMAGE_TAG" sh -c 'command -v gau sqlmap arjun mitmdump && sqlmap --version && mitmdump --version'
 
 # codegraph CLI (D9/D10): only present on WITH_NODE=1 lanes.
 if [[ "${WITH_NODE:-0}" == "1" ]]; then
@@ -108,6 +128,17 @@ printf 'import os\nos.system("echo " + input())\n' > "$TMP_REPO/evil.py"
 docker run --rm --network none -v "$TMP_REPO:/scan:ro" "$IMAGE_TAG" \
     semgrep scan --config /opt/scan-rules/harness --metrics off --quiet /scan
 rm -rf "$TMP_REPO"
+
+echo "[smoke] vendored upstream rules fire offline (weak-crypto fixture)"
+TMP_CRYPTO="$(mktemp -d)"
+printf 'import cryptography\n_insecure = cryptography.hazmat.primitives.hashes.MD5()\n' > "$TMP_CRYPTO/a.py"
+docker run --rm --network none -v "$TMP_CRYPTO:/scan:ro" "$IMAGE_TAG" sh -c \
+    'semgrep scan --config /opt/scan-rules/harness/vendor/semgrep-rules --metrics off /scan | grep -q insecure-hash-algorithm'
+rm -rf "$TMP_CRYPTO"
+
+echo "[smoke] vendored-rules provenance (versions.env rev named in baked NOTICE.md)"
+[[ -n "${SEMGREP_RULES_REV:-}" ]] || { echo "SEMGREP_RULES_REV missing in $VERSIONS_FILE" >&2; exit 1; }
+docker run --rm "$IMAGE_TAG" sh -c "grep -qF '${SEMGREP_RULES_REV}' /opt/scan-rules/harness/vendor/semgrep-rules/NOTICE.md"
 
 echo "[smoke] checkov JSON parses offline"
 TMP_IAC="$(mktemp -d)"
