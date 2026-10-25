@@ -1,38 +1,10 @@
 from pydantic import BaseModel, Field
 
+from harness.prompts.engine import block
+
 
 # Output contract for both swarm stages and the synthesizer; mirrors the threat-model skill's schema contract.
-SCHEMA_CONTRACT = (
-    "Emit markdown with these eight sections, headings exactly:\n"
-    "# Threat Model: <name>\n"
-    "## 1. System context — 1-3 paragraphs of prose: what it is, who uses it, "
-    "where it runs.\n"
-    "## 2. Assets — table: | asset | description | sensitivity | with "
-    "sensitivity in {low, medium, high, critical}.\n"
-    "## 3. Entry points & trust boundaries — table: | entry_point | "
-    "description | trust_boundary | reachable_assets |. One row per place "
-    "untrusted input enters or privilege changes. Supply-chain, build-time, "
-    "and infra/IAM surfaces count even though no runtime input crosses them.\n"
-    "## 4. Threats — table: | id | threat | actor | surface | asset | impact "
-    "| likelihood | status | controls | evidence |. One row per "
-    "actor-wants-outcome pair at the level where it survives a patch. Closed "
-    "enums: actor in {remote_unauth, remote_auth, adjacent_network, local_user, "
-    "local_admin, supply_chain, insider}; impact in {low, medium, high, "
-    "critical, existential}; likelihood in {very_rare, rare, possible, likely, "
-    "almost_certain}; status in {unmitigated, partially_mitigated, mitigated, "
-    "risk_accepted}. Sort by (impact, likelihood) descending, id T1, T2, ...\n"
-    "## 5. Deprioritized — table: | threat | reason | for threats considered "
-    "and parked.\n"
-    "## 6. Open questions — bullet list of what the code could not answer.\n"
-    "## 7. Provenance — bullets: mode, date, target, inputs, owner.\n"
-    "## 8. Recommended mitigations — table: | mitigation | threat_ids | "
-    "closes_class | effort | with closes_class in {yes, partial} and effort in "
-    "{S, M, L}; one class-level control per row, not a per-bug patch.\n"
-    "Rules: threats survive a patch; CVEs/commits are evidence in the evidence "
-    "column only. Every section 3 entry point must be named in at least one "
-    "section 4 surface cell. At least one threat row must have an EMPTY "
-    "evidence cell (the STRIDE gap-fill)."
-)
+SCHEMA_CONTRACT = block("threat/schema_contract")
 
 
 class SwarmEntryPoint(BaseModel):
@@ -133,52 +105,12 @@ class QuestionList(BaseModel):
 
 
 # Filesystem tools are confined to the target repo; local mode has no shell; `execute` (Docker) runs inside the sandbox only.
-READ_ONLY_NOTE = (
-    "The filesystem tools (read_file/grep/glob/ls) are confined to the target "
-    "repository. If `execute` is available, it runs inside the configured "
-    "Docker sandbox. Run target-controlled code, tests, or fuzzers only "
-    "when that sandbox has network egress disabled, and only as short, "
-    "targeted checks after reading the exact command and relevant test script. "
-    "Use dummy inputs, isolated loopback only, and keep every write in sandbox "
-    "scratch; do not run setup or install scripts. If "
-    "egress is restricted, full, or unknown, use execute only for read-only "
-    "inspection and static checks; do not run repository code. Put generated "
-    "output only in sandbox scratch. Never modify source, deploy, install "
-    "packages, download code, make network requests, contact external "
-    "services, or run unbounded fuzzing. Respect command and resource limits. "
-    "If execute is unavailable, continue with static analysis. A failed, "
-    "blocked, or untested check is inconclusive, not evidence that a threat "
-    "is absent."
-)
+READ_ONLY_NOTE = block("threat/read_only_note")
 
 # A SEED, not a checklist: one concrete token per row sets the specificity bar.
-SURFACE_GREP_TABLE = (
-    "Surface lookup seeds (extend with the target's own idioms):\n"
-    "- Network: socket listen/accept/bind; HTTP route definitions "
-    "(e.g. @app.route, app.get); RPC/gRPC/GraphQL service definitions\n"
-    "- File / format parsing: file-open calls (e.g. open(); format "
-    "magic-byte checks; 'parse'/'decode'/'load'/'unmarshal' function names\n"
-    "- CLI / env: argv parsers (e.g. argparse); env reads (e.g. getenv)\n"
-    "- Deserialization: language-native deserializers on external data "
-    "(e.g. pickle, ObjectInputStream, yaml.load)\n"
-    "- DB / query: raw query-string construction; ORM .raw()/.query() "
-    "escapes\n"
-    "- IPC / plugins: dynamic load (e.g. dlopen); subprocess spawn; "
-    "eval/exec on config; dynamic import\n"
-    "- Supply chain: dependency lockfiles; vendored libs; curl | sh in "
-    "build scripts\n"
-    "- Infra / IAM: terraform *_iam_* resources; k8s serviceAccountName / "
-    "workload-identity annotations; dataset/table ACL blocks; secrets mounts"
-)
+SURFACE_GREP_TABLE = block("threat/surface_grep_table")
 
-RESEARCHER_SYSTEM = (
-    "You are a threat-model research agent covering three briefs at once: "
-    "surface mapper, asset finder, and infra reader. You enumerate where a "
-    "lower-trust actor hands input to the code, what the system protects, "
-    "and which controls already exist — every claim grounded in a file you "
-    "actually read.\n" + READ_ONLY_NOTE + "\nFill the structured schema "
-    "exactly."
-)
+RESEARCHER_SYSTEM = block("threat/researcher_system")
 
 
 def build_research_task(repo: str, draft_md: str, files: list[str]) -> str:
@@ -187,54 +119,16 @@ def build_research_task(repo: str, draft_md: str, files: list[str]) -> str:
         f"Indexed files ({len(files or [])}):\n"
         + "\n".join(f"- {f}" for f in (files or [])[:200])
         +         f"\n\nDeterministic draft for orientation (may be thin):\n{(draft_md or '').strip()[:6000]}\n\n"
-        "BRIEF 0 — Docs reader. Read README*, SECURITY.md, CHANGELOG*, "
-        "top-level docs/, and the build manifest (setup.py / Cargo.toml / "
-        "package.json / CMakeLists.txt / pyproject.toml). Summarize what the "
-        "project says it is, who uses it, and any security claims or "
-        "self-documented fixes — then use that summary as the basis of "
-        "context_prose. Treat a published SECURITY.md scope as a constraint, "
-        "not a suggestion. Do not cite harness-generated artifacts "
-        "(.harness/, graphify-out/, runs/) as project documentation: they "
-        "are tool outputs, not owner evidence, and they appear and disappear "
-        "between scans.\n\n"
-        "BRIEF 1 — Surface mapper. " + SURFACE_GREP_TABLE + "\n"
-        "Bound the scan: exclude vendor/, node_modules/, third_party/, and "
-        "generated code; cap at ~5 representative hits per surface row. For "
-        "each hit, name the surface, the file:function, and what crosses it. "
-        "Supply-chain surfaces (lockfiles, vendored deps, curl | sh in build "
-        "scripts, CI workflows, container/IaC definitions) are entry points "
-        "too, even though no runtime input crosses them. Every entry point "
-        "must get at least one threat row later — miss none.\n\n"
-        "BRIEF 2 — Asset finder. Identify what the code protects or "
-        "produces: sensitive data it reads/writes (secrets, keys, user "
-        "records, databases), process integrity (always present for native "
-        "code), service availability, and downstream embedder assets if it "
-        "is a library. Assign sensitivity honestly — a fixture placeholder "
-        "secret is not a live credential.\n\n"
-        "BRIEF 3 — Infra reader. Read deploy-time config: terraform, k8s "
-        "manifests, Dockerfile*, CI workflows, IAM/service-account/ACL "
-        "files. For each, name (a) the identity the workload runs as and "
-        "what that identity can reach, (b) any access grant NOT managed in "
-        "this tree (ad-hoc IAM, hand-created service accounts, missing "
-        "policy tags), (c) credentials or principals that survive a "
-        "migration or teardown. Where an automated approval, merge, or "
-        "write path exists, ask what bounds it to its intended scope "
-        "(path allowlist, label, reviewer set).\n\n"
-        "Also list controls you actually found in code/config (auth "
-        "middleware, parameterized queries, size caps, sandboxing, security "
-        "headers) — never assumed ones. Anything you could not determine "
-        "goes to open_questions; do not guess."
+        + block("threat/research_brief0_docs")
+        + "BRIEF 1 — Surface mapper. " + SURFACE_GREP_TABLE + "\n"
+        + block("threat/research_brief1_bound")
+        + block("threat/research_brief2_assets")
+        + block("threat/research_brief3_infra")
+        + block("threat/research_controls_tail")
     )
 
 
-HISTORIAN_SYSTEM = (
-    "You are a threat-model history miner. Given a repository's past "
-    "security-fix commits, you classify each into a normalized "
-    "past-vulnerability row that will later serve as EVIDENCE for threat "
-    "rows. Classify only the commits you were given; never invent ids. Read "
-    "the repository to ground a commit's component and reach vector when the "
-    "subject alone is ambiguous.\n" + READ_ONLY_NOTE
-)
+HISTORIAN_SYSTEM = block("threat/historian_system")
 
 
 def build_historian_task(repo: str, bug_shapes: str, draft_md: str,
@@ -270,14 +164,7 @@ def build_historian_task(repo: str, bug_shapes: str, draft_md: str,
     return task
 
 
-SYNTH_SYSTEM = (
-    "You are the threat-model synthesizer: you turn a deterministic draft "
-    "plus two research returns into the JUDGMENT half of a threat model. "
-    "Harness code owns the mechanical cells (ids, sort order, provenance, "
-    "measured facts, the surface skeleton, enum validation) — you supply "
-    "only decisions: ratings, clusters, parked threats, open questions, "
-    "class-level mitigations. Fill the structured schema exactly."
-)
+SYNTH_SYSTEM = block("threat/synth_system")
 
 
 # Row budget for the planner's `threats` (merge-side ROW_CAPS["threats"] is too loose: unbounded asks returned empty threats). NARROW is the retry brief.
@@ -298,36 +185,10 @@ def _threat_row_budget(cap: int) -> str:
 
 
 # STAGE 4 for the default brief; the narrow retry drops it wholesale (the STRIDE walk inflates the row count without adding judgment).
-STRIDE_GAPFILL_STAGE = (
-    "STAGE 4 — Gap-fill (the part past vulns can't give you). Past "
-    "vulns are biased toward what was already found. For every entry "
-    "point with no threat row yet, walk STRIDE and add the plausible "
-    "ones with EMPTY evidence:\n"
-    "- Spoofing: could an attacker pretend to be a trusted source?\n"
-    "- Tampering: could they modify data in transit or at rest?\n"
-    "- Repudiation: could they act without leaving attributable logs?\n"
-    "- Info disclosure: could they read data they shouldn't?\n"
-    "- DoS: could they exhaust a resource (CPU, memory, disk, connections)?\n"
-    "- Elevation: could they end up with more privilege than they "
-    "started with?\n"
-    "For infra/IAM entry points STRIDE maps poorly — walk these "
-    "instead: over-grant (identity reaches more than the app needs), "
-    "lateral identity (co-located workload can assume it), drift "
-    "(grant managed outside the tree), residual access (credentials "
-    "surviving a migration), column exposure (broad read exposing PII), "
-    "scope enforcement (what bounds an automated write path). Also walk "
-    "the entry points that DO have rows: a parser with an RCE threat "
-    "probably also has a DoS threat.\n\n"
-)
+STRIDE_GAPFILL_STAGE = block("threat/stride_gapfill_stage")
 
 # Replaces the gap-fill stage in the narrow retry brief (no walk, no sweep).
-NARROW_GAPFILL_SKIP = (
-    "STAGE 4 — Skipped in this retry: no coverage sweep and no "
-    "per-entry-point walk. Work only from the clusters the past vulns and "
-    "the research surfaces actually support, merge overlapping clusters, "
-    "and put anything else in deprioritized with the reason it was "
-    "parked.\n\n"
-)
+NARROW_GAPFILL_SKIP = block("threat/narrow_gapfill_skip")
 
 
 def build_synth_task(repo: str, draft_md: str, research_json: str,
@@ -398,11 +259,7 @@ def build_synth_task(repo: str, draft_md: str, research_json: str,
     )
 
 
-INTERVIEWER_SYSTEM = (
-    "You are a security threat-model interviewer. You resolve doubts, "
-    'not collect trivia. Return exactly one JSON object with a "questions" '
-    "array of strings and no prose."
-)
+INTERVIEWER_SYSTEM = block("threat/interviewer_system")
 
 
 def build_interview_task(draft_md: str, history_text: str, max_questions: int) -> str:
@@ -417,10 +274,7 @@ def build_interview_task(draft_md: str, history_text: str, max_questions: int) -
     )
 
 
-FINALIZE_SYSTEM = (
-    "You write THREAT_MODEL.md files. Keep the fixed ## sections, full "
-    "detail, no truncation. Reply ONLY with markdown."
-)
+FINALIZE_SYSTEM = block("threat/finalize_system")
 
 
 def build_finalize_task(draft_md: str, history_text: str) -> str:

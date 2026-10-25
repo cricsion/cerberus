@@ -1,37 +1,13 @@
 """Triage prompts: duplicate rules and severity rubric for the dedup pass."""
 from pydantic import BaseModel, Field
 
-DEDUP_RULES = (
-    "Two findings are DUPLICATES if fixing one would automatically fix the other (e.g. the exact same code line reported twice, or identical vulnerability reported by two different scanners).\n"
-    "Two findings are DISTINCT if they are in different functions, different methods, different routes, or different line numbers that each require an independent code change — even if they share the same file or CWE category (e.g. multiple distinct vulnerable functions in a trigger or utility module).\n"
-    "Treat as DUPLICATE:\n"
-    "- Same root cause on the same line described with different wording or by different scanners\n"
-    "- The exact same vulnerable sink call site reported under two different rule IDs\n"
-    "Treat as DISTINCT:\n"
-    "- Different functions or methods in the same file (e.g. do_open vs do_tarfile, re.match vs re.search)\n"
-    "- Different lines in the same file that each require their own separate code fix\n"
-    "- Different vulnerability classes in the same file region"
-)
+from harness.prompts.engine import block
 
-SEVERITY_GUIDE = (
-    "Rate severity based on concrete exploitability evidence, not the generic bug class:\n"
-    "1. Reachability: Can an attacker reach this from an external entry point, or is it internal-only?\n"
-    "2. Attacker control: Does untrusted input reach the sink intact, or is it constrained/sanitized?\n"
-    "The finding's `control_type` (sanitizer, auth_check, none) is the validator's control signal; "
-    "use it when judging whether the control actually stops the input.\n"
-    "3. Preconditions: What must hold (non-default setting, feature flag, race window)?\n"
-    "4. Authentication: Unauthenticated, standard logged-in user, or administrator?\n"
-    "5. Read vs Write: Read-only data disclosure or state/filesystem modification / code execution?\n"
-    "6. Blast radius: Single record, tenant data, or full platform compromise?\n"
-    "Scoring rubric: Unauthenticated remote access with zero preconditions = critical/high. "
-    "Authenticated access or 1-2 preconditions = medium. Local-only or 3+ narrow preconditions = low."
-)
+DEDUP_RULES = block("triage/dedup_rules")
 
-TRIAGE_SYSTEM = (
-    "You triage security findings: deduplicate by root cause, "
-    'then rank by exploitability evidence. Return exactly one JSON object '
-    'with a "verdicts" array and no prose.'
-)
+SEVERITY_GUIDE = block("triage/severity_guide")
+
+TRIAGE_SYSTEM = block("triage/triage_system")
 
 
 def build_triage_batch_task(scope: str, slim_json: str) -> str:

@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from harness.prompts.engine import block
 from harness.prompts.untrusted import make_nonce, untrusted_block
 from harness.sandbox.run_base import DEFAULT_RULES_DIR
 
@@ -18,110 +19,20 @@ FINDING_SPEC = (
 )
 
 # Discovery contract: findings are the only machine-consumed output.
-DISCOVERY_CONTRACT = (
-    "Return exactly one JSON object and no surrounding prose:\n"
-    '{"inspected_files": [...], "findings": [...]}\n'
-    "- inspected_files: array of repo-relative paths of EVERY assigned file (the listed Starting paths plus the remainder you MUST enumerate with ls/glob when the list is truncated) you opened and inspected with your file tools.\n"
-    f"- findings: array of {FINDING_SPEC} An empty array is valid ONLY after "
-    "inspecting every assigned file, including the enumerated remainder."
-)
+DISCOVERY_CONTRACT = block("hunter/discovery_contract", finding_spec=FINDING_SPEC)
 
-PATH_CONTRACT = (
-    "## PATH CONTRACT\n"
-    "The absolute repo root in this task is context only. Every path you pass "
-    "to a file tool (read_file, grep, glob, ls) and every path you return in "
-    "DiscoveryResult (path, refs[].file, taint.path, inspected_files) must be "
-    "a repo-relative POSIX path such as `pages/index.js`. Do not use absolute "
-    "paths, a leading `/`, `./`, backslashes, or the repo directory name as a "
-    "prefix. Shell commands run with the repo root as their working "
-    "directory, so use relative paths in shell commands too."
-)
+PATH_CONTRACT = block("hunter/path_contract")
 
-FINDING_BAR = (
-    "What counts as a finding is decided by the trust boundary this unit sits "
-    "behind, not by any fixed list of bug types. Work out what an attacker of "
-    "the lower trust level controls here, which control is supposed to stop "
-    "them, and whether it actually does."
-)
+FINDING_BAR = block("hunter/finding_bar")
 
 # Repeatable per-entry-point procedure instead of a fixed class list.
-AUDIT_PROCEDURE = (
-    "AT EACH ENTRY POINT, work through these four questions before moving on:\n"
-    "1. REACH — what can the lower-trust caller fully control here: field values, "
-    "headers, paths, identifiers, timing, size, or the mere fact of the call?\n"
-    "2. BOUNDARY — what is supposed to stop that (validation, encoding, an "
-    "authorization decision, a session or cookie attribute, a rate or quota "
-    "limit, a transport guarantee)? Identify the control by what it protects, "
-    "not by its name.\n"
-    "3. TRACE — what does the request touch on the way through: stored data, "
-    "another user's data, the network, the filesystem, the browser, logs, "
-    "queues, caches, or a privileged operation?\n"
-    "4. GAP — is that control missing, bypassable, ordered after the thing it "
-    "guards, weaker on one path than a sibling, or different from what every "
-    "other caller of the same resource does?\n"
-    "A control the code never establishes is a finding, not a style note: say "
-    "which control is expected and where the code is silent."
-)
+AUDIT_PROCEDURE = block("hunter/audit_procedure")
 
-DISCOVERY_METHOD = (
-    "READ EVERY ASSIGNED FILE AT DEPTH. Automated scanners are only supplemental pre-filters; "
-    "you must inspect every assigned file in your starting paths and the remainder you MUST enumerate before concluding. "
-    "Follow each input through parsing, identity, authorization, normalization, state, "
-    "and the final sink. Read sibling, legacy, batch, retry, and error paths that produce "
-    "the same effect. Cross into other units freely whenever needed to trace callers, "
-    "entry points, or sink implementations.\n"
-    "SURFACE EXHAUSTION: Do NOT stop after finding the first vulnerability or when a "
-    "scanner returns few leads. Thoroughly review all assigned starting paths and the enumerated remainder. "
-    "When one finding reveals a reusable pattern or helper vulnerability, search the rest of "
-    "the codebase for variants and report each one — two vulnerable call sites are two findings."
-)
+DISCOVERY_METHOD = block("hunter/discovery_method")
 
-CANDIDATE_GATE = (
-    "1. A candidate needs an attacker-reachable flow or an unsafe sink accepting unvalidated input. "
-    "If reviewing a library or sink helper, report dangerous sinks that accept arbitrary attacker-controllable "
-    "input (e.g. command execution, unpickling, raw queries, unvalidated file operations, SSRF) even if the "
-    "HTTP entry point is defined in a different unit or framework integration.\n"
-    "2. MANDATORY COVERAGE: Assume vulnerabilities ARE present in this unit. You MUST call `read_file` or inspect every path in Starting paths and the remainder you MUST enumerate with ls/glob before returning. Do not conclude or return early until every listed file and enumerated remainder has been inspected.\n"
-    "3. Report anything suspicious. A separate validator independently judges exploitability, "
-    "so a wrong report costs less than a missed vulnerability — never withhold a suspicion "
-    "because you are uncertain.\n"
-    "4. Apply the procedure above at every entry point you reach; do not stop "
-    "once you have one weakness in a category.\n"
-    "5. Do not report clean error returns or assertion failures without an "
-    "attacker-reachable security consequence; keep reviewing the remaining paths.\n"
-    "6. DO NOT REPORT: findings limited to test-only scaffolding, fixtures, docs, or notebooks "
-    "unless the target intentionally includes that code for security evaluation (for example, "
-    "a vulnerable benchmark/demo route); standalone build scripts are out of scope unless "
-    "they cross a security-relevant build or release boundary. "
-    "operator-controlled inputs (env vars, CLI flags) unless untrusted in this environment; "
-    "outdated third-party dependency versions (managed by SCA).\n"
-)
+CANDIDATE_GATE = block("hunter/candidate_gate")
 
-UNIT_SYSTEM = (
-    "You are an expert defensive vulnerability hunter reviewing ONE logical unit of a "
-    "codebase: a feature, service, or subsystem. Read source and ground claims in code. "
-    "In local mode, use static analysis only. In sandbox mode, follow the appended sandbox "
-    "execution posture for any bounded local checks. Never modify source files or deploy "
-    "the target.\n"
-    "PRIMARY FOCUS & CROSS-UNIT READING: Your primary assignment is the files listed under "
-    "Starting paths (open them with your file tools — nothing is inlined). However, you are "
-    "NOT limited to reading only your assigned unit's files: you are fully permitted and "
-    "encouraged to read code from other units, shared libraries, framework routes, and callers "
-    "across the repository whenever needed to trace dataflow, verify reachability, or understand caller context.\n"
-    "FINISH THE ASSIGNMENT: Review every assigned starting path, the enumerated remainder, "
-    "and relevant entry points before returning. Do not stop after the first finding, and do "
-    "not skip any listed file or enumerated remainder. "
-    "Once the review is complete, return the final JSON response matching the output contract.\n"
-    "Goal: find all real security invariant failures in this unit. "
-    "Favor recall — a separate validator independently judges exploitability, so report every "
-    "plausible candidate.\n"
-    "STRUCTURE: the graph_* tools (graph_neighbors, graph_path, graph_query, graph_affected) "
-    "answer call-graph questions your file tools cannot — who calls a given function, and "
-    "whether an entry point can reach a sink across files. The graph is AST-proven CALL "
-    "edges: it proves reachability, not taint. After the graph narrows your walk, open the "
-    "code and verify the argument is attacker-controlled before reporting.\n"
-    "Return exactly one JSON object matching the output contract in your task prompt, and no surrounding prose."
-)
+UNIT_SYSTEM = block("hunter/unit_system")
 
 
 def sandbox_system_section(backend=None, repo: str = ".") -> str:
@@ -338,30 +249,9 @@ class DiscoveryResult(BaseModel):
                                         description="Candidate findings from this pass")
 
 
-SYSTEM_PASS_FOCUS = (
-    "You see the merged findings of parallel per-unit hunters, which may be empty. "
-    "Report ONLY "
-    "what they could not see from inside one unit: weaknesses spanning "
-    "multiple units (caller in one unit, sink in another) and gaps that are "
-    "global rather than local — a control the application never establishes, "
-    "or an inconsistency between units that handle the same concern. "
-    "Do NOT repeat unit findings."
-)
+SYSTEM_PASS_FOCUS = block("hunter/system_pass_focus")
 
-SYSTEM_PASS_SYSTEM = (
-    "You are the cross-unit security reviewer. Run this source review regardless of "
-    "whether unit hunters returned findings; an empty hunter result is not evidence "
-    "that the repository is clean. Independently inspect source paths to identify "
-    "and validate a concrete flow that crosses unit boundaries or a security "
-    "invariant that is global to the application. Do not repeat findings already "
-    "reported by unit hunters, infer a flaw from a title alone, or claim a complete "
-    "cross-unit path without file:line evidence at its entry, relevant transitions, "
-    "and sink. For a missing-control claim, inspect the complete relevant set of "
-    "handlers or callers; if coverage is incomplete, do not claim the control is absent. "
-    "In local mode, use static analysis only. In sandbox mode, follow the appended "
-    "sandbox execution posture for any bounded local checks. Return the structured "
-    "output contract exactly."
-)
+SYSTEM_PASS_SYSTEM = block("hunter/system_pass_system")
 
 
 def build_system_pass_task(repo: str, scope: str, ctx: str,
