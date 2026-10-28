@@ -48,8 +48,8 @@ def _run(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) -> di
     identical argv INSIDE the per-repo run container via
     ``sandbox/system_exec``: the system SAST stage becomes a deterministic
     recall floor executed in-sandbox (target-derived compute off the host),
-    while its JSON stdout stays parseable because the composition redirects
-    stderr to a temp file (exec normally merges streams).
+    and its JSON stdout stays parseable by construction — the demuxed exec
+    captures stderr separately, no composition needed.
     """
     if str(config_lane()) != "docker":
         return run_cli(cmd, timeout=timeout, max_bytes=max_bytes)

@@ -553,9 +553,9 @@ def _score_finding_threat_match(f: dict, t: dict) -> int:
 
 
 def _update_threat_table_with_claims(md: str, claims: list[dict]) -> str:
-    threat_rows = _parse_threats(md)
-    if not threat_rows:
-        return md
+    if "## 4. Threats" not in (md or ""):
+        return md or ""
+    threat_rows = _parse_threats(md) or []
 
     novel_groups: dict[str, list[dict]] = {}
 

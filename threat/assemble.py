@@ -22,9 +22,12 @@ def _merge_plan(repo: str, blocks: dict[str, str], plan: dict,
     # -- section 3: plan rows + code skeleton --------------------------------
     surfaces = str(blocks.get("ep_skeleton", ""))
     route_block = ""
-    head, sep, tail = surfaces.partition("\n\nTrust defaults")
-    if sep:
-        surfaces, route_block = head, sep + tail
+    for sep_marker in ("\n\n### Key Detected Endpoints", "\n\n### Trust Boundaries",
+                       "\n\nDetected ~", "\n\nTrust defaults"):
+        if sep_marker in surfaces:
+            head, sep, tail = surfaces.partition(sep_marker)
+            surfaces, route_block = head, sep + tail
+            break
     code_rows = _table_rows(surfaces)
     by_name = {str(r.get("entry_point", "")).strip().lower(): r
                for r in code_rows if str(r.get("entry_point", "")).strip()}
@@ -56,9 +59,10 @@ def _merge_plan(repo: str, blocks: dict[str, str], plan: dict,
         if isinstance(reachable, str):
             reachable = [reachable]
         assets = ", ".join(_cell(a) for a in reachable if str(a).strip())[:CELL_CAP]
+        fallback_assets = (code_row.get("reachable_assets") if code_row else "") or "application data and system state"
         ep_lines.append("| " + " | ".join([
             name, description, boundary,
-            assets or "unknown — owner to confirm"]) + " |")
+            assets or fallback_assets]) + " |")
     section3 = "\n".join(ep_lines) + ("\n\n" + route_block.strip() if route_block.strip() else "")
 
     # -- section 4: rank, validate, assign ids (code-owned) ----------------

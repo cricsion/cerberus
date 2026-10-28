@@ -150,6 +150,109 @@ def collect_docs(repo: str) -> list[tuple[str, str]]:
     return out
 
 
+_SURFACE_METADATA = {
+    "http": {
+        "desc": "Web and REST API endpoints processing external client HTTP requests",
+        "boundary": "untrusted network / client → application logic",
+        "assets": "application data, session state, process integrity",
+    },
+    "template": {
+        "desc": "Template engine evaluating dynamic views with server and user variables",
+        "boundary": "untrusted template variables → template engine runtime",
+        "assets": "server process integrity, application data",
+    },
+    "depend": {
+        "desc": "Third-party libraries and runtime packages declared in project manifests",
+        "boundary": "untrusted package registries / upstream supply chain → runtime process",
+        "assets": "host process integrity, source code integrity",
+    },
+    "ci": {
+        "desc": "Automation pipelines (.github/workflows) triggered on pull requests and commits",
+        "boundary": "untrusted pull requests / external action runners → CI runner environment",
+        "assets": "source code integrity, CI secrets & deployment credentials",
+    },
+    "container": {
+        "desc": "Dockerfile, container images, and runtime deployment manifests",
+        "boundary": "untrusted base images / container host runtime → container namespace",
+        "assets": "container isolation, host process integrity",
+    },
+    "config": {
+        "desc": "Structured configuration and data files (JSON, YAML, TOML, INI) parsed at startup/runtime",
+        "boundary": "untrusted configuration files → configuration parser",
+        "assets": "application configuration state, runtime logic",
+    },
+}
+
+
+def _surface_row_spec(surface_name: str, n_routes: int = 0) -> tuple[str, str, str]:
+    """Return (description, trust_boundary, reachable_assets) tailored to surface."""
+    s_lower = surface_name.lower()
+    for key, spec in _SURFACE_METADATA.items():
+        if key in s_lower:
+            desc = spec["desc"]
+            if "route" in s_lower and n_routes:
+                desc = f"Web and REST API endpoints (~{n_routes} routes detected) processing external requests"
+            return desc, spec["boundary"], spec["assets"]
+    return ("Application input interface reaching internal logic",
+            "untrusted input → application logic",
+            "application data and system state, process integrity")
+
+
+def _format_detected_routes(route_lines: list[str], max_display: int = 15) -> str:
+    n_routes = len(route_lines)
+    if not n_routes:
+        return ""
+
+    seen_endpoints: set[str] = set()
+    formatted_items: list[str] = []
+
+    for line in route_lines:
+        line = line.strip()
+        if not line:
+            continue
+        cleaned = line
+        file_ref = ""
+        if ": [route] " in cleaned:
+            parts = cleaned.split(": [route] ", 1)
+            file_ref = parts[0].strip()
+            cleaned = parts[1].strip()
+        elif ":" in cleaned and any(cleaned.split(":", 1)[0].endswith(ext)
+                                    for ext in (".py", ".js", ".ts", ".go", ".java", ".rb", ".php", ".cs")):
+            parts = cleaned.split(":", 2)
+            if len(parts) >= 2:
+                file_ref = f"{parts[0]}:{parts[1]}"
+                cleaned = parts[2].strip() if len(parts) > 2 else ""
+
+        handler = ""
+        if "->" in cleaned:
+            c_parts = cleaned.split("->", 1)
+            cleaned = c_parts[0].strip()
+            handler = c_parts[1].strip()
+
+        endpoint = cleaned.strip()
+        if not endpoint:
+            continue
+
+        key = endpoint.lower()
+        if key in seen_endpoints:
+            continue
+        seen_endpoints.add(key)
+
+        ref_str = f" (`{file_ref}`)" if file_ref else (f" (`{handler}`)" if handler else "")
+        formatted_items.append(f"- `{endpoint}`{ref_str}")
+        if len(formatted_items) >= max_display:
+            break
+
+    header = f"### Key Detected Endpoints\n*Detected ~{n_routes} framework routes:*"
+    if formatted_items:
+        body = "\n".join(formatted_items)
+        remaining = n_routes - len(formatted_items)
+        if remaining > 0:
+            body += f"\n- *(and ~{remaining} additional route handlers)*"
+        return f"{header}\n\n{body}"
+    return f"{header}\n\n- *(route definitions detected across repository)*"
+
+
 def _measured_blocks(repo: str, files: list[str], candidates: list[dict],
                      summary: str, vulns: list[dict] | None = None) -> dict[str, str]:
     routes = next((c.get("snippet", "") for c in candidates
@@ -207,19 +310,17 @@ def _measured_blocks(repo: str, files: list[str], candidates: list[dict],
     ep_rows = ["| entry_point | description | trust_boundary | reachable_assets |",
                "|---|---|---|---|"]
     for s in surfaces:
-        ep_rows.append(f"| {s} | reaches application code | "
-                       "untrusted input → application logic | "
-                       "unknown — owner to confirm |")
+        desc, boundary, assets = _surface_row_spec(s, n_routes)
+        ep_rows.append(f"| {s} | {desc} | {boundary} | {assets} |")
     ep_block = "\n".join(ep_rows)
     if route_lines:
-        ep_block += (f"\n\nDetected ~{n_routes} framework routes: "
-                     + ", ".join(route_lines[:15])
-                     + (" ..." if len(route_lines) > 15 else ""))
-    ep_block += ("\n\nTrust defaults (deterministic): authenticated clients, "
-                 "config files, and vendored deps are TRUSTED unless the "
-                 "owner says otherwise. Network input, request "
-                 "bodies/params, file uploads, and template vars rendered "
-                 "from user data are UNTRUSTED.")
+        ep_block += f"\n\n{_format_detected_routes(route_lines)}"
+    ep_block += (
+        "\n\n### Trust Boundaries & Assumptions\n\n"
+        "Trust defaults (deterministic):\n"
+        "- **UNTRUSTED**: Network input, HTTP request bodies/parameters, query strings, headers, file uploads, and template variables rendered from user data.\n"
+        "- **TRUSTED (by default)**: Authenticated administrative clients, local configuration files, and vendored dependencies unless explicitly modeled as an attack surface."
+    )
 
     questions = (
         "- Is this deployment network-reachable, and by whom?\n"
