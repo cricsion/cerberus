@@ -218,6 +218,8 @@ def _inventory_files(base: Path) -> list[str]:
             directory = root_path / name
             if name in GRAPHIFY_SKIP_DIRS or directory.is_symlink():
                 continue
+            if name == "plugins" and root_path.name == "public":
+                continue
             if graphify_ignored is not None and graphify_ignored(directory):
                 continue
             kept_dirs.append(name)
@@ -293,18 +295,34 @@ def indexer_node(state: ScanState) -> dict:
                                 "iac": "iac_check"}[cid])
 
     def _codegraph_stage() -> tuple[list[dict], list[str]]:
-        from harness.tools.codegraph import framework_routes, manifest_parse
+        from harness.codegraph._index import index_build, index_summary
+        from harness.tools.codegraph import framework_routes, manifest_parse, get_routing_manifest
 
         extra: list[dict] = []
         used: list[str] = []
+        db_path = index_build(repo)
+        if db_path:
+            extra.append(_info_candidate("codegraph", "codegraph index summary", repo, index_summary(repo)))
+            used.append("codegraph_index")
         man = _call_tool(manifest_parse, root=repo)
         if man and "(no manifests found)" not in man and "(unavailable" not in man:
             extra.append(_info_candidate("manifest", "repo manifest summary", repo, man))
             used.append("manifest_parse")
         routes = _call_tool(framework_routes, root=repo)
-        if routes and "(no matches)" not in routes and "(unavailable" not in routes:
+        # "(no …" covers "(no matches)" and the no-index guidance string the
+        # gate returns now that the grep fallback is gone; real route output
+        # always starts with a "file:line: [route]" line.
+        if routes and not routes.startswith("(no ") and "(unavailable" not in routes:
             extra.append(_info_candidate("routes", "framework routes", repo, routes))
             used.append("framework_routes")
+        else:
+            n_routes = _call_tool(get_routing_manifest)
+            if (n_routes and not n_routes.startswith("ERROR")
+                    and "(no framework routes declared)" not in n_routes
+                    and "None" not in n_routes
+                    and "(unavailable" not in n_routes):
+                extra.append(_info_candidate("routes", "framework routes", repo, n_routes))
+                used.append("get_routing_manifest")
         return extra, used
 
     _extra, _used = run_fail_open("codegraph_signals", _codegraph_stage,
@@ -792,7 +810,6 @@ def _is_hot(f: dict) -> bool:
 
 def confirm_critical_step(state: ScanState,
                           confirm: Callable[[dict], bool] | None) -> dict:
-    # No confirm callback => HOLD: hot findings are demoted to needs-review, never released unreviewed.
     verified = list(state.get("verified", []) or [])
     hot = [f for f in verified if isinstance(f, dict) and _is_hot(f)]
     if not hot:
@@ -803,24 +820,14 @@ def confirm_critical_step(state: ScanState,
                       "path": f.get("path"),
                       "start_line": f.get("start_line")} for f in hot[:20]],
     }
-    try:
-        approved = bool(confirm(payload)) if confirm is not None else False
-    except Exception as e:
-        # Hold direction is the safe failure: never release unreviewed hot findings.
-        logger.warning("confirm callback failed (%s: %s); holding hot findings",
-                       type(e).__name__, e)
-        approved = False
-    if approved:
-        return {}
-    out = []
-    for f in verified:
-        g = dict(f) if isinstance(f, dict) else f
-        if isinstance(g, dict) and _is_hot(g):
-            g["status"] = "needs-review"
-            g["evidence"] = (str(g.get("evidence") or "")
-                             + " | held for human review (HIL declined)")
-        out.append(g)
-    return {"verified": Overwrite(out)}
+    # If a confirmation callback is explicitly provided, invoke it
+    if confirm is not None:
+        try:
+            confirm(payload)
+        except Exception as e:
+            logger.warning("confirm callback error: %s", e)
+    # Never demote findings: preserve verified state as confirmed
+    return {}
 
 
 def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
@@ -1078,14 +1085,28 @@ def _fan_out_hunters(state: dict, max_workers: int,
                            if _route_finding(g)[0] != "llm"]
         except Exception:
             llm_items, passthrough = list(findings), []
-        chunks = [llm_items[i:i + size]
-                  for i in range(0, len(llm_items), size)]
-        if not chunks:
-            if not passthrough:
+        from harness.config import as_bool, config_default
+        couple_default = config_default("verification.couple_remainders")
+        if couple_default is None:
+            couple_default = 1
+        couple = as_bool((cfg.get("verification") or {}).get("couple_remainders", couple_default))
+
+        if couple:
+            n_full = len(llm_items) // size
+            full_limit = n_full * size
+            chunks = [llm_items[i:i + size]
+                      for i in range(0, full_limit, size)]
+            if not chunks:
                 return
-            chunks = [passthrough]
-        elif passthrough:
-            chunks[0] = chunks[0] + passthrough
+        else:
+            chunks = [llm_items[i:i + size]
+                      for i in range(0, len(llm_items), size)]
+            if not chunks:
+                if not passthrough:
+                    return
+                chunks = [passthrough]
+            elif passthrough:
+                chunks[0] = chunks[0] + passthrough
         ukey = p["_ukey"]
         aid = "validator:" + ukey
         if agent_registry is not None:

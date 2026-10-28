@@ -11,11 +11,14 @@ TRIAGE_SYSTEM = block("triage/triage_system")
 
 
 def build_triage_batch_task(scope: str, slim_json: str) -> str:
+    # Static prefix first: dedup rules, severity rubric, and output instructions (~6k tokens)
+    # Cached across all triage batches in the scan.
+    scope_prefix = f"{scope}\n\n" if (scope or "").strip() else ""
     return (
-        f"{scope}All triage findings of this scan (JSON):\n"
-        f"{slim_json}\n"
-        f"Deduplication rules: {DEDUP_RULES}\n"
-        f"Severity rubric: {SEVERITY_GUIDE}\n"
+        f"{scope_prefix}"
+        f"Deduplication rules:\n{DEDUP_RULES}\n\n"
+        f"Severity rubric:\n{SEVERITY_GUIDE}\n\n"
+        "Instructions:\n"
         "Reply with a JSON object containing the array of verdicts: "
         '{"verdicts": [{"id": ..., "duplicate_of": "<primary id or null when distinct/primary>", '
         '"severity": "critical|high|medium|low (earned from the rubric above)", '
@@ -26,7 +29,10 @@ def build_triage_batch_task(scope: str, slim_json: str) -> str:
         "an explicitly deprioritized threat in section 5 keeps its status and takes severity low, but "
         "never acquits anything on its own. Unnamed or in-scope threats must be scored strictly according to "
         "their earned exploitability evidence from the severity rubric above. "
-        "If the threat model conflicts with that evidence, note the conflict in reason for human review."
+        "If the threat model conflicts with that evidence, note the conflict in reason for human review.\n\n"
+        # Dynamic tail: candidate findings JSON
+        f"All triage findings of this batch (JSON):\n"
+        f"{slim_json}"
     )
 
 

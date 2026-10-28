@@ -9,8 +9,8 @@ Fast, pattern-based static analysis for security scanning and custom rule creati
 
 ## In this environment
 
-- Semgrep is **preinstalled in the scan container, pinned to v1.136.0**. Never install, upgrade, or fetch another build: the repo is mounted read-only and egress may be denied.
-- Always pass `--metrics off` (no telemetry leaves the scan sandbox).
+- Semgrep is **preinstalled in the scan container, pinned to v1.172.0**. Never install, upgrade, or fetch another build: the repo is mounted read-only and egress may be denied.
+- Always pass `--metrics off` (no telemetry leaves the scan sandbox). The image also sets `SEMGREP_ENABLE_VERSION_CHECK=0`: under `--network none`, semgrep's update check otherwise stalls ~100s before scanning (the sandbox kills a command at ~120s).
 - The harness's offline custom rules live at the rules directory named in your task prompt (default `/opt/scan-rules/harness`); registry packs (`p/...`) download on first use and only work when egress allows.
 - Pass **explicit file paths** (your unit's assigned files), never a bare directory: directory scans only see git-tracked files, and a target tree may have no `.git` at all.
 - Output discipline: `--json`, then select with `jq`, cap with `head`, or write the full JSON under `/work` (a writable tmpfs) and read back slices. Never paste raw scan output into your answer — report findings only.
@@ -192,6 +192,8 @@ semgrep --test --config rule.yaml test-file
 | Validate YAML | `semgrep --validate --config rule.yaml` |
 | Dump AST | `semgrep --dump-ast -l <lang> <file>` |
 | Debug taint flow | `semgrep --dataflow-traces -f rule.yaml file` |
+
+`--validate` also fetches semgrep's rule lints from semgrep.dev, so it needs egress; under `--network none` it fails. Use `--test` (local) to validate rule behavior offline.
 
 ## Rule Creation Workflow
 

@@ -1,49 +1,34 @@
 """CodeGraph index lifecycle for the scan's target root.
 
-The scan's indexer stage owns the CLI (``init``/``index``/``sync``/``status``);
-everything downstream of the hunt reads the index through
-:mod:`harness.codegraph._db` — read-only SQL, no CLI (D1). This module is the
-writable half of that split. Every public function returns a value instead of
-raising: when the CLI is missing, slow, or refuses the target, the scan
-continues unindexed (tools fall back to grep, the partitioner to dirs).
+Purpose
+Manage the target root's own index without authorizing an ancestor's index.
 
-Three containment gates, each live-verified against codegraph 1.6.2:
+The indexer stage owns the CLI (``init``/``index``/``sync``/``status``); the
+hunt reads the index through :mod:`harness.codegraph._db` (read-only SQL, D1).
+This is the writable half; every public function returns instead of raising.
 
-1. **Gate reads are root-pinned.** ``status -j`` walks UP to the nearest
-   ``.codegraph`` ("similar to how git finds .git/"): run against a target
-   nested under an already-indexed tree it reports the ANCESTOR's
-   ``projectPath``/``indexPath``. :func:`index_status` therefore rejects — and
-   logs — any payload whose paths are not the requested root, and
-   :func:`_gate_ok` additionally requires ``<root>/.codegraph`` and its DB to
-   exist at exactly the path :func:`harness.codegraph._db.resolve_db_path`
-   joins, so the CLI is never the authority on where the DB is.
-2. **A fresh root is initialized first.** ``index <root>`` REFUSES a root with
-   no ``.codegraph`` ("CodeGraph not initialized in <root>") and does not walk
-   up, so :func:`index_build` runs ``codegraph init -y <root>`` whenever
-   ``<root>/.codegraph`` is missing (``init`` builds the index itself).
-3. **``sync`` runs only on a confirmed own-root index.** ``sync <nested>`` reads
-   AND WRITES the ancestor's index (verified: syncing a subdirectory updated the
-   parent's DB and created no ``.codegraph`` of its own), so the status payload
-   must first prove ``indexPath == <root>/.codegraph``; when it cannot, the
-   root-pinned full ``index -q`` path runs instead.
+Laws
+- Gate reads are root-pinned: the payload must name this root's ``projectPath``
+  and ``indexPath`` (via ``realpath``); a foreign payload is refused.
+- A fresh root is initialized first (``init -y``) because ``index`` refuses an
+  uninitialized root; ``sync`` runs only on a confirmed own-root index.
 
-Payload shape (1.6.2 — one JSON object on stdout): ``{"initialized":…,
-"version":…, "projectPath":…, "indexPath":…, "fileCount":…, "nodeCount":…,
-"edgeCount":…, "languages":[…], "pendingChanges":{"added":…,"modified":…,
-"removed":…}, "index":{"state":"complete"|…, "pendingRefs":…,
-"reindexRecommended":…, "builtWithVersion":…}}``. Gate predicate:
-``index.state == "complete" AND index.pendingRefs == 0 AND NOT
-index.reindexRecommended``. Freshness (⇒ nothing to do): the gate plus all three
-``pendingChanges`` counters at 0. An unknown shape, an absent key, or an
-uncontained payload is "not ready" — never a crash, never an ancestor's index.
+Invariants
+- The gate is ``state == "complete"``, ``pendingRefs == 0``,
+  ``reindexRecommended is False``, and ``.codegraph`` plus the DB exist at
+  ``_db.resolve_db_path``'s exact path.
+- ``pendingRefs`` is the CLI queue, not the ``unresolved_refs`` table.
+- Every CLI call carries :data:`SCAN_ENV` over the scrubbed env.
 
-``index.pendingRefs`` is NOT the ``unresolved_refs`` table (whose rows are 100%
-``status='failed'``): the former is the CLI's own work queue, the latter is
-CodeGraph's "an edge may be missing here" marker read by
-:mod:`harness.codegraph._db`. Do not conflate the two counts.
-
-D9 hygiene invariant: every CLI execution here carries :data:`SCAN_ENV`
-(no daemon, no telemetry, no update check) on top of the shared scrubbed env.
+Format laws
+- CodeGraph 1.6.2 status -j is one JSON object with projectPath, indexPath,
+  counts, languages, pendingChanges and an index block (state, pendingRefs,
+  reindexRecommended, builtWithVersion).
+- The gate requires state complete, pendingRefs zero and reindexRecommended
+  false; freshness also requires added, modified and removed counts all zero.
+- pendingRefs is the CLI queue, distinct from unresolved_refs rows in the
+  read-only DB. Unknown shapes are not ready; index_build returns a DB path or
+  an empty string.
 """
 from __future__ import annotations
 
@@ -60,15 +45,10 @@ from harness.codegraph import _db
 logger = logging.getLogger(__name__)
 
 CLI_NAME = "codegraph"
-
-# Per-call wall clocks: `status` is bookkeeping, a cold `init`/`index` over a
-# large repo is the slow one (the indexer stage bounds it, not this module).
 STATUS_TIMEOUT = 60
 DEFAULT_BUILD_TIMEOUT = 600
 
-# The D9 invariant, on top of the shared scrubbed env (which strips provider
-# keys): a daemon would outlive the scan, and the update check / telemetry would
-# phone home from a security tool.
+# D9: a daemon would outlive the scan; telemetry/update checks would phone home.
 SCAN_ENV = {
     "PYTHONDONTWRITEBYTECODE": "1",
     "CODEGRAPH_NO_DAEMON": "1",
@@ -77,10 +57,6 @@ SCAN_ENV = {
     "DO_NOT_TRACK": "1",
 }
 
-
-# ---------------------------------------------------------------------------
-# process plumbing (never raises)
-# ---------------------------------------------------------------------------
 
 def _cli_path() -> str | None:
     """Absolute path to the CLI, or None when the image/host has none."""
@@ -99,8 +75,7 @@ def _scan_env() -> dict[str, str]:
 def _run(cli: str, args: list[str], timeout: int) -> tuple[int, str, str]:
     """Run the CLI once: ``(returncode, stdout, stderr)``, never raising.
 
-    ``-1`` marks an infra failure (timeout, vanished/ unexecutable binary) —
-    callers treat it exactly like a non-zero exit.
+    ``-1`` marks an infra failure, treated like a non-zero exit by callers.
     """
     try:
         proc = subprocess.run([cli, *args], capture_output=True, text=True,
@@ -114,17 +89,8 @@ def _run(cli: str, args: list[str], timeout: int) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout or "", proc.stderr or ""
 
 
-# ---------------------------------------------------------------------------
-# paths + payload parsing
-# ---------------------------------------------------------------------------
-
 def _paths(root: str) -> tuple[Path, Path, Path]:
-    """``(root, <root>/.codegraph, <root>/.codegraph/codegraph.db)``.
-
-    The DB path is :func:`harness.codegraph._db.resolve_db_path`'s own answer —
-    the file ``_db`` will later open — so the gate asserts against the exact
-    path the read side uses, not against a path this module invented.
-    """
+    """``(root, .codegraph dir, DB path)`` via :func:`_db.resolve_db_path`."""
     root_path = Path(root).expanduser().resolve()
     db_path = _db.resolve_db_path(str(root_path))
     return root_path, db_path.parent, db_path
@@ -138,8 +104,7 @@ def _parse_payload(raw: str) -> dict | None:
     try:
         payload = json.loads(text)
     except ValueError:
-        # Tolerate trailing noise by decoding the leading object only.
-        try:
+        try:  # tolerate trailing noise: decode the leading object only
             payload, _end = json.JSONDecoder().raw_decode(text)
         except ValueError:
             return None
@@ -147,6 +112,7 @@ def _parse_payload(raw: str) -> dict | None:
 
 
 def _same_path(a: object, b: object) -> bool:
+    """True when two spellings resolve to the same path (never raises)."""
     if not a or not b:
         return False
     try:
@@ -207,20 +173,11 @@ def _fresh(payload: dict, cg_dir: Path, db_path: Path) -> bool:
     return _gate_ok(payload, cg_dir, db_path) and _pending_changes(payload) == 0
 
 
-# ---------------------------------------------------------------------------
-# public API
-# ---------------------------------------------------------------------------
-
 def index_status(root: str = ".") -> dict:
     """This root's ``status -j`` payload, or ``{}`` when there is no usable one.
 
-    ``{}`` means: no CLI, no stdout, malformed JSON, an unaddressable root, or —
-    the case this function exists for — a payload describing a DIFFERENT root
-    (the CLI walks up to the nearest ``.codegraph``, so a nested target's status
-    is its ancestor's). Rejections are logged, never raised; callers treat ``{}``
-    as not-ready. An uninitialized-but-contained payload (``initialized:false``,
-    no ``index`` block) IS returned: it is this root's honest answer, and
-    :func:`_gate_ok` rejects it on shape.
+    ``{}`` covers no CLI, bad JSON, an unaddressable or foreign root. A
+    contained ``initialized:false`` payload IS returned; the gate rejects it.
     """
     try:
         root_path, cg_dir, _db_path = _paths(root)
@@ -258,26 +215,25 @@ def index_needed(root: str = ".") -> bool:
 
 
 def index_build(root: str = ".", timeout: int = DEFAULT_BUILD_TIMEOUT) -> str:
-    """Build/gate ``<root>``'s OWN index; return the DB path, or ``""``.
+    """Build/gate this root's OWN index; return the DB path, or ``""``.
 
-    Order (D2 + the three gates): fresh index ⇒ nothing to do; missing
-    ``.codegraph`` ⇒ ``init`` FIRST; an own-root DB ⇒ ``sync -q`` then re-gate;
-    otherwise ``index -q``. The path is returned only after a re-gate proves the
-    payload describes this root, so an ancestor's index can never be authorized
-    for a db-less target. Never raises: ``""`` means "continue unindexed".
+    Order: fresh ⇒ nothing; missing ``.codegraph`` ⇒ ``init`` FIRST; an own-root
+    DB ⇒ ``sync -q`` then re-gate; else ``index -q``. The path is returned only
+    after a re-gate proves the payload is this root's. Never raises (D2/D6).
     """
     try:
         return _index_build(root, timeout)
-    except Exception as e:  # fail-open by contract (D2/D6); a scan never dies here
+    except Exception as e:  # a scan never dies here
         logger.warning("codegraph index build failed for %r; continuing "
                        "unindexed: %s: %s", root, type(e).__name__, e)
         return ""
 
 
 def _index_build(root: str, timeout: int) -> str:
+    """The raising core of :func:`index_build`; see its order contract."""
     root_path, cg_dir, db_path = _paths(root)
     if not root_path.is_dir():
-        # `init` would happily create the missing path; never invent a root.
+        # `init` would create the missing path; never invent a root.
         logger.debug("codegraph index: %s is not a directory; nothing to build",
                      root_path)
         return ""
@@ -292,15 +248,13 @@ def _index_build(root: str, timeout: int) -> str:
                     "back to grep)", root_path)
         return ""
     if not cg_dir.is_dir():
-        # Gate (b): `index <path>` refuses an un-initialized root and does not
-        # walk up; `init` builds the index itself.
+        # Gate (b): `index` refuses an un-initialized root; `init` builds it.
         _run(cli, ["init", "-y", str(root_path)], timeout)
         payload = index_status(root)
         if _fresh(payload, cg_dir, db_path):
             return str(db_path)
     if db_path.is_file() and _contained(payload, root_path, cg_dir):
-        # Gate (c): sync only against an index the payload proves is this
-        # root's — a walk-up sync reads AND WRITES the ancestor's index.
+        # Gate (c): a walk-up sync reads AND WRITES the ancestor's index.
         _run(cli, ["sync", "-q", str(root_path)], timeout)
         payload = index_status(root)
         if _fresh(payload, cg_dir, db_path):

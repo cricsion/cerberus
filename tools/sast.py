@@ -8,7 +8,6 @@ from pathlib import Path
 from harness.config import get_default_config
 
 from ._compat import SAST_MAX_BYTES, env_int, run_cli, tool
-
 SAST_MAX_FINDINGS = int(get_default_config("sast.findings"))
 
 
@@ -41,7 +40,40 @@ def _scan_json(build_cmd: Callable[[list[str]], list[str]], target: str,
     return _paginate(json.dumps(_run(build_cmd(resolved))), max_chars)
 
 
-_run = run_cli
+def _run(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) -> dict:
+    """The scanner seam (module monkeypatch target): run one scanner argv.
+
+    Same dict contract as ``run_cli`` on both lanes. The LOCAL lane is the old
+    host path (``_compat.run_cli``), byte-identical. The DOCKER lane runs the
+    identical argv INSIDE the per-repo run container via
+    ``sandbox/system_exec``: the system SAST stage becomes a deterministic
+    recall floor executed in-sandbox (target-derived compute off the host),
+    while its JSON stdout stays parseable because the composition redirects
+    stderr to a temp file (exec normally merges streams).
+    """
+    if str(config_lane()) != "docker":
+        return run_cli(cmd, timeout=timeout, max_bytes=max_bytes)
+    res = system_shell(cmd, timeout=timeout, max_bytes=max_bytes)
+    if res.error == "timeout":
+        return {"tool": cmd[0], "skipped": True, "reason": "timeout"}
+    if res.error:
+        return {"tool": cmd[0], "skipped": True, "reason": res.error}
+    cap = env_int("SAST_BYTES", SAST_MAX_BYTES) if max_bytes is None \
+        else int(max_bytes or 0)
+    stdout = res.stdout
+    truncated = bool(cap > 0 and len(stdout) > cap)
+    if truncated:
+        stdout = stdout[:cap]
+    return {"tool": cmd[0], "returncode": res.exit_code,
+            "stdout": stdout, "stderr": res.stderr[:20000],
+            "truncated": truncated}
+
+
+def config_lane() -> str:
+    """The scanner execution lane (thin alias for the system sandbox lane)."""
+    from harness.sandbox.system_exec import sandbox_lane
+
+    return sandbox_lane()
 
 
 @tool(parse_docstring=True)

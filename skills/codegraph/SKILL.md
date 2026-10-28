@@ -33,8 +33,6 @@ without whole-repo greps.
 - The index is **static and whole-repo**, so it is safe to query beyond your
   unit's files for reachability evidence — but findings still attach only to
   your unit's assigned files.
-- When a repo has no index the tools degrade to a success-shaped guidance
-  string (grep fallback), never an error and never a hidden tool.
 
 ## The boundary: call graph ≠ taint
 
@@ -81,23 +79,18 @@ routing-manifest join a route node to its handler exactly like CodeGraph's
 kind), through a `references` or `calls` edge, ordered by the route's own file
 and line, with the same test/generated hygiene filter the UI applies. Start a
 cross-file hunt from a route, not from a grep for `@app.get`. Route ids are
-what the authz and proof tools take (`compare_sibling_route_security`,
-`verify_exploit_poc_in_harness`).
+what route authorization tools take (`compare_sibling_route_security`).
 
 ## The sidecar: agent memory, not the graph
 
 Writes never touch the index. The one writable artifact is
 `<repo>/.codegraph/sast_summaries.db` (redirectable via `SAST_SUMMARIES_DB`) —
-the **sidecar** that records **triage memory across agents**:
-
-- per-node **sanitizer/guard verdicts** —
-  `record_function_security_summary` / `get_function_security_summary`, role in
-  `SANITIZER | VALIDATOR | AUTH_GUARD | TAINT_PASSTHROUGH | SAFE_WRAPPER`. A
-  recorded verdict is prepended to later tool calls as a `[CACHED SUMMARY: …]`
-  hint, so do not re-derive what is already decided.
-- per-`(CWE, sink-signature)` **triage decisions** —
-  `query_historical_triage_memory` (`TRUE_POSITIVE | FALSE_POSITIVE |
-  SUPPRESSED | NEEDS_REVIEW`) — plus the analyst's variant rules.
+the **sidecar** for reusable security-role summaries: per-node
+**sanitizer/guard** verdicts (`SANITIZER | VALIDATOR | AUTH_GUARD |
+TAINT_PASSTHROUGH | SAFE_WRAPPER`). It is triage memory across agents; recorded
+rows are prepended to later tool calls as a `[CACHED SUMMARY: …]` hint, so do
+not re-derive what is already decided. The tool surface only reads it — the
+index and the sidecar stay read-only for agents.
 
 A summary is a claim, not a finding: it is an analyst's verdict you can act on
 and, when wrong, overwrite.
@@ -106,7 +99,13 @@ and, when wrong, overwrite.
 
 | You want to know | Tool |
 |---|---|
-| What is this symbol connected to (both directions) | `callers` / `callees` (`_db`-first, grep fallback) |
+| **1-shot exploration: verbatim source + call path + blast radius** | `codegraph_explore` (Reach for this FIRST instead of multi-step read/grep) |
+| **Shortest call path between entry point and sink across dynamic hops** | `find_path` (traces exact call-site lines & edge confidence) |
+| **Multi-hop blast radius / transitive downstream dependents** | `impact_radius` (walks transitive dependencies up to depth N) |
+| **Assemble focused context for a task (entry points + related files)** | `build_context` |
+| **Compile web framework route table & detected frameworks (Express, FastAPI, Django...)** | `get_routing_manifest` |
+| **Identify dependency cycles and dead/orphaned code** | `detect_circular_and_dead_code` |
+| What is this symbol connected to (both directions) | `callers` / `callees` (`_db`-first index search, optional JSON mode) |
 | Where do routes enter, and which handler serves each | `framework_routes` (route nodes → handler file:line) |
 | The exact source span of one node, without flooding context | `get_ast_slice` |
 | Where one call hop happens and what argument crossed it | `trace_interprocedural_hop` |
@@ -116,16 +115,10 @@ and, when wrong, overwrite.
 | Does this endpoint enforce what its sibling endpoints enforce | `compare_sibling_route_security` |
 | Who reads/writes this shared state, and is it unguarded | `find_shared_state_readers_writers` |
 | Which state transitions skip the workflow | `trace_state_machine_transitions` |
-| Does a proposed patch fix the sink without breaking callers | `validate_remediation_patch` |
-| Sweep the repo for every occurrence of a proven pattern | `synthesize_and_sweep_variant_rule` |
-| What did we already decide about this CWE and sink | `query_historical_triage_memory` |
-| Does reachable code call this package's vulnerable symbol | `verify_cve_symbol_reachability` |
-| Which config leaves are weak / hold a hardcoded secret | `inspect_config_and_secret_hygiene` |
 | Do this function's network calls go to a fixed URL or an attacker's | `trace_egress_and_ssrf_targets` |
-| What contract crosses this language boundary, and does it hold | `inspect_cross_language_bridge` |
-| Does external data reach an LLM/tool prompt (AI-native toxic flow) | `audit_llm_and_mcp_tool_sinks` |
-| Did the attacker-controlled value really reach the sink | `verify_exploit_poc_in_harness` |
-| Record/read a node's security verdict (the sidecar) | `record_function_security_summary` / `get_function_security_summary` |
+| Which security-sensitive sinks (shell, db, crypto, network, etc.) are reached | `trace_effect_category` |
+| Reconcile package imports against manifest dependencies | `reconcile_manifest_imports` |
+| Map GraphQL schema, queries, mutations, types, and resolver handlers | `graphql_surface` |
 | Summarize dependency manifests + container/IaC under root | `manifest_parse` |
 | Read one code span by line | `ast_query` |
 
@@ -157,14 +150,6 @@ recall collapses toward noise.
 - Skipping dead weight: if no call path reaches a suspicious function, that is
   signal to spend budget elsewhere — but only *reachability* signal, never a
   claim that the path does not exist.
-
-## When they are NOT available
-
-- The index is missing (the tool returns the "no codegraph index for this repo"
-  guidance): fall back to `grep` / `ast_query` — the index is an accelerator,
-  not a dependency.
-- A repo the indexer never indexed has no route nodes and no sidecar; the tools
-  degrade to grep, they do not error.
 
 ## Remember
 

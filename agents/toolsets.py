@@ -9,11 +9,43 @@ def graph_tools() -> list:
     skills are the scan surface.
     """
     from harness.tools.code import ast_query
-    from harness.tools.codegraph import callees, callers, framework_routes
-    from harness.tools.graphify import (graph_affected, graph_neighbors,
-                                         graph_path, graph_query)
+    from harness.tools.codegraph import (
+        affected,
+        build_context,
+        callees,
+        callers,
+        codegraph_explore,
+        compare_sibling_route_security,
+        detect_circular_and_dead_code,
+        find_path,
+        framework_routes,
+        get_ast_slice,
+        get_routing_manifest,
+        impact_radius,
+        resolve_blind_spot,
+        trace_effect_category,
+        trace_interprocedural_hop,
+        trace_state_machine_transitions,
+    )
     from harness.tools.verify import reachability_check
 
-    return [ast_query, callers, callees, framework_routes,
-            graph_neighbors, graph_path, graph_query, graph_affected,
-            reachability_check]
+    return [
+        ast_query,
+        codegraph_explore,
+        find_path,
+        impact_radius,
+        build_context,
+        get_routing_manifest,
+        callers,
+        callees,
+        framework_routes,
+        affected,
+        reachability_check,
+        get_ast_slice,
+        trace_interprocedural_hop,
+        resolve_blind_spot,
+        compare_sibling_route_security,
+        trace_state_machine_transitions,
+        trace_effect_category,
+        detect_circular_and_dead_code,
+    ]

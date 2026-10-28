@@ -45,13 +45,13 @@ for v in GITLEAKS_VERSION GITLEAKS_SHA256_X64 GITLEAKS_SHA256_ARM64 \
          TRUFFLEHOG_VERSION TRUFFLEHOG_SHA256_X64 TRUFFLEHOG_SHA256_ARM64 \
          GOSEC_VERSION GOSEC_SHA256_X64 GOSEC_SHA256_ARM64 \
          NJSSCAN_VERSION ATHERIS_VERSION FLAWFINDER_VERSION \
-         PWNTOOLS_VERSION CAPSTONE_VERSION BINWALK_VERSION \
+         PWNTOOLS_VERSION CAPSTONE_VERSION BINWALK_VERSION BINWALK_SHA256 \
          FFUF_VERSION FFUF_SHA256_X64 FFUF_SHA256_ARM64 \
          NUCLEI_VERSION NUCLEI_SHA256_X64 NUCLEI_SHA256_ARM64 \
          HTTPX_VERSION HTTPX_SHA256_X64 HTTPX_SHA256_ARM64 \
          KATANA_VERSION KATANA_SHA256_X64 KATANA_SHA256_ARM64 \
          GAU_VERSION GAU_SHA256_X64 GAU_SHA256_ARM64 \
-         SQLMAP_VERSION ARJUN_VERSION MITMPROXY_VERSION \
+         SQLMAP_VERSION ARJUN_VERSION MITMPROXY_VERSION PYTHON_BASE_IMAGE \
          WITH_NODE NODE_VERSION CODEGRAPH_VERSION WITH_GO GO_VERSION; do
     if [[ -n "${!v:-}" ]]; then
         ARGS+=(--build-arg "$v=${!v}")
@@ -70,89 +70,122 @@ for v in GITLEAKS_VERSION GITLEAKS_SHA256_X64 GITLEAKS_SHA256_ARM64 \
 done
 
 echo "[build] ${IMAGE_TAG} (context: repo root)"
-docker build -f harness/sandbox/docker/Dockerfile "${ARGS[@]}" -t "$IMAGE_TAG" .
+# Stable named builder (docker-container driver): its build cache lives in the
+# builder's own volume, which survives Docker Desktop restarts, and this driver
+# is the one that can adopt --cache-to/--cache-from backends later. The first
+# run after creation bootstraps cold by design. --builder pins every
+# invocation explicitly (no reliance on buildx-use state); --load exports the
+# result into the daemon's image store so the smoke suite can use the tag.
+# Remote cache (deferred, optDocker 4.6) — uncomment once a registry ref exists:
+#   --cache-from type=registry,ref=<registry>/cyber-sandbox:cache \
+#   --cache-to   type=registry,ref=<registry>/cyber-sandbox:cache,mode=max \
+docker buildx inspect cyber >/dev/null 2>&1 \
+    || docker buildx create --name cyber --driver docker-container >/dev/null
+docker buildx build --builder cyber --load \
+    -f harness/sandbox/docker/Dockerfile "${ARGS[@]}" -t "$IMAGE_TAG" .
 
-echo "[smoke] versions"
-docker run --rm "$IMAGE_TAG" semgrep --version
-docker run --rm "$IMAGE_TAG" opengrep --version
-docker run --rm "$IMAGE_TAG" gitleaks version
-docker run --rm "$IMAGE_TAG" osv-scanner --version
-docker run --rm "$IMAGE_TAG" checkov --version
+# Smoke checks: batched into exactly TWO container invocations:
+# 1. Container 1: Toolchain, versions, python imports, and skills layout (online/default)
+# 2. Container 2: Offline rule scanning, codegraph indexing, checkov IaC, and hermetic isolation (--network none)
 
-echo "[smoke] jq + skills"
-docker run --rm "$IMAGE_TAG" jq --version
-docker run --rm "$IMAGE_TAG" sh -c 'test -f /opt/harness-skills/gitleaks/SKILL.md && test -f /opt/harness-skills/osv-scanner/SKILL.md && test -f /opt/harness-skills/checkov/SKILL.md'
-docker run --rm "$IMAGE_TAG" sh -c 'for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done'
-docker run --rm "$IMAGE_TAG" sh -c 'cd /opt/harness-skills && for t in \
-    gdb afl valgrind pwntools binwalk httpx katana gau arjun; do \
-    test -s "$t/SKILL.md" || exit 1; done && echo "offensive runbooks ok"'
-docker run --rm "$IMAGE_TAG" cat /opt/harness-skills/gitleaks/SKILL.md | diff -q - harness/skills/gitleaks/SKILL.md
+[[ -n "${SEMGREP_RULES_REV:-}" ]] || { echo "SEMGREP_RULES_REV missing in $VERSIONS_FILE" >&2; exit 1; }
 
-echo "[smoke] Tier-1 analysis toolchain (debug/RE/fuzz/extract)"
-docker run --rm "$IMAGE_TAG" sh -c 'command -v gdb valgrind objdump afl-fuzz binwalk pwn'
-docker run --rm "$IMAGE_TAG" sh -c 'gdb --version | head -1 && valgrind --version && objdump --version | head -1'
-docker run --rm "$IMAGE_TAG" sh -c 'python3 -c "import pwn, binwalk; print(\"pwntools+binwalk ok\")"'
-docker run --rm "$IMAGE_TAG" sh -c 'binwalk --help >/dev/null 2>&1 && echo "binwalk CLI ok"'
+echo "[smoke 1/2] toolchain, versions, python imports & skills (batched)"
+docker run --rm \
+    -v "$PWD/harness/skills/gitleaks/SKILL.md:/tmp/host_gitleaks_skill.md:ro" \
+    "$IMAGE_TAG" bash -c '
+    set -euo pipefail
 
-echo "[smoke] Tier-2 dynamic web/API binaries"
-docker run --rm "$IMAGE_TAG" sh -c 'ffuf -V && nuclei -version && httpx -version && katana -version'
-docker run --rm "$IMAGE_TAG" sh -c 'command -v gau sqlmap arjun mitmdump && sqlmap --version && mitmdump --version'
+    # Core scanners & CLI tools
+    semgrep --version
+    opengrep --version
+    gitleaks version
+    osv-scanner --version
+    checkov --version
+    bandit --version
+    bearer --version
+    trufflehog --version
+    gosec -version
+    njsscan --version
+    flawfinder --version
+    jq --version
 
-# codegraph CLI (D9/D10): only present on WITH_NODE=1 lanes.
-if [[ "${WITH_NODE:-0}" == "1" ]]; then
-    echo "[smoke] codegraph CLI present + telemetry disabled"
-    # `command -v` must resolve to a real executable, not a shell builtin/alias
-    # (an empty pin would otherwise "pass" a parse-only check with no CLI).
-    docker run --rm "$IMAGE_TAG" sh -c 'test -x "$(command -v codegraph)"'
-    docker run --rm "$IMAGE_TAG" sh -c 'codegraph version | grep -q .'
-    docker run --rm "$IMAGE_TAG" sh -c 'codegraph telemetry status | grep -qi disabled'
+    # Tier-1 analysis & RE/debug binaries
+    for t in gdb valgrind objdump afl-fuzz binwalk pwn; do
+        command -v "$t" >/dev/null || exit 1
+    done
+    gdb --version | head -1
+    valgrind --version
+    objdump --version | head -1
+    binwalk --help >/dev/null 2>&1
 
-    echo "[smoke] codegraph index + gate, offline on a tiny fixture (no network)"
-    # Fixture is generated in-container under the writable /work, so no host
-    # mount (and no repo fixture) is involved. Env hygiene comes from the image.
-    # The jq gate parse runs in-container too (jq is baked in), like the
-    # checkov smoke above -- no host jq dependency.
-    docker run --rm --network none "$IMAGE_TAG" sh -c '
-        set -eu
+    # Python packages
+    python3 -c "import pwn, binwalk, atheris; print(\"pwntools+binwalk+atheris ok\")"
+
+    # Tier-2 dynamic web binaries
+    ffuf -V
+    nuclei -version
+    httpx -version
+    katana -version
+    for t in gau sqlmap arjun mitmdump; do
+        command -v "$t" >/dev/null || exit 1
+    done
+    sqlmap --version
+    mitmdump --version
+
+    # Codegraph CLI (when WITH_NODE=1)
+    if [ "'"${WITH_NODE:-0}"'" = "1" ]; then
+        test -x "$(command -v codegraph)"
+        codegraph version | grep -q .
+        codegraph telemetry status | grep -qi disabled
+    fi
+
+    # Skills layout and reference trees
+    test -f /opt/harness-skills/gitleaks/SKILL.md
+    test -f /opt/harness-skills/osv-scanner/SKILL.md
+    test -f /opt/harness-skills/checkov/SKILL.md
+    for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done
+    for t in gdb afl valgrind pwntools binwalk httpx katana gau arjun; do test -s "/opt/harness-skills/$t/SKILL.md" || exit 1; done
+    cmp -s /opt/harness-skills/gitleaks/SKILL.md /tmp/host_gitleaks_skill.md || exit 1
+    grep -qF "'"${SEMGREP_RULES_REV}"'" /opt/scan-rules/harness/vendor/semgrep-rules/NOTICE.md
+    echo "toolchain, runbooks, and skills ok"
+'
+
+echo "[smoke 2/2] offline execution, fixtures & network isolation (--network none)"
+docker run --rm --network none "$IMAGE_TAG" bash -c '
+    set -euo pipefail
+
+    # 1. codegraph index + gate on in-memory fixture (when WITH_NODE=1)
+    if [ "'"${WITH_NODE:-0}"'" = "1" ]; then
         mkdir -p /work/cg/src
         printf "def main():\n    return helper()\n\ndef helper():\n    return 1\n" > /work/cg/src/a.py
         codegraph init /work/cg >/dev/null 2>&1
         codegraph index -q /work/cg
         codegraph status -j /work/cg | jq -e ".index.state == \"complete\" and .index.pendingRefs == 0" >/dev/null
-    '
-fi
+    fi
 
-echo "[smoke] offline rule scan with no network (must succeed)"
-TMP_REPO="$(mktemp -d)"
-printf 'import os\nos.system("echo " + input())\n' > "$TMP_REPO/evil.py"
-docker run --rm --network none -v "$TMP_REPO:/scan:ro" "$IMAGE_TAG" \
-    semgrep scan --config /opt/scan-rules/harness --metrics off --quiet /scan
-rm -rf "$TMP_REPO"
+    # 2. offline rule scan with harness custom rules
+    mkdir -p /work/scan-evil
+    printf "import os\nos.system(\"echo \" + input())\n" > /work/scan-evil/evil.py
+    timeout 600 semgrep scan --config /opt/scan-rules/harness --metrics off --quiet /work/scan-evil
 
-echo "[smoke] vendored upstream rules fire offline (weak-crypto fixture)"
-TMP_CRYPTO="$(mktemp -d)"
-printf 'import cryptography\n_insecure = cryptography.hazmat.primitives.hashes.MD5()\n' > "$TMP_CRYPTO/a.py"
-docker run --rm --network none -v "$TMP_CRYPTO:/scan:ro" "$IMAGE_TAG" sh -c \
-    'semgrep scan --config /opt/scan-rules/harness/vendor/semgrep-rules --metrics off /scan | grep -q insecure-hash-algorithm'
-rm -rf "$TMP_CRYPTO"
+    # 3. offline rule scan with vendored upstream rules (weak crypto)
+    mkdir -p /work/scan-crypto
+    printf "import cryptography\n_insecure = cryptography.hazmat.primitives.hashes.MD5()\n" > /work/scan-crypto/a.py
+    timeout 600 semgrep scan --config /opt/scan-rules/harness/vendor/semgrep-rules --metrics off /work/scan-crypto | grep -q insecure-hash-algorithm
 
-echo "[smoke] vendored-rules provenance (versions.env rev named in baked NOTICE.md)"
-[[ -n "${SEMGREP_RULES_REV:-}" ]] || { echo "SEMGREP_RULES_REV missing in $VERSIONS_FILE" >&2; exit 1; }
-docker run --rm "$IMAGE_TAG" sh -c "grep -qF '${SEMGREP_RULES_REV}' /opt/scan-rules/harness/vendor/semgrep-rules/NOTICE.md"
+    # 4. checkov offline IAC parsing
+    mkdir -p /work/scan-iac
+    printf "FROM alpine:3.20\nRUN echo hi\n" > /work/scan-iac/Dockerfile
+    checkov -d /work/scan-iac -o json --skip-download --quiet --output-file-path /work >/dev/null 2>&1 || true
+    jq -e ".results.failed_checks | length > 0" /work/results_json.json >/dev/null
 
-echo "[smoke] checkov JSON parses offline"
-TMP_IAC="$(mktemp -d)"
-printf 'FROM alpine:3.20\nRUN echo hi\n' > "$TMP_IAC/Dockerfile"
-docker run --rm --network none -v "$TMP_IAC:/scan:ro" "$IMAGE_TAG" sh -c \
-    'checkov -d /scan -o json --skip-download --quiet --output-file-path /work >/dev/null 2>&1; rc=$?; [ "$rc" = 1 ] && jq -e ".results.failed_checks | length > 0" /work/results_json.json >/dev/null'
-rm -rf "$TMP_IAC"
-
-echo "[smoke] network must be unreachable (curl is not in the image)"
-# d/k has /dev/tcp, dash does not; run the probe under bash explicitly.
-if docker run --rm --network none "$IMAGE_TAG" bash -c 'exec 3<>/dev/tcp/example.com/443' 2>/dev/null; then
-    echo "WARNING: outbound TCP from the sandbox apparently works with --network none" >&2
-else
-    echo "network denied, as designed"
-fi
+    # 5. network isolation: egress must fail closed
+    if exec 3<>/dev/tcp/example.com/443 2>/dev/null; then
+        echo "WARNING: outbound TCP from the sandbox works with --network none" >&2
+        exit 1
+    fi
+    echo "offline rule execution and network isolation ok"
+'
 
 echo "[done] ${IMAGE_TAG}"

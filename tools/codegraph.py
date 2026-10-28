@@ -8,19 +8,19 @@ live here:
   CodeGraph index (``<root>/.codegraph/codegraph.db``, read-only) when it is
   present AND the DB-visible half of the build gate passes (``pendingRefs`` is
   zero); otherwise — and whenever the index yields nothing for the query — it
-  falls back to the deterministic grep implementation in the *same output
-  format* (``path:line:`` prefixes; ``## def`` / ``## calls`` markers; the
-  ``(no matches)`` sentinel). That format is load-bearing: ``threat_model_node``
-  counts lines and the pipeline's routes stage greps the text.
-- **The 18 ``harness.codegraph`` tools** (navigation / authz / contracts /
-  variants / supply / polyglot). They already answer ``_db``-first internally;
+  fails closed with clean guidance / ``(no matches)`` sentinels.
+- **The native high-order tools** — :func:`codegraph_explore`, :func:`find_path`,
+  :func:`impact_radius`, :func:`build_context`,
+  :func:`detect_circular_and_dead_code`, :func:`get_routing_manifest`.
+- **The 11 ``harness.codegraph`` tools** (navigation / authz / contracts /
+  supply / effects / manifests / graphql). They answer ``_db``-first internally;
   they are re-exported here so ``harness/agents/toolsets.py`` binds the whole
   code-intelligence surface from one place (:func:`codegraph_tools`).
 
-Import law: this module imports only ``harness.codegraph`` (the 18 + ``_db``),
-stdlib, and the existing harness tool helpers (``harness.tools.code``) — no new
-dependencies. Nothing here shells ``codegraph``; the CLI is the indexer's tool,
-never an agent's.
+Import law: this module imports only ``harness.codegraph`` (the 11 +
+``_db``), stdlib, and the existing harness tool helpers
+(``harness.tools.code``) — no new dependencies. Nothing here shells
+``codegraph``; the CLI is the indexer's tool, never an agent's.
 """
 from __future__ import annotations
 
@@ -29,32 +29,25 @@ from collections import deque
 from pathlib import Path
 
 from harness.codegraph import (
-    audit_llm_and_mcp_tool_sinks,
     compare_sibling_route_security,
     find_shared_state_readers_writers,
     get_ast_slice,
-    get_function_security_summary,
-    inspect_config_and_secret_hygiene,
-    inspect_cross_language_bridge,
+    graphql_surface,
     inspect_type_contract,
-    query_historical_triage_memory,
-    record_function_security_summary,
+    reconcile_manifest_imports,
     resolve_blind_spot,
-    synthesize_and_sweep_variant_rule,
+    trace_effect_category,
     trace_egress_and_ssrf_targets,
     trace_interprocedural_hop,
     trace_state_machine_transitions,
-    validate_remediation_patch,
-    verify_cve_symbol_reachability,
-    verify_exploit_poc_in_harness,
 )
 from harness.codegraph import _db
 from harness.config import get_default_config
 
 from ._compat import tool
-from .code import _resolve_limit, grep_files
+from .code import _resolve_limit
 
-# The 18 harness.codegraph tools, in the package's own order. Kept as names so
+# The 11 harness.codegraph tools, in the package's own order. Kept as names so
 # codegraph_tools() stays a single source of truth and __all__ is derived.
 CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
     "get_ast_slice",
@@ -64,17 +57,10 @@ CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
     "find_shared_state_readers_writers",
     "trace_state_machine_transitions",
     "inspect_type_contract",
-    "record_function_security_summary",
-    "get_function_security_summary",
-    "validate_remediation_patch",
-    "synthesize_and_sweep_variant_rule",
-    "query_historical_triage_memory",
-    "verify_cve_symbol_reachability",
-    "inspect_config_and_secret_hygiene",
     "trace_egress_and_ssrf_targets",
-    "inspect_cross_language_bridge",
-    "audit_llm_and_mcp_tool_sinks",
-    "verify_exploit_poc_in_harness",
+    "trace_effect_category",
+    "reconcile_manifest_imports",
+    "graphql_surface",
 )
 
 # CodeGraph's uncertainty boundary (src/graph/dynamic-boundary-report.ts): below
@@ -102,7 +88,7 @@ ROUTE_LINE_RE = re.compile(
 
 
 def codegraph_tools() -> list:
-    """The 18 ``harness.codegraph`` tools, in a stable order.
+    """The 11 ``harness.codegraph`` tools, in a stable order.
 
     ``harness/agents/toolsets.py`` binds this list beside the ``_db``-first grep
     tools, so the whole code-intelligence surface is defined once and the roles
@@ -322,15 +308,11 @@ def manifest_parse(root: str = ".", limit: int | None = None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# framework_routes: route nodes from the index, regex elsewhere
+# framework_routes: route nodes from the index
 # ---------------------------------------------------------------------------
 
 def _routes_db(conn, limit, offset) -> str | None:
-    """The index's routing manifest in the pinned route format, or None.
-
-    None means "the index has no routes" — the caller then greps, so an
-    unindexed framework still shows up.
-    """
+    """The index's routing manifest in the pinned route format, or None."""
     rows = _db.routing_manifest(conn, limit=5000)
     if not rows:
         return None
@@ -343,75 +325,9 @@ def _routes_db(conn, limit, offset) -> str | None:
     return _paginate(lines, limit, offset, "ROUTES_LIMIT", 500)
 
 
-def _routes_grep(root: str, limit, offset: int) -> str:
-    """The deterministic regex route scan (today's implementation, verbatim)."""
-    pattern = (
-        r"(@(app|router|api)\.(get|post|put|delete|patch|route)\b"
-        r"|@app\.route\b"
-        r"|app\.(get|post|put|delete|route)\s*\("
-        r"|router\.(get|post|put|delete|use)\s*\("
-        r"|@(?:Get|Post|Put|Delete|Patch|Route|Controller|RestController|RequestMapping)\b"
-        r"|express\s*\.\s*(get|post)"
-        r"|\.get\s*\(\s*['\"]/"
-        r"|Route\s*::"
-        r"|^\s*(get|post|put|patch|delete)\s+['\"][^'\"]*['\"]\s*(=>|do|,)"
-        r"|^\s*resources\s+:\w+"
-        r"|\[(HttpGet|HttpPost|HttpPut|HttpDelete|Route)\b"
-        r"|Map(Get|Post|Put|Delete)\s*\("
-        r"|http\.HandleFunc\s*\("
-        r"|\b(gin|echo)\.(GET|POST|PUT|DELETE)\s*\("
-        r"|^\s*(path|re_path|url)\s*\("
-        r"|\(\s*r?['\"]/[^'\"]*['\"]\s*,\s*\w+Handler\b"
-        r"|\badd_url_rule\s*\("
-        r"|^\s{2}(/[a-zA-Z0-9_{}/-]+):"
-        r")"
-    )
-    # Ask grep for a large window; we page locally for stable offsets.
-    res = grep_files(regex=pattern, include="*", root=root, limit=5000)
-    raw_lines = [l for l in res.splitlines() if l.strip() and not l.startswith("… ")] if res and "(no matches)" not in res else []
-    valid_exts = (
-        ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rb", ".php", ".java",
-        ".cs", ".rs", ".kt", ".scala", ".yml", ".yaml", ".json"
-    )
-    skip_parts = (
-        "/tests/", "/test/", "/spec/", "/specs/", "/fixtures/",
-        "/codefixes/", "static/font-awesome/", "node_modules/"
-    )
-    all_lines = []
-    for line in raw_lines:
-        path_part = line.split(":", 1)[0].replace("\\", "/").lower()
-        if not path_part.startswith("/"):
-            path_part = "/" + path_part
-        if any(path_part.endswith(ext) for ext in valid_exts):
-            if not any(sp in path_part for sp in skip_parts):
-                if path_part.endswith((".yml", ".yaml", ".json")):
-                    if not any(k in path_part for k in ("openapi", "swagger", "api")):
-                        continue
-                all_lines.append(line)
-
-    try:
-        from pathlib import Path as _Path
-        base = _Path(root)
-        for pages_dir_name in ("pages", "src/pages"):
-            p_dir = base / pages_dir_name
-            if p_dir.is_dir():
-                for f in sorted(p_dir.rglob("*")):
-                    if f.is_file() and f.suffix in (".js", ".ts", ".jsx", ".tsx"):
-                        name = f.name
-                        if not name.startswith(("_app.", "_document.", "_error.")):
-                            rel = f.relative_to(base)
-                            all_lines.append(f"{rel}:1: [page route] {rel}")
-    except OSError:
-        pass
-
-    if not all_lines:
-        return "(no matches)"
-    return _paginate(all_lines, limit, offset, "ROUTES_LIMIT", 500)
-
-
 @tool(parse_docstring=True)
 def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0) -> str:
-    """Index-first web-framework routes (URL + handler file:line); regex fallback. Paginated via limit/offset.
+    """Index-backed web-framework routes (URL + handler file:line). Paginated via limit/offset.
 
     Args:
         root: Directory to scan for route declarations.
@@ -419,15 +335,32 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
         offset: Route index to start from, for paging.
     """
     conn, ok = _index_gate(root)
-    if ok:
-        db_out = _routes_db(conn, limit, offset)
-        if db_out is not None:
-            return db_out
-    return _routes_grep(root, limit, offset)
+    if not ok:
+        return _db.guidance_no_db(root)
+    db_out = _routes_db(conn, limit, offset)
+    if db_out is not None:
+        return db_out
+    try:
+        from harness.codegraph import native
+        res = native.routing_manifest(root)
+        manifest = res.get("manifest")
+        if manifest and isinstance(manifest, list):
+            lines = []
+            for r in manifest:
+                url = r.get("path") or r.get("url") or "/"
+                handler = r.get("handler") or r.get("name") or "handler"
+                rf = r.get("filePath") or "routes"
+                rl = r.get("startLine") or 1
+                lines.append(f"{rf}:{rl}: [route] {url} -> {handler} ({rf}:{rl})")
+            if lines:
+                return _paginate(lines, limit, offset, "ROUTES_LIMIT", 500)
+    except Exception:
+        pass
+    return "(no matches)"
 
 
 # ---------------------------------------------------------------------------
-# callers / callees: edge tables first, regex elsewhere
+# callers / callees: edge tables from the index
 # ---------------------------------------------------------------------------
 
 def _sanitize_func_name(func_name: str) -> str:
@@ -476,49 +409,33 @@ def _callers_db(conn, root: str, name: str, file: str | None, limit) -> str | No
     return "\n".join(out)[:20000] or "(no matches)"
 
 
-def _callers_grep(name: str, root: str, limit) -> str:
-    """The deterministic grep call-site scan (today's implementation, verbatim)."""
-    esc = re.escape(name)
-    _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
-    out: list[str] = []
-    def_res = grep_files(regex=rf"^\s*(def|function|func|fn)\s+{esc}\b", include="*", root=root, limit=5000)
-    if (not def_res or "(no matches)" in def_res) and "." not in name:
-        # C-family definitions: `<type> name(` — looser, may over-match.
-        c_res = grep_files(regex=rf"^\s*[A-Za-z_][\w\s\*&:<>]*\b{esc}\s*\(", include="*", root=root)
-        if c_res and "(no matches)" not in c_res:
-            def_res = c_res if not def_res or "(no matches)" in def_res else def_res + "\n" + c_res
-    call_res = grep_files(regex=rf"\b{esc}\s*\(", include="*", root=root, limit=5000)
-    if def_res and "(no matches)" not in def_res:
-        out.append("## def")
-        def_lines = [l for l in def_res.splitlines() if l.strip() and not l.startswith("… ")]
-        out.extend(def_lines if _lim <= 0 else def_lines[:_lim])
-    if call_res and "(no matches)" not in call_res:
-        out.append("## calls")
-        call_lines = [l for l in call_res.splitlines() if l.strip() and not l.startswith("… ")]
-        out.extend(call_lines if _lim <= 0 else call_lines[:_lim])
-    return "\n".join(out)[:20000] or "(no matches)"
-
-
 @tool(parse_docstring=True)
 def callers(func_name: str, root: str = ".", file: str | None = None,
-            limit: int | None = None) -> str:
-    """Find call sites of func_name (index edges first, grep fallback). Paginated via limit (0=unlimited).
+            limit: int | None = None, as_json: bool = False) -> str:
+    """Find call sites of func_name from the CodeGraph index. Paginated via limit (0=unlimited).
 
     Args:
         func_name: Function name whose call sites to find.
         root: Directory to search.
         file: Optional file path to disambiguate same-named definitions.
         limit: Max call sites per section. 0 = unlimited.
+        as_json: Return structured JSON with enriched metadata (confidence, column, target ID).
     """
     name = _sanitize_func_name(func_name)
     if not name:
         return "(no matches)"
     conn, ok = _index_gate(root)
-    if ok:
-        db_out = _callers_db(conn, root, name, file, limit)
-        if db_out is not None:
-            return db_out
-    return _callers_grep(name, root, limit)
+    if not ok:
+        return _db.guidance_no_db(root)
+    if as_json:
+        import json
+        from harness.codegraph import native
+        res = native.callers_json(name, repo=root, limit=limit or 100)
+        return json.dumps(res, indent=2)
+    db_out = _callers_db(conn, root, name, file, limit)
+    if db_out is not None:
+        return db_out
+    return "(no matches)"
 
 
 def _callees_db(conn, root: str, name: str, file: str | None, limit) -> str | None:
@@ -549,93 +466,33 @@ def _callees_db(conn, root: str, name: str, file: str | None, limit) -> str | No
     return _paginate(seen, limit, 0, "CALLERS_LIMIT", 100)
 
 
-def _callees_grep(name: str, root: str, limit) -> str:
-    """The deterministic grep callee scan (today's implementation, verbatim)."""
-    try:
-        base = _safe_root(root)
-    except ValueError as e:
-        return f"ERROR: {e}"
-    if not base.exists():
-        return "(no matches)"
-    esc = re.escape(name)
-    def_res = grep_files(regex=rf"^\s*def\s+{esc}\s*\(", include="*.py", root=root)
-    if def_res and "(no matches)" in def_res:
-        def_res = ""
-    if not def_res:
-        def_res = grep_files(regex=rf"^\s*(def|function|func)\s+{esc}\b", include="*", root=root)
-        if def_res and "(no matches)" in def_res:
-            return "(no matches)"
-    if not def_res:
-        return "(no matches)"
-    call_pat = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
-    _lim2 = _resolve_limit(limit, "CALLERS_LIMIT", 100)
-    seen: list[str] = []
-    seen_set: set[str] = set()
-    for line in def_res.splitlines()[:10]:
-        try:
-            parts = line.split(":", 2)
-            if len(parts) < 3:
-                continue
-            rel, num = parts[0], parts[1]
-            lineno = int(num)
-        except (ValueError, IndexError):
-            continue
-        try:
-            fpath = (base / rel).resolve()
-            # Re-check after resolving: rel may traverse a symlink dir.
-            fpath.relative_to(base.resolve())
-            if not fpath.is_file() or fpath.is_symlink():
-                continue
-            text = fpath.read_text(errors="replace").splitlines()
-        except OSError:
-            continue
-        except ValueError:
-            continue
-        body = text[lineno - 1: lineno - 1 + 200]
-        for bline in body[1:]:
-            # Stop at next top-level def to avoid bleeding into sibling funcs.
-            if re.match(r"^(def|class)\s+\w+", bline):
-                break
-            for m in call_pat.finditer(bline):
-                callee = m.group(1)
-                if callee == name.split(".")[-1]:
-                    continue
-                if callee not in seen_set:
-                    seen_set.add(callee)
-                    seen.append(f"{rel}:{callee}()")
-                if _lim2 > 0 and len(seen) >= _lim2:
-                    break
-        if _lim2 > 0 and len(seen) >= _lim2:
-            break
-    if not seen:
-        return "(no callees found)"
-    page = seen if _lim2 <= 0 else seen[:_lim2]
-    body_out = "\n".join(page)[:20000]
-    if len(seen) > len(page):
-        body_out += f"\n… +{len(seen) - len(page)} more"
-    return body_out
-
-
 @tool(parse_docstring=True)
 def callees(func_name: str, root: str = ".", file: str | None = None,
-            limit: int | None = None) -> str:
-    """Find what func_name calls (index edges first, grep fallback). Paginated via limit (0=unlimited).
+            limit: int | None = None, as_json: bool = False) -> str:
+    """Find what func_name calls from the CodeGraph index. Paginated via limit (0=unlimited).
 
     Args:
         func_name: Function name whose body to scan.
         root: Directory to search.
         file: Optional file path to disambiguate same-named definitions.
         limit: Max callees. 0 = unlimited.
+        as_json: Return structured JSON with enriched metadata (confidence, column, target ID).
     """
     name = _sanitize_func_name(func_name)
     if not name:
         return "(no matches)"
     conn, ok = _index_gate(root)
-    if ok:
-        db_out = _callees_db(conn, root, name, file, limit)
-        if db_out is not None:
-            return db_out
-    return _callees_grep(name, root, limit)
+    if not ok:
+        return _db.guidance_no_db(root)
+    if as_json:
+        import json
+        from harness.codegraph import native
+        res = native.callees_json(name, repo=root, limit=limit or 100)
+        return json.dumps(res, indent=2)
+    db_out = _callees_db(conn, root, name, file, limit)
+    if db_out is not None:
+        return db_out
+    return "(no matches)"
 
 
 # ---------------------------------------------------------------------------
@@ -735,9 +592,170 @@ def affected(node: str, root: str = ".", file: str | None = None,
         # guidance the un-indexed contract uses everywhere else.
         return _db.guidance_no_db(root)
     db_out = _affected_db(conn, root, name, file, depth, limit)
-    if db_out is None:
-        return "(no matches)"
-    return db_out
+    if db_out is not None:
+        return db_out
+    try:
+        from harness.codegraph import native
+        res = native.impact(name, depth=depth, repo=root)
+        nodes = res.get("nodes", [])
+        if nodes:
+            lines = [f"Affected nodes for {name} (native impact depth<={depth}, total {len(nodes)}):"]
+            lim = limit if limit and limit > 0 else 100
+            for n in nodes[:lim]:
+                lines.append(f"- {n.get('name')} [{n.get('kind')}] {n.get('filePath')}:{n.get('startLine')}")
+            return "\n".join(lines)
+    except Exception:
+        pass
+    return "(no matches)"
+
+
+# ---------------------------------------------------------------------------
+# Native CodeGraph High-Order Tools (1-shot explore, impact, path & context)
+# ---------------------------------------------------------------------------
+
+@tool(parse_docstring=True)
+def codegraph_explore(query: str, max_files: int = 5) -> str:
+    """1-shot code exploration over the CodeGraph index.
+
+    Returns the verbatim, line-numbered source code of relevant symbols across
+    files, PLUS the call path connecting them (including dynamic-dispatch hops),
+    PLUS the blast-radius summary of dependents. Reach for this BEFORE reading
+    files or running multi-step greps — ONE call usually provides the complete flow.
+
+    Args:
+        query: Natural language question or symbol/file names (e.g. 'auth verify_token').
+        max_files: Maximum number of files to include verbatim source from (default: 5).
+    """
+    from harness.codegraph import native
+    return native.explore(query, max_files=max_files)
+
+
+@tool(parse_docstring=True)
+def find_path(from_symbol: str, to_symbol: str) -> str:
+    """Find the shortest call path between two symbols across the codebase.
+
+    Traces calls across interprocedural hops and dynamic dispatch, returning each
+    step's file, line, call site, and edge confidence.
+
+    Args:
+        from_symbol: Starting function or method name (e.g. 'handle_request').
+        to_symbol: Target function or sink name (e.g. 'execute_query').
+    """
+    from harness.codegraph import native
+    res = native.find_path(from_symbol, to_symbol)
+    if isinstance(res, dict) and res.get("error"):
+        return f"ERROR: call-path search unavailable: {res['error']}"
+    path = res if isinstance(res, list) else None
+    if not path:
+        return f"No call path found from {from_symbol} to {to_symbol}."
+    lines = [f"Call path from {from_symbol} to {to_symbol} ({len(path)} steps):"]
+    for i, step in enumerate(path):
+        node = step.get("node", {})
+        edge = step.get("edge")
+        node_desc = f"[{node.get('kind', 'symbol')}] {node.get('name')} ({node.get('filePath')}:{node.get('startLine')})"
+        if edge:
+            conf = edge.get("metadata", {}).get("confidence", 1.0)
+            lines.append(f"  --({edge.get('kind', 'calls')}, conf: {conf})--> {node_desc}")
+        else:
+            lines.append(f"  1. {node_desc}")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def impact_radius(symbol: str, depth: int = 2) -> str:
+    """Analyze the downstream transitive blast radius of a symbol across files.
+
+    Args:
+        symbol: Function, class, or variable name.
+        depth: Traversal depth (default: 2).
+    """
+    from harness.codegraph import native
+    res = native.impact(symbol, depth=depth)
+    if "error" in res:
+        return f"Error computing impact for {symbol}: {res['error']}"
+    nodes = res.get("nodes", [])
+    if not nodes:
+        return f"No impacted symbols found for {symbol} at depth {depth}."
+    lines = [f"Impact radius of {symbol} (depth {depth}): {len(nodes)} affected symbols:"]
+    for n in nodes[:40]:
+        lines.append(f"  - [{n.get('kind')}] {n.get('name')} ({n.get('filePath')}:{n.get('startLine')})")
+    if len(nodes) > 40:
+        lines.append(f"  ... ({len(nodes) - 40} more symbols)")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def build_context(task: str, max_nodes: int = 20) -> str:
+    """Assemble focused context for a task, identifying key entry points, related files, and symbols.
+
+    Args:
+        task: Security task or focus description (e.g. 'investigate SSRF in webhook handler').
+        max_nodes: Maximum symbols to include (default: 20).
+    """
+    from harness.codegraph import native
+    res = native.build_context(task, max_nodes=max_nodes)
+    if "error" in res:
+        return f"Context assembly error: {res['error']}"
+    summary = res.get("summary", "")
+    entry_points = res.get("entryPoints", [])
+    related_files = res.get("relatedFiles", [])
+    lines = [summary]
+    if entry_points:
+        lines.append("\nKey Entry Points:")
+        for ep in entry_points:
+            lines.append(f"  - [{ep.get('kind')}] {ep.get('name')} ({ep.get('filePath')}:{ep.get('startLine')})")
+    if related_files:
+        lines.append(f"\nRelated Files: {', '.join(related_files)}")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def detect_circular_and_dead_code() -> str:
+    """Find circular dependencies and unreferenced dead code in the repository."""
+    from harness.codegraph import native
+    res = native.circular_and_dead_code()
+    if res.get("error"):
+        return f"ERROR: circular/dead analysis unavailable: {res['error']}"
+    circular = res.get("circular_dependencies", [])
+    dead = res.get("dead_code", [])
+    lines = []
+    if circular:
+        lines.append(f"Circular Dependencies ({len(circular)} cycles):")
+        for cyc in circular[:10]:
+            lines.append(f"  - {' -> '.join(cyc)}")
+    else:
+        lines.append("No circular dependencies detected.")
+    if dead:
+        lines.append(f"\nUnreferenced/Dead Code ({len(dead)} symbols):")
+        for d in dead[:20]:
+            lines.append(f"  - [{d.get('kind')}] {d.get('name')} ({d.get('filePath')}:{d.get('startLine')})")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
+def get_routing_manifest() -> str:
+    """Retrieve the native framework routing manifest and detected web frameworks (Next.js, Express, Django, FastAPI, Rails, etc.)."""
+    import json
+    from harness.codegraph import native
+    res = native.routing_manifest()
+    if res.get("error"):
+        return f"ERROR: routing manifest unavailable: {res['error']}"
+    frameworks = res.get("frameworks", [])
+    manifest = res.get("manifest")
+    lines = []
+    if frameworks:
+        lines.append(f"Detected Frameworks: {', '.join(frameworks)}")
+    else:
+        lines.append("Detected Frameworks: None")
+    if manifest:
+        lines.append(f"Routing Manifest:\n{json.dumps(manifest, indent=2)}")
+    else:
+        lines.append("Routing Manifest: (no framework routes declared)")
+    return "\n".join(lines)
+
+
+# Aliases
+codegraph_impact = impact_radius
 
 
 __all__ = [
@@ -746,6 +764,13 @@ __all__ = [
     "callers",
     "callees",
     "affected",
+    "codegraph_explore",
+    "codegraph_impact",
+    "find_path",
+    "impact_radius",
+    "build_context",
+    "detect_circular_and_dead_code",
+    "get_routing_manifest",
     "codegraph_tools",
     "CODEGRAPH_TOOL_NAMES",
     "ROUTE_LINE_RE",

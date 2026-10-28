@@ -6,8 +6,8 @@ from typing import Any as _Any
 from .assemble import _merge_plan
 from .floor import _bug_shapes, _measured_blocks, bootstrap_threat
 from .render import (FPS_HEADING, OBSERVED_HEADING, PROPOSALS_HEADING,
-                     _coverage_gaps, _replace_section, _section,
-                     validate_threat_md)
+                     THREAT_COLUMNS, _cell, _coverage_gaps, _parse_threats,
+                     _replace_section, _section, validate_threat_md)
 from .util import (CACHE_DIRNAME, CACHE_HEADER, FILENAME, _now_iso, _repo_root)
 
 _logger = _logging.getLogger(__name__)
@@ -456,6 +456,189 @@ def persist_threat(repo: str, md: str) -> str:
         return ""
 
 
+_CWE_THREAT_KEYWORDS: dict[str, list[str]] = {
+    "CWE-915": ["mass assignment", "parameter binding", "object injection", "parameter tampering"],
+    "CWE-347": ["jwt", "token", "signature", "none algorithm", "algorithm confusion", "token validation"],
+    "CWE-287": ["authentication", "auth bypass", "credential", "login bypass", "identity"],
+    "CWE-384": ["session fixation", "session hijacking", "session"],
+    "CWE-613": ["insufficient session expiration", "session timeout", "session"],
+    "CWE-89": ["sql injection", "sqli", "sql query", "database injection", "raw query"],
+    "CWE-78": ["command injection", "os command", "shell command", "remote code execution", "rce", "exec"],
+    "CWE-79": ["cross-site scripting", "xss", "script injection", "html injection"],
+    "CWE-94": ["code injection", "eval", "dynamic execution", "rce"],
+    "CWE-22": ["path traversal", "directory traversal", "arbitrary file", "lfi", "file read"],
+    "CWE-23": ["path traversal", "relative path"],
+    "CWE-918": ["ssrf", "server-side request forgery", "request forgery", "out-of-band"],
+    "CWE-601": ["open redirect", "url redirect", "redirection", "phishing"],
+    "CWE-117": ["log injection", "improper output neutralization for logs", "log forging", "crlf log"],
+    "CWE-90": ["ldap injection", "ldap query", "directory injection"],
+    "CWE-502": ["deserialization", "untrusted deserialization", "object deserialization", "pickle"],
+    "CWE-352": ["csrf", "cross-site request forgery", "request forgery"],
+    "CWE-862": ["missing authorization", "authorization bypass", "access control"],
+    "CWE-863": ["incorrect authorization", "privilege escalation", "access control"],
+    "CWE-639": ["idor", "insecure direct object", "authorization"],
+    "CWE-776": ["xxe", "xml external entity", "xml entity"],
+    "CWE-611": ["xxe", "xml external entity"],
+    "CWE-200": ["information disclosure", "sensitive data", "data exposure", "leak"],
+}
+
+_CWE_CANONICAL_THREATS: dict[str, str] = {
+    "CWE-915": "Privilege escalation or unauthorized state tampering via mass assignment",
+    "CWE-347": "Authentication bypass via unverified JWT signatures or 'none' algorithm acceptance",
+    "CWE-287": "Authentication bypass via flawed credential or identity validation",
+    "CWE-89": "Database compromise and sensitive data exfiltration via SQL injection",
+    "CWE-78": "Remote code execution via untrusted operating system command injection",
+    "CWE-79": "Client-side session hijacking or defacement via cross-site scripting (XSS)",
+    "CWE-94": "Arbitrary code execution via dynamic code evaluation",
+    "CWE-22": "Arbitrary file disclosure or tampering via path traversal",
+    "CWE-918": "Internal service access and cloud metadata exposure via Server-Side Request Forgery (SSRF)",
+    "CWE-601": "Phishing or credential theft via unvalidated open URL redirection",
+    "CWE-117": "Audit log tampering or log injection via unneutralized log input",
+    "CWE-90": "Directory query manipulation via LDAP injection",
+    "CWE-502": "Remote code execution via untrusted object deserialization",
+    "CWE-352": "Unauthorized state change via cross-site request forgery (CSRF)",
+    "CWE-862": "Unauthorized access via missing authorization checks",
+    "CWE-863": "Privilege escalation via incorrect authorization enforcement",
+    "CWE-639": "Horizontal privilege escalation via Insecure Direct Object References (IDOR)",
+    "CWE-776": "Denial of service or file disclosure via XML entity expansion (XXE)",
+    "CWE-611": "Arbitrary file disclosure via XML External Entity (XXE) injection",
+    "CWE-200": "Information disclosure of sensitive application or configuration data",
+}
+
+
+def _format_finding_evidence(f: dict) -> str:
+    path = str(f.get("path") or f.get("file") or "").strip()
+    line = f.get("start_line") or f.get("line") or ""
+    loc = f"{path}:{line}" if path and line else (path or "")
+    title = str(f.get("title") or "").strip()
+    cwe = str(f.get("cwe") or "").strip().upper()
+    if loc and title:
+        return f"{loc} [{title}]"
+    if loc and cwe:
+        return f"{loc} [{cwe}]"
+    if title:
+        return title
+    return cwe or "verified finding"
+
+
+def _score_finding_threat_match(f: dict, t: dict) -> int:
+    score = 0
+    cwe = str(f.get("cwe") or "").upper().strip()
+    threat_text = str(t.get("threat", "")).lower()
+    surface_text = str(t.get("surface", "")).lower()
+    ev_text = str(t.get("evidence", "")).lower()
+
+    if cwe and (cwe.lower() in threat_text or cwe.lower() in ev_text):
+        score += 10
+    if cwe in _CWE_THREAT_KEYWORDS:
+        for kw in _CWE_THREAT_KEYWORDS[cwe]:
+            if kw in threat_text:
+                score += 5
+            elif kw in surface_text:
+                score += 2
+
+    import re as _re
+    title_words = [w for w in _re.findall(r"[a-zA-Z]{4,}", str(f.get("title", "")).lower())
+                   if w not in {"across", "every", "into", "with", "site", "units", "from", "user", "data"}]
+    for w in title_words:
+        if w in threat_text:
+            score += 2
+
+    path = str(f.get("path", "")).lower()
+    for seg in path.replace("/", " ").replace(".", " ").replace("-", " ").replace("_", " ").split():
+        if len(seg) >= 4 and seg in threat_text:
+            score += 2
+
+    return score
+
+
+def _update_threat_table_with_claims(md: str, claims: list[dict]) -> str:
+    threat_rows = _parse_threats(md)
+    if not threat_rows:
+        return md
+
+    novel_groups: dict[str, list[dict]] = {}
+
+    for f in claims:
+        best_idx = None
+        best_score = 0
+        for i, t in enumerate(threat_rows):
+            s = _score_finding_threat_match(f, t)
+            if s > best_score:
+                best_score = s
+                best_idx = i
+
+        if best_score >= 4 and best_idx is not None:
+            t = threat_rows[best_idx]
+            ev = _format_finding_evidence(f)
+            cur = str(t.get("evidence") or "").strip()
+            loc_key = f"{f.get('path', '')}:{f.get('start_line', '')}".strip(":")
+            if not cur or cur.lower() in ("none", "-"):
+                t["evidence"] = ev
+            elif ev not in cur and (not loc_key or loc_key not in cur):
+                t["evidence"] = f"{cur.rstrip(';')}; {ev}"
+
+            t["status"] = "unmitigated"
+            t["likelihood"] = "almost_certain"
+
+            sev = str(f.get("severity") or "").lower()
+            if sev == "critical" and t.get("impact", "").lower() in ("low", "medium", "high"):
+                t["impact"] = "critical"
+            elif sev == "high" and t.get("impact", "").lower() in ("low", "medium"):
+                t["impact"] = "high"
+        else:
+            cwe = str(f.get("cwe") or "").strip().upper() or "NOVEL"
+            novel_groups.setdefault(cwe, []).append(f)
+
+    # Add new threat rows for novel findings that do not map to any existing row
+    existing_ids = []
+    for r in threat_rows:
+        tid = str(r.get("id", ""))
+        if tid.startswith("T") and tid[1:].isdigit():
+            existing_ids.append(int(tid[1:]))
+    next_id_num = (max(existing_ids) + 1) if existing_ids else (len(threat_rows) + 1)
+
+    for cwe, grp in novel_groups.items():
+        tid = f"T{next_id_num}"
+        next_id_num += 1
+
+        threat_desc = _CWE_CANONICAL_THREATS.get(
+            cwe, f"Security compromise via {grp[0].get('title', cwe)}")
+        actor = "remote_auth" if cwe in ("CWE-915", "CWE-862", "CWE-863", "CWE-639") else "remote_unauth"
+
+        paths = sorted({str(f.get("path", "")).strip() for f in grp if f.get("path")})
+        surface = ", ".join(paths[:3]) if paths else "application endpoints"
+
+        sevs = {str(f.get("severity", "")).lower() for f in grp}
+        impact = "critical" if "critical" in sevs else ("high" if "high" in sevs else "medium")
+
+        ev_str = "; ".join(_format_finding_evidence(f) for f in grp)
+
+        threat_rows.append({
+            "id": tid,
+            "threat": threat_desc,
+            "actor": actor,
+            "surface": surface,
+            "asset": "application data and system state",
+            "impact": impact,
+            "likelihood": "almost_certain",
+            "status": "unmitigated",
+            "controls": "none",
+            "evidence": ev_str,
+        })
+
+    lines = [
+        "| " + " | ".join(THREAT_COLUMNS) + " |",
+        "|" + "|".join(["---"] * len(THREAT_COLUMNS)) + "|",
+    ]
+    for r in threat_rows:
+        cells = [_cell(r.get(col, "")) for col in THREAT_COLUMNS]
+        lines.append("| " + " | ".join(cells) + " |")
+
+    table_text = "## 4. Threats\n\n" + "\n".join(lines).rstrip() + "\n"
+    return _replace_section(md, "4. Threats", table_text)
+
+
 def update_threat_with_findings(md: str, findings: list[dict], repo: str = "") -> str:
     items = [f for f in (findings or []) if isinstance(f, dict)]
     claims = [f for f in items
@@ -483,6 +666,10 @@ def update_threat_with_findings(md: str, findings: list[dict], repo: str = "") -
     in_model = (_section(md or "", "4. Threats")
                 + _section(md or "", "5. Deprioritized")).upper()
     novel = [c for c in sorted(by_cwe) if c and c not in in_model]
+
+    # First, update Section 4 Threats with mapped evidence and new novel threat rows
+    out = _update_threat_table_with_claims(md, claims) if claims else (md or "")
+
     lines = [OBSERVED_HEADING, "",
              f"Last validator-confirmed scan: {stamp} ({repo or 'repo'}).",
              f"Confirmed primary claims: {len(claims)}.", ""]
@@ -490,7 +677,7 @@ def update_threat_with_findings(md: str, findings: list[dict], repo: str = "") -
         lines += [f"By class: {top_cwe}", ""]
     if top_paths:
         lines += [f"Affected paths: {top_paths}", ""]
-    out = _replace_section(md or "", "Observed findings",
+    out = _replace_section(out, "Observed findings",
                            "\n".join(lines).rstrip() + "\n")
     prop_lines = [PROPOSALS_HEADING, "",
                   "Machine-generated candidates from verified findings — "

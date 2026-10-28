@@ -5,8 +5,7 @@ This package is the bridge between the local CodeGraph index
 and the hunter/validator/verifier agents. It is deliberately read-only against
 the target repo: the index is opened ``mode=ro`` everywhere, and the only
 writable artifact is a small sidecar next to it (``.codegraph/sast_summaries.db``)
-holding the agents' own memory — per-node sanitizer/guard verdicts, triage
-decisions, and analyst variant rules.
+holding the agents' own memory — per-node sanitizer/guard verdicts.
 
 Design law: never give a security agent open-ended filesystem tools. Every
 ``@tool`` here accepts structured graph/AST coordinates (node ids, route ids,
@@ -38,21 +37,14 @@ Tool modules (the micro-agent partition from the SAST tool suite design):
                      :func:`find_shared_state_readers_writers`,
                      :func:`trace_state_machine_transitions`.
     ``contracts``  — Taint & Verifier agents:
-                     :func:`inspect_type_contract`,
-                     :func:`record_function_security_summary`,
-                     :func:`get_function_security_summary`,
-                     :func:`validate_remediation_patch`.
-    ``variants``   — Verifier & Remediation agent:
-                     :func:`synthesize_and_sweep_variant_rule`,
-                     :func:`query_historical_triage_memory`.
-    ``supply``     — Supply-Chain & Polyglot agents:
-                     :func:`verify_cve_symbol_reachability`,
-                     :func:`inspect_config_and_secret_hygiene`,
+                     :func:`inspect_type_contract`.
+    ``supply``     — Supply-Chain agents:
                      :func:`trace_egress_and_ssrf_targets`.
-    ``polyglot``   — Polyglot, Async & AI-native agent:
-                     :func:`inspect_cross_language_bridge`,
-                     :func:`audit_llm_and_mcp_tool_sinks`,
-                     :func:`verify_exploit_poc_in_harness`.
+    ``effects``    — Effect-category tracing (the egress view generalized to
+                     every curated category): :func:`trace_effect_category`.
+    ``manifests``  — Manifest-vs-import reconciliation:
+                     :func:`reconcile_manifest_imports`.
+    ``graphql``    — GraphQL attack-surface mapping: :func:`graphql_surface`.
 """
 from __future__ import annotations
 
@@ -62,30 +54,26 @@ from harness.codegraph.authz import (
     trace_state_machine_transitions,
 )
 from harness.codegraph.contracts import (
-    get_function_security_summary,
     inspect_type_contract,
-    record_function_security_summary,
-    validate_remediation_patch,
 )
 from harness.codegraph.navigation import (
     get_ast_slice,
     resolve_blind_spot,
     trace_interprocedural_hop,
 )
-from harness.codegraph.polyglot import (
-    audit_llm_and_mcp_tool_sinks,
-    inspect_cross_language_bridge,
-    verify_exploit_poc_in_harness,
-)
 from harness.codegraph.supply import (
-    inspect_config_and_secret_hygiene,
     trace_egress_and_ssrf_targets,
-    verify_cve_symbol_reachability,
 )
-from harness.codegraph.variants import (
-    query_historical_triage_memory,
-    synthesize_and_sweep_variant_rule,
+from harness.codegraph.effects import (
+    trace_effect_category,
 )
+from harness.codegraph.manifests import (
+    reconcile_manifest_imports,
+)
+from harness.codegraph.graphql import (
+    graphql_surface,
+)
+from harness.codegraph import native
 
 __all__: list = [
     "get_ast_slice",
@@ -95,15 +83,8 @@ __all__: list = [
     "find_shared_state_readers_writers",
     "trace_state_machine_transitions",
     "inspect_type_contract",
-    "record_function_security_summary",
-    "get_function_security_summary",
-    "validate_remediation_patch",
-    "synthesize_and_sweep_variant_rule",
-    "query_historical_triage_memory",
-    "verify_cve_symbol_reachability",
-    "inspect_config_and_secret_hygiene",
     "trace_egress_and_ssrf_targets",
-    "inspect_cross_language_bridge",
-    "audit_llm_and_mcp_tool_sinks",
-    "verify_exploit_poc_in_harness",
+    "trace_effect_category",
+    "reconcile_manifest_imports",
+    "graphql_surface",
 ]

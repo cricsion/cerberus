@@ -22,6 +22,22 @@ NETWORK_MODES = ("none", "bridge")
 DEFAULT_NETWORK = NETWORK
 
 
+def validate_cpus(cpus: str) -> int:
+    """``cpus`` → the ``nano_cpus`` int containers.create wants.
+
+    Construction-time conversion: garbage fails the resolve (callers degrade
+    to the local backend) instead of silently running 1 CPU — every other
+    numeric sandbox setting has the same raise-on-garbage contract.
+    """
+    try:
+        nano = int(round(float(str(cpus).strip()) * 1_000_000_000))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid sandbox cpus: {cpus!r}") from exc
+    if nano <= 0:
+        raise ValueError(f"invalid sandbox cpus: {cpus!r} (must be > 0)")
+    return nano
+
+
 def validate_network(network: str) -> str:
     mode = str(network or DEFAULT_NETWORK).strip().lower()
     if mode not in NETWORK_MODES:

@@ -195,7 +195,7 @@ def partition_mode(cfg: dict | None = None) -> str:
     if mode in PARTITION_MODES:
         return mode
     fallback = str(_yaml_default("codegraph.partition.mode")).strip().lower()
-    return fallback if fallback in PARTITION_MODES else "shadow"
+    return fallback if fallback in PARTITION_MODES else "primary"
 
 
 def partition_resolution(cfg: dict | None = None) -> float:

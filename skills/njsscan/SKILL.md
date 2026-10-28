@@ -16,12 +16,12 @@ counterpart.
 
 ## In this environment
 
-- njsscan is **preinstalled, pinned**. It is installed **isolated** into its
-  own directory (`/opt/njsscan`) and exposed through a wrapper script, because
-  it pins its own semgrep version that conflicts with the image's pinned
-  semgrep. Just run `njsscan` — the wrapper sets the paths. Nothing to
+- njsscan is **preinstalled, pinned**, and rides the **shared Python scanner
+  line** with semgrep/bandit/flawfinder in one shared dependency tree: its
+  own semgrep pin (1.172.0) is the image's pin too. Just run `njsscan` —
+  it shells out to the shared `semgrep` binary on PATH. Nothing to
   install or upgrade (the repo is read-only and egress may be denied).
-- **No Node.js is required**: njsscan is pure Python over its bundled
+- **No Node.js is required**: njsscan is pure Python over the shared
   semgrep. (Node in the image is a separate opt-in for running *targets'*
   JS tests, not for this tool.)
 - Pass **explicit paths** — the unit's `.js`/`.ts` files, or the unit

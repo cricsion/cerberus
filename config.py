@@ -199,7 +199,11 @@ EFFORT_RANK = {name: i for i, name in enumerate(EFFORT_LEVELS)}
 
 def get_effort(cfg: dict) -> str:
     """Effort level"""
+    _load_dotenv()
     fallback = str(config_default("effort")).strip().lower()
+    from_env = str(os.environ.get("EFFORT", "")).strip().lower()
+    if from_env in EFFORT_RANK:
+        return from_env
     eff = str((cfg or {}).get("effort", fallback) or fallback).strip().lower()
     return eff if eff in EFFORT_RANK else fallback
 
@@ -244,15 +248,26 @@ def get_concurrency(cfg: dict) -> int:
 
 
 def get_reasoning_kwargs(cfg: dict, agent: str | None = None) -> dict:
-    """Thinking-effort params. ``effort_by_agent`` (hunter, validator, triager,
-    partitioner, threat) wins over the global effort level."""
+    """Thinking-effort params. Environment variables or ``effort_by_agent``
+    (hunter, validator, triager, partitioner, threat) win over global effort."""
+    _load_dotenv()
     cfg = cfg or {}
     level = ""
     if agent:
-        by = cfg.get("effort_by_agent")
-        if not isinstance(by, dict):
-            by = config_default("effort_by_agent") or {}
-        level = str(by.get(agent, "") or "").strip().lower()
+        clean_name = str(agent).upper().replace("-", "_")
+        env_val = os.environ.get(f"{clean_name}_EFFORT", "").strip().lower()
+        if not env_val and clean_name in ("TRIAGER", "TRIAGE", "SYNTHESIS"):
+            env_val = (os.environ.get("TRIAGER_EFFORT")
+                       or os.environ.get("TRIAGE_EFFORT")
+                       or os.environ.get("SYNTHESIS_EFFORT")
+                       or "").strip().lower()
+        if env_val in EFFORT_RANK:
+            level = env_val
+        else:
+            by = cfg.get("effort_by_agent")
+            if not isinstance(by, dict):
+                by = config_default("effort_by_agent") or {}
+            level = str(by.get(agent, "") or "").strip().lower()
     if level not in EFFORT_RANK:
         level = get_effort(cfg)
     return {"reasoning_effort": level}
@@ -395,10 +410,24 @@ def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
     cfg = cfg or default_config()
     model_name = effective_model(cfg, role, agent)
 
-    base_url = (os.environ.get("BASE_URL", "")
+    role_key = (agent or role or "").upper().replace("-", "_")
+    base_url = (os.environ.get(f"{role_key}_BASE_URL", "")
+                or os.environ.get("BASE_URL", "")
                 or cfg.get("base_url", "")
                 or config_default("base_url") or "")
-    api_key = resolve_api_key(cfg)
+    api_key = (os.environ.get(f"{role_key}_API_KEY", "")
+               or resolve_api_key(cfg))
+
+    # Auto-route provider base_url and api_key based on model name if not explicitly set
+    if not os.environ.get(f"{role_key}_BASE_URL"):
+        if "nemotron" in model_name.lower() or model_name.startswith("nvidia/"):
+            base_url = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
+            if not os.environ.get(f"{role_key}_API_KEY"):
+                api_key = os.environ.get("NVIDIA_API_KEY") or api_key
+        elif "muse" in model_name.lower() or "spark" in model_name.lower():
+            base_url = os.environ.get("META_BASE_URL", "https://api.meta.ai/v1")
+            if not os.environ.get(f"{role_key}_API_KEY"):
+                api_key = os.environ.get("META_API_KEY") or api_key
 
     profile = cfg.get("model_profile")
     if not isinstance(profile, dict):

@@ -1,30 +1,23 @@
 """Tree-sitter helpers over the CodeGraph index — local parsing, no subprocess.
 
-What this gives that a raw ``tree_sitter`` session does not:
+Purpose
+Parse indexed source locally with bytes-only tree-sitter calls and no
+subprocesses.
 
-- **One entry point per question the SAST tools actually ask**: which parser
-  owns this file, what is the text at this line, which function encloses this
-  line, what does this function call, what are the parameters in this
-  ``nodes.signature`` string, what does the source look like around this line.
-  Each of those is otherwise twenty lines of node-walking copy-pasted per tool.
-- **CodeGraph-compatible naming.** ``nodes.language`` says ``csharp``; the
-  grammar module is ``tree_sitter_c_sharp``; ``.tsx`` needs a second language
-  out of ``tree_sitter_typescript``. :func:`parser_for_language` and
-  :data:`LANG_BY_EXT` absorb that mismatch, cached per process so a tool call
-  costs a dict lookup, not a grammar load.
-- **The same 1 MB per-file cap CodeGraph indexes with** — a file the indexer
-  skipped has no symbols here either, and parsing it would only produce
-  half-formed spans that disagree with the graph.
-- **Signature parsing.** CodeGraph stores ``signature`` as text
-  (``def f(a: int, b: str = 'x') -> bool``); nothing joins it back to the call's
-  arity, so a taint check that needs parameter names/types would re-implement a
-  parser per language. :func:`parse_signature_params` is that parser, best
-  effort and never raising.
+Laws: everything degrades to ``None``/``[]`` instead of raising (unknown
+extension, missing grammar, unreadable or oversized file); ``parse`` only ever
+receives ``bytes``, because the 0.24+ API rejects ``str`` and this module is the
+only place that could pass it.
 
-Everything degrades to ``None``/``[]`` rather than raising: an unsupported
-extension, an unreadable file, a grammar that is not installed. ``parse`` only
-ever receives ``bytes`` — passing a ``str`` is the one mistake the 0.24+ API
-punishes, and this module is the only place that can make it.
+Invariants: parsers and ``Language`` objects are cached per canonical language
+for the process, so a tool call costs a dict lookup, not a grammar load; a
+grammar that fails to import is cached as ``None`` rather than retried.
+
+Format laws: :data:`LANG_BY_EXT` maps extension -> CodeGraph's
+``nodes.language`` spelling; :data:`_GRAMMAR_MODULE` maps that (or an alias) ->
+a grammar (``csharp`` -> ``tree_sitter_c_sharp``, ``.tsx`` -> the TS grammar's
+``language_tsx``); files above :data:`MAX_FILE_BYTES` (1 MB, CodeGraph's own
+cap) are never parsed; span queries take 1-based lines, tree-sitter points 0-based.
 """
 from __future__ import annotations
 
@@ -53,27 +46,19 @@ LANG_BY_EXT: dict[str, str] = {
 
 # Grammar module name per canonical language key. CodeGraph spells C# as
 # ``csharp`` in nodes.language while LANG_BY_EXT spells it ``c_sharp``; both
-# resolve through here.
+# resolve here.
 _GRAMMAR_MODULE: dict[str, str] = {
-    "python": "tree_sitter_python",
-    "javascript": "tree_sitter_javascript",
-    "typescript": "tree_sitter_typescript",
-    "tsx": "tree_sitter_typescript",
-    "go": "tree_sitter_go",
-    "java": "tree_sitter_java",
-    "rust": "tree_sitter_rust",
-    "c": "tree_sitter_c",
-    "cpp": "tree_sitter_cpp",
-    "ruby": "tree_sitter_ruby",
-    "php": "tree_sitter_php",
-    "csharp": "tree_sitter_c_sharp",
-    "kotlin": "tree_sitter_kotlin",
-    "swift": "tree_sitter_swift",
+    "python": "tree_sitter_python", "javascript": "tree_sitter_javascript",
+    "typescript": "tree_sitter_typescript", "tsx": "tree_sitter_typescript",
+    "go": "tree_sitter_go", "java": "tree_sitter_java", "rust": "tree_sitter_rust",
+    "c": "tree_sitter_c", "cpp": "tree_sitter_cpp", "ruby": "tree_sitter_ruby",
+    "php": "tree_sitter_php", "csharp": "tree_sitter_c_sharp",
+    "kotlin": "tree_sitter_kotlin", "swift": "tree_sitter_swift",
     "scala": "tree_sitter_scala",
 }
 
-# Alternate spellings seen in the wild (CodeGraph language values, file
-# extensions, agent shorthand) folded onto the canonical key above.
+# Alternate spellings seen in the wild (CodeGraph values, extensions, agent
+# shorthand) folded onto the canonical key above.
 _LANGUAGE_ALIASES: dict[str, str] = {
     "c_sharp": "csharp", "c#": "csharp", "cs": "csharp",
     "py": "python",
@@ -87,8 +72,7 @@ _LANGUAGE_ALIASES: dict[str, str] = {
     "rb": "ruby",
 }
 
-# Node types that mean "a callable". Python: function_definition covers both
-# ``def`` and ``async def``. The rest are the JS/TS/Go/Java/Rust/C spellings.
+# ``def`` and ``async def``, the rest are the JS/TS/Go/Java/Rust/C spellings.
 CALL_NODE_TYPES = frozenset({
     "call", "call_expression", "method_invocation", "macro_invocation",
     "function_call", "invocation_expression", "constructor_invocation",
@@ -116,9 +100,7 @@ _language_cache: dict[str, object] = {}
 _parser_cache: dict[str, object] = {}
 
 
-# ---------------------------------------------------------------------------
-# parsers
-# ---------------------------------------------------------------------------
+# --- parsers -------------------------------------------------------------------
 
 def _canonical_language(language: str | None) -> str:
     """Fold a spelling onto a grammar key ('' when unknown)."""
@@ -166,25 +148,19 @@ def parser_for_language(language: str):
     """Cached parser for a CodeGraph ``nodes.language`` value; None if unknown.
 
     Accepts the index spellings (``csharp``, ``typescript``, ``tsx``, ``cpp``)
-    and the LANG_BY_EXT spellings (``c_sharp``).
+    and the :data:`LANG_BY_EXT` spellings (``c_sharp``).
     """
-    if not language:
-        return None
     key = _canonical_language(language)
     if not key:
         return None
-    if key in _parser_cache:
-        return _parser_cache[key]
-    from tree_sitter import Parser
-    lang = _load_language(key)
-    parser = None
-    if lang is not None:
+    if key not in _parser_cache:
+        from tree_sitter import Parser
+        lang = _load_language(key)
         try:
-            parser = Parser(lang)
+            _parser_cache[key] = Parser(lang) if lang is not None else None
         except Exception:
-            parser = None
-    _parser_cache[key] = parser
-    return parser
+            _parser_cache[key] = None
+    return _parser_cache[key]
 
 
 def parser_for_file(path):
@@ -196,9 +172,7 @@ def parser_for_file(path):
     return parser_for_language(LANG_BY_EXT.get(suffix, ""))
 
 
-# ---------------------------------------------------------------------------
-# parsing
-# ---------------------------------------------------------------------------
+# --- parsing -------------------------------------------------------------------
 
 def _read_capped(path, max_bytes: int = MAX_FILE_BYTES):
     """(source_bytes, stat_size) or (None, reason). Never raises."""
@@ -217,20 +191,15 @@ def parse_file(path, max_bytes: int = MAX_FILE_BYTES):
     """(tree, source_bytes) for a source file, or None.
 
     None when the extension is unsupported, the grammar is missing, the file is
-    unreadable, or the file is over ``max_bytes`` — the same 1 MB cap the
-    indexer applies, so a skipped file produces no symbols on either side.
-    ``max_bytes <= 0`` means "the default cap", not "unlimited": parsing a
-    file the index refused to index would invent spans the graph disagrees
-    with, and a runaway parse costs more than the symbols are worth.
+    unreadable or over ``max_bytes`` — the same 1 MB cap the indexer applies, so
+    a skipped file produces no symbols on either side. ``max_bytes <= 0`` (or
+    invalid) means "the default cap", never "unlimited".
     """
-    if max_bytes is None:
-        max_bytes = MAX_FILE_BYTES
     try:
-        max_bytes = int(max_bytes)
+        max_bytes = int(MAX_FILE_BYTES if max_bytes is None else max_bytes)
     except (TypeError, ValueError):
         max_bytes = MAX_FILE_BYTES
-    if max_bytes <= 0:
-        max_bytes = MAX_FILE_BYTES
+    max_bytes = max_bytes if max_bytes > 0 else MAX_FILE_BYTES
     parser = parser_for_file(path)
     if parser is None:
         return None
@@ -249,19 +218,15 @@ def parse_file(path, max_bytes: int = MAX_FILE_BYTES):
 def parse_source(text, language: str):
     """Parse an in-memory string. A tree, or None for an unsupported language.
 
-    ``text`` is encoded to bytes first — ``Parser.parse`` in the 0.24+ API
-    rejects a ``str`` outright, and this is the one helper every other module
-    funnels through.
+    ``text`` is encoded to bytes first: ``Parser.parse`` rejects a ``str`` in
+    the 0.24+ API, and this is the helper every other module funnels through.
     """
     if text is None:
         return None
     parser = parser_for_language(language)
     if parser is None:
         return None
-    if isinstance(text, str):
-        src = text.encode("utf-8", errors="replace")
-    else:
-        src = bytes(text)
+    src = text.encode("utf-8", errors="replace") if isinstance(text, str) else bytes(text)
     try:
         return parser.parse(src)
     except Exception:
@@ -281,11 +246,8 @@ def node_text(node, src: bytes) -> str:
 
 def line_text(src_lines_or_bytes, line_no: int) -> str:
     """One 1-based source line. Accepts bytes, str, or a list of lines."""
-    try:
-        n = int(line_no)
-    except (TypeError, ValueError):
-        return ""
-    if src_lines_or_bytes is None:
+    n = _as_line(line_no)
+    if n is None or src_lines_or_bytes is None:
         return ""
     if isinstance(src_lines_or_bytes, (bytes, bytearray)):
         lines = bytes(src_lines_or_bytes).decode("utf-8", errors="replace").splitlines()
@@ -296,15 +258,21 @@ def line_text(src_lines_or_bytes, line_no: int) -> str:
             lines = list(src_lines_or_bytes)
         except TypeError:
             return ""
-    if n < 1 or n > len(lines):
+    if not 1 <= n <= len(lines):
         return ""
     out = lines[n - 1]
     return out if isinstance(out, str) else out.decode("utf-8", errors="replace")
 
 
-# ---------------------------------------------------------------------------
-# span queries
-# ---------------------------------------------------------------------------
+# --- span queries --------------------------------------------------------------
+
+def _as_line(value):
+    """``value`` as an int line number, or None when it cannot be one."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
 
 def _contains(node, line: int) -> bool:
     """1-based line containment for a node's start/end points."""
@@ -330,8 +298,7 @@ def _best_containing(tree, line: int, wanted):
         root = tree.root_node
     except Exception:
         return None
-    best = None
-    best_span = None
+    best = best_span = None
     for node in _walk(root):
         if not _contains(node, line):
             continue
@@ -347,42 +314,32 @@ def _best_containing(tree, line: int, wanted):
 def enclosing_node(tree, line: int):
     """The innermost function/method/class node whose span contains ``line``.
 
-    Falls back to the deepest span-containing node of any type, so a call
-    inside a lambda, a comprehension or a decorator still gets a location.
-    ``tree`` is a ``Tree`` from :func:`parse_source` / :func:`parse_file`.
+    Falls back to the deepest span-containing node of any type, so a call in a
+    lambda, comprehension or decorator still gets a location.
     """
-    try:
-        target = int(line)
-    except (TypeError, ValueError):
+    target = _as_line(line)
+    if target is None:
         return None
     node = _best_containing(tree, target, FUNCTION_NODE_TYPES | CLASS_NODE_TYPES)
-    if node is not None:
-        return node
-    return _best_containing(tree, target, None)
+    return node if node is not None else _best_containing(tree, target, None)
 
 
 def enclosing_function(tree, line: int):
     """Same search, functions/methods only — the unit a finding belongs to."""
-    try:
-        target = int(line)
-    except (TypeError, ValueError):
-        return None
-    return _best_containing(tree, target, FUNCTION_NODE_TYPES)
+    target = _as_line(line)
+    return None if target is None else _best_containing(tree, target, FUNCTION_NODE_TYPES)
 
 
 def calls_in_span(tree, start_line: int, end_line: int, src: bytes) -> list[dict]:
     """Every call in the 1-based inclusive line span.
 
-    Each entry is ``{"line", "col", "text", "node"}`` where ``text`` is the
-    callee as written (``db.query`` — the whole member chain, not just the last
-    segment) so it can be fed straight into :func:`sinks.classify_call`.
+    Each entry is ``{"line", "col", "text", "node"}``; ``text`` is the callee as
+    written (``db.query``, the whole chain) so it feeds straight into
+    :func:`sinks.classify_call`.
     """
     out: list[dict] = []
-    if tree is None:
-        return out
-    try:
-        start, end = int(start_line), int(end_line)
-    except (TypeError, ValueError):
+    start, end = _as_line(start_line), _as_line(end_line)
+    if tree is None or start is None or end is None:
         return out
     if end < start:
         start, end = end, start
@@ -394,10 +351,10 @@ def calls_in_span(tree, start_line: int, end_line: int, src: bytes) -> list[dict
         if node.type not in CALL_NODE_TYPES:
             continue
         try:
-            node_start = node.start_point[0] + 1
+            line = node.start_point[0] + 1
         except Exception:
             continue
-        if node_start < start or node_start > end:
+        if not start <= line <= end:
             continue
         callee = node.child_by_field_name("function")
         if callee is None:
@@ -406,21 +363,13 @@ def calls_in_span(tree, start_line: int, end_line: int, src: bytes) -> list[dict
             named = [c for c in node.children if c.is_named]
             callee = named[0] if named else None
         text = node_text(callee, src) if callee is not None else ""
-        if not text:
-            text = node_text(node, src)
-        out.append({
-            "line": node_start,
-            "col": node.start_point[1] + 1,
-            "text": text,
-            "node": node,
-        })
+        out.append({"line": line, "col": node.start_point[1] + 1,
+                    "text": text or node_text(node, src), "node": node})
     out.sort(key=lambda c: (c["line"], c["col"]))
     return out
 
 
-# ---------------------------------------------------------------------------
-# signature parsing
-# ---------------------------------------------------------------------------
+# --- signature parsing ---------------------------------------------------------
 
 _PARAM_KEYWORDS = (
     "async def ", "def ", "async function ", "function ", "fn ", "func ",
@@ -446,26 +395,28 @@ _NAME_FIRST_LANGUAGES = frozenset({"go", "rust", "php", "swift"})
 
 
 def _strip_param_modifiers(text: str) -> str:
+    """Drop declaration keywords and visibility modifiers from a signature head."""
     out = str(text or "").strip()
-    if not out:
-        return ""
-    changed = True
-    while changed:
-        changed = False
+    while True:
         low = out.lower()
-        for kw in _PARAM_KEYWORDS:
-            if low.startswith(kw):
-                out = out[len(kw):].lstrip()
-                changed = True
-                break
+        hit = next((kw for kw in _PARAM_KEYWORDS if low.startswith(kw)), None)
+        if hit is None:
+            break
+        out = out[len(hit):].lstrip()
     # A leading return type on a Java-ish declaration: `void doThing(...)`.
     head = out.split("(", 1)[0].strip()
     if head and " " in head and re.fullmatch(r"[A-Za-z_$][\w$.<>,\[\]]*", head):
         parts = head.split()
-        last = parts[-1]
-        if re.fullmatch(r"[A-Za-z_$][\w$]*", last) and "<" not in parts[0]:
+        if re.fullmatch(r"[A-Za-z_$][\w$]*", parts[-1]) and "<" not in parts[0]:
             out = out[len(parts[0]):].lstrip()
     return out
+
+
+def _drop_modifiers(tokens: list[str]) -> list[str]:
+    """Drop leading parameter-property/receiver modifiers from name tokens."""
+    while tokens and tokens[0] in _PARAM_NAME_MODIFIERS:
+        tokens.pop(0)
+    return tokens
 
 
 def _split_top_level(text: str, separators: str = ",") -> list[str]:
@@ -542,19 +493,18 @@ def _balanced_parens(text: str) -> str:
     return ""
 
 
+
+
 def parse_signature_params(signature: str, language: str) -> list[dict]:
     """Best-effort parameter list from a ``nodes.signature`` string.
 
     Handles ``def f(a: int, b: str = 'x') -> bool``,
     ``async handle(req: Request, res: Response)`` and the ``Type name`` order of
-    the C/JVM family. Never raises — an unparsable signature yields ``[]``
-    rather than costing a tool call.
+    the C/JVM family. Never raises: an unparsable signature yields ``[]``.
     """
     try:
         text = _strip_param_modifiers(signature)
-        if not text:
-            return []
-        inner = _balanced_parens(text)
+        inner = _balanced_parens(text) if text else ""
         if not inner.strip():
             return []
         lang = _canonical_language(language) or str(language or "").lower()
@@ -573,21 +523,18 @@ def parse_signature_params(signature: str, language: str) -> list[dict]:
             colon = _split_top_level(name_part, ":")
             if len(colon) >= 2:
                 type_name = ":".join(colon[1:]).strip()
-                name_tokens = [t for t in colon[0].split() if t]
-                while name_tokens and name_tokens[0] in _PARAM_NAME_MODIFIERS:
-                    name_tokens.pop(0)
-                name = name_tokens[-1] if name_tokens else ""
+                tokens = _drop_modifiers([t for t in colon[0].split() if t])
+                name = tokens[-1] if tokens else ""
             else:
-                tokens = [t for t in name_part.replace(",", " ").split() if t]
-                while tokens and tokens[0] in _PARAM_NAME_MODIFIERS:
-                    tokens.pop(0)
+                tokens = _drop_modifiers(
+                    [t for t in name_part.replace(",", " ").split() if t])
                 if len(tokens) >= 2 and type_first:
                     type_name, name = tokens[0], tokens[1]
                 elif len(tokens) >= 2 and lang in _NAME_FIRST_LANGUAGES:
                     name, type_name = tokens[0], " ".join(tokens[1:])
                 elif tokens:
-                    # A JS/TS parameter property (`readonly x`) or a spread:
-                    # the name is the last word that is not a modifier.
+                    # A JS/TS parameter property (`readonly x`) or a spread: the
+                    # name is the last word that is not a modifier.
                     name = tokens[-1]
             name = re.sub(r"^[*.$\s]+", "", name).strip()
             type_name = type_name.strip().strip("`").strip()
@@ -600,15 +547,12 @@ def parse_signature_params(signature: str, language: str) -> list[dict]:
         return []
 
 
-# ---------------------------------------------------------------------------
-# context windows
-# ---------------------------------------------------------------------------
+# --- context windows -----------------------------------------------------------
 
 def window(src, center_line: int, radius: int = 3) -> str:
     """``"139: ...\\n140: ..."`` — a numbered window around a 1-based line."""
     try:
-        center = int(center_line)
-        rad = int(radius)
+        center, rad = int(center_line), int(radius)
     except (TypeError, ValueError):
         return ""
     if isinstance(src, (bytes, bytearray)):
@@ -616,7 +560,7 @@ def window(src, center_line: int, radius: int = 3) -> str:
     else:
         text = str(src or "")
     lines = text.splitlines()
-    if not lines or center < 1 or center > len(lines):
+    if not lines or not 1 <= center <= len(lines):
         return ""
     lo = max(1, center - max(0, rad))
     hi = min(len(lines), center + max(0, rad))

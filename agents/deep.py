@@ -129,28 +129,57 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
             _cap = DEFAULT_RETRY_SLEEP_CAP
         _oai_base.MAX_RETRY_DELAY = _cap
         _oai_base.MAX_RETRY_AFTER_DELAY = _cap
+
+        if not getattr(_oai_base.BaseClient, "_resilient_429_patched", False):
+            _orig_should_retry = _oai_base.BaseClient._should_retry
+
+            def _resilient_should_retry(self, response):
+                if response.status_code == 429:
+                    return True
+                return _orig_should_retry(self, response)
+
+            _oai_base.BaseClient._should_retry = _resilient_should_retry
+            _oai_base.BaseClient._resilient_429_patched = True
+
+        from openai.resources.chat.completions import AsyncCompletions, Completions
+
+        if not getattr(Completions, "_universal_tool_choice_patched", False):
+            _orig_comp_create = Completions.create
+
+            def _universal_comp_create(self, *args, **kwargs):
+                tc = kwargs.get("tool_choice")
+                if tc is not None and tc != "auto":
+                    kwargs["tool_choice"] = "auto"
+                return _orig_comp_create(self, *args, **kwargs)
+
+            Completions.create = _universal_comp_create
+            Completions._universal_tool_choice_patched = True
+
+        if not getattr(AsyncCompletions, "_universal_tool_choice_patched", False):
+            _orig_async_comp_create = AsyncCompletions.create
+
+            async def _universal_async_comp_create(self, *args, **kwargs):
+                tc = kwargs.get("tool_choice")
+                if tc is not None and tc != "auto":
+                    kwargs["tool_choice"] = "auto"
+                return await _orig_async_comp_create(self, *args, **kwargs)
+
+            AsyncCompletions.create = _universal_async_comp_create
+            AsyncCompletions._universal_tool_choice_patched = True
     except (ImportError, AttributeError, TypeError, ValueError):
         pass
 
     raw = mk.get("model_profile")
     if isinstance(raw, dict):
         profile = {}
-        for key in ("max_input_tokens", "structured_output"):
-            val = raw.get(key)
-            if val in (None, ""):
-                continue
-            if key == "max_input_tokens":
-                try:
-                    profile[key] = int(val)
-                except (TypeError, ValueError):
-                    continue
-            else:
-                profile[key] = as_bool(val)
+        val = raw.get("max_input_tokens")
+        if val not in (None, ""):
+            try:
+                profile["max_input_tokens"] = int(val)
+            except (TypeError, ValueError):
+                pass
         if profile:
             kwargs["profile"] = profile
-        elif raw:
-            print(f"[deep] model_profile pins unusable, registry profile kept: "
-                  f"{sorted(raw, key=str)}", file=sys.stderr)
 
     llm = init_chat_model(model_provider="openai", **kwargs)
     return llm
@@ -379,8 +408,11 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         from langchain.agents.structured_output import ToolStrategy
         response_format = ToolStrategy(response_format, handle_errors=True)
 
+    # Sort tools deterministically by name to guarantee identical schema order across LLM calls for prefix caching
+    sorted_tools = sorted(list(tools or []),
+                          key=lambda t: str(getattr(t, "name", None) or getattr(t, "__name__", "") or t))
     kwargs: dict[str, Any] = dict(
-        model=llm, tools=list(tools or []), system_prompt=system_prompt,
+        model=llm, tools=sorted_tools, system_prompt=system_prompt,
         middleware=_scan_middleware(backend, scratchpad=scratchpad),
     )
     kwargs["backend"] = backend

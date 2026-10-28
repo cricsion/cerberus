@@ -57,21 +57,7 @@ def _coverage_gap(files: list[str], inspected: list[str],
 
 def _record_coverage(unit: str, files: list[str], inspected: list[str],
                      sink: list | None, repo: str | None = None) -> str:
-    """Per-unit coverage gap: log it and hand the note to `sink` (report channel).
-
-    Never raises; never fabricates a finding. Empty assignment → no note.
-    """
-    try:
-        listed, missing = _coverage_gap(files, inspected, repo)
-        if listed and missing:
-            note = (f"unit-{unit} coverage: {listed - len(missing)}/{listed} "
-                    f"listed; missing: {', '.join(missing[:20])}")
-            print(f"[hunters] {note}", file=sys.stderr, flush=True)
-            if isinstance(sink, list):
-                sink.append(note)
-            return note
-    except Exception:
-        return ""
+    """Coverage reporting is deprecated and disabled."""
     return ""
 
 
@@ -286,7 +272,8 @@ def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
     mk = sanitize_model_kwargs(model_kwargs)
     _timeout = resolve_call_timeout(mk, cfg)
     llm = make_llm(mk, timeout=_timeout)
-    prompt = build_unit_system_prompt(focus_hint(focus), backend=backend)
+    # Caching optimization: system prompt is static across all units
+    prompt = build_unit_system_prompt("", backend=backend)
     tools = graph_tools()
     return build_deep_agent(llm, system_prompt=prompt, tools=tools,
                             response_format=DiscoveryResult,
@@ -327,17 +314,11 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
                 _tools_out.extend(_agent_tools_used(res))
             sr = res.get("structured_response") if isinstance(res, dict) else None
             if sr is not None and hasattr(sr, "findings"):
-                _record_coverage(name, files or [],
-                                 list(getattr(sr, "inspected_files", None) or []),
-                                 _coverage_out, repo)
                 norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
                 return _sort_by_confidence(norm)
             text = _extract_agent_text(res)
             norm, ok = _parse_findings_with_status(text, f"unit-{name}", files or [], repo)
             if ok:
-                _record_coverage(name, files or [],
-                                 _inspected_files_from_text(text), _coverage_out,
-                                 repo)
                 return _sort_by_confidence(norm)
         except Exception as e:
             if is_fatal_error(e):

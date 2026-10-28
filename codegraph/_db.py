@@ -1,31 +1,27 @@
 """Read-only access to the CodeGraph SQLite index for the SAST tools.
 
-What this gives that raw ``sqlite3`` does not:
+Purpose
+Expose a contained, read-only query layer with decoded rows and success-shaped
+degradation when an index is unavailable.
 
-- **A contained, cached, always-read-only handle** (:func:`connect`). The DB is
-  opened through a ``mode=ro`` URI (never read-write: a SAST tool has no
-  business writing the target repo's index), pinned to
-  ``PRAGMA query_only=ON``, keyed by ``(resolved path, mtime)`` so a re-index
-  invalidates the cache, and it degrades instead of raising: a missing or
-  unreadable index yields ``None`` and every helper below then returns
-  ``[]``/``None``/the :func:`guidance_no_db` string.
-- **Decoded rows.** ``nodes.decorators`` / ``nodes.type_parameters`` and
-  ``edges.metadata`` are JSON text in SQLite; every helper here hands back
-  plain dicts/lists, so callers never re-parse.
-- **The CodeGraph semantics an agent needs**, ported from
-  ``codegraph/src/db/queries.ts``: the routing-manifest join (route node ->
-  handler), the test/generated-file hygiene filter, ``unresolved_refs`` as a
-  first-class "an edge may be missing here" warning, and the FTS5 join with a
-  safe MATCH fallback.
-- **Honest caps.** Every list helper takes ``limit<=0`` as "unlimited" and
-  clamps to a hard maximum of 500 rows (``CODEGRAPH_*_LIMIT`` env overrides,
-  0 = unlimited), so a pathological repo cannot flood an agent context.
+Laws: never write the index (``mode=ro`` or degraded ``immutable``, plus
+``PRAGMA query_only=ON``); never raise (a missing index gives ``None`` from
+:func:`connect`, then ``[]``/``None``/:func:`guidance_no_db`); ``limit <= 0``
+means "unlimited" but stops at :data:`HARD_MAX_ROWS` (``CODEGRAPH_*_LIMIT``, 0
+= unlimited, is folded through :func:`_resolve_rows`); agent strings bind via
+:func:`_safe_param`, so a lone surrogate matches nothing instead of raising.
 
-Node ids are content hashes and edge autoincrement ids are NOT stable across
-re-indexes — fingerprint the ``(source, target, kind, line, col)`` tuple.
-``node_modules``/``vendor`` are never indexed, so anything missing here is
-missing on purpose. ``UNCERTAIN_BELOW = 0.6`` in CodeGraph: below it an edge is
-a name-only guess, not a call.
+Invariants: :func:`connect` caches one handle per ``(resolved path, mtime)``, so
+a re-index invalidates it and :data:`last_open_mode` mirrors the live handle;
+node ids are content hashes and edge autoincrement ids are NOT stable across
+re-indexes — fingerprint ``(source, target, kind, line, col)``.
+
+Format laws: the schema is CodeGraph's (``nodes``, ``edges``, ``files``,
+``unresolved_refs`` and ``nodes_fts``, a virtual table some builds lack);
+``decorators``/``type_parameters``/``metadata``/``candidates`` are JSON text
+that helpers hand back decoded (``None``/``{}``/``[]`` when unparsable);
+``node_modules``/``vendor`` are never indexed; below CodeGraph's
+``UNCERTAIN_BELOW = 0.6`` an edge is a name-only guess, not a call.
 """
 from __future__ import annotations
 
@@ -37,30 +33,24 @@ import threading
 import urllib.parse
 from pathlib import Path
 
-# Where CodeGraph puts its index, relative to the repo root. Resolved under
-# the same containment check every other harness tool module uses.
+# Index location relative to the repo root.
 DB_RELATIVE_PATH = ".codegraph/codegraph.db"
 
-# The success-shaped guidance string every CodeGraph-backed tool returns when
-# connect() is None. Mirrors CodeGraph's own policy (NotIndexedError ->
-# textResult): an un-indexed repo is a SUCCESS-shaped answer carrying guidance,
-# never an error, and never a hidden tool.
-GUIDANCE_NO_DB = (
-    "(no codegraph index for this repo: run `codegraph index` — falling back to grep)"
-)
+# Success-shaped guidance every tool returns when connect() is None: an
+# un-indexed repo is guidance, never an error and never a hidden tool.
+GUIDANCE_NO_DB = "(no codegraph index for this repo: run `codegraph index`)"
 
-# Hard ceiling for every list-returning helper, per the contract: limit<=0
-# means unlimited, but unlimited still stops at this many rows.
+# Hard ceiling for every list helper: limit<=0 is unlimited-but-capped.
 HARD_MAX_ROWS = 500
 
-# Env-var names for the per-helper caps (0 = unlimited, then clamped).
+# Per-helper cap overrides (0 = unlimited, then clamped).
 ENV_NODES = "CODEGRAPH_NODES_LIMIT"
 ENV_EDGES = "CODEGRAPH_EDGES_LIMIT"
 ENV_ROUTES = "CODEGRAPH_ROUTES_LIMIT"
 ENV_FTS = "CODEGRAPH_FTS_LIMIT"
 
-# "ro" when the index opened normally, "immutable" when SQLite needed the
-# degraded WAL-without--shm open, "" when nothing is open.
+# "ro" for a normal open, "immutable" for the degraded WAL-without--shm open,
+# "" when nothing is open.
 last_open_mode: str = ""
 
 _CONN_CACHE: dict[str, tuple[float, str, sqlite3.Connection]] = {}
@@ -72,9 +62,7 @@ _JSON_COLUMNS = ("decorators", "type_parameters", "candidates")
 _HANDLER_KINDS = ("function", "method", "class", "constant", "variable", "component")
 
 
-# ---------------------------------------------------------------------------
-# hygiene: test/generated-file filtering (port of isLowValueFile)
-# ---------------------------------------------------------------------------
+# --- hygiene: test/generated-file filtering (port of isLowValueFile) -----------
 
 # Path-only generated-file conventions (extraction/generated-detection.ts).
 _GENERATED_PATH_PATTERNS = tuple(re.compile(p) for p in (
@@ -105,18 +93,17 @@ _TEST_DIR = re.compile(
 
 
 def _is_generated_path(file_path: str) -> bool:
+    """True when the path alone carries a generated-file convention."""
     return any(p.search(file_path) for p in _GENERATED_PATH_PATTERNS)
 
 
 def _is_non_production_dir(lower_path: str) -> bool:
-    marker = "/src/"
-    idx = lower_path.find(marker)
-    if idx >= 0:
-        scope = lower_path[: idx + 1]
-    elif lower_path.startswith("src/"):
-        scope = ""
+    """True when a non-production segment precedes the nearest ``/src/``."""
+    marker = lower_path.find("/src/")
+    if marker >= 0:
+        scope = lower_path[: marker + 1]
     else:
-        scope = lower_path
+        scope = "" if lower_path.startswith("src/") else lower_path
     return any(f"/{d}/" in scope or scope.startswith(f"{d}/") for d in _NON_PRODUCTION_DIRS)
 
 
@@ -126,31 +113,24 @@ def is_test_file(file_path: str) -> bool:
     Port of ``isTestFile`` from ``codegraph/src/search/query-utils.ts``.
     """
     lower = str(file_path or "").lower().replace("\\", "/")
-    name = lower.rsplit("/", 1)[-1]
-    if _TEST_FILENAME.search(name):
-        return True
-    if _TEST_DIR.search(lower):
-        return True
-    return _is_non_production_dir(lower)
+    return bool(_TEST_FILENAME.search(lower.rsplit("/", 1)[-1])
+                or _TEST_DIR.search(lower)
+                or _is_non_production_dir(lower))
 
 
 def _is_low_value_file(file_path: str, generated: frozenset[str] | set[str]) -> bool:
     """Port of ``isLowValueFile``: indexed flag ∪ path test/generated signals."""
-    if file_path in generated:
-        return True
-    return is_test_file(file_path) or _is_generated_path(file_path)
+    return (file_path in generated or is_test_file(file_path)
+            or _is_generated_path(file_path))
 
 
-# ---------------------------------------------------------------------------
-# limits
-# ---------------------------------------------------------------------------
+# --- limits and SQL plumbing ---------------------------------------------------
 
 def _env_int(key: str, default: int) -> int:
+    """Env override as int; ``default`` when unset or invalid (never raises)."""
     try:
         v = os.environ.get(key)
-        if v is None or v == "":
-            return default
-        return int(v)
+        return int(v) if v else default
     except (TypeError, ValueError):
         return default
 
@@ -164,29 +144,15 @@ def _resolve_rows(value, env_key: str, default: int) -> int:
             n = int(value)
         except (TypeError, ValueError):
             n = default
-    if n <= 0:
-        return HARD_MAX_ROWS
-    return min(n, HARD_MAX_ROWS)
+    return HARD_MAX_ROWS if n <= 0 else min(n, HARD_MAX_ROWS)
 
-
-# ---------------------------------------------------------------------------
-# bound parameters
-# ---------------------------------------------------------------------------
 
 def _safe_param(value) -> str:
-    """Text SQLite can actually bind, whatever the agent handed us.
+    """Text SQLite can bind, whatever the agent handed us.
 
-    Python's ``str`` admits lone surrogates (a JSON ``\\uD800`` escape, a
-    decoder's error path, a shell's undecodable byte), but SQLite binds text
-    as UTF-8 and raises ``UnicodeEncodeError`` from inside ``conn.execute``
-    for them. Every helper below binds agent-controlled strings, so every one
-    of them passes through here first.
-
-    The replacement is lossy on purpose and only for characters that cannot
-    exist in the index: a node id or file path carrying a surrogate matches
-    nothing, which is the correct answer — that id was never indexed. Nothing
-    that is not a lone surrogate is touched, so ordinary queries keep their
-    exact semantics.
+    Python ``str`` admits lone surrogates while SQLite binds UTF-8 and raises
+    from ``conn.execute``; replacing them is lossy on purpose — such an id was
+    never indexed, so matching nothing is correct. ``None`` binds as ``""``.
     """
     if value is None:
         return ""
@@ -198,21 +164,35 @@ def _safe_param(value) -> str:
     return text
 
 
-# ---------------------------------------------------------------------------
-# connect / state
-# ---------------------------------------------------------------------------
+def _where(clause: list[str]) -> str:
+    """``WHERE a AND b`` for a non-empty clause list, otherwise ``""``."""
+    return f"WHERE {' AND '.join(clause)}" if clause else ""
+
+
+def _fetch(conn, sql: str, params: tuple = ()):
+    """Every row of one query, or ``None`` when SQLite or the binding refuses it."""
+    try:
+        return conn.execute(sql, params).fetchall()
+    except (sqlite3.Error, UnicodeEncodeError):
+        return None
+
+
+def _fetch_one(conn, sql: str, params: tuple = ()):
+    """First row of one query, or ``None`` when SQLite or the binding refuses it."""
+    try:
+        return conn.execute(sql, params).fetchone()
+    except (sqlite3.Error, UnicodeEncodeError):
+        return None
+
+
+# --- connect / state -----------------------------------------------------------
 
 def resolve_db_path(root: str = ".") -> Path:
     """Resolve ``<root>/.codegraph/codegraph.db`` under repo containment.
 
-    Raises ``ValueError`` when root escapes the repo — callers exposed as
-    tools convert that to an agent-facing error string. An OS-level refusal
-    (a path component past NAME_MAX, an unreadable parent directory) is
-    reported the same way instead of as a bare ``OSError``: the containment
-    check itself stats the filesystem, so a hostile root can fail there, and
-    the shape every tool caller knows how to convert is this one.
-
-    Nothing here can raise ``OSError`` — that is the degradation contract.
+    Raises ``ValueError`` when root escapes the repo or the OS refuses to
+    address it (NAME_MAX component, unreadable parent), so tool callers get the
+    error string they know; nothing here raises ``OSError``.
     """
     from harness.tools.code import _safe_path
     try:
@@ -222,10 +202,8 @@ def resolve_db_path(root: str = ".") -> Path:
                 base = base.parent
         except OSError:
             pass
-        # Force one addressability check on the root itself. The shared path
-        # resolver must allow writes to not-yet-existing children, so it does
-        # not stat every candidate; codegraph still needs a hostile root
-        # (NAME_MAX+, unreadable parent) to surface as ValueError here.
+        # One addressability check: _safe_path permits not-yet-existing children,
+        # but codegraph needs a hostile root to surface as ValueError here.
         base.stat()
         return (base / DB_RELATIVE_PATH).resolve()
     except OSError as e:
@@ -320,34 +298,29 @@ def close_cached() -> None:
 def guidance_no_db(root: str = ".") -> str:
     """The guidance string every tool returns when connect() is None.
 
-    ``root`` is accepted for signature symmetry with the helpers that follow
-    the ``conn = connect(root)`` / ``if None -> guidance_no_db(root)`` shape.
+    ``root`` exists for signature symmetry with the ``connect(root)`` callers.
     """
     return GUIDANCE_NO_DB
 
 
 def _count(conn: sqlite3.Connection, table: str, where: str = "", params: tuple = ()) -> int:
-    try:
-        row = conn.execute(f"SELECT count(*) FROM {table} {where}", params).fetchone()
-        return int(row[0]) if row else 0
-    except (sqlite3.Error, UnicodeEncodeError):
-        return 0
+    """Row count for a table/where pair; 0 when the query cannot run."""
+    row = _fetch_one(conn, f"SELECT count(*) FROM {table} {where}", params)
+    return int(row[0]) if row else 0
 
 
 def index_state(root: str = ".") -> dict:
     """What the caller needs to know before trusting graph answers.
 
-    ``mode`` reports how the index was opened (``ro`` or the degraded
-    ``immutable``); ``refs_pending`` counts ``unresolved_refs`` still in the
-    ``pending`` lifecycle state, and ``unresolved_refs`` the failed ones —
-    CodeGraph's own gate is ``pendingRefs == 0`` and ``index.state == complete``,
-    so a caller that sees ``refs_pending > 0`` knows edges are still missing.
+    ``mode`` is ``ro`` or the degraded ``immutable``; ``refs_pending`` counts
+    ``unresolved_refs`` still pending and ``unresolved_refs`` the failed ones.
+    CodeGraph's gate is ``pendingRefs == 0`` and ``index.state == complete``, so
+    either count above zero means edges are still missing.
     """
     out = {"available": False, "path": "", "mode": "", "nodes": 0, "edges": 0,
            "unresolved_refs": 0, "refs_pending": 0}
     try:
-        db = resolve_db_path(root)
-        out["path"] = str(db)
+        out["path"] = str(resolve_db_path(root))
     except (ValueError, OSError):
         return out
     conn = connect(root)
@@ -362,19 +335,10 @@ def index_state(root: str = ".") -> dict:
     return out
 
 
-# ---------------------------------------------------------------------------
-# node rows
-# ---------------------------------------------------------------------------
-
-def _row_to_node(row: sqlite3.Row) -> dict:
-    out = dict(row)
-    for col in _JSON_COLUMNS:
-        if col in out:
-            out[col] = _decode_json(out[col])
-    return out
-
+# --- node rows -----------------------------------------------------------------
 
 def _decode_json(raw):
+    """Decoded JSON column; ``None`` for empty/unparsable input, values pass through."""
     if raw is None or raw == "":
         return None
     if isinstance(raw, (dict, list)):
@@ -385,15 +349,16 @@ def _decode_json(raw):
         return None
 
 
+def _row_to_node(row: sqlite3.Row) -> dict:
+    """A node row as a dict, with its JSON columns decoded."""
+    return {k: _decode_json(v) if k in _JSON_COLUMNS else v for k, v in dict(row).items()}
+
+
 def get_node(conn, node_id: str) -> dict | None:
     """One node by id, JSON columns decoded. None when absent/unreadable."""
     if conn is None:
         return None
-    try:
-        row = conn.execute("SELECT * FROM nodes WHERE id = ?",
-                           (_safe_param(node_id),)).fetchone()
-    except (sqlite3.Error, UnicodeEncodeError):
-        return None
+    row = _fetch_one(conn, "SELECT * FROM nodes WHERE id = ?", (_safe_param(node_id),))
     return _row_to_node(row) if row is not None else None
 
 
@@ -420,23 +385,16 @@ def find_nodes(conn, *, kind=None, name=None, name_like=None, file_path=None,
     if language:
         clause.append("language = ?")
         params.append(_safe_param(language))
-    where = f"WHERE {' AND '.join(clause)}" if clause else ""
-    rows = _resolve_rows(limit, ENV_NODES, 50)
-    try:
-        cur = conn.execute(
-            f"SELECT * FROM nodes {where} ORDER BY file_path, start_line, id LIMIT ?",
-            (*params, rows),
-        )
-        return [_row_to_node(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    rows = _fetch(conn, f"SELECT * FROM nodes {_where(clause)} "
+                        f"ORDER BY file_path, start_line, id LIMIT ?",
+                  (*params, _resolve_rows(limit, ENV_NODES, 50)))
+    return [_row_to_node(r) for r in rows or ()]
 
 
-# ---------------------------------------------------------------------------
-# edge rows
-# ---------------------------------------------------------------------------
+# --- edge rows -----------------------------------------------------------------
 
 def _row_to_edge(row: sqlite3.Row) -> dict:
+    """An edge row as a dict with ``metadata`` decoded to a dict."""
     out = dict(row)
     out["metadata"] = _decode_json(out.get("metadata")) or {}
     return out
@@ -446,9 +404,8 @@ def get_edges(conn, *, source=None, target=None, kind=None, provenance=None,
               limit=100) -> list[dict]:
     """Edges by endpoint/kind/provenance, with ``metadata`` decoded to a dict.
 
-    ``id`` is exposed for display only — it is an autoincrement and NOT stable
-    across re-indexes. The stable fingerprint is ``(source, target, kind, line,
-    col)``.
+    ``id`` is display-only: an autoincrement, NOT stable across re-indexes. The
+    stable fingerprint is ``(source, target, kind, line, col)``.
     """
     if conn is None:
         return []
@@ -459,16 +416,10 @@ def get_edges(conn, *, source=None, target=None, kind=None, provenance=None,
         if val:
             clause.append(f"{col} = ?")
             params.append(_safe_param(val))
-    where = f"WHERE {' AND '.join(clause)}" if clause else ""
-    rows = _resolve_rows(limit, ENV_EDGES, 100)
-    try:
-        cur = conn.execute(
-            f"SELECT * FROM edges {where} ORDER BY line, col, id LIMIT ?",
-            (*params, rows),
-        )
-        return [_row_to_edge(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    rows = _fetch(conn, f"SELECT * FROM edges {_where(clause)} "
+                        f"ORDER BY line, col, id LIMIT ?",
+                  (*params, _resolve_rows(limit, ENV_EDGES, 100)))
+    return [_row_to_edge(r) for r in rows or ()]
 
 
 def node_children(conn, node_id: str, kinds=None, limit=50) -> list[dict]:
@@ -476,37 +427,29 @@ def node_children(conn, node_id: str, kinds=None, limit=50) -> list[dict]:
     if conn is None:
         return []
     kinds = _normalise_kinds(kinds)
-    rows = _resolve_rows(limit, ENV_NODES, 50)
     clause = "AND h.kind IN (%s)" % ",".join("?" * len(kinds)) if kinds else ""
-    try:
-        cur = conn.execute(
-            f"SELECT h.* FROM edges e JOIN nodes h ON h.id = e.target "
-            f"WHERE e.source = ? AND e.kind = 'contains' {clause} "
-            f"ORDER BY h.start_line, h.id LIMIT ?",
-            (_safe_param(node_id), *kinds, rows),
-        )
-        return [_row_to_node(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    rows = _fetch(conn,
+                  f"SELECT h.* FROM edges e JOIN nodes h ON h.id = e.target "
+                  f"WHERE e.source = ? AND e.kind = 'contains' {clause} "
+                  f"ORDER BY h.start_line, h.id LIMIT ?",
+                  (_safe_param(node_id), *kinds, _resolve_rows(limit, ENV_NODES, 50)))
+    return [_row_to_node(r) for r in rows or ()]
 
 
 def node_parent(conn, node_id: str) -> dict | None:
     """The node that ``contains`` this one (a symbol's file or class)."""
     if conn is None:
         return None
-    try:
-        row = conn.execute(
-            "SELECT p.* FROM edges e JOIN nodes p ON p.id = e.source "
-            "WHERE e.target = ? AND e.kind = 'contains' "
-            "ORDER BY p.start_line, p.id LIMIT 1",
-            (_safe_param(node_id),),
-        ).fetchone()
-    except (sqlite3.Error, UnicodeEncodeError):
-        return None
+    row = _fetch_one(conn,
+                     "SELECT p.* FROM edges e JOIN nodes p ON p.id = e.source "
+                     "WHERE e.target = ? AND e.kind = 'contains' "
+                     "ORDER BY p.start_line, p.id LIMIT 1",
+                     (_safe_param(node_id),))
     return _row_to_node(row) if row is not None else None
 
 
 def _normalise_kinds(kinds) -> tuple[str, ...]:
+    """Kinds as a tuple of bindable strings; empty/blank input yields ``()``."""
     if not kinds:
         return ()
     if isinstance(kinds, str):
@@ -514,105 +457,73 @@ def _normalise_kinds(kinds) -> tuple[str, ...]:
     return tuple(_safe_param(k) for k in kinds if str(k).strip())
 
 
-def incoming_edges(conn, node_id: str, kinds=None, limit=100) -> list[dict]:
-    """Edges pointing at this node, optionally filtered by kind."""
+def _edges_by_endpoint(conn, column: str, node_id, kinds, limit: int) -> list[dict]:
+    """Edges whose ``column`` endpoint (source/target) is ``node_id``."""
     if conn is None:
         return []
     ks = _normalise_kinds(kinds)
     where_kinds = " AND e.kind IN (%s)" % ",".join("?" * len(ks)) if ks else ""
-    rows = _resolve_rows(limit, ENV_EDGES, 100)
-    try:
-        cur = conn.execute(
-            f"SELECT e.* FROM edges e WHERE e.target = ?{where_kinds} "
-            f"ORDER BY e.line, e.col, e.id LIMIT ?",
-            (_safe_param(node_id), *ks, rows),
-        )
-        return [_row_to_edge(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    rows = _fetch(conn,
+                  f"SELECT e.* FROM edges e WHERE e.{column} = ?{where_kinds} "
+                  f"ORDER BY e.line, e.col, e.id LIMIT ?",
+                  (_safe_param(node_id), *ks, _resolve_rows(limit, ENV_EDGES, 100)))
+    return [_row_to_edge(r) for r in rows or ()]
+
+
+def incoming_edges(conn, node_id: str, kinds=None, limit=100) -> list[dict]:
+    """Edges pointing at this node, optionally filtered by kind."""
+    return _edges_by_endpoint(conn, "target", node_id, kinds, limit)
 
 
 def outgoing_edges(conn, node_id: str, kinds=None, limit=100) -> list[dict]:
     """Edges leaving this node, optionally filtered by kind."""
-    if conn is None:
-        return []
-    ks = _normalise_kinds(kinds)
-    where_kinds = " AND e.kind IN (%s)" % ",".join("?" * len(ks)) if ks else ""
-    rows = _resolve_rows(limit, ENV_EDGES, 100)
-    try:
-        cur = conn.execute(
-            f"SELECT e.* FROM edges e WHERE e.source = ?{where_kinds} "
-            f"ORDER BY e.line, e.col, e.id LIMIT ?",
-            (_safe_param(node_id), *ks, rows),
-        )
-        return [_row_to_edge(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    return _edges_by_endpoint(conn, "source", node_id, kinds, limit)
 
 
 def unresolved_refs(conn, *, node_id=None, file_path=None, status=None,
                     limit=100) -> list[dict]:
     """References the resolver saw and failed on — an edge may be missing here.
 
-    CodeGraph keeps ``status='failed'`` rows on purpose so a later sync can
-    retry them; ``pending`` means the resolution pass has not run yet. Either
-    way the SAST reading is the same: under-approximation, be explicit about it.
+    ``failed`` rows are kept so a later sync can retry them; ``pending`` means
+    resolution has not run yet. Either way the SAST reading is the same:
+    under-approximation, stated explicitly.
     """
     if conn is None:
         return []
     clause: list[str] = []
     params: list = []
-    if node_id:
-        clause.append("from_node_id = ?")
-        params.append(_safe_param(node_id))
-    if file_path:
-        clause.append("file_path = ?")
-        params.append(_safe_param(file_path))
-    if status:
-        clause.append("status = ?")
-        params.append(_safe_param(status))
-    where = f"WHERE {' AND '.join(clause)}" if clause else ""
-    rows = _resolve_rows(limit, ENV_EDGES, 100)
-    try:
-        cur = conn.execute(
-            f"SELECT * FROM unresolved_refs {where} ORDER BY file_path, line LIMIT ?",
-            (*params, rows),
-        )
-        return [_row_to_ref(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+    for col, val in (("from_node_id", node_id), ("file_path", file_path),
+                     ("status", status)):
+        if val:
+            clause.append(f"{col} = ?")
+            params.append(_safe_param(val))
+    rows = _fetch(conn, f"SELECT * FROM unresolved_refs {_where(clause)} "
+                        f"ORDER BY file_path, line LIMIT ?",
+                  (*params, _resolve_rows(limit, ENV_EDGES, 100)))
+    return [_row_to_ref(r) for r in rows or ()]
 
 
 def _row_to_ref(row: sqlite3.Row) -> dict:
+    """An unresolved-ref row with ``candidates`` decoded to a list."""
     out = dict(row)
     if "candidates" in out:
         out["candidates"] = _decode_json(out["candidates"]) or []
     return out
 
 
-# ---------------------------------------------------------------------------
-# routing manifest
-# ---------------------------------------------------------------------------
+# --- routing manifest ----------------------------------------------------------
 
 def routing_manifest(conn, limit: int = 40) -> list[dict]:
     """URL -> handler rows, exact semantics of ``getRoutingManifest`` (queries.ts).
 
-    One join: ``nodes r(kind='route')`` -> ``edges e(kind IN
-    ('references','calls'))`` -> ``nodes h(kind IN (function, method, class,
-    constant, variable, component))``, ordered by ``r.file_path,
-    r.start_line``. Edge kind varies by framework resolver (Spring/Rails/
-    Laravel emit ``references``, Express emits ``calls``), so both are accepted.
-
-    The rows are then passed through the same test/generated hygiene filter the
-    UI applies (``files.generated`` ∪ path conventions); when the ``files``
-    table lookup fails the filter is skipped rather than dropping everything.
-    Unlike the TypeScript helper this returns the list directly — an agent
-    asking "what routes exist" wants the rows, not null because a repo happens
-    to have fewer than three of them.
+    ``route`` nodes join through ``references``/``calls`` edges (the resolver
+    varies by framework) to ``_HANDLER_KINDS`` nodes, ordered by
+    ``r.file_path, r.start_line``, then filtered by the same test/generated rule
+    the UI applies; a failed ``files`` lookup skips the filter rather than
+    dropping everything. Returns the rows directly, never ``None``.
     """
     if conn is None:
         return []
-    rows = _resolve_rows(limit, ENV_ROUTES, 40)
     sql = (
         "SELECT r.name AS url, r.id AS route_id, r.file_path AS route_file, "
         "r.start_line AS route_line, h.name AS handler, h.file_path AS handler_file, "
@@ -624,37 +535,31 @@ def routing_manifest(conn, limit: int = 40) -> list[dict]:
         f"AND h.kind IN ({', '.join('?' * len(_HANDLER_KINDS))}) "
         "ORDER BY r.file_path, r.start_line LIMIT ?"
     )
-    try:
-        cur = conn.execute(sql, (*_HANDLER_KINDS, rows))
-        raw = [dict(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
+    rows = _fetch(conn, sql, (*_HANDLER_KINDS, _resolve_rows(limit, ENV_ROUTES, 40)))
+    if rows is None:
         return []
+    raw = [dict(r) for r in rows]
+    files = {r["handler_file"] for r in raw}
     generated: set[str] = set()
-    try:
-        files = {r["handler_file"] for r in raw}
-        if files:
-            placeholders = ",".join("?" * len(files))
-            flagged = conn.execute(
-                f"SELECT path FROM files WHERE generated = 1 AND path IN ({placeholders})",
-                tuple(_safe_param(f) for f in files),
-            ).fetchall()
-            generated = {r[0] for r in flagged}
-    except (sqlite3.Error, UnicodeEncodeError):
-        generated = set()
+    if files:
+        placeholders = ",".join("?" * len(files))
+        flagged = _fetch(conn,
+                         f"SELECT path FROM files WHERE generated = 1 "
+                         f"AND path IN ({placeholders})",
+                         tuple(_safe_param(f) for f in files))
+        generated = {r[0] for r in flagged or ()}
     return [r for r in raw if not _is_low_value_file(r["handler_file"], generated)]
 
 
-# ---------------------------------------------------------------------------
-# search
-# ---------------------------------------------------------------------------
+# --- search --------------------------------------------------------------------
 
 def _fts_match_text(query: str) -> str:
     """Quote each token so agent input cannot break the FTS5 MATCH grammar.
 
-    FTS5 has its own query language (AND/OR/NEAR/prefix*/"phrases"); a bare
-    agent string is not valid in it. Each whitespace/underscore token becomes a
+    FTS5 has its own query language (AND/OR/NEAR/prefix*/"phrases"), in which a
+    bare agent string is invalid. Each whitespace/underscore token becomes a
     quoted OR-term, so ``login handler`` -> ``"login" OR "handler"`` and a
-    stray ``(`` or ``"`` can never raise a syntax error.
+    stray ``(`` or ``"`` cannot raise a syntax error.
     """
     tokens = [t for t in re.split(r"[\s_\-.:/\\]+", str(query or "")) if t]
     if not tokens:
@@ -665,47 +570,34 @@ def _fts_match_text(query: str) -> str:
 def search_nodes_fts(conn, query: str, limit: int = 20) -> list[dict]:
     """FTS5 name/signature/docstring search, LIKE-fallback when FTS is missing.
 
-    CodeGraph itself ranks FTS with BM25 weights and applies a -15 penalty to
-    test/fixture/benchmark paths — neither is reproduced here: this returns
-    recall-complete candidates ranked by FTS's own ``rank``, and a security
-    lookup must not silently drop the tests directory.
+    Ranked by FTS's own ``rank``: CodeGraph's BM25 weights and -15 test-path
+    penalty are deliberately not reproduced — a security lookup must not
+    silently drop the tests directory.
     """
     if conn is None:
         return []
-    rows = _resolve_rows(limit, ENV_FTS, 20)
-    # Sanitised, not trusted: a lone surrogate cannot be bound as UTF-8, and
-    # the LIKE/MATCH strings below reach the same execute.
+    cap = _resolve_rows(limit, ENV_FTS, 20)
+    # Sanitised, not trusted: a lone surrogate cannot be bound as UTF-8.
     text = _safe_param(query).strip()
     if not text or not re.search(r"\w", text):
         return []  # an empty (or punctuation-only) query is not a query
     match = _fts_match_text(text)
     if match:
-        try:
-            cur = conn.execute(
-                "SELECT n.* FROM nodes_fts f JOIN nodes n ON n.id = f.id "
-                "WHERE nodes_fts MATCH ? ORDER BY rank LIMIT ?",
-                (match, rows),
-            )
-            return [_row_to_node(r) for r in cur.fetchall()]
-        except (sqlite3.Error, UnicodeEncodeError):
-            pass
-    # LIKE fallback: FTS5 absent from the SQLite build, or a schema without the
-    # virtual table. Substring on name/qualified_name, never a syntax error.
-    try:
-        needle = f"%{text}%"
-        cur = conn.execute(
-            "SELECT * FROM nodes WHERE name LIKE ? OR qualified_name LIKE ? "
-            "ORDER BY file_path, start_line, id LIMIT ?",
-            (needle, needle, rows),
-        )
-        return [_row_to_node(r) for r in cur.fetchall()]
-    except (sqlite3.Error, UnicodeEncodeError):
-        return []
+        rows = _fetch(conn,
+                      "SELECT n.* FROM nodes_fts f JOIN nodes n ON n.id = f.id "
+                      "WHERE nodes_fts MATCH ? ORDER BY rank LIMIT ?", (match, cap))
+        if rows is not None:
+            return [_row_to_node(r) for r in rows]
+    # LIKE fallback: FTS5 absent from the SQLite build, or no virtual table.
+    needle = f"%{text}%"
+    rows = _fetch(conn,
+                  "SELECT * FROM nodes WHERE name LIKE ? OR qualified_name LIKE ? "
+                  "ORDER BY file_path, start_line, id LIMIT ?",
+                  (needle, needle, cap))
+    return [_row_to_node(r) for r in rows or ()]
 
 
-# ---------------------------------------------------------------------------
-# misc
-# ---------------------------------------------------------------------------
+# --- misc ----------------------------------------------------------------------
 
 def node_line_span(conn, node_id) -> tuple[int, int] | None:
     """(start_line, end_line) for a node — the span a finding should cite."""
@@ -722,16 +614,12 @@ def is_generated_file(conn, file_path: str) -> bool:
     """``files.generated`` when the index knows it; False on any miss.
 
     Only the DB flag is consulted — the path-convention half lives in
-    :func:`_is_generated_path` / :func:`is_test_file` and does not need a DB.
+    :func:`_is_generated_path` / :func:`is_test_file` and needs no DB.
     """
     if conn is None:
         return False
-    try:
-        row = conn.execute(
-            "SELECT generated FROM files WHERE path = ?", (_safe_param(file_path),)
-        ).fetchone()
-    except (sqlite3.Error, UnicodeEncodeError):
-        return False
+    row = _fetch_one(conn, "SELECT generated FROM files WHERE path = ?",
+                     (_safe_param(file_path),))
     if row is None:
         return False
     try:

@@ -1007,9 +1007,19 @@ def partition_units(repo: str, files: list[str],
         single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
         if single is not None:
             return _finish([single])
-    edges = _load_partition_edges(repo, app_files)
-    units = _units_from_graphify(repo, app_files, weight_of, target, edges=edges)
+    from harness.partitioning.config import partition_mode
+    from harness.partitioning import codegraph as _cg
+    mode = partition_mode(cfg)
+    if mode == "primary" and _cg.index_available(repo):
+        raw_units = _cg.partition_codegraph_native(app_files)
+        units = _normalize_units(raw_units, weight_of, target) if raw_units else []
+        edges = None
+    else:
+        edges = _load_partition_edges(repo, app_files)
+        units = _units_from_graphify(repo, app_files, weight_of, target, edges=edges)
     if not units:
+        if edges is None:
+            edges = _load_partition_edges(repo, app_files)
         support_files = [
             f for f in app_files
             if support_file_kind(f) in {"template", "config"}]
@@ -1106,6 +1116,40 @@ def _codegraph_dirs_units(repo: str, files: list[str],
             [{"name": "all", "files": sorted(set(files)),
               "reason": "fallback-single-unit"}], weight_of, target, edges=edges)
     return units
+
+
+def _reattach_dirs_majority(unmapped: list[str], by_comm: dict[int, list[str]],
+                            all_files: list[str]) -> tuple[dict[str, int], list[str]]:
+    """P2.5 graphify parity: attach unmapped files to the dominant community of their directory."""
+    from collections import Counter
+
+    dir_comm_counts = defaultdict(Counter)
+    dir_total_counts = Counter()
+    for f in all_files:
+        p = str(PurePosixPath(f).parent)
+        dir_total_counts[p] += 1
+
+    for cid, fs in by_comm.items():
+        for f in fs:
+            p = str(PurePosixPath(f).parent)
+            dir_comm_counts[p][cid] += 1
+
+    attached: dict[str, int] = {}
+    left: list[str] = []
+    for f in unmapped:
+        p = str(PurePosixPath(f).parent)
+        counts = dir_comm_counts.get(p)
+        total = dir_total_counts.get(p, 0)
+        if not counts or total == 0:
+            left.append(f)
+            continue
+        top = counts.most_common(2)
+        top_cid, top_votes = top[0]
+        if top_votes * 2 > total and (len(top) < 2 or top_votes > top[1][1]):
+            attached[f] = top_cid
+        else:
+            left.append(f)
+    return attached, left
 
 
 def _units_from_codegraph(repo: str, files: list[str],
