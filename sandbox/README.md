@@ -25,12 +25,7 @@ cp docker/versions.env.example docker/versions.env
 ./docker/build.sh cyber-sandbox:local
 ```
 
-Requires Docker Desktop running. The harness drives the daemon through the
-Docker SDK for Python (docker-py) — one cached client; no `docker` binary on
-PATH and no `docker_bin` setting. Every command is bounded INSIDE the
-container by `timeout -k 5 <n>` (SIGTERM, then SIGKILL 5s later), so a hung
-command cannot outlive its timeout even if the SDK stream never returns.
-The repo is bind-mounted **read-only** at
+Requires Docker Desktop running. The repo is bind-mounted **read-only** at
 its absolute path; the container gets no host mounts and no host env. Only
 paths under Docker Desktop's file sharing work.
 
@@ -62,10 +57,9 @@ fails the build).
 | `checkov` | IaC (in-container via `execute`, plus indexer wrapper) | bridgecrew |
 
 All image scanners are **agent-driven** (run per unit via `execute`, one skill
-each under `harness/skills/`); the indexer path calls the
-`gitleaks`/`osv-scanner`/`checkov` wrappers through the same in-container
-lane as the agent (`system_exec`), degrading gracefully when a binary is
-absent (and on the host when running lane-local).
+each under `harness/skills/`); the indexer path additionally calls the
+`gitleaks`/`osv-scanner`/`checkov` wrappers in the harness process on the
+host, degrading gracefully when a binary is absent.
 `bandit`/`njsscan`/`atheris`/`flawfinder` ride the pip line with
 `semgrep`/`checkov`; `gosec`/`bearer`/`trufflehog` are release binaries with
 per-arch sha256 verification.
@@ -134,10 +128,8 @@ removed: never delete what you cannot measure.
 That contract is also why the sweep does not use the SDK's one-call bulk
 API, `client.containers.prune(filters={"label": ...})` (docker-py docs,
 containers.prune; Engine API `Container/Prune`): prune is
-delete-what-matches — a label filter in, one summary count out, every match
-gone unconditionally — and it only deletes **stopped** containers, while our
-orphan corpses are RUNNING, so prune would miss exactly the leakage it is
-meant to clean. The sweep's rule is the inverse shape: it decides
+delete-what-matches — a label filter in, one summary count out, and every
+match gone unconditionally. The sweep's rule is the inverse shape: it decides
 KEEP vs REMOVE one container at a time from evidence prune has no slot for
 (per-container exec history and birth stamps on the keep side; a per-refusal
 "not removed" verdict on the remove side so the next scan re-sweeps). The
@@ -209,23 +201,21 @@ on). It is a **no-op in `local` mode**, where there is no sandbox to reset.
 
 ## Code layout
 
-One transport (`docker_channel.py`) speaks to the daemon; the run lifecycle,
-the per-agent session, and the docker specifics layer on top of it.
+A sandbox backend is deliberately thin: it supplies *which CLI* it drives and
+the argv, while everything the backends share lives in its own module.
 
 | module | owns |
 |---|---|
-| `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (and local mode itself) |
-| `cli_utils.py` | the bounded-subprocess seams the LOCAL lane uses, the exec tag, the agent-id slug |
+| `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of both modes, and local mode itself) |
+| `cli_utils.py` | the two subprocess seams (bounded / fixed output), the exec tag, the agent-id slug — one monkeypatch point for the shell backend |
 | `validation.py` | setting validators that fail at construction, before any container exists |
-| `docker_channel.py` | the docker-py transport: one cached `DockerClient` (600s socket read deadline — the last-resort bound for a read that never returns), `create_sandbox` (the confinement kwargs), the demuxed bounded exec (`exec_core`), the tar transfer plane, and the sweep recon (label listing, events age, remove-by-name) |
-| `run_base.py` | mode-independent run plumbing: per-agent env, `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping), the orphan-sweep rules (name pattern, idle threshold, target selection), crash hooks |
-| `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract over the run's exec channel |
-| `docker_backend.py` | `RunSandbox` (create-once, phase reset, mark-dead → recreate under a fresh name) and `DockerSandboxBackend` (the `BaseSandbox` adapter: confined FS ops + the tar upload/download plane), plus the registry instance and the sweep entry point |
-| `system_exec.py` | the system lane: pipeline stages (SAST scanners, the codegraph CLI, compute) executed in the SAME run container on the shared exec channel, `ShellResult` with separated streams |
+| `run_base.py` | `RunSandboxBase`: the whole run-sandbox lifecycle (create-once, per-agent env, phase reset, mark-dead, remove) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
+| `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract, with hooks for the two recovery paths that genuinely differ |
+| `docker_backend.py` | the CLI argv, the create failure advice, and its recovery hook |
 
-Adding another daemon-backed mode means one run class, one
-`SandboxShellBackend` subclass, and a registry line — the channel, the
-lifecycle, and the sweep are shared.
+Adding another backend means one `RunSandboxBase` subclass, one
+`SandboxShellBackend` subclass, and a registry line — no copy-pasted
+lifecycle.
 
 
 ## Run-sandbox filesystem continuity

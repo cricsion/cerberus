@@ -3,8 +3,8 @@ from __future__ import annotations
 import io
 import posixpath
 import shlex
+import subprocess
 import tarfile
-import threading
 import uuid
 from pathlib import Path
 from typing import Iterable
@@ -19,14 +19,24 @@ from deepagents.backends.sandbox import BaseSandbox
 from . import docker_channel
 from .backend_base import SandboxShellBackend
 from .docker_channel import ExecResult
-from .run_base import (RunRegistry, install_crash_hooks, sweep_orphans_via)
 from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
                        DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
-                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS, RESET_COMMAND)
+                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS, RunRegistry,
+                       RunSandboxBase, RESET_COMMAND, agent_env,
+                       install_crash_hooks, sweep_orphans_via)
 from .settings_defaults import (CPUS as DEFAULT_CPUS,
+                                DOCKER_BIN as DEFAULT_DOCKER_BIN,
                                 PIDS_LIMIT as DEFAULT_PIDS_LIMIT)
-from .validation import (DEFAULT_NETWORK, validate_cpus, validate_image,
-                         validate_network)
+from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
+
+from harness.config import config_default
+from harness.paths import resolve_tool_path
+
+
+def _docker_bin(value: str | None = None) -> str:
+    return str(value or config_default("sandbox.docker_bin")
+               or DEFAULT_DOCKER_BIN)
+
 
 __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
            "get_run_sandbox", "shutdown_run_sandbox", "reap_orphans",
@@ -59,29 +69,12 @@ def _validate_mask_paths(*, repo_path: str | Path,
     return out
 
 
-def _tar_uid_gid(user: str) -> tuple[int, int]:
-    """Tar-stream member owner derived from the container ``user`` so an
-    extracted file is writable by the agent user. Numeric ``uid[:gid]``
-    only; a named owner falls back to the image default."""
-    uid_text, _, gid_text = str(user).partition(":")
-    try:
-        uid = int(uid_text)
-    except ValueError:
-        return _IMAGE_UID_GID
-    try:
-        gid = int(gid_text) if gid_text else uid
-    except ValueError:
-        gid = _IMAGE_UID_GID
-    return uid, gid
-
-
-# Image user (uid/gid) of the run container for non-numeric owners: tar-stream
-# members carry it so an extracted file stays writable by the agent user.
+# Image user (uid/gid) of the run container: tar-stream members carry it so an
+# extracted file is owned (and writable) by the agent user, not the daemon.
 _IMAGE_UID_GID = 1000
 
 
-def _tar_bytes(name: str, data: bytes, *, uid: int = _IMAGE_UID_GID,
-               gid: int = _IMAGE_UID_GID) -> bytes:
+def _tar_bytes(name: str, data: bytes) -> bytes:
     """One in-memory tar member for :func:`docker_channel.put_archive`."""
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w") as tar:
@@ -89,7 +82,7 @@ def _tar_bytes(name: str, data: bytes, *, uid: int = _IMAGE_UID_GID,
         info.size = len(data)
         info.mode = 0o644
         info.mtime = 0
-        info.uid = info.gid = int(uid)
+        info.uid = info.gid = _IMAGE_UID_GID
         info.uname = info.gname = ""
         tar.addfile(info, io.BytesIO(data))
     return buf.getvalue()
@@ -113,10 +106,10 @@ def _untar_first(tar_bytes: bytes):
 
 
 def _transfer_error_text(text: str, fallback: str = "") -> str:
-    """Map a docker API message to the docs' file-operation literals
-    (``file_not_found``/``permission_denied``/``is_directory``); a
-    backend-specific first line is the unreachable catch-all, ``fallback``
-    when nothing was said."""
+    """Message-normalizing half of :func:`_transfer_error`: the docs'
+    file-operation literals (``file_not_found``/``permission_denied``/
+    ``is_directory``) with a backend-specific string as the unreachable
+    catch-all (first line, capped), and ``fallback`` when nothing was said."""
     text = (text or "").strip()
     low = text.lower()
     if "permission denied" in low or "read-only" in low:
@@ -131,22 +124,17 @@ def _transfer_error_text(text: str, fallback: str = "") -> str:
 
 def _transfer_error(e: Exception) -> str:
     """Normalize a docker API failure to the docs' file-operation literals
-    ('On failure, error is one of file_not_found, permission_denied,
+    (``file_not_found``/``permission_denied``) with a backend-specific string
+    as the unreachable catch-all (deepagents sandboxes, Managed Deep Agents:
+    'On failure, error is one of file_not_found, permission_denied,
     is_directory, or invalid_path')."""
     return _transfer_error_text(str(getattr(e, "explanation", "") or e),
                                 fallback=type(e).__name__)
 
-
-class RunSandbox:
-    """The per-repo run container, on the docker-py channel.
-
-    ONE container per repo shared by every agent of the run (the registry in
-    :mod:`harness.sandbox.run_base` holds it). Confinement is composed at
-    creation (:func:`docker_channel.create_sandbox`); execution is one
-    bounded exec channel (:func:`docker_channel.exec_core`), demuxed.
-    """
-
+class RunSandbox(RunSandboxBase):
     cli_label = "docker"
+    # A corpse must be removed in seconds, not minutes: an agent is waiting.
+    DESTROY_TIMEOUT: float = 30
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
                  user: str = "1000:1000",
@@ -156,21 +144,25 @@ class RunSandbox:
                  cpus: str = DEFAULT_CPUS,
                  pids_limit: int = DEFAULT_PIDS_LIMIT,
                  network: str = DEFAULT_NETWORK,
-                 mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
+                 docker_bin: str | None = None,
+                 mask_paths: tuple[str, ...] | list[str] | None = None,
+                 pull_image: bool = False) -> None:
         # Re-start-after-death flag: a name a corpse may still hold is never
         # reused; the next start allocates a fresh one (id stays the dead
         # name until then).
         self._fresh_name_needed = False
+        # Opt-in ``sandbox.pull_image``: ONE daemon-side pull before a single
+        # create retry when the daemon lacks the image. Default off = fail
+        # fast on a typo'd image (cli parity; containers.run's hidden
+        # auto-pull stays avoided).
+        self.pull_image = bool(pull_image)
         self.user = str(user)
         self.memory = str(memory)
         self.cpus = str(cpus)
-        # Construction-time conversion: garbage fails the resolve (callers
-        # degrade to the local backend) instead of silently running 1 CPU —
-        # every other numeric sandbox setting has the same raise contract.
-        self._nano_cpus = validate_cpus(cpus)
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress (Docker NAT), none = none; host is refused (host netns). Validated here: a bad sandbox.network fails first.
         self.network = validate_network(network)
+        self.docker_bin = _docker_bin(docker_bin)
         # Credential files to hide from the shell (egress is live, so a key must not be readable): each gets a read-only /dev/null bind.
         if mask_paths is None:
             # No guard on purpose: find_credential_files is already fail-soft and a catch-all could only fail OPEN (mask_paths = ()).
@@ -178,91 +170,17 @@ class RunSandbox:
             mask_paths = find_credential_files(repo_path)
         self.mask_paths = tuple(_validate_mask_paths(repo_path=repo_path,
                                                      mask_paths=mask_paths))
-        # Validated here rather than in the channel: a bad image must fail
-        # the resolve, not the first exec.
-        self.image = validate_image(str(image or DEFAULT_IMAGE))
-        self.repo_path = Path(repo_path).resolve()
-        self.command_timeout = max(1, int(command_timeout))
-        self.max_output_bytes = max(0, int(max_output_bytes))
-        # Random name: same-repo runs must not collide; a stale sandbox
-        # from a crashed run must not be adopted.
-        self._name = f"cyber-sandbox-run-{uuid.uuid4().hex[:12]}"
-        self._lock = threading.Lock()
-        self._started = False
-        self._closed = False
+        super().__init__(repo_path=repo_path, image=image,
+                         command_timeout=command_timeout,
+                         max_output_bytes=max_output_bytes,
+                         name_prefix="cyber-sandbox-run")
 
     @property
-    def name(self) -> str:
-        return self._name
+    def cli_bin(self) -> str:
+        return self.docker_bin
 
-    @property
-    def started(self) -> bool:
-        return self._started
-
-    @property
-    def closed(self) -> bool:
-        return self._closed
-
-    def ensure_started(self) -> str | None:
-        with self._lock:
-            if self._closed:
-                return "sandbox is closed"
-            if self._started:
-                return None
-            return self._start_locked()
-
-    def exec(self, *, command: str, marker: str, timeout: int,
-             max_output_bytes: int,
-             env: list[tuple[str, str]] | None = None) -> ExecResult:
-        """One demuxed exec on the run's channel (agent or system lane)."""
-        return docker_channel.exec_core(
-            self._name, command=command, marker=marker, timeout=timeout,
-            max_output_bytes=max_output_bytes, env=env,
-            workdir=str(self.repo_path))
-
-    def mark_dead(self) -> None:
-        self._on_death()
-        with self._lock:
-            self._started = False
-
-    def _on_death(self) -> None:
-        # The corpse may still hold the name (the best-effort removal on the
-        # recover path can fail): the recreation picks a fresh one at start.
-        self._fresh_name_needed = True
-
-    def close(self) -> None:
-        with self._lock:
-            already = self._closed
-            was_started = self._started
-            self._closed = True
-            self._started = False
-        if already:
-            return
-        if was_started:
-            self.remove()
-
-    def remove(self) -> None:
-        # Teardown runs on crash paths too: the channel variant swallows
-        # everything (absent/gone is success), so a raise here can only be a
-        # harness bug and must surface.
-        docker_channel.remove_container(self._name)
-
-    def reset_agent_scratch(self) -> str | None:
-        with self._lock:
-            started, closed = self._started, self._closed
-        if not started or closed:
-            return None
-        res = docker_channel.exec_core(
-            self._name, command=RESET_COMMAND,
-            marker=f"reset-{uuid.uuid4().hex[:8]}", timeout=120,
-            max_output_bytes=4096, env=(), workdir=str(self.repo_path))
-        if res.error:
-            return (f"{self.cli_label} agent-scratch reset failed: "
-                    f"{res.error[:160]}")
-        if res.exit_code not in (0, None):
-            return (f"{self.cli_label} agent-scratch reset failed: "
-                    f"{(res.stdout or res.error or '').strip()[:160]}")
-        return None
+    def _workdir_args(self) -> list[str]:
+        return ["-w", str(self.repo_path)]
 
     def _codegraph_shadow(self) -> str:
         """Host path of the RW ``<repo>/.codegraph`` shadow dir, or ``""``.
@@ -286,10 +204,11 @@ class RunSandbox:
         try:
             name = docker_channel.create_sandbox(
                 name=self._name, image=self.image, repo=str(self.repo_path),
-                network=self.network, nano_cpus=self._nano_cpus,
+                network=self.network, cpus=self.cpus,
                 pids_limit=self.pids_limit, memory=self.memory,
                 user=self.user, mask_paths=self.mask_paths,
-                codegraph_shadow=self._codegraph_shadow())
+                codegraph_shadow=self._codegraph_shadow(),
+                pull_image=self.pull_image)
             docker_channel.start_sandbox(name)
         except Exception as e:
             # create-then-start: a start failure (or a name conflict on
@@ -319,22 +238,108 @@ class RunSandbox:
         self._started = True
         return None
 
+    def exec(self, *, agent_id: str, command: str, marker: str, timeout: int,
+             max_output_bytes: int) -> tuple[str, int | None, bool]:
+        """CLI-parity merged triple, channel-backed.
 
+        The exec is bounded by the client read deadline (no in-container
+        ``timeout`` wrapper): the channel pkills this exec's tagged shell on
+        deadline/cap exceed, and this method re-raises as
+        ``subprocess.TimeoutExpired`` so the backend's existing hang path
+        (pkill + exit 124) keeps one shape for every lane.
+        """
+        res = docker_channel.exec_core(
+            self._name, command=command, marker=marker, timeout=timeout,
+            max_output_bytes=max_output_bytes, env=agent_env(agent_id),
+            workdir=str(self.repo_path))
+        if res.error.startswith("command timed out after"):
+            raise subprocess.TimeoutExpired(cmd=[self._name], timeout=timeout)
+        merged = res.stdout + (f"\n{res.stderr}" if res.stderr else "")
+        if res.error:
+            merged = f"{merged}\n{res.error}" if merged else res.error
+        # The exec-failure shapes (exec_create/exec_start exceptions) carry
+        # exit_code=126 WITH the error string: pass the code through so the
+        # backend's recovery greps (`exit_code == 126 and "exec failed"`)
+        # see the same triple the CLI's run_bounded returned. exec_core
+        # never yields (error, unreachable-None) past the hang guard above.
+        return merged, res.exit_code, res.truncated
+
+    def exec_streams(self, *, agent_id: str, command: str, marker: str,
+                     timeout: int, max_output_bytes: int) -> ExecResult:
+        """Demuxed shape for the system lane (sandbox/system_exec): separate
+        stdout/stderr so scanner JSON stays parseable by construction, and
+        infra failures surface as ``error`` with the ``exec failed`` marker
+        backend recovery knows (exit_code 126)."""
+        return docker_channel.exec_core(
+            self._name, command=command, marker=marker, timeout=timeout,
+            max_output_bytes=max_output_bytes, env=agent_env(agent_id),
+            workdir=str(self.repo_path))
+
+    def kill_exec(self, marker: str) -> None:
+        """Kill ONLY this exec's tagged shell (the sandbox is shared); the
+        channel's variant is fail-soft by contract."""
+        docker_channel.kill_exec_marker(self._name, marker)
+
+    def reset_agent_scratch(self) -> str | None:
+        with self._lock:
+            started, closed = self._started, self._closed
+        if not started or closed:
+            return None
+        res = docker_channel.exec_core(
+            self._name, command=RESET_COMMAND,
+            marker=f"reset-{uuid.uuid4().hex[:8]}", timeout=120,
+            max_output_bytes=4096, env=(), workdir=str(self.repo_path))
+        if res.error:
+            return (f"{self.cli_label} agent-scratch reset failed: "
+                    f"{res.error[:160]}")
+        if res.exit_code not in (0, None):
+            return (f"{self.cli_label} agent-scratch reset failed: "
+                    f"{(res.stdout or res.error or '').strip()[:160]}")
+        return None
+
+    def remove(self, timeout: float | None = None) -> None:
+        # Teardown runs on crash paths too: the channel variant swallows
+        # everything (absent/gone is success), so a raise here can only be a
+        # harness bug and must surface.
+        docker_channel.remove_container(self._name)
+
+    def destroy_argv(self) -> list[str]:
+        # Vestigial argv form: the channel owns teardown (remove()); kept for
+        # the RunSandboxBase ABC contract and operator-led cleanup parity.
+        return [self.docker_bin, "rm", "-f", self._name]
+
+    def _on_death(self) -> None:
+        # The corpse may still hold the name (the best-effort removal on the
+        # recover path can fail): the recreation picks a fresh one at start.
+        self._fresh_name_needed = True
 class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
-    """deepagents ``BaseSandbox`` adapter over the per-repo run container.
+    """deepagents ``BaseSandbox`` adapter over the per-repo run container (M4).
 
-    Primitives: ``id`` → the run's container name; ``execute()`` → the shared
-    shell lane (the agent's execute tool, scanner runners, and every
-    library-generated FS script ride this one bounded channel);
-    ``upload_files()``/``download_files()`` → the tar transfer plane, as
-    ordered per-file responses (one failure is reported in its response,
-    never aborts the batch). Every other FS op is DERIVED by ``BaseSandbox``
-    from those and therefore runs INSIDE the container; before delegating,
+    Primitives (docs.langchain.com/oss/python/deepagents/{backends,sandboxes}):
+
+    - ``id``            → the run's container name (``SandboxShellBackend.id``);
+    - ``execute()``     → the shared shell lane against the run's exec channel
+      — the agent's ``execute`` tool, scanner runners, and every
+      library-generated FS script ride this one bounded channel;
+    - ``upload_files()``/``download_files()`` → the application-level transfer
+      plane over docker-py ``put_archive``/``get_archive``, as ordered per-file
+      responses (one failure is reported in its response, never aborts the
+      batch — the partner contract).
+
+    Every other FS op (``ls/read/write/edit/delete/glob/grep``) is DERIVED by
+    ``BaseSandbox`` from those primitives and therefore executes INSIDE the
+    container: the host only receives the scripts' output. Before delegating,
     each op confines its path through :func:`~harness.paths.resolve_tool_path`
     — an escaping path resolves onto a never-created in-repo sentinel, so the
-    refusal reads as the sandbox's own not-found and no path outside the repo
-    is ever addressed. The repo bind is read-only, so in-repo writes surface
-    as container-side permission errors and never mutate the target tree.
+    refusal reads as the sandbox's own not-found (RepositoryLocalBackend's
+    denial mechanic, the test_confinement contract) and no path outside the
+    repo — and, with same-path mounts, no host path — is ever addressed. The
+    repo bind is read-only, so in-repo writes surface as container-side
+    permission errors and never mutate the target tree.
+
+    FilesystemMiddleware validation note: an unresolvable ``path`` for
+    glob/grep defaults to the repo root, mirroring the middleware's
+    leading-slash normalization.
     """
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
@@ -345,9 +350,11 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                  cpus: str = DEFAULT_CPUS,
                  pids_limit: int = DEFAULT_PIDS_LIMIT,
                  network: str = DEFAULT_NETWORK,
+                 docker_bin: str | None = None,
                  rules_dir: str = DEFAULT_RULES_DIR,
                  run: RunSandbox | None = None, agent_id: str | None = None,
-                 mask_paths: tuple[str, ...] | list[str] | None = None) -> None:
+                 mask_paths: tuple[str, ...] | list[str] | None = None,
+                 pull_image: bool = False) -> None:
         # Validated before super(): a bad image or network must fail at construction, not inside `docker run`; mask_paths None keeps discovery.
         self.mask_paths = None if mask_paths is None else tuple(mask_paths)
         self.image = validate_image(str(image or DEFAULT_IMAGE))
@@ -357,6 +364,7 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress, none = none; host refused (host netns).
         network_mode = validate_network(network)
+        self.docker_bin = _docker_bin(docker_bin)
         super().__init__(
             repo_path=repo_path,
             run_factory=lambda: RunSandbox(
@@ -364,8 +372,8 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                 command_timeout=command_timeout,
                 max_output_bytes=max_output_bytes, memory=self.memory,
                 cpus=self.cpus, pids_limit=self.pids_limit,
-                network=network_mode,
-                mask_paths=self.mask_paths),
+                network=network_mode, docker_bin=self.docker_bin,
+                mask_paths=self.mask_paths, pull_image=pull_image),
             run=run, agent_id=agent_id,
             command_timeout=command_timeout,
             max_output_bytes=max_output_bytes,
@@ -386,8 +394,6 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
         the denial sentinel — never followed, never created. Same-path mounts
         make the resolved host form valid at the identical container path.
         """
-        from harness.paths import resolve_tool_path
-
         resolved = resolve_tool_path(path, self.repo_path)
         return str(self._sentinel if resolved is None else resolved)
 
@@ -424,13 +430,15 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
 
     def upload_files(self,
                      files: list[tuple[str, bytes]]) -> list[FileUploadResponse]:
-        """App-level transfer plane: one tar ``put_archive`` per file. Parent
-        dirs are ensured per-parent first (put_archive requires the
-        extraction directory to exist), and a bad parent fails only its own
-        files. Neither this nor ``download_files`` routes through
-        ``_confine``: they need container-absolute paths, and the residual
-        reach is the container's own RW tmpfs — no agent surface calls this
-        plane."""
+        """App-level transfer plane: one tar ``put_archive`` per file (agent
+        FS tools never ride this — docs, sandboxes#two-planes-of-file-access).
+        Parent dirs are ensured per-parent first: docker's put_archive
+        requires the extraction directory to already exist (docker-py docs,
+        api.rst#put_archive). Unlike every other FS op here, neither this nor
+        ``download_files`` routes through ``_confine``: put_archive/get_archive
+        need container-absolute paths, the repo bind is read-only, and the
+        unconfined residual reach is the container's own RW tmpfs (/tmp,
+        /work) — no agent surface calls this plane."""
         started = self._run.ensure_started()
         if started:
             return [FileUploadResponse(path=path,
@@ -459,12 +467,10 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                 if reason:
                     out.append(FileUploadResponse(path=path, error=reason))
                     continue
-                uid, gid = _tar_uid_gid(self._run.user)
                 try:
                     docker_channel.put_archive(
                         self._run.name, posixpath.dirname(path),
-                        _tar_bytes(posixpath.basename(path), content,
-                                   uid=uid, gid=gid))
+                        _tar_bytes(posixpath.basename(path), content))
                 except Exception as e:
                     out.append(FileUploadResponse(path=path,
                                                   error=_transfer_error(e)))
@@ -502,10 +508,14 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                                                 error=None))
         return out
 
-    def _recover_sandbox(self, *, res: ExecResult, out: str,
-                         exit_code: int | None, truncated: bool
+    def _missing_binary_message(self) -> str:
+        return (f"refused: {self.docker_bin!r} not found on PATH; "
+                "sandbox backend needs a container runtime")
+
+    def _recover_sandbox(self, *, command: str, marker: str, t: int,
+                         out: str, exit_code: int | None, truncated: bool
                          ) -> tuple[str, int | None, bool] | None:
-        if res.exit_code == 126 and "exec failed" in out:
+        if exit_code == 126 and "exec failed" in out:
             # "exec failed" reports the exec, not the container: an exec can
             # lose its race with a transient daemon hiccup while the shared
             # container is alive and mid-run. Ask the daemon (inspect →
@@ -520,34 +530,37 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
             self._run.mark_dead()
         return None
 
-
 # Run-level slice of a sandbox settings dict: rules_dir is PER-AGENT and must
 # never reach the container constructor (TypeError).
 _RUN_SETTING_KEYS = frozenset({
     "image", "user", "command_timeout", "max_output_bytes", "memory", "cpus",
-    "pids_limit", "network", "mask_paths",
+    "pids_limit", "network", "docker_bin", "mask_paths", "pull_image",
 })
 
 RUNS = RunRegistry(RunSandbox, _RUN_SETTING_KEYS)
 
-
 def get_run_sandbox(repo: str | Path, settings: dict | None = None) -> RunSandbox:
     return RUNS.get(repo, settings)
-
 
 def shutdown_run_sandbox(repo: str | Path | None = None) -> None:
     RUNS.shutdown(repo)
 
-
-def sweep_orphans(*, live: Iterable[str] | None = None,
+def sweep_orphans(*, docker_bin: str | None = None,
+                  live: Iterable[str] | None = None,
                   idle_seconds: float = ORPHAN_IDLE_SECONDS) -> list[str]:
+    # `docker_bin` stays in the surface for registry parity; the SDK lane
+    # ignores it (docker.from_env honors DOCKER_HOST/contexts itself).
+    del docker_bin
+
     # NOT client.containers.prune(filters={"label": RUN_LABEL}) (md 910-928;
-    # v1.56.yaml ContainerPrune 9739): the docs say prune deletes STOPPED
-    # containers — our orphan corpses are RUNNING, so prune would miss them
-    # even apart from its delete-what-matches contract, which cannot express
-    # this sweep's inverse: never remove what it cannot measure. The loop
-    # (list wire rows → per-container age evidence → remove-by-name) decides
-    # KEEP vs REMOVE per container from daemon-published facts.
+    # v1.56.yaml ContainerPrune 9739): prune is one call for delete-what-
+    # matches, while this sweep's contract is the inverse — never remove
+    # what it cannot measure. The loop (list wire rows → per-container age
+    # evidence → remove-by-name) decides KEEP vs REMOVE per container from
+    # daemon-published facts; prune() cannot express that (no per-container
+    # age in, no per-container verdict out, and any accepted filter deletes
+    # unconditionally). A refusal above still must not read as reaped, which
+    # prune answers with a summary, not per-id results.
     return sweep_orphans_via(
         registry=RUNS, list_names=docker_channel.list_sandbox_names,
         idle_age=docker_channel.last_exec_event_age,
@@ -557,9 +570,7 @@ def sweep_orphans(*, live: Iterable[str] | None = None,
         remove_one=docker_channel.remove_container,
         live=live, idle_seconds=idle_seconds)
 
-
 def reap_orphans() -> None:
     RUNS.shutdown()
-
 
 install_crash_hooks(RUNS.shutdown)

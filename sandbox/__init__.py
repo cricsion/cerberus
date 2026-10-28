@@ -112,11 +112,30 @@ def _coerce_int(key: str, value: Any) -> int:
     except (TypeError, ValueError) as exc:
         raise ValueError(f"invalid sandbox {key}: {value!r}") from exc
 
+def _coerce_bool(key: str, value: Any) -> bool:
+    """Same raise-on-garbage contract as ``_coerce_int``: "1/true/yes/on" is
+    True, "0/false/no/off" or empty is False, anything else fails the resolve
+    (callers degrade to the local backend)."""
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in ("1", "true", "yes", "on"):
+        return True
+    if text in ("0", "false", "no", "off"):
+        return False
+    raise ValueError(f"invalid sandbox {key}: {value!r}")
+
 def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
+    from .credentials import find_credential_files
     defaults = _sandbox_defaults("sandbox")
+    # No guard on purpose: find_credential_files is fail-soft; a catch-all could only fail OPEN (mask_paths = []).
+    mask_paths: list[str] = find_credential_files(repo)
 
     def _int(key: str) -> int:
         return _coerce_int(key, _sandbox_setting(cfg, key, defaults[key]))
+
+    def _bool(key: str) -> bool:
+        return _coerce_bool(key, _sandbox_setting(cfg, key, defaults[key]))
 
     return {
         "image": str(_sandbox_setting(cfg, "image", defaults["image"])),
@@ -126,14 +145,15 @@ def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
         "cpus": str(_sandbox_setting(cfg, "cpus", defaults["cpus"])),
         "pids_limit": _int("pids_limit"),
         "network": str(_sandbox_setting(cfg, "network", defaults["network"])),
+        "docker_bin": str(_sandbox_setting(cfg, "docker_bin",
+                                           defaults["docker_bin"])),
         # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- harness/agents/deep.py.
         "rules_dir": str(_sandbox_setting(cfg, "rules_dir",
                                           defaults["rules_dir"])),
-        # Credential files to mask (each gets a /dev/null bind) are
-        # discovered at RUN CREATION — the registry caches one run per repo,
-        # so the credential rglob walks the repo once per run, not once per
-        # agent acquisition. RunSandbox.mask_paths=None keeps that behavior.
-        "mask_paths": None,
+        "mask_paths": mask_paths,
+        # Opt-in SDK-lane pull-on-missing-image (docker_backend.RunSandbox);
+        # default 0 from default.yaml keeps the CLI lane's fail-fast.
+        "pull_image": _bool("pull_image"),
     }
 
 # One row per backend: name, settings builder (called as (cfg, repo) for every
