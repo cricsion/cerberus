@@ -93,6 +93,16 @@ def _sandbox_defaults(*path: str) -> dict:
     value = config_default(".".join(path))
     return value if isinstance(value, dict) else {}
 
+
+def _backend_choice(cfg: dict | None) -> str:
+    """Which backend the config names — ``sandbox.backend``, env escape
+    ``SANDBOX_BACKEND`` included — normalized. ``resolve_backend`` matches it
+    against the backend table; the system lane's ``sandbox_lane`` compares it
+    to ``docker``."""
+    defaults = _sandbox_defaults("sandbox")
+    return str(_sandbox_setting(cfg, "backend",
+                                defaults["backend"])).strip().lower()
+
 def _host_list(raw: Any) -> list[str]:
     # Config hosts arrive as list, comma/semicolon string, or a single value.
     if isinstance(raw, str):
@@ -181,9 +191,7 @@ def _iter_backends() -> Iterator[tuple[tuple[Any, ...], Any]]:
 
 def resolve_backend(cfg: dict | None, repo: str | Path,
                     *, agent_id: str | None = None) -> RepoLocalBackend:
-    defaults = _sandbox_defaults("sandbox")
-    which = str(_sandbox_setting(cfg, "backend",
-                                 defaults["backend"])).strip().lower()
+    which = _backend_choice(cfg)
     for name, build_settings, cls_name, getter, _shutdown in _BACKENDS:
         if which != name:
             continue

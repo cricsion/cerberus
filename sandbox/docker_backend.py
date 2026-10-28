@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import posixpath
 import shlex
-import subprocess
 import tarfile
 import uuid
 from pathlib import Path
@@ -17,7 +16,7 @@ from deepagents.backends.protocol import (DeleteResult, EditResult,
 from deepagents.backends.sandbox import BaseSandbox
 
 from . import docker_channel
-from .backend_base import SandboxShellBackend
+from .backend_base import HANG_NOTE, SandboxShellBackend
 from .docker_channel import ExecResult
 from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
                        DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
@@ -133,8 +132,6 @@ def _transfer_error(e: Exception) -> str:
 
 class RunSandbox(RunSandboxBase):
     cli_label = "docker"
-    # A corpse must be removed in seconds, not minutes: an agent is waiting.
-    DESTROY_TIMEOUT: float = 30
 
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
                  user: str = "1000:1000",
@@ -178,9 +175,6 @@ class RunSandbox(RunSandboxBase):
     @property
     def cli_bin(self) -> str:
         return self.docker_bin
-
-    def _workdir_args(self) -> list[str]:
-        return ["-w", str(self.repo_path)]
 
     def _codegraph_shadow(self) -> str:
         """Host path of the RW ``<repo>/.codegraph`` shadow dir, or ``""``.
@@ -240,45 +234,42 @@ class RunSandbox(RunSandboxBase):
 
     def exec(self, *, agent_id: str, command: str, marker: str, timeout: int,
              max_output_bytes: int) -> tuple[str, int | None, bool]:
-        """CLI-parity merged triple, channel-backed.
+        """Merged output/exit/truncated triple, channel-backed.
 
         The exec is bounded by the client read deadline (no in-container
         ``timeout`` wrapper): the channel pkills this exec's tagged shell on
-        deadline/cap exceed, and this method re-raises as
-        ``subprocess.TimeoutExpired`` so the backend's existing hang path
-        (pkill + exit 124) keeps one shape for every lane.
+        deadline/cap exceed. A deadline exceed returns the partial tail the
+        deadline preserved, surfaced as exit 124 with the hang note — the
+        hang never raises; infra flows as data, the way the channel reports
+        it.
         """
         res = docker_channel.exec_core(
             self._name, command=command, marker=marker, timeout=timeout,
             max_output_bytes=max_output_bytes, env=agent_env(agent_id),
             workdir=str(self.repo_path))
-        if res.error.startswith("command timed out after"):
-            raise subprocess.TimeoutExpired(cmd=[self._name], timeout=timeout)
         merged = res.stdout + (f"\n{res.stderr}" if res.stderr else "")
+        if res.error.startswith("command timed out after"):
+            note = f"command timed out after {timeout}s ({HANG_NOTE})"
+            return (f"{merged}\n{note}" if merged else note, 124, True)
         if res.error:
             merged = f"{merged}\n{res.error}" if merged else res.error
         # The exec-failure shapes (exec_create/exec_start exceptions) carry
         # exit_code=126 WITH the error string: pass the code through so the
         # backend's recovery greps (`exit_code == 126 and "exec failed"`)
-        # see the same triple the CLI's run_bounded returned. exec_core
-        # never yields (error, unreachable-None) past the hang guard above.
+        # see the same triple the agent's exec contract returns.
         return merged, res.exit_code, res.truncated
 
     def exec_streams(self, *, agent_id: str, command: str, marker: str,
                      timeout: int, max_output_bytes: int) -> ExecResult:
-        """Demuxed shape for the system lane (sandbox/system_exec): separate
-        stdout/stderr so scanner JSON stays parseable by construction, and
-        infra failures surface as ``error`` with the ``exec failed`` marker
-        backend recovery knows (exit_code 126)."""
+        """Demuxed shape for the system lane (sandbox/system_exec):
+        ``system_shell`` runs scanner argv through this so stdout/stderr stay
+        separate by construction — scanner JSON is never polluted — and infra
+        failures surface as ``error`` with the ``exec failed`` marker backend
+        recovery knows (exit_code 126)."""
         return docker_channel.exec_core(
             self._name, command=command, marker=marker, timeout=timeout,
             max_output_bytes=max_output_bytes, env=agent_env(agent_id),
             workdir=str(self.repo_path))
-
-    def kill_exec(self, marker: str) -> None:
-        """Kill ONLY this exec's tagged shell (the sandbox is shared); the
-        channel's variant is fail-soft by contract."""
-        docker_channel.kill_exec_marker(self._name, marker)
 
     def reset_agent_scratch(self) -> str | None:
         with self._lock:
@@ -297,21 +288,18 @@ class RunSandbox(RunSandboxBase):
                     f"{(res.stdout or res.error or '').strip()[:160]}")
         return None
 
-    def remove(self, timeout: float | None = None) -> None:
+    def remove(self) -> None:
         # Teardown runs on crash paths too: the channel variant swallows
         # everything (absent/gone is success), so a raise here can only be a
         # harness bug and must surface.
         docker_channel.remove_container(self._name)
 
-    def destroy_argv(self) -> list[str]:
-        # Vestigial argv form: the channel owns teardown (remove()); kept for
-        # the RunSandboxBase ABC contract and operator-led cleanup parity.
-        return [self.docker_bin, "rm", "-f", self._name]
-
     def _on_death(self) -> None:
         # The corpse may still hold the name (the best-effort removal on the
         # recover path can fail): the recreation picks a fresh one at start.
         self._fresh_name_needed = True
+
+
 class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
     """deepagents ``BaseSandbox`` adapter over the per-repo run container (M4).
 
@@ -545,12 +533,11 @@ def get_run_sandbox(repo: str | Path, settings: dict | None = None) -> RunSandbo
 def shutdown_run_sandbox(repo: str | Path | None = None) -> None:
     RUNS.shutdown(repo)
 
-def sweep_orphans(*, docker_bin: str | None = None,
-                  live: Iterable[str] | None = None,
+def sweep_orphans(*, live: Iterable[str] | None = None,
                   idle_seconds: float = ORPHAN_IDLE_SECONDS) -> list[str]:
-    # `docker_bin` stays in the surface for registry parity; the SDK lane
-    # ignores it (docker.from_env honors DOCKER_HOST/contexts itself).
-    del docker_bin
+    # The SDK lane ignores any docker binary hint (docker.from_env honors
+    # DOCKER_HOST/contexts itself); `live` stays for callers that already
+    # hold the registry's live set.
 
     # NOT client.containers.prune(filters={"label": RUN_LABEL}) (md 910-928;
     # v1.56.yaml ContainerPrune 9739): prune is one call for delete-what-

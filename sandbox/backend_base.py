@@ -12,6 +12,9 @@ from .cli_utils import safe_slug
 from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_MAX_OUTPUT_BYTES,
                        DEFAULT_RULES_DIR, RunSandboxBase)
 
+# The hang response's note, shared by every lane that reports a hung client.
+HANG_NOTE = "exec client hang"
+
 class SandboxShellBackend(SandboxBackendProtocol):
     """Run-backed shell lane for a :class:`BaseSandbox` adapter.
 
@@ -25,7 +28,7 @@ class SandboxShellBackend(SandboxBackendProtocol):
     class no longer inherits it.
     """
 
-    HANG_NOTE = "exec client hang"
+    HANG_NOTE = HANG_NOTE
 
     def __init__(self, *, repo_path: str | Path, run_factory: Callable[[], RunSandboxBase],
                  run: RunSandboxBase | None = None, agent_id: str | None = None,
@@ -101,25 +104,10 @@ class SandboxShellBackend(SandboxBackendProtocol):
 
         # Tags this exec's command line so a hung client can be killed without touching a concurrent agent's shell.
         marker = f"{self.agent_id}-{uuid.uuid4().hex[:8]}"
-        try:
-            result = self._run.exec(
-                agent_id=self.agent_id, command=command,
-                marker=marker, timeout=t,
-                max_output_bytes=self.max_output_bytes)
-        except subprocess.TimeoutExpired:
-            # A hung client: kill ONLY this exec's tagged shell, never a
-            # blanket pkill (the container is shared).
-            try:
-                self._run.kill_exec(marker)
-            except Exception:
-                pass
-            return ExecuteResponse(
-                output=f"command timed out after {t}s ({self.HANG_NOTE})",
-                exit_code=124)
-        except FileNotFoundError:
-            self._run.mark_dead()
-            return ExecuteResponse(output=self._missing_binary_message(),
-                                   exit_code=None)
+        result = self._run.exec(
+            agent_id=self.agent_id, command=command,
+            marker=marker, timeout=t,
+            max_output_bytes=self.max_output_bytes)
         out, exit_code, truncated = self._truncate(result)
         recovered = self._recover_sandbox(command=command, marker=marker,
                                           t=t, out=out, exit_code=exit_code,

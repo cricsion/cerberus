@@ -7,7 +7,8 @@ Python (docker-py), doc-verified 7.x:
   exactly one side is bytes per frame, the other None
   (``utils/socket.py`` ``demux_adaptor``) — and ``exec_inspect()`` gives
   the exit code; the sentinel-file composition the merged-CLI stream
-  required is gone for the docker lane.
+  required is gone (system_exec's ``system_shell`` reads the demuxed
+  frames directly).
 - ``put_archive``/``get_archive`` are the tar transfer plane (BaseSandbox
   upload_files/download_files land on these in M4).
 - ``containers.create`` expresses the full confinement contract:
@@ -48,7 +49,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-from .cli_utils import EXEC_TAG
+from .cli_utils import BYTE_CAP_FACTOR, EXEC_TAG
 
 __all__ = ["ExecResult", "client_for", "create_sandbox", "start_sandbox",
            "daemon_unreachable_reason", "pull_missing_image",
@@ -65,8 +66,8 @@ RUN_LABEL = f"{DOCKER_LABEL_KEY}={DOCKER_LABEL_VALUE}"
 # a socket lull); parity for the SDK lane.
 _HANG_SLACK = 15
 
-# run_base._BYTE_CAP_FACTOR parity: the exec cap counts COMBINED stream bytes.
-_BYTE_CAP_FACTOR = 4
+# cli_utils.BYTE_CAP_FACTOR parity: the exec cap counts COMBINED stream bytes
+# (stdout + stderr together), same accounting as the CLI-lane runner.
 
 
 @dataclass(frozen=True)
@@ -158,6 +159,10 @@ def create_sandbox(*, name: str, image: str, repo: str, network: str,
             image, ["sleep", "infinity"], name=name, detach=True,
             user=str(user), network_mode=network,
             cap_drop=["ALL"], security_opt=["no-new-privileges"],
+            # ``init``: a tini PID 1 reaps the exec children this channel
+            # pkill -KILLs (the bare ``sleep infinity`` CMD never reaps, so
+            # without it every killed command lingers as a zombie).
+            init=True,
             pids_limit=max(16, int(pids_limit)), mem_limit=str(memory),
             memswap_limit=str(memory), nano_cpus=nano,
             read_only=True,
@@ -294,7 +299,7 @@ def exec_core(name: str, *, command: str, marker: str, timeout: int,
     stdout: list[bytes] = []
     stderr: list[bytes] = []
     total = 0
-    cap = max(1, int(max_output_bytes)) * _BYTE_CAP_FACTOR
+    cap = max(1, int(max_output_bytes)) * BYTE_CAP_FACTOR
     deadline = time.monotonic() + timeout
 
     def partial() -> tuple[str, str]:

@@ -114,6 +114,8 @@ sandbox:
   backend: ${SANDBOX_BACKEND:-local}
   # Runner image for docker
   image: ${SANDBOX_IMAGE:-cyber-sandbox:local}
+  docker_bin: ${SANDBOX_DOCKER_BIN:-docker}
+  pull_image: ${SANDBOX_PULL_IMAGE:-0}
   # The runner container is started once per scan; commands are exec'd in
   # it over the docker-py SDK channel (demuxed, bounded in-container by
   # `timeout -k 5`). The container is torn down at scan

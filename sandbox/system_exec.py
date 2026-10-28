@@ -7,13 +7,14 @@ per-repo run container on the shared exec channel (D1: one container per repo,
 zero additional containers; the host runs only the orchestrator and its store
 reads). This module is that single seam.
 
-It rides the SAME exec channel, exec markers and pkill hygiene as agent shells
-(``RunSandboxBase.exec``) with a reserved ``system`` agent id, and mirrors
+It rides the SAME exec channel, exec markers and pkill hygiene as agent
+shells (the channel's ``exec_core`` path, via ``RunSandbox.exec_streams``)
+with a reserved ``system`` agent id, and mirrors
 ``SandboxShellBackend.execute``'s error mapping: a missing client is an infra
-error, a client hang kills ONLY this exec's tagged shell via pkill, and the
-in-sandbox ``timeout`` yields exit 124. It deliberately skips the backend's
-``command_timeout`` clamp so a 600 s index build is bounded by its own timeout
-argument, not agent policy.
+error, a client hang kills ONLY this exec's tagged shell via pkill (the
+channel's watchdog), and the deadline surfaces as exit 124. It deliberately
+skips the backend's ``command_timeout`` clamp so a 600 s index build is
+bounded by its own timeout argument, not agent policy.
 
 The environment crosses as an ``export`` prefix INSIDE the command (docker
 ``-e`` equivalents): inline ``K=V cmd`` assignment would apply to one simple
@@ -22,7 +23,10 @@ scratch dirs live under ``/work/_system`` / ``/tmp/_system`` — outside the
 ``agent-*`` reset glob, so caches survive phase cleanup.
 
 ``SANDBOX_BACKEND=local`` keeps a host-subprocess lane (cwd=repo, scrubbed
-env) so dev scans without docker behave exactly as before.
+env) so dev scans without docker behave exactly as before. Both lanes capture
+stdout/stderr separately (demuxed) — the scanner seam (:func:`system_shell`,
+harness/tools/sast.py) parses stdout JSON, so stderr noise must never touch
+that stream; there is no merged shape.
 """
 from __future__ import annotations
 
@@ -32,13 +36,13 @@ import re
 import shlex
 import subprocess
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from .cli_utils import run_bounded
+from .cli_utils import BYTE_CAP_FACTOR, run_bounded_streams
+from .docker_channel import ExecResult
 from .run_base import DEFAULT_MAX_OUTPUT_BYTES
 
-__all__ = ["ExecResult", "ShellResult", "sandbox_lane", "system_execute",
-           "system_shell"]
+__all__ = ["ShellResult", "sandbox_lane", "system_execute", "system_shell"]
 
 _logger = logging.getLogger(__name__)
 
@@ -56,21 +60,9 @@ _SYSTEM_ENV = {
 # Sentinel exit for the ``command -v`` probe: absent binary in the lane.
 _MISSING_OK = re.compile(r"^[A-Za-z0-9_.+/-]+$")
 
-_BYTE_CAP_FACTOR = 4  # keep in line with run_base._BYTE_CAP_FACTOR
-
-
-@dataclass(frozen=True)
-class ExecResult:
-    """One lane primitive result.
-
-    ``error`` non-empty marks an INFRA failure (no client, no container, a
-    create timeout, or a client hang) — stages treat it like a non-zero exit
-    and fail open, exactly like the backend does.
-    """
-    out: str = ""
-    exit_code: int | None = None
-    truncated: bool = False
-    error: str = ""
+# Probe-failure marker: echoed to stderr by the probe's exit branch, so a
+# tool that itself exits 91 is distinguishable from a binary that is absent.
+_PROBE_ABSENT = "cyber-sys-absent"
 
 
 @dataclass(frozen=True)
@@ -100,11 +92,9 @@ def sandbox_lane() -> str:
         _logger.debug("sandbox lane degraded to local: config load failed: "
                       "%s: %s", type(cfg_err).__name__, cfg_err)
         return "local"
-    from . import _sandbox_defaults, _sandbox_setting
+    from . import _backend_choice
 
-    defaults = _sandbox_defaults("sandbox")
-    return str(_sandbox_setting(cfg, "backend",
-                                defaults["backend"])).strip().lower()
+    return _backend_choice(cfg)
 
 
 def _env_exports(env: dict[str, str] | None) -> str:
@@ -139,7 +129,8 @@ def system_execute(repo: str, command: str, *, timeout: int = 300,
 
     Local lane: ``/bin/bash -c`` as a host subprocess with cwd=repo and a
     scrubbed environment. Docker lane: the per-repo run container's exec
-    channel, with system scratch exports prepended.
+    channel, with system scratch exports prepended. Output is demuxed:
+    ``stdout`` carries stdout, ``stderr`` carries stderr.
     """
     if sandbox_lane() != "docker":
         return _local_exec(repo, command, timeout, max_bytes, env)
@@ -151,20 +142,20 @@ def _local_exec(repo: str, command: str, timeout: int, max_bytes: int | None,
     from harness.tools._compat import scrubbed_env
 
     merged = {**scrubbed_env(), **(env or {})}
-    cap = max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES))
+    cap = max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES)) * BYTE_CAP_FACTOR
+    argv = ["/bin/bash", "-c", _env_exports(env) + command]
     try:
-        out, exit_code, truncated = run_bounded(
-            ["/bin/bash", "-c", _env_exports(env) + command],
-            timeout=float(timeout), byte_cap=cap * _BYTE_CAP_FACTOR,
-            env=merged,
+        stdout, stderr, exit_code, truncated = run_bounded_streams(
+            argv, timeout=float(timeout), byte_cap=cap, env=merged,
             # cwd=repo: relative targets resolve against the repo, matching
-            # the in-container exec workdir (-w <repo>). No in-container
-            # `timeout` wrapper here, so the client deadline IS the cap.
+            # the in-container exec workdir (-w <repo>). No client-side
+            # deadline slack: run_bounded_streams IS the deadline.
             cwd=repo)
     except subprocess.TimeoutExpired:
         return ExecResult(error=f"command timed out after {timeout}s",
                           exit_code=124)
-    return ExecResult(out=out, exit_code=exit_code, truncated=truncated)
+    return ExecResult(stdout=stdout, stderr=stderr, exit_code=exit_code,
+                      truncated=truncated)
 
 
 def _docker_exec(repo: str, command: str, timeout: int, max_bytes: int | None,
@@ -185,24 +176,15 @@ def _docker_exec(repo: str, command: str, timeout: int, max_bytes: int | None,
     command = (_env_exports({**_SYSTEM_ENV, **(env or {})})
                + 'mkdir -p "$HOME" "$TMPDIR" 2>/dev/null; ' + command)
     marker = f"{_SYSTEM_AGENT_ID}-{uuid.uuid4().hex[:8]}"
-    try:
-        out, exit_code, truncated = run.exec(
-            agent_id=_SYSTEM_AGENT_ID, command=command, marker=marker,
-            timeout=max(1, int(timeout)),
-            max_output_bytes=max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES)))
-    except subprocess.TimeoutExpired:
-        # A hung client: kill ONLY this exec's tagged shell.
-        try:
-            run.kill_exec(marker)
-        except Exception:
-            pass
-        return ExecResult(error=f"command timed out after {timeout}s "
-                                "(exec client hang)", exit_code=124)
-    except FileNotFoundError:
-        run.mark_dead()
-        return ExecResult(error=f"refused: {run.cli_bin!r} not found on PATH; "
-                                "system lane needs a container runtime")
-    return ExecResult(out=out, exit_code=exit_code, truncated=truncated)
+    # exec_core never raises for infra; the hang arrives as ``error`` with
+    # the partial tail it kept.
+    res = run.exec_streams(
+        agent_id=_SYSTEM_AGENT_ID, command=command, marker=marker,
+        timeout=max(1, int(timeout)),
+        max_output_bytes=max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES)))
+    if res.error.startswith("command timed out after"):
+        return replace(res, exit_code=124, truncated=True)
+    return res
 
 
 # --------------------------------------------------------------------------
@@ -219,11 +201,16 @@ def system_shell(argv, *, repo: str | None = None, timeout: int = 300,
     """Run argv inside the lane with stdout/stderr/rc separated; never raises.
 
     ``repo`` keys the run sandbox (docker lane) and is the subprocess cwd
-    (local lane); default is the scan's ``TARGET_REPO``. A ``command -v``
-    probe up front catches an absent binary (exit 91) and folds it into
-    ``error`` as ``binary not found: <argv0>`` — the same skip-if-absent
-    semantics the host ``shutil.which`` path provided. Not for agent input:
-    argv strings are fixed harness literals, quoted defensively.
+    (local lane); default is the scan's ``TARGET_REPO``. Both lanes capture
+    the streams separately — docker via the exec channel's demuxed frames,
+    local via :func:`run_bounded_streams` — so scanner JSON on stdout is
+    never polluted by stderr noise, and the rc comes from the runner (the
+    file-and-marker composition the merged stream required is gone). A
+    ``command -v`` probe up front catches an absent binary (exit 91 with
+    the probe marker on stderr) and folds it into ``error`` as ``binary
+    not found: <argv0>`` — the same skip-if-absent semantics the host
+    ``shutil.which`` path provided. Not for agent input: argv strings are
+    fixed harness literals, quoted defensively.
     """
     if not _MISSING_OK.match(str(argv[0])):
         return ShellResult(error=f"refused: unusable argv[0]: {argv[0]!r}")
@@ -232,48 +219,23 @@ def system_shell(argv, *, repo: str | None = None, timeout: int = 300,
 
         repo = str(canonical_repo(os.environ.get("TARGET_REPO") or "."))
 
-    tag = uuid.uuid4().hex[:12]
     outcap = max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES))
     # exec cap is the backstop over stdout cap + stderr slack; the composite
-    # cost (stdout cap + separately-killed stderr + rc) must fit.
+    # cost (stdout cap + separately-captured stderr + rc) must fit.
     cap = outcap + (1 << 16)
 
-    command = (
-        f'command -v {_quote_argv([argv[0]])} >/dev/null 2>&1 '
-        f'|| exit 91; '
-        f'd=$TMPDIR/.sys-run-{tag} && mkdir -p "$d"; '
-        f'{{ {_quote_argv(argv)}; }} >"$d/out" 2>"$d/err"; rc=$?; '
-        f'printf %s "$rc" >"$d/rc"; '
-        f'cat "$d/out"; printf "{tag}|0|"; cat "$d/err"; '
-        f'printf "{tag}|1|"; cat "$d/rc"; rm -rf "$d" 2>/dev/null'
-    )
-    res = system_execute(repo, command, timeout=timeout, max_bytes=cap, env=env)
-    if str(res.exit_code) == "91" and f"{tag}|" not in res.out:
+    command = (f'command -v {_quote_argv([argv[0]])} >/dev/null 2>&1 '
+               f'|| {{ echo {_PROBE_ABSENT} >&2; exit 91; }}; '
+               f'{{ {_quote_argv(argv)}; }}')
+    res = system_execute(repo, command, timeout=timeout, max_bytes=cap,
+                         env=env)
+    if res.error.startswith("command timed out"):
+        return ShellResult(error="timeout")
+    if res.error:
+        return ShellResult(stdout=res.stdout, stderr=res.stderr,
+                           truncated=res.truncated, error=res.error)
+    if res.exit_code == 91 and _PROBE_ABSENT in (res.stderr or ""):
         # The probe refused before the composition ran (binary absent here).
         return ShellResult(error=f"binary not found: {argv[0]}")
-    if res.error:
-        if res.error.startswith("command timed out"):
-            return ShellResult(error="timeout")
-        return ShellResult(stdout=res.out, truncated=res.truncated,
-                           error=res.error)
-
-    parts = res.out.split(f"{tag}|0|", 1)
-    if len(parts) != 2:
-        # Either the backstop cap ate the composition (stdout alone exceeded
-        # it) or the in-container timeout killed the shell mid-run (exit 124).
-        if res.exit_code == 124:
-            return ShellResult(error="timeout")
-        return ShellResult(stdout=res.out, truncated=True,
-                           error="system exec output cap exceeded")
-    stdout, rest = parts
-    tail = rest.split(f"{tag}|1|", 1)
-    stderr = tail[0] if len(tail) == 2 else rest
-    rc = tail[1].strip() if len(tail) == 2 else ""
-    try:
-        exit_code = int(rc) if rc else None
-    except ValueError:
-        exit_code = None
-    if res.exit_code == 124 and exit_code in (None, 124):
-        return ShellResult(error="timeout")
-    return ShellResult(exit_code=exit_code, stdout=stdout,
-                       stderr=stderr, truncated=res.truncated)
+    return ShellResult(exit_code=res.exit_code, stdout=res.stdout,
+                       stderr=res.stderr, truncated=res.truncated)

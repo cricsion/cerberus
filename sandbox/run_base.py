@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from . import cli_utils
 from .settings_defaults import (COMMAND_TIMEOUT, IMAGE, MAX_OUTPUT_BYTES,
                                 MEMORY, RULES_DIR)
 from .validation import validate_image
@@ -35,9 +34,6 @@ SHARED_CACHE_DIRS = ("/work/_shared/pip", "/work/_shared/npm")
 # Best-effort phase cleanup inside the sandbox only; not isolation.
 RESET_COMMAND = "rm -rf /work/agent-* /tmp/agent-* 2>/dev/null; exit 0"
 
-# Multiplier >1 keeps run_bounded's read loop from stopping mid-line.
-_BYTE_CAP_FACTOR = 4
-
 
 # Per-agent HOME/TMPDIR are hygiene, not an access-control boundary.
 def agent_env(agent_id: str) -> list[tuple[str, str]]:
@@ -52,9 +48,7 @@ def agent_env(agent_id: str) -> list[tuple[str, str]]:
 
 
 class RunSandboxBase(ABC):
-    # How long removing the sandbox may take (docker rm -f).
-    DESTROY_TIMEOUT: float = 60
-    # How long a create may take (docker run).
+    # How long a create may take (named in the create-timeout message).
     CREATE_TIMEOUT: float = 120
     cli_label: str = ""
 
@@ -88,14 +82,7 @@ class RunSandboxBase(ABC):
     @property
     @abstractmethod
     def cli_bin(self) -> str:
-        ...
-
-    def _child_env(self) -> dict[str, str] | None:
-        return None
-
-    @abstractmethod
-    def _workdir_args(self) -> list[str]:
-        ...
+        """The container runtime client, for the not-found messages."""
 
     def ensure_started(self) -> str | None:
         with self._lock:
@@ -129,66 +116,11 @@ class RunSandboxBase(ABC):
             self.remove()
 
     @abstractmethod
-    def destroy_argv(self) -> list[str]:
+    def remove(self) -> None:
+        """Force-remove the sandbox. Teardown runs on crash paths too, so it
+        must swallow infra failures itself (absent/gone is success); a raise
+        here can only be a harness bug and must surface."""
         ...
-
-    def remove(self, timeout: float | None = None) -> None:
-        try:
-            cli_utils.run_cli(self.destroy_argv(),
-                              timeout=(self.DESTROY_TIMEOUT
-                                        if timeout is None else timeout),
-                              env=self._child_env())
-        except Exception:
-            # Also runs on teardown/crash paths: never fail a scan.
-            pass
-
-    def reset_agent_scratch(self) -> str | None:
-        with self._lock:
-            started, closed = self._started, self._closed
-        if not started or closed:
-            return None
-        argv = [*self._exec_prefix(), self._name,
-                "/bin/bash", "-c", RESET_COMMAND]
-        try:
-            proc = cli_utils.run_cli(argv, timeout=120, env=self._child_env())
-        except Exception as e:
-            return f"{self.cli_label} agent-scratch reset failed: {e}"
-        if proc.returncode != 0:
-            return (f"{self.cli_label} agent-scratch reset failed: "
-                    f"{(proc.stdout or '').strip()[:160]}")
-        return None
-
-    def _exec_prefix(self) -> list[str]:
-        return [self.cli_bin, "exec", *self._workdir_args()]
-
-    def exec(self, *, agent_id: str, command: str, marker: str, timeout: int,
-             max_output_bytes: int) -> tuple[str, int | None, bool]:
-        argv = [*self._exec_prefix(),
-                *(a for key, value in agent_env(agent_id)
-                  for a in ("-e", f"{key}={value}")),
-                self._name,
-                # No -i: stdin is /dev/null so a stray pager/read exits at once.
-                "timeout", "-k", "5", str(timeout),
-                "/bin/bash", "-c",
-                f"{cli_utils.EXEC_TAG}={marker}; "
-                f"mkdir -p \"$HOME\" \"$TMPDIR\"; {command}"]
-        byte_cap = (max_output_bytes or DEFAULT_MAX_OUTPUT_BYTES) * _BYTE_CAP_FACTOR
-        return cli_utils.run_bounded(argv, timeout=timeout + 15,
-                                     byte_cap=byte_cap, env=self._child_env())
-
-    def pkill_argv(self, name: str, marker: str) -> list[str]:
-        # Kill ONLY this exec's tagged shell (the sandbox is shared).
-        return [self.cli_bin, "exec", name,
-                "pkill", "-KILL", "-f", f"{cli_utils.EXEC_TAG}={marker}"]
-
-    def kill_exec(self, marker: str) -> None:
-        """Kill ONLY this exec's tagged shell (the sandbox is shared).
-
-        The never-raises default rides the CLI lane; an SDK-backed run
-        subclasses it onto the channel (docker_channel.kill_exec_marker).
-        """
-        cli_utils.run_cli(self.pkill_argv(self.name, marker),
-                          timeout=30, env=self._child_env())
 
 
 class RunRegistry:

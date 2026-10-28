@@ -201,17 +201,21 @@ on). It is a **no-op in `local` mode**, where there is no sandbox to reset.
 
 ## Code layout
 
-A sandbox backend is deliberately thin: it supplies *which CLI* it drives and
-the argv, while everything the backends share lives in its own module.
+A sandbox backend is deliberately thin: it supplies the container it drives
+(the SDK channel call) and the confinement kwargs, while everything the
+backends share lives in its own module.
 
 | module | owns |
 |---|---|
 | `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of both modes, and local mode itself) |
-| `cli_utils.py` | the two subprocess seams (bounded / fixed output), the exec tag, the agent-id slug — one monkeypatch point for the shell backend |
+| `cli_utils.py` | the byte-bounded separated-streams subprocess seam, the exec tag, the byte-cap factor, the agent-id slug — one monkeypatch point for the shell backend |
 | `validation.py` | setting validators that fail at construction, before any container exists |
-| `run_base.py` | `RunSandboxBase`: the whole run-sandbox lifecycle (create-once, per-agent env, phase reset, mark-dead, remove) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
+| `credentials.py` | credential-file detection inside the target tree, for masking and the operator warning |
+| `docker_channel.py` | the one docker-py transport: confined `containers.create`, bounded demuxed execs (client deadline + watchdog pkill), the tar transfer plane, and the sweep's daemon-published liveness sources |
+| `run_base.py` | `RunSandboxBase`: the run-sandbox lifecycle (create-once, mark-dead, remove, close) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
 | `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract, with hooks for the two recovery paths that genuinely differ |
-| `docker_backend.py` | the CLI argv, the create failure advice, and its recovery hook |
+| `docker_backend.py` | the docker settings surface, the create failure advice, its recovery hook, and the `BaseSandbox` adapter (FS ops confined, then delegated into the container) |
+| `system_exec.py` | the system lane: harness-owned commands (scanners, indexers) run in the sandbox on the same channel, with a local subprocess fallback |
 
 Adding another backend means one `RunSandboxBase` subclass, one
 `SandboxShellBackend` subclass, and a registry line — no copy-pasted
