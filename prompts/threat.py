@@ -104,9 +104,6 @@ class QuestionList(BaseModel):
                     "material is left open.")
 
 
-# Filesystem tools are confined to the target repo; local mode has no shell; `execute` (Docker) runs inside the sandbox only.
-READ_ONLY_NOTE = block("threat/read_only_note")
-
 # A SEED, not a checklist: one concrete token per row sets the specificity bar.
 SURFACE_GREP_TABLE = block("threat/surface_grep_table")
 

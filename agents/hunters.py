@@ -27,40 +27,6 @@ def _sort_by_confidence(findings: list[dict]) -> list[dict]:
     return sorted(findings, key=lambda f: -safe_float(f.get("confidence", 0)))
 
 
-def _norm_cover_path(path: str, repo: str | None = None) -> str:
-    """Repo-relative POSIX path normalization for coverage comparison."""
-    if repo:
-        return to_repo_relative(str(path or ""), repo).rstrip("/")
-    s = str(path or "").strip().replace("\\", "/")
-    while s.startswith("./"):
-        s = s[2:]
-    return s.lstrip("/").rstrip("/")
-
-
-def _coverage_gap(files: list[str], inspected: list[str],
-                  repo: str | None = None) -> tuple[int, list[str]]:
-    """(listed_count, missing) — assigned files absent from the inspected set.
-
-    Both sides are normalized (./, leading /, backslashes, trailing /), and
-    host-absolute forms are mapped back to repo-relative when ``repo`` is
-    known. An empty assignment is not a gap, so it returns (0, []).
-    """
-    assigned = [_norm_cover_path(f, repo) for f in (files or [])
-                if str(f or "").strip()]
-    if not assigned:
-        return 0, []
-    seen = {_norm_cover_path(p, repo) for p in (inspected or [])
-            if str(p or "").strip()}
-    missing = [f for f in dict.fromkeys(assigned) if f not in seen]
-    return len(assigned), missing
-
-
-def _record_coverage(unit: str, files: list[str], inspected: list[str],
-                     sink: list | None, repo: str | None = None) -> str:
-    """Coverage reporting is deprecated and disabled."""
-    return ""
-
-
 def focus_hint(focus: list[str] | str | None) -> str:
     if isinstance(focus, str):
         focus = [f.strip() for f in focus.split(",")]
@@ -222,21 +188,6 @@ def _parse_findings_json(text: str, hunter: str, files: list[str], repo: str) ->
     return norm
 
 
-def _inspected_files_from_text(text: str) -> list[str]:
-    """Best-effort inspected_files from a text/JSON reply (contract object shape)."""
-    import json as _json
-
-    from harness.llmjson import candidate_jsons
-    for candidate in candidate_jsons(text):
-        try:
-            parsed = _json.loads(candidate)
-        except Exception:
-            continue
-        if isinstance(parsed, dict) and isinstance(parsed.get("inspected_files"), list):
-            return [str(p) for p in parsed["inspected_files"]]
-    return []
-
-
 def _parse_findings_with_status(text: str, hunter: str, files: list[str], repo: str) -> tuple[list[dict], bool]:
     import json as _json
 
@@ -285,8 +236,7 @@ def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
 def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
               cfg: dict, threat_md: str = "",
               focus: list[str] | str | None = None,
-              _tools_out: list | None = None,
-              _coverage_out: list | None = None) -> list[dict]:
+              _tools_out: list | None = None) -> list[dict]:
     from harness.config import get_model_kwargs
 
     name = str(unit.get("name", "unit"))

@@ -565,11 +565,6 @@ class ScanReporter:
             if source:
                 value += f" · source={source}"
             table.add_row(Text("threat-model"), Text(clean_untrusted(value)))
-        coverage = state.get("hunter_coverage") or []
-        if coverage:
-            table.add_row(Text("coverage"), Text(
-                f"{len(coverage)} units incomplete (see report.md)",
-                style="warn"))
         tools = sorted({str(t) for t in (state.get("tools_used") or []) if t})
         if tools:
             table.add_row(Text("tools"),

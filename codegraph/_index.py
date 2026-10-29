@@ -168,11 +168,6 @@ def _pending_changes(payload: dict) -> int | None:
     return total
 
 
-def _fresh(payload: dict, cg_dir: Path, db_path: Path) -> bool:
-    """Gate passes AND no pending work ⇒ ``sync``/``index`` would be a no-op."""
-    return _gate_ok(payload, cg_dir, db_path) and _pending_changes(payload) == 0
-
-
 def index_status(root: str = ".") -> dict:
     """This root's ``status -j`` payload, or ``{}`` when there is no usable one.
 
@@ -237,8 +232,7 @@ def _index_build(root: str, timeout: int) -> str:
         logger.debug("codegraph index: %s is not a directory; nothing to build",
                      root_path)
         return ""
-    payload = index_status(root)
-    if _fresh(payload, cg_dir, db_path):
+    if not index_needed(str(root_path)):
         logger.info("codegraph index for %s is fresh (gate complete, "
                     "pendingChanges 0) — skipping build", root_path)
         return str(db_path)

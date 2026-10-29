@@ -34,13 +34,6 @@ def needs_review_verdicts(items: list[dict], note: str) -> list[dict]:
     return out
 
 
-def is_config_error(exc: BaseException) -> bool:
-    """Provider-config failure (operator error), not fail-open noise."""
-    from harness.agents.deep import is_config_error as _is_config_error
-
-    return _is_config_error(exc)
-
-
 def is_fatal_error(exc: BaseException) -> bool:
     """Config error or harness bug: re-raise. Model, parse, and transport
     failures are the fail-open cases."""

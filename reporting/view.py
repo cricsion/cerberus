@@ -164,8 +164,7 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
     header_lines = [f"run: {run_dir}"]
     if isinstance(meta, dict):
         for key in ("repo", "files", "findings", "fail_on", "min_confidence",
-                    "threat_model_source", "threat_quality", "tools_used",
-                    "hunter_coverage"):
+                    "threat_model_source", "threat_quality", "tools_used"):
             if key in meta and meta[key] is not None:
                 header_lines.append(f"{key}: {meta[key]}")
     print_panel(console, header_lines, title="Run")

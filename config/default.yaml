@@ -75,33 +75,18 @@ codegraph:
   # Tool output caps (env-overridable). 0 = unlimited where supported.
   chars: ${CODEGRAPH_CHARS:-20000}
   candidates: ${CODEGRAPH_CANDIDATES:-200}
-  # Partitioning source (P2.5, shadow-first rollout; roll back with a config
-  # edit, never code):
-  #   shadow  = default. BOTH partitions computed every scan; the served units
-  #             are graphify's (today's behavior byte-for-byte) and one
-  #             bounded structural diff is logged at DEBUG for parity review.
-  #   primary = serve codegraph-derived units (Louvain over index-derived
-  #             file coupling); flip only after the shadow diff shows parity.
-  #   off     = today's behavior exactly; the codegraph partition path never
-  #             reads the index (rollback = set mode: off).
+  # Partitioning source:
+  #   primary = serve codegraph-native units (depth-1 module grouping with
+  #             pass-through collapsing); needs a readable index.
+  #   off     = serve the graphify file-graph partition instead; the codegraph
+  #             partition path never reads the index.
   partition:
     mode: ${CODEGRAPH_PARTITION_MODE:-primary}
-    # Louvain resolution for the codegraph community path (networkx
-    # semantics: higher -> more, smaller communities). DORMANT: the P4 tuning
-    # sweep found NO (resolution, threshold) combo passing the revised gate
-    # corpus-wide, so no tuned value was landed — 1.0 is networkx's default and
-    # is byte-identical to the pre-knob clustering. Do not treat this default
-    # as sweep-validated.
-    resolution: ${CODEGRAPH_PARTITION_RESOLUTION:-1.0}
-    # Confidence floor for coupling edges: below this, an edge is treated as
-    # uncertain rather than structural.
-    uncertain_below: ${CODEGRAPH_PARTITION_UNCERTAIN_BELOW:-0.6}
 graphify:
   # Deprecated pending removal (P4); the codegraph stage replaces this build.
   enabled: ${GRAPHIFY_ENABLED:-0}
-  # Subprocess budgets (seconds) for the build and query paths.
+  # Subprocess budget (seconds) for the build path.
   build_timeout: ${GRAPHIFY_BUILD_TIMEOUT:-600}
-  summary_timeout: ${GRAPHIFY_SUMMARY_TIMEOUT:-120}
   # Tool output cap (chars; 0 = unlimited).
   chars: ${GRAPH_CHARS:-20000}
 sandbox:

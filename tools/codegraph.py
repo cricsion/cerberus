@@ -42,7 +42,6 @@ from harness.codegraph import (
     trace_state_machine_transitions,
 )
 from harness.codegraph import _db
-from harness.config import get_default_config
 
 from ._compat import tool
 from .code import _resolve_limit
@@ -66,7 +65,7 @@ CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
 # CodeGraph's uncertainty boundary (src/graph/dynamic-boundary-report.ts): below
 # it an edge is a name-only guess, not a proven call — a hop to follow only with
 # explicit scepticism.
-UNCERTAIN_BELOW = float(get_default_config("codegraph.partition.uncertain_below"))
+UNCERTAIN_BELOW = 0.6
 
 # Container kinds whose children count as affected when the container is reached
 # (getImpactRadius semantics: a class reaching its methods counts).
@@ -754,10 +753,6 @@ def get_routing_manifest() -> str:
     return "\n".join(lines)
 
 
-# Aliases
-codegraph_impact = impact_radius
-
-
 __all__ = [
     "manifest_parse",
     "framework_routes",
@@ -765,7 +760,6 @@ __all__ = [
     "callees",
     "affected",
     "codegraph_explore",
-    "codegraph_impact",
     "find_path",
     "impact_radius",
     "build_context",

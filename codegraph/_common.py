@@ -324,7 +324,7 @@ def _guard_condition(node, src: bytes) -> str:
         if child is not None:
             return _truncate_line(_ts.node_text(child, src), 200)
     text = _ts.node_text(node, src)
-    return _truncate_line(text.splitlines()[0] if text else "")
+    return text.splitlines()[0] if text else ""
 
 def _confidence(base: float, *bonuses: float) -> float:
     """Bounded confidence: a heuristic never claims certainty."""

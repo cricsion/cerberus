@@ -87,10 +87,10 @@ scan metadata before asking the model to emit it.
 **Rule:** don't duplicate what the agent can fetch itself; if you remove a
 mechanism, make its replacement observable.
 
-## 7. Graphify proves the call graph, not taint
+## 7. The call graph proves reachability
 
 Verified by spike: cross-file `calls` with extracted confidence, **no
-intra-function dataflow, no stdlib-sink nodes**. `graph_affected(sink)` proves
+intra-function dataflow, no stdlib-sink nodes**. `affected(sink)` proves
 *who can reach* a function; it says nothing about whether the argument is
 attacker-controlled. The tool docstring promising "ideal taint-chain evidence"
 oversells it — an agent trusting that reports false positives.

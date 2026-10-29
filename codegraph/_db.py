@@ -47,7 +47,6 @@ HARD_MAX_ROWS = 500
 ENV_NODES = "CODEGRAPH_NODES_LIMIT"
 ENV_EDGES = "CODEGRAPH_EDGES_LIMIT"
 ENV_ROUTES = "CODEGRAPH_ROUTES_LIMIT"
-ENV_FTS = "CODEGRAPH_FTS_LIMIT"
 
 # "ro" for a normal open, "immutable" for the degraded WAL-without--shm open,
 # "" when nothing is open.
@@ -551,64 +550,7 @@ def routing_manifest(conn, limit: int = 40) -> list[dict]:
     return [r for r in raw if not _is_low_value_file(r["handler_file"], generated)]
 
 
-# --- search --------------------------------------------------------------------
-
-def _fts_match_text(query: str) -> str:
-    """Quote each token so agent input cannot break the FTS5 MATCH grammar.
-
-    FTS5 has its own query language (AND/OR/NEAR/prefix*/"phrases"), in which a
-    bare agent string is invalid. Each whitespace/underscore token becomes a
-    quoted OR-term, so ``login handler`` -> ``"login" OR "handler"`` and a
-    stray ``(`` or ``"`` cannot raise a syntax error.
-    """
-    tokens = [t for t in re.split(r"[\s_\-.:/\\]+", str(query or "")) if t]
-    if not tokens:
-        return ""
-    return " OR ".join('"' + t.replace('"', " ") + '"' for t in tokens)
-
-
-def search_nodes_fts(conn, query: str, limit: int = 20) -> list[dict]:
-    """FTS5 name/signature/docstring search, LIKE-fallback when FTS is missing.
-
-    Ranked by FTS's own ``rank``: CodeGraph's BM25 weights and -15 test-path
-    penalty are deliberately not reproduced — a security lookup must not
-    silently drop the tests directory.
-    """
-    if conn is None:
-        return []
-    cap = _resolve_rows(limit, ENV_FTS, 20)
-    # Sanitised, not trusted: a lone surrogate cannot be bound as UTF-8.
-    text = _safe_param(query).strip()
-    if not text or not re.search(r"\w", text):
-        return []  # an empty (or punctuation-only) query is not a query
-    match = _fts_match_text(text)
-    if match:
-        rows = _fetch(conn,
-                      "SELECT n.* FROM nodes_fts f JOIN nodes n ON n.id = f.id "
-                      "WHERE nodes_fts MATCH ? ORDER BY rank LIMIT ?", (match, cap))
-        if rows is not None:
-            return [_row_to_node(r) for r in rows]
-    # LIKE fallback: FTS5 absent from the SQLite build, or no virtual table.
-    needle = f"%{text}%"
-    rows = _fetch(conn,
-                  "SELECT * FROM nodes WHERE name LIKE ? OR qualified_name LIKE ? "
-                  "ORDER BY file_path, start_line, id LIMIT ?",
-                  (needle, needle, cap))
-    return [_row_to_node(r) for r in rows or ()]
-
-
 # --- misc ----------------------------------------------------------------------
-
-def node_line_span(conn, node_id) -> tuple[int, int] | None:
-    """(start_line, end_line) for a node — the span a finding should cite."""
-    node = get_node(conn, node_id)
-    if not node:
-        return None
-    try:
-        return int(node.get("start_line")), int(node.get("end_line"))
-    except (TypeError, ValueError):
-        return None
-
 
 def is_generated_file(conn, file_path: str) -> bool:
     """``files.generated`` when the index knows it; False on any miss.

@@ -89,8 +89,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         min_conf = args.min_confidence
         write_json(findings, out / "findings.json")
         write_sarif(findings, out / "results.sarif")
-        write_markdown(findings, out / "report.md",
-                       coverage=state.get("hunter_coverage", []) or [])
+        write_markdown(findings, out / "report.md")
         write_html(findings, out / "report.html")
         write_junit(findings, out / "junit.xml")
         threat_md = state.get("threat_model_md", "") or ""
@@ -111,10 +110,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if triage_log:
             try:
                 from harness.agents.triage import _resolve_batch, render_triage_log
-                try:
-                    _batch = _resolve_batch(cfg)
-                except (TypeError, ValueError):
-                    _batch = 30
+                _batch = _resolve_batch(cfg)
                 _calls = max((int(e.get("batch", 0) or 0) for e in triage_log
                               if isinstance(e, dict)), default=0)
                 (out / "triage.log").write_text(
@@ -143,10 +139,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
         except Exception:
             pass
     try:
-        _agent_events = state.get("agent_events", []) or []
-        if isinstance(_agent_events, list):
-            (out / "agents.jsonl").write_text(
-                "".join(json.dumps(e) + "\n" for e in _agent_events))
         _agent_summary = state.get("agent_summary")
         if _agent_summary is not None:
             (out / "agent_summary.json").write_text(
@@ -170,7 +162,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
         "votes": args.votes,
         "n_duplicates": sum(1 for f in findings if f.get("duplicate_of")),
         "triage_log": "triage.log" if (out / "triage.log").is_file() else "",
-        "hunter_coverage": state.get("hunter_coverage", []) or [],
         "tools_used": sorted(set(str(t) for t in state.get("tools_used", []))),
         "manifest": scan_record,
         "scan_id": state.get("scan_id", ""),

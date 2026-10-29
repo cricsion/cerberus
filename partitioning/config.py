@@ -17,14 +17,6 @@ def _num(value: Any, default: int) -> int:
         return default
 
 
-def _float(value: Any, default: float) -> float:
-    """float(value) or default: a malformed operator value degrades, never blocks."""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _section_value(cfg: dict | None, key: str, section: str = "partition") -> Any:
     """``<section>.<key>`` from cfg, or None when unset (callers fall back to env)."""
     node: Any = cfg if isinstance(cfg, dict) else None
@@ -173,21 +165,19 @@ def same_dir_soft_edges(cfg: dict | None = None) -> bool:
     return _as_flag(_policy_value(cfg, "same_dir_edges"), True)
 
 
-# --- P2.5 codegraph partition source (shadow-first; §6) ----------------------
+# --- codegraph partition source ----------------------------------------------
 #
-# Additive getters only: the mode is read at call time and DEFAULTS TO
-# ``shadow`` — the served units stay graphify's until the user approves the
-# ``primary`` flip. Read from ``codegraph.partition.*`` in the scan config
+# Read at call time from ``codegraph.partition.mode`` in the scan config
 # (config beats env), else the env var, else the documented default.
 
-PARTITION_MODES = ("off", "shadow", "primary")
+PARTITION_MODES = ("off", "primary")
 
 
 def partition_mode(cfg: dict | None = None) -> str:
-    """``codegraph.partition.mode`` — one of off|shadow|primary.
+    """``codegraph.partition.mode`` — one of off|primary.
 
-    An unrecognized value degrades to the default (never serves an unknown
-    mode), so a typo can only ever keep the shadow rollout, not skip it.
+    An unrecognized value degrades to the
+    default, so a stale config can never select a mode that does not exist.
     """
     value = _policy_value(cfg, "mode", section="codegraph.partition",
                           env="CODEGRAPH_PARTITION_MODE")
@@ -196,19 +186,3 @@ def partition_mode(cfg: dict | None = None) -> str:
         return mode
     fallback = str(_yaml_default("codegraph.partition.mode")).strip().lower()
     return fallback if fallback in PARTITION_MODES else "primary"
-
-
-def partition_resolution(cfg: dict | None = None) -> float:
-    """Louvain resolution for the codegraph community path."""
-    return _float(
-        _policy_value(cfg, "resolution", section="codegraph.partition",
-                      env="CODEGRAPH_PARTITION_RESOLUTION"),
-        float(_yaml_default("codegraph.partition.resolution")))
-
-
-def partition_uncertain_below(cfg: dict | None = None) -> float:
-    """Confidence floor for coupling edges."""
-    return _float(
-        _policy_value(cfg, "uncertain_below", section="codegraph.partition",
-                      env="CODEGRAPH_PARTITION_UNCERTAIN_BELOW"),
-        float(_yaml_default("codegraph.partition.uncertain_below")))

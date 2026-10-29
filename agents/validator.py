@@ -151,31 +151,6 @@ def _cell_size(cfg: dict | None) -> int:
 
 CELL_SIZE = int(get_default_config("verification.cell_size"))
 
-# fp verdict stands only with a named control; auth-guard-only acquittals are downgraded.
-_SANITIZER_RES = (
-    r"paramet", r"\bbound\b", r"prepared", r"escap", r"saniti", r"quot",
-    r"\bcast\b", r"allowlist", r"allow-list", r"realpath", r"safe_join",
-    r"csrf", r"ownership", r"neutraliz", r"validat.*input", r"encod",
-)
-_AUTH_GUARD_RES = (
-    r"log ?in.{0,40}(decorator|required|check|guard)",
-    r"requires?\s+login",
-    r"trusted",
-    # threat-model scope language: a model row can prioritize, never acquit
-    r"threat[- ]model",
-    r"out[- ]of[- ]scope",
-    r"not (a |an )?(modelled|modeled|listed)",
-    r"section\s*[45]\b",
-    r"deprioriti",
-    r"prioriti[sz]ation only",
-)
-
-
-def _apply_fp_guardrail(verdict: dict) -> dict:
-    """Guardrail disabled: trust the validator model consensus directly without regex overturning."""
-    return verdict
-
-
 def _route_finding(f: dict) -> tuple[str, dict]:
     if (f.get("status") == "fp"
             and (f.get("gated")
@@ -402,7 +377,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
         merged_votes = []
         for v in votes:
             merged_votes.append(_merge_verdict(dict(f), v))
-        out.append(_apply_fp_guardrail(_majority_verdict(f, merged_votes)))
+        out.append(_majority_verdict(f, merged_votes))
     return out
 
 

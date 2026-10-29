@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import logging
 import os
 import sys
@@ -24,7 +23,7 @@ except Exception:  # observability module unavailable → tracing disabled (fail
 CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.0}
 
 # Channels that accumulate across stages (everything else is last-writer-wins).
-_ADD_KEYS = ("candidates", "findings", "tools_used", "hunter_coverage")
+_ADD_KEYS = ("candidates", "findings", "tools_used")
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,6 @@ class ScanState(TypedDict, total=False):
     # Two writers (hunter workers, then validator_node); append-only — aggregator joins against it so nothing validates twice.
     verified: list[dict]
     pending: list[dict]
-    hunter_coverage: list[str]
 
 
 def apply_update(state: dict, update: dict | None) -> dict:
@@ -86,35 +84,12 @@ def apply_update(state: dict, update: dict | None) -> dict:
     return state
 
 
-def _call_node(node, state, **kwargs):
-    # Introspect once and pass only the kwargs the node declares (upstream
-    # callers pass optional params such as agent_registry). TypeError raised
-    # *inside* a node is a harness bug (fatal class) and must propagate, so
-    # the call itself is never retried here.
-    try:
-        params = inspect.signature(node).parameters
-    except (TypeError, ValueError):  # C callables etc. — cannot introspect.
-        return node(state, **kwargs)
-    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
-        return node(state, **kwargs)
-    accepted = {k: v for k, v in kwargs.items() if k in params}
-    if not accepted:
-        return node(state)
-    return node(state, **accepted)
-
-
 def _call_tool(tool_fn, **kwargs) -> str:
     try:
         if hasattr(tool_fn, "func"):
             return str(tool_fn.func(**kwargs))
     except Exception as e:
         logger.debug("tool %s unavailable via .func: %s", tool_fn, e)
-        return f"(unavailable: {e})"
-    try:
-        if hasattr(tool_fn, "invoke"):
-            return str(tool_fn.invoke(kwargs))
-    except Exception as e:
-        logger.debug("tool %s unavailable via .invoke: %s", tool_fn, e)
         return f"(unavailable: {e})"
     try:
         return str(tool_fn(**kwargs))  # plain function (langchain missing)
@@ -143,40 +118,17 @@ _SHEBANG_MAX_BYTES = 262_144
 
 
 def _graphify_ignore_predicate(root: Path):
-    try:
-        from graphify.detect import ignored_predicate
-    except ImportError:
-        # Minimal dev envs lack the graphify package; the repo vendors its source under ./graphify.
-        source_pkg = Path(__file__).resolve().parents[1] / "graphify" / "graphify"
-        if not (source_pkg / "detect.py").is_file():
-            return None
-
-        package = sys.modules.get("graphify")
-        if package is None:
-            sys.path.insert(0, str(source_pkg.parent))
-        elif not getattr(package, "__file__", None):
-            package_path = getattr(package, "__path__", None)
-            if package_path is None:
-                return None
-            local_path = str(source_pkg)
-            if local_path not in package_path:
-                package_path.append(local_path)
-        else:
-            return None
-        try:
-            from graphify.detect import ignored_predicate
-        except ImportError:
-            return None
-
     # graphify's ignored_predicate is a factory: ignored_predicate(root)
     # returns the per-path predicate. Call it once, then guard each use.
     try:
+        from graphify.detect import ignored_predicate
+
         predicate = ignored_predicate(root)
     except Exception:
         return None
 
     def _safe_ignored(p) -> bool:
-        # The vendored predicate can throw on odd paths; skipping the skip is safe.
+        # The predicate can throw on odd paths; skipping the skip is safe.
         try:
             return bool(predicate(p))
         except Exception:
@@ -598,13 +550,11 @@ def hunter_worker(state: dict) -> dict:
     threat_md = state.get("threat_model_md", "") or ""
     focus = state.get("focus", []) or []
     _tools: list = []
-    _coverage: list = []
     t0 = _time.time()
     label = state.get("unit") or "unit"
     try:
         out = _run_unit({"name": label}, repo, files, candidates, cfg,
-                        threat_md=threat_md, focus=focus, _tools_out=_tools,
-                        _coverage_out=_coverage)
+                        threat_md=threat_md, focus=focus, _tools_out=_tools)
         # Stamp the partition so validation runs one validator per unit.
         for f in out:
             if isinstance(f, dict) and not f.get("unit"):
@@ -614,8 +564,6 @@ def hunter_worker(state: dict) -> dict:
                       f"{_time.time()-t0:.0f}s")
         ret = {"findings": out,
                "tools_used": sorted(set(str(t) for t in _tools))}
-        if _coverage:
-            ret["hunter_coverage"] = _coverage
         return ret
     except Exception as e:
         # A config error must sink the scan, not become a unit fallback finding.
@@ -1191,7 +1139,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                     _submit_bundles(p, list(res.get("findings") or []))
                     if hunt_next == len(payloads):
                         sfut = executor.submit(
-                            _timed, _call_node, system_pass_node, state,
+                            _timed, system_pass_node, state,
                             agent_registry=agent_registry)
                         pending[sfut] = ("system_pass", p, None)
                 elif kind == "validation":
@@ -1305,8 +1253,8 @@ def run_scan(repo: str, confirm_critical: bool = False,
             return result
 
         _stage("indexer", lambda: apply_update(state, indexer_node(state)))
-        _stage("threat_model", lambda: apply_update(state, _call_node(threat_model_node, state, agent_registry=_agent_registry)))
-        _stage("hunters_router", lambda: apply_update(state, _call_node(hunters_router, state, agent_registry=_agent_registry)))
+        _stage("threat_model", lambda: apply_update(state, threat_model_node(state, agent_registry=_agent_registry)))
+        _stage("hunters_router", lambda: apply_update(state, hunters_router(state, agent_registry=_agent_registry)))
         if state.get("fanout_payloads"):
             _hunt_timings = _stage("hunters", _hunters_stage)
             for _flavor in ("hunt", "validation", "system_pass"):
@@ -1314,21 +1262,18 @@ def run_scan(repo: str, confirm_critical: bool = False,
                     float((_hunt_timings or {}).get(_flavor, 0.0)), 3)
         else:
             _stage("system_pass", lambda: apply_update(
-                state, _call_node(system_pass_node, state,
-                                  agent_registry=_agent_registry)))
+                state, system_pass_node(state,
+                                        agent_registry=_agent_registry)))
         _stage("aggregator", lambda: apply_update(state, aggregator_node(state)))
         _reset_agent_scratch_phase(state.get("repo", "."))
-        _stage("validator", lambda: apply_update(state, _call_node(validator_node, state, agent_registry=_agent_registry)))
+        _stage("validator", lambda: apply_update(state, validator_node(state, agent_registry=_agent_registry)))
         if state.get("confirm_critical"):
             _stage("confirm_critical", lambda: apply_update(state, confirm_critical_step(state, confirm)))
-        _stage("triage", lambda: apply_update(state, _call_node(triage_node, state, agent_registry=_agent_registry)))
+        _stage("triage", lambda: apply_update(state, triage_node(state, agent_registry=_agent_registry)))
         _stage("threat_update", lambda: apply_update(state, threat_update_node(state)))
         _stage("scorer", lambda: apply_update(state, scorer_node(state)))
         try:
             if _agent_registry is not None:
-                state["agent_events"] = [e.to_dict() if hasattr(e, "to_dict") else dict(e)
-                                         for e in getattr(_agent_registry, "events", [])]
-                state["agent_handles"] = _agent_registry.dump()
                 state["agent_summary"] = _agent_registry.summary()
             state["stage_timings"] = dict(stage_timings)
         except Exception:

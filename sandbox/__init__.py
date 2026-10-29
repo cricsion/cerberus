@@ -103,17 +103,6 @@ def _backend_choice(cfg: dict | None) -> str:
     return str(_sandbox_setting(cfg, "backend",
                                 defaults["backend"])).strip().lower()
 
-def _host_list(raw: Any) -> list[str]:
-    # Config hosts arrive as list, comma/semicolon string, or a single value.
-    if isinstance(raw, str):
-        raw = [raw]
-    hosts: list[str] = []
-    for entry in raw if isinstance(raw, (list, tuple)) else [str(raw)]:
-        for host in str(entry).replace(";", ",").split(","):
-            if host.strip():
-                hosts.append(host.strip())
-    return hosts
-
 def _coerce_int(key: str, value: Any) -> int:
     """A garbage sandbox setting fails the resolve (callers degrade to the
     local backend), matching validation.py's raise-at-construction contract."""

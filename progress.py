@@ -64,8 +64,6 @@ class AgentState(str, Enum):
         return self in (AgentState.succeeded, AgentState.failed,
                        AgentState.canceled, AgentState.timed_out)
 
-TERMINAL_STATES = {AgentState.succeeded, AgentState.failed,
-                   AgentState.canceled, AgentState.timed_out}
 
 def _state_str(state) -> str:
     """One canonical value-string for normalized AgentState handles/events."""
@@ -449,4 +447,4 @@ def _stats_progress(handle):
     return dict(st)
 
 __all__ = ["AgentState", "AgentStats", "AgentHandle", "AgentEvent",
-           "AgentRegistry", "TERMINAL_STATES"]
+           "AgentRegistry"]

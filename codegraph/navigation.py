@@ -159,18 +159,6 @@ def _def_header(node, src: bytes) -> str:
     return _truncate_line(text.splitlines()[0] if text else "")
 
 
-# Local because the shared fallback calls ``_truncate_line(text)`` without the
-# required ``cap`` (real ``_common.py``); the field path is identical.
-def _guard_condition(node, src: bytes) -> str:
-    """The guard's test, not its body."""
-    for field in ("condition", "value", "subject"):
-        child = node.child_by_field_name(field)
-        if child is not None:
-            return _truncate_line(_ts.node_text(child, src), 200)
-    text = _ts.node_text(node, src)
-    return _truncate_line(text.splitlines()[0] if text else "")
-
-
 def _block_leaves_early(block) -> bool:
     """True when ``block``'s first statement returns or raises."""
     if block is None:
@@ -189,7 +177,7 @@ def _block_leaves_early(block) -> bool:
 def _guard_is_security_shaped(node, src: bytes) -> bool:
     """Relevance, not syntax: auth/validation names and guard clauses that exit early."""
     try:
-        condition = _guard_condition(node, src).lower()
+        condition = _common._guard_condition(node, src).lower()
     except Exception:
         condition = ""
     if any(marker in condition for marker in _GUARD_NAME_MARKERS):
@@ -398,7 +386,7 @@ def _guard_rows(def_node, src, start, end, cap):
         line = _line_of(node)
         if not start <= line <= end or line in guards:
             continue
-        guards[line] = _guard_condition(node, src)
+        guards[line] = _common._guard_condition(node, src)
         priority[line] = 2 if _guard_is_security_shaped(node, src) else 1
     lines = sorted(guards)
     kept = set(lines)

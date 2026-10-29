@@ -80,7 +80,7 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
         "Installed: semgrep, opengrep, gitleaks, osv-scanner, checkov, "
         f"git, python, pytest. graphify is NOT installed — for structural "
         "questions (who calls what, entry-to-sink reachability) use the bound "
-        "graph_* tools, never a graphify shell command. Offline custom rules "
+        "codegraph tools, never a graphify shell command. Offline custom rules "
         f"live at {rules} "
         "(run them per the semgrep skill in the Skills System section; "
         f"opengrep accepts the same rules). {net} "
@@ -193,7 +193,7 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
     return "\n\n".join(parts)
 
 
-class TaintItem(BaseModel):
+class Taint(BaseModel):
     """Source-to-sink chain. All optional: partial chains still carry signal."""
 
     source: str = Field(default="", description="Where untrusted input enters")
@@ -218,7 +218,7 @@ class EvidenceRef(BaseModel):
                       description="What this line shows for the claim")
 
 
-class FindingItem(BaseModel):
+class Finding(BaseModel):
     """One candidate finding. Lenient by design: missing fields fall back to
     fail-open defaults downstream, so a thin-but-real claim is never lost to
     schema strictness. Values that matter are constrained (Literal/bounds/
@@ -237,7 +237,7 @@ class FindingItem(BaseModel):
     start_line: int = Field(default=0, ge=0, description="Exact 1-based start line of the sink statement")
     end_line: int = Field(default=0, ge=0, description="Exact 1-based end line of the sink statement")
     snippet: str = Field(default="", description="Exact 1-4 lines containing the sink statement (never paste entire functions)")
-    taint: TaintItem = Field(default_factory=TaintItem,
+    taint: Taint = Field(default_factory=Taint,
                              description="Source-to-sink chain")
     refs: list[EvidenceRef] = Field(
         default_factory=list,
@@ -253,7 +253,7 @@ class DiscoveryResult(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    findings: list[FindingItem] = Field(default_factory=list,
+    findings: list[Finding] = Field(default_factory=list,
                                         description="Candidate findings from this pass")
 
 
