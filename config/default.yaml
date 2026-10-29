@@ -162,7 +162,7 @@ discovery:
   system_pass: true
 verification:
   votes: ${VERIFIER_VOTES:-1}
-  cell_size: ${VERIFIER_CELL_SIZE:-25}
+  cell_size: ${VERIFIER_CELL_SIZE:-10}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
 triage:
   batch_size: ${TRIAGE_BATCH:-30}
