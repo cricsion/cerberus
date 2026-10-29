@@ -217,9 +217,9 @@ def index_needed(root: str = ".") -> bool:
 def index_build(root: str = ".", timeout: int = DEFAULT_BUILD_TIMEOUT) -> str:
     """Build/gate this root's OWN index; return the DB path, or ``""``.
 
-    Order: fresh ⇒ nothing; missing ``.codegraph`` ⇒ ``init`` FIRST; an own-root
-    DB ⇒ ``sync -q`` then re-gate; else ``index -q``. The path is returned only
-    after a re-gate proves the payload is this root's. Never raises (D2/D6).
+    Order: fresh ⇒ nothing; else ``init -y`` then ``sync -q``.
+    The path is returned only after a re-gate proves the payload is this root's.
+    Never raises (D2/D6).
     """
     try:
         return _index_build(root, timeout)
@@ -247,19 +247,9 @@ def _index_build(root: str, timeout: int) -> str:
         logger.info("codegraph CLI not found; %s stays unindexed (tools fall "
                     "back to grep)", root_path)
         return ""
-    if not cg_dir.is_dir():
-        # Gate (b): `index` refuses an un-initialized root; `init` builds it.
-        _run(cli, ["init", "-y", str(root_path)], timeout)
-        payload = index_status(root)
-        if _fresh(payload, cg_dir, db_path):
-            return str(db_path)
-    if db_path.is_file() and _contained(payload, root_path, cg_dir):
-        # Gate (c): a walk-up sync reads AND WRITES the ancestor's index.
-        _run(cli, ["sync", "-q", str(root_path)], timeout)
-        payload = index_status(root)
-        if _fresh(payload, cg_dir, db_path):
-            return str(db_path)
-    _run(cli, ["index", "-q", str(root_path)], timeout)
+
+    _run(cli, ["init", "-y", str(root_path)], timeout)
+    _run(cli, ["sync", "-q", str(root_path)], timeout)
     payload = index_status(root)
     if _gate_ok(payload, cg_dir, db_path):
         return str(db_path)
