@@ -27,16 +27,24 @@ _ADD_KEYS = ("candidates", "findings", "tools_used")
 
 logger = logging.getLogger(__name__)
 
+import threading
+
+_THREAD_LOCAL = threading.local()
 _PROGRESS: Any = None
+
+
+def _get_progress() -> Any:
+    return getattr(_THREAD_LOCAL, "progress", None) or _PROGRESS
 
 
 def _stage_detail(stage: str, text: str) -> None:
     """Route a node's completion detail to the UI sink, else print as before."""
-    if _PROGRESS is None:
+    prog = _get_progress()
+    if prog is None:
         print(text, file=sys.stderr, flush=True)
         return
     try:
-        _PROGRESS.detail(stage, text)
+        prog.detail(stage, text)
     except Exception:
         pass
 
@@ -480,12 +488,8 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
         # Fail-open for infra noise; a config-class failure must sink the scan.
         if is_fatal_error(e):
             raise
-        out = []
-        for f in (findings or []):
-            g = dict(f) if isinstance(f, dict) else {"title": str(f)}
-            g.setdefault("status", "needs-review")
-            out.append(g)
-        return out
+        return [{"status": "needs-review", **(f if isinstance(f, dict) else {"title": str(f)})}
+                for f in (findings or [])]
 
 
 def hunter_worker(state: dict) -> dict:
@@ -1118,23 +1122,26 @@ def run_scan(repo: str, confirm_critical: bool = False,
              confirm: Callable[[dict], bool] | None = None,
              agent_events_path: Any = None,
              progress: Any = None,
+             cfg: dict | None = None,
              ) -> dict[str, Any]:
     global _PROGRESS
 
-    _prev_progress = _PROGRESS
+    _prev_progress = _get_progress()
     _PROGRESS = progress
+    _THREAD_LOCAL.progress = progress
     _prev_target_repo = os.environ.get("TARGET_REPO")
     try:
         repo = str(canonical_repo(repo))
         os.environ["TARGET_REPO"] = repo
         _sweep_orphan_sandboxes()
-        from harness.config import load_config_safe
-        cfg, cfg_err = load_config_safe()
-        if cfg_err is not None:
-            print(f"warning: config load failed ({type(cfg_err).__name__}: "
-                  f"{cfg_err}); continuing with packaged defaults",
-                  file=sys.stderr, flush=True)
-            logger.debug("config load failed; using defaults: %s", cfg_err)
+        if cfg is None:
+            from harness.config import load_config_safe
+            cfg, cfg_err = load_config_safe()
+            if cfg_err is not None:
+                print(f"warning: config load failed ({type(cfg_err).__name__}: "
+                      f"{cfg_err}); continuing with packaged defaults",
+                      file=sys.stderr, flush=True)
+                logger.debug("config load failed; using defaults: %s", cfg_err)
         state: dict[str, Any] = {"repo": repo, "cfg": cfg}
         if _obs is not None:
             _scan_id = _obs.start_scan(repo, cfg=cfg)
@@ -1166,9 +1173,10 @@ def run_scan(repo: str, confirm_critical: bool = False,
             try:
                 res = fn()
                 elapsed = round(_stage_time.time() - _t0, 3)
-                if _PROGRESS is not None:
+                prog = _get_progress()
+                if prog is not None:
                     try:
-                        _PROGRESS.stage_done(name, elapsed, ok=True)
+                        prog.stage_done(name, elapsed, ok=True)
                     except Exception:
                         pass
                 else:
@@ -1176,10 +1184,11 @@ def run_scan(repo: str, confirm_critical: bool = False,
                 return res
             except Exception as exc:
                 elapsed = round(_stage_time.time() - _t0, 3)
-                if _PROGRESS is not None:
+                prog = _get_progress()
+                if prog is not None:
                     try:
-                        _PROGRESS.stage_done(name, elapsed, ok=False,
-                                             error=f"{type(exc).__name__}: {exc}")
+                        prog.stage_done(name, elapsed, ok=False,
+                                        error=f"{type(exc).__name__}: {exc}")
                     except Exception:
                         pass
                 else:
@@ -1192,7 +1201,8 @@ def run_scan(repo: str, confirm_critical: bool = False,
             result = _fan_out_hunters(
                 state, _safe_max_concurrency(state),
                 agent_registry=_agent_registry)
-            if _PROGRESS is not None:
+            prog = _get_progress()
+            if prog is not None:
                 try:
                     units = len(state.get("fanout_payloads") or [])
                     produced = len(state.get("findings") or [])
@@ -1233,6 +1243,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
         return dict(state)
     finally:
         _PROGRESS = _prev_progress
+        _THREAD_LOCAL.progress = _prev_progress
         if _prev_target_repo is None:
             os.environ.pop("TARGET_REPO", None)
         else:

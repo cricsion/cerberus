@@ -14,7 +14,13 @@ SKIP_PARTS = frozenset({
 })
 
 _MANIFESTS: dict[str, dict[str, Any]] = {}
+_MAX_MANIFESTS = 128
 _HASH_CHUNK = 1 << 20
+
+
+def clear_manifests() -> None:
+    """Clear all recorded scan manifests from memory."""
+    _MANIFESTS.clear()
 
 
 def _digest_repo(repo: str | Path) -> dict[str, Any]:
@@ -53,6 +59,8 @@ def record_scan_manifest(repo_path: str | Path) -> dict[str, Any]:
         record = {"repo": key, **_digest_repo(key)}
     except OSError:
         record = {"repo": key, "manifest_hash": "", "manifest_files": 0}
+    while len(_MANIFESTS) >= _MAX_MANIFESTS:
+        _MANIFESTS.pop(next(iter(_MANIFESTS)), None)
     _MANIFESTS[key] = record
     return dict(record)
 

@@ -83,7 +83,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
                          vulns_file=args.vulns,
                          confirm=prompt_confirm if confirm else None,
                          agent_events_path=out / "agents.jsonl",
-                         progress=reporter)
+                         progress=reporter,
+                         cfg=_cfg)
         scan_elapsed = time.perf_counter() - scan_t0
         findings = state.get("verified", [])
         # CI gate: min-confidence + fail-on severity filter
