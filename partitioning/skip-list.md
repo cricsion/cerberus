@@ -3,9 +3,11 @@
 Same spirit as `lessons.md`: every number here was paid for, not guessed.
 Validated against the whole benchmark, not samples:
 
-- input: 5,282 inventory files of the 50 graded `realvuln-*` repos (harness walker:
-  installed `ignored_predicate` + `tools/code.SKIP_DIRS` + `_INVENTORY_EXTS` +
-  Dockerfile/shebang)
+- input: 5,282 inventory files of the 50 graded `realvuln-*` repos (historical
+  harness walker: installed `ignored_predicate` + `tools/code.SKIP_DIRS` +
+  `_INVENTORY_EXTS` + Dockerfile/shebang). The current static policy in
+  `tools/code.is_skipped_dir` inventories 3,662 files across the same repos;
+  the rule table below is unchanged.
 - 988 scoreable findings from `runs/*-run-001/findings.json` (severity != info, skip-ids excluded)
 - ground truth: all 4,594 GT items across all GT dirs (4,314 vulnerable)
 
@@ -20,8 +22,9 @@ file lists: `runs/llm_eval_results/skip_list_materialized.json`.
 - Apply in `harness/pipeline.py :: _inventory_files`, after the existing
   extension/Dockerfile/shebang filter, before units are built
   (`harness/partitioning/units.py` then never sees these paths).
-- Independent of the installed ignore predicate: if `_graphify_ignore_predicate()`
-  returns `None` (thin `tools/code.SKIP_DIRS` fallback), these rules still apply.
+- Independent of the walk's directory skip policy (`tools/code.is_skipped_dir`):
+  these rules apply after the extension/Dockerfile/shebang filter regardless of
+  which directories the walk pruned.
 - Does **not** belong in codegraph itself — this is a harness-level scan-noise
   policy, not an indexing decision.
 
@@ -44,7 +47,8 @@ file lists: `runs/llm_eval_results/skip_list_materialized.json`.
 (`/Users/critical/.gitignore_global` L87 `vendor/`, honored via `core.excludesFile`)
 is already folded into the gitignore-aware predicate. On a normal run (plain repo dir,
 no such exclude) R7 is what drops vendor trees — historically 14 finding rows
-(nodegoat/vuln-node-express vendored libs). Keep it.
+(nodegoat/vuln-node-express vendored libs). Keep it. The current static policy
+skips `vendor/` unconditionally via `tools/code.is_skipped_dir`.
 
 Row counts can double-count a finding matching two rules; deduped union is 149.
 Per-repo file lists and counts: `skip_list_materialized.json`. Top repos:

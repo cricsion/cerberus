@@ -22,10 +22,90 @@ def _resolve_limit(explicit: int | None, env_key: str, default: int) -> int:
     return env_int(env_key, default)
 
 SKIP_DIRS = frozenset({
-    ".venv", "venv", ".env", "node_modules", ".git", "__pycache__",
-    ".pytest_cache", ".tox", ".mypy_cache", "dist", "build", ".hg", ".svn",
-    "graphify-out", ".graphify",
+    ".angular", ".bloop", ".build", ".cache", ".codegraph", ".cxx",
+    ".dart_tool", ".docusaurus", ".eggs", ".env", ".externalNativeBuild",
+    ".git", ".gradle", ".hg", ".hypothesis", ".ipynb_checkpoints",
+    ".luarocks", ".metals", ".mypy_cache", ".netlify", ".next", ".nitro",
+    ".nox", ".nuxt", ".nyc_output", ".output", ".parcel-cache",
+    ".pdm-build", ".pixi", ".pnpm-store", ".pub-cache", ".pytest_cache",
+    ".ruff_cache", ".serverless", ".svelte-kit", ".svn", ".swiftpm",
+    ".terraform", ".tox", ".turbo", ".venv", ".vercel", ".vinxi", ".vite",
+    ".worktrees", ".wrangler", ".yarn", "Carthage", "DerivedData", "Pods",
+    "__history", "__pycache__", "__pypackages__", "__recovery",
+    "__snapshots__", "bower_components", "build", "dist", "dist-protected",
+    "jspm_packages", "lcov-report", "lib64", "lua_modules", "node_modules",
+    "obj", "out-tsc", "site-packages", "storybook-static", "tmp",
+    "vcpkg_installed", "vendor", "venv", "visual-test", "visual-tests",
+    "web_modules",
 })
+
+SKIP_DIR_SUFFIXES = (".egg-info", "_venv")
+
+
+def _has_venv_markers(directory: Path) -> bool:
+    """True when an ``env``-named directory is actually a virtualenv."""
+    try:
+        if (directory / "pyvenv.cfg").is_file():
+            return True
+        if (directory / "bin" / "activate").is_file():
+            return True
+        if (directory / "Scripts" / "activate").is_file():
+            return True
+        if (directory / "Scripts" / "activate.bat").is_file():
+            return True
+        if any(p.is_dir() for p in directory.glob("lib/python*")):
+            return True
+        if (directory / "conda-meta").is_dir():
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def _is_build_target(directory: Path) -> bool:
+    """True when ``target`` is Cargo/Maven output, not first-party source."""
+    parent = directory.parent
+    try:
+        if (parent / "Cargo.toml").is_file() or (parent / "pom.xml").is_file():
+            return True
+        if (directory / "CACHEDIR.TAG").is_file():
+            return True
+        if (directory / "debug").is_dir() or (directory / "release").is_dir():
+            return True
+        if (directory / "classes").is_dir():
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def is_skipped_dir(directory: Path) -> bool:
+    """True when *directory* should be pruned from inventory/grep walks.
+
+    Name-based for unambiguous build/dependency/cache dirs. ``target`` and
+    ``env``/``*_env`` are kept unless on-disk evidence says otherwise, so a
+    Python app under ``target/`` and ``config/env`` survive.
+    """
+    name = directory.name
+    if name in SKIP_DIRS:
+        return True
+    if name.endswith(SKIP_DIR_SUFFIXES):
+        return True
+    if name == "target":
+        return _is_build_target(directory)
+    if name == "env" or name.endswith("_env"):
+        return _has_venv_markers(directory)
+    return False
+
+
+def is_skipped_relpath(base: Path, rel: Path) -> bool:
+    """True when any parent directory of *rel* is pruned."""
+    current = base
+    for part in rel.parts[:-1]:
+        current = current / part
+        if is_skipped_dir(current):
+            return True
+    return False
 
 
 def _safe_path(path: str, root: str = ".") -> Path:
@@ -45,7 +125,7 @@ def _safe_path(path: str, root: str = ".") -> Path:
 def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | None = None, offset: int = 0) -> str:
     """Ripgrep-like search, the shared engine behind the deterministic passes.
 
-    Not an agent tool (agents use the built-in grep). Capped, SKIP_DIRS-aware,
+    Not an agent tool (agents use the built-in grep). Capped, skip-policy-aware,
     containment-checked; paginated via limit/offset (0 = unlimited).
     """
     lim = _resolve_limit(limit, "GREP_LIMIT", 500)
@@ -116,7 +196,7 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
                 f.resolve().relative_to(base.resolve())
             except ValueError:
                 continue
-            if any(part in SKIP_DIRS for part in rel.parts):
+            if is_skipped_relpath(base, rel):
                 continue
             if not fnmatch.fnmatch(f.name, include) and include != "*":
                 # Also match rel path for patterns like *.html vs subdirs

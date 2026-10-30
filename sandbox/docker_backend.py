@@ -42,32 +42,6 @@ __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
            "sweep_orphans"]
 
 
-def _validate_mask_paths(*, repo_path: str | Path,
-                         mask_paths: tuple[str, ...] | list[str] | None
-                         ) -> list[str]:
-    repo = Path(repo_path).resolve()
-    out: list[str] = []
-    seen: set[str] = set()
-    for rel in mask_paths or ():
-        rel = str(rel).strip().replace("\\", "/")
-        if not rel or rel.startswith("/") or ".." in rel.split("/"):
-            continue
-        try:
-            target = (repo / rel).resolve(strict=True)
-        except (OSError, RuntimeError):
-            continue
-        try:
-            target_rel = target.relative_to(repo).as_posix()
-        except ValueError:
-            continue
-        if not target.is_file() or target_rel in seen:
-            continue
-        # Mount over the resolved file, not the symlink: a `.env -> settings.txt` alias must mask the destination bytes too.
-        out.append(target_rel)
-        seen.add(target_rel)
-    return out
-
-
 # Image user (uid/gid) of the run container: tar-stream members carry it so an
 # extracted file is owned (and writable) by the agent user, not the daemon.
 _IMAGE_UID_GID = 1000
@@ -142,7 +116,6 @@ class RunSandbox(RunSandboxBase):
                  pids_limit: int = DEFAULT_PIDS_LIMIT,
                  network: str = DEFAULT_NETWORK,
                  docker_bin: str | None = None,
-                 mask_paths: tuple[str, ...] | list[str] | None = None,
                  pull_image: bool = False) -> None:
         # Re-start-after-death flag: a name a corpse may still hold is never
         # reused; the next start allocates a fresh one (id stays the dead
@@ -160,13 +133,6 @@ class RunSandbox(RunSandboxBase):
         # Egress: bridge = full egress (Docker NAT), none = none; host is refused (host netns). Validated here: a bad sandbox.network fails first.
         self.network = validate_network(network)
         self.docker_bin = _docker_bin(docker_bin)
-        # Credential files to hide from the shell (egress is live, so a key must not be readable): each gets a read-only /dev/null bind.
-        if mask_paths is None:
-            # No guard on purpose: find_credential_files is already fail-soft and a catch-all could only fail OPEN (mask_paths = ()).
-            from harness.sandbox.credentials import find_credential_files
-            mask_paths = find_credential_files(repo_path)
-        self.mask_paths = tuple(_validate_mask_paths(repo_path=repo_path,
-                                                     mask_paths=mask_paths))
         super().__init__(repo_path=repo_path, image=image,
                          command_timeout=command_timeout,
                          max_output_bytes=max_output_bytes,
@@ -200,7 +166,7 @@ class RunSandbox(RunSandboxBase):
                 name=self._name, image=self.image, repo=str(self.repo_path),
                 network=self.network, cpus=self.cpus,
                 pids_limit=self.pids_limit, memory=self.memory,
-                user=self.user, mask_paths=self.mask_paths,
+                user=self.user,
                 codegraph_shadow=self._codegraph_shadow(),
                 pull_image=self.pull_image)
             docker_channel.start_sandbox(name)
@@ -341,10 +307,8 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                  docker_bin: str | None = None,
                  rules_dir: str = DEFAULT_RULES_DIR,
                  run: RunSandbox | None = None, agent_id: str | None = None,
-                 mask_paths: tuple[str, ...] | list[str] | None = None,
                  pull_image: bool = False) -> None:
-        # Validated before super(): a bad image or network must fail at construction, not inside `docker run`; mask_paths None keeps discovery.
-        self.mask_paths = None if mask_paths is None else tuple(mask_paths)
+        # Validated before super(): a bad image or network must fail at construction, not inside `docker run`.
         self.image = validate_image(str(image or DEFAULT_IMAGE))
         self.user = str(user)
         self.memory = str(memory)
@@ -361,7 +325,7 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
                 max_output_bytes=max_output_bytes, memory=self.memory,
                 cpus=self.cpus, pids_limit=self.pids_limit,
                 network=network_mode, docker_bin=self.docker_bin,
-                mask_paths=self.mask_paths, pull_image=pull_image),
+                pull_image=pull_image),
             run=run, agent_id=agent_id,
             command_timeout=command_timeout,
             max_output_bytes=max_output_bytes,
@@ -522,7 +486,7 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
 # never reach the container constructor (TypeError).
 _RUN_SETTING_KEYS = frozenset({
     "image", "user", "command_timeout", "max_output_bytes", "memory", "cpus",
-    "pids_limit", "network", "docker_bin", "mask_paths", "pull_image",
+    "pids_limit", "network", "docker_bin", "pull_image",
 })
 
 RUNS = RunRegistry(RunSandbox, _RUN_SETTING_KEYS)

@@ -14,8 +14,7 @@ Python (docker-py), doc-verified 7.x:
 - ``containers.create`` expresses the full confinement contract:
   ``cap_drop``, ``security_opt``, ``pids_limit``, ``mem_limit``,
   ``memswap_limit``, ``nano_cpus``, ``network_mode``, ``read_only``, the
-  ``tmpfs`` dict, and ``types.Mount`` binds (RO repo, RW .codegraph shadow,
-  /dev/null credential masks).
+  ``tmpfs`` dict, and ``types.Mount`` binds (RO repo, RW .codegraph shadow).
 - The low-level plane drives the sweep: ``api.containers(all=True,
   filters={"label": ...})`` (``docker ps`` dicts with ``Names``/``Created``),
   ``api.inspect_container`` (``State.Running``), and ``events()``.
@@ -107,7 +106,6 @@ def client_for(timeout: float = 60.0):
 
 def create_sandbox(*, name: str, image: str, repo: str, network: str,
                    cpus: str, pids_limit: int, memory: str, user: str,
-                   mask_paths: tuple[str, ...] | list[str] = (),
                    codegraph_shadow: str = "",
                    pull_image: bool = False) -> str:
     """Create (not start) the confined per-repo container; returns ``name``.
@@ -140,9 +138,6 @@ def create_sandbox(*, name: str, image: str, repo: str, network: str,
     if codegraph_shadow:
         mounts.append(Mount(target=codegraph_shadow,
                             source=codegraph_shadow, type="bind"))
-    for rel in mask_paths:
-        mounts.append(Mount(target=f"{repo}/{rel}", source="/dev/null",
-                            type="bind", read_only=True))
 
     client = client_for(120)
 

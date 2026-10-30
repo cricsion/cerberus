@@ -125,10 +125,7 @@ def _coerce_bool(key: str, value: Any) -> bool:
     raise ValueError(f"invalid sandbox {key}: {value!r}")
 
 def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
-    from .credentials import find_credential_files
     defaults = _sandbox_defaults("sandbox")
-    # No guard on purpose: find_credential_files is fail-soft; a catch-all could only fail OPEN (mask_paths = []).
-    mask_paths: list[str] = find_credential_files(repo)
 
     def _int(key: str) -> int:
         return _coerce_int(key, _sandbox_setting(cfg, key, defaults[key]))
@@ -149,7 +146,6 @@ def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
         # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- harness/agents/deep.py.
         "rules_dir": str(_sandbox_setting(cfg, "rules_dir",
                                           defaults["rules_dir"])),
-        "mask_paths": mask_paths,
         # Opt-in SDK-lane pull-on-missing-image (docker_backend.RunSandbox);
         # default 0 from default.yaml keeps the CLI lane's fail-fast.
         "pull_image": _bool("pull_image"),

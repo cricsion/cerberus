@@ -97,9 +97,9 @@ sandbox:
   # it over the docker-py SDK channel (demuxed, bounded in-container by
   # `timeout -k 5`). The container is torn down at scan
   # exit (success, failure, or SIGINT/SIGTERM).
-  # Bridge network policy: none = no network inside the sandbox (default);
-  # host/bridge = allow network (e.g. for dependency fetching if needed).
-  network: ${SANDBOX_NETWORK:-none}
+  # Network policy: bridge = full egress inside the sandbox (default);
+  # none = no network. `host` is refused (it would join the host netns).
+  network: ${SANDBOX_NETWORK:-bridge}
   # Per-command stdout+stderr capture cap (bytes). Output past the cap is
   # truncated; exit code still reflects the command, so a chatty command cannot grow the
   # harness process unbounded. 0 = unlimited.

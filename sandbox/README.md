@@ -10,7 +10,7 @@ the shell (when it exists) is the only extra capability.
 | mode | repo file tools | scratch writes | shell | boundary |
 |---|---|---|---|---|
 | `local` (default, resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
-| `docker` (opt-in) | read-only, in-process | same | `execute` | one container per run, egress per `sandbox.network` (default `none`) |
+| `docker` (opt-in) | read-only, in-process | same | `execute` | one container per run, egress per `sandbox.network` (default `bridge`) |
 
 ## local
 
@@ -81,17 +81,12 @@ versions.env pin each if a target mix demands them.
 `host` is refused: it would join the host's network namespace.
 
 **With egress on, treat everything the agent can read as exfiltrable** — the
-repo, and any credential file inside it (a target repo that is the harness
-checkout exposes its own `.env` with the live API key). Keep
-`sandbox.network: none` unless egress is genuinely required. The agent has full
-control inside the sandbox; containment is the sandbox itself.
-
-**Credential files are masked, not just noticed**: Docker places a read-only
-`/dev/null` bind over each detected file's in-repo resolved target, so a
-credential-named symlink does not expose its destination. Reads return EOF;
-writes fail on the read-only bind. The mask cannot be a tmpfs:
-tmpfs mounts onto directories only, and Docker refuses the whole container
-("not a directory") when a plain-file credential is masked.
+repo, including any `.env`, key, or other credential file in it. These files
+are readable like any other repo file (a target repo that is the harness
+checkout exposes its own `.env` with the live API key). The default is
+`sandbox.network: bridge`; switch to `none` for untrusted targets or scans that
+do not need egress. The agent has full control inside the sandbox; containment
+is the sandbox itself.
 
 ### Orphans from a killed run
 
@@ -210,7 +205,6 @@ backends share lives in its own module.
 | `local_backend.py` | `RepoLocalBackend`: read-only, repo-confined file tools (the base of both modes, and local mode itself) |
 | `cli_utils.py` | the byte-bounded separated-streams subprocess seam, the exec tag, the byte-cap factor, the agent-id slug — one monkeypatch point for the shell backend |
 | `validation.py` | setting validators that fail at construction, before any container exists |
-| `credentials.py` | credential-file detection inside the target tree, for masking and the operator warning |
 | `docker_channel.py` | the one docker-py transport: confined `containers.create`, bounded demuxed execs (client deadline + watchdog pkill), the tar transfer plane, and the sweep's daemon-published liveness sources |
 | `run_base.py` | `RunSandboxBase`: the run-sandbox lifecycle (create-once, mark-dead, remove, close) + `RunRegistry` (one sandbox per repo per process, atexit + SIGTERM reaping) + the shared orphan-sweep rules (name pattern, idle threshold, target selection) |
 | `backend_base.py` | `SandboxShellBackend`: the per-agent session (close = session only) and the `execute` contract, with hooks for the two recovery paths that genuinely differ |

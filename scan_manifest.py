@@ -1,9 +1,8 @@
-"""Scan audit metadata: target-tree digests and credential files; bookkeeping
-only, not sandbox lifecycle or confinement."""
+"""Scan audit metadata: target-tree digests; bookkeeping only, not sandbox
+lifecycle or confinement."""
 from __future__ import annotations
 
 import hashlib
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +10,7 @@ from typing import Any
 SKIP_PARTS = frozenset({
     ".git", "node_modules", ".venv", "venv", "__pycache__",
     "dist", "build", ".tox", ".mypy_cache", ".pytest_cache",
-    ".hg", ".svn", ".idea", ".vscode", "graphify-out",
+    ".hg", ".svn", ".idea", ".vscode", ".codegraph", "tmp",
 })
 
 _MANIFESTS: dict[str, dict[str, Any]] = {}
@@ -48,25 +47,12 @@ def _digest_repo(repo: str | Path) -> dict[str, Any]:
 
 
 def record_scan_manifest(repo_path: str | Path) -> dict[str, Any]:
-    """Record the target tree and credential files at scan start."""
+    """Record the target tree at scan start."""
     key = str(Path(repo_path).resolve())
     try:
         record = {"repo": key, **_digest_repo(key)}
     except OSError:
         record = {"repo": key, "manifest_hash": "", "manifest_files": 0}
-    try:
-        from harness.sandbox.credentials import (credential_warning,
-                                                 find_credential_files)
-
-        files = find_credential_files(key)
-        record["credential_files"] = files
-        for line in credential_warning(key, files):
-            print(line, file=sys.stderr)
-    except Exception as e:
-        # Fail open (bookkeeping only), but never silently claim zero
-        # credential files: record why the check could not run.
-        record["credential_files"] = []
-        record["credential_files_error"] = f"{type(e).__name__}: {e}"
     _MANIFESTS[key] = record
     return dict(record)
 

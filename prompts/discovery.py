@@ -208,11 +208,13 @@ def build_system_pass_task(repo: str, scope: str, ctx: str,
         f"Repository (read-only): {repo}\nScope: {scope}\n{ctx}"
         + inventory_section + "\n"
         + SYSTEM_PASS_FOCUS + "\n"
-        "Use the inventory and repo tools to perform a source-led cross-unit and "
-        "global-invariant review even when the unit findings list is empty. Identify "
-        "the relevant application units and shared controls, then trace plausible "
-        "entry-to-effect paths across them. Return an empty findings list only when "
-        "no source-grounded cross-unit or global gap survives review.\n"
+        "Use the inventory and repo tools to perform a source-led cross-unit, "
+        "global-invariant, secrets, and configuration review even when the unit "
+        "findings list is empty. Identify the relevant application units and shared "
+        "controls, then trace plausible entry-to-effect paths across them. Also "
+        "discover and inspect credential, key, and configuration files outside the "
+        "inventory. Return an empty findings list only when no source-grounded "
+        "cross-unit, global, secret, or configuration gap survives review.\n"
         + PATH_CONTRACT + "\n"
         + DISCOVERY_CONTRACT
     )

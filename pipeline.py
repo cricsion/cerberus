@@ -117,26 +117,6 @@ _SHEBANG_INTERPRETERS = ("python", "node", "ruby", "perl", "php", "bash", "sh", 
 _SHEBANG_MAX_BYTES = 262_144
 
 
-def _graphify_ignore_predicate(root: Path):
-    # graphify's ignored_predicate is a factory: ignored_predicate(root)
-    # returns the per-path predicate. Call it once, then guard each use.
-    try:
-        from graphify.detect import ignored_predicate
-
-        predicate = ignored_predicate(root)
-    except Exception:
-        return None
-
-    def _safe_ignored(p) -> bool:
-        # The predicate can throw on odd paths; skipping the skip is safe.
-        try:
-            return bool(predicate(p))
-        except Exception:
-            return False
-
-    return _safe_ignored
-
-
 def _is_shebang_script(path: Path) -> bool:
     try:
         if path.suffix or path.stat().st_size > _SHEBANG_MAX_BYTES:
@@ -152,15 +132,12 @@ def _is_shebang_script(path: Path) -> bool:
 
 
 def _inventory_files(base: Path) -> list[str]:
-    from harness.tools.code import SKIP_DIRS
+    from harness.tools.code import is_skipped_dir
+
     if base.is_file():
-        graphify_ignored = _graphify_ignore_predicate(base.parent)
-        if graphify_ignored is not None and graphify_ignored(base):
-            return []
         return [str(base)]
     if not base.is_dir():
         return []
-    graphify_ignored = _graphify_ignore_predicate(base)
 
     files: list[str] = []
     for root, dirs, names in os.walk(base, topdown=True, followlinks=False):
@@ -168,11 +145,9 @@ def _inventory_files(base: Path) -> list[str]:
         kept_dirs = []
         for name in sorted(dirs):
             directory = root_path / name
-            if name in SKIP_DIRS or directory.is_symlink():
+            if directory.is_symlink() or is_skipped_dir(directory):
                 continue
             if name == "plugins" and root_path.name == "public":
-                continue
-            if graphify_ignored is not None and graphify_ignored(directory):
                 continue
             kept_dirs.append(name)
         dirs[:] = kept_dirs
@@ -183,8 +158,6 @@ def _inventory_files(base: Path) -> list[str]:
             if not (f.suffix.lower() in _INVENTORY_EXTS
                     or f.name.lower().startswith("dockerfile")
                     or _is_shebang_script(f)):
-                continue
-            if graphify_ignored is not None and graphify_ignored(f):
                 continue
             try:
                 files.append(str(f.relative_to(base)))
