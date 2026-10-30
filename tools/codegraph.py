@@ -1,6 +1,6 @@
 """Code-intelligence tools bound on the shared agent surface (plan § D3, D4).
 
-This is the ONE binding module for the code-intelligence family. Two groups
+This is the ONE binding module for the code-intelligence family. Three groups
 live here:
 
 - **The ``_db``-first graph tools** — :func:`callers`, :func:`callees`,
@@ -11,13 +11,14 @@ live here:
   fails closed with clean guidance / ``(no matches)`` sentinels.
 - **The native high-order tools** — :func:`codegraph_explore`, :func:`find_path`,
   :func:`impact_radius`, :func:`build_context`,
-  :func:`detect_circular_and_dead_code`, :func:`get_routing_manifest`.
-- **The 11 ``harness.codegraph`` tools** (navigation / authz / contracts /
-  supply / effects / manifests / graphql). They answer ``_db``-first internally;
+  :func:`detect_circular_and_dead_code`, :func:`get_routing_manifest`,
+  :func:`type_hierarchy`.
+- **The 9 ``harness.codegraph`` tools** (navigation / authz / contracts /
+  supply / effects). They answer ``_db``-first internally;
   they are re-exported here so ``harness/agents/toolsets.py`` binds the whole
   code-intelligence surface from one place (:func:`codegraph_tools`).
 
-Import law: this module imports only ``harness.codegraph`` (the 11 +
+Import law: this module imports only ``harness.codegraph`` (the 9 +
 ``_db``), stdlib, and the existing harness tool helpers
 (``harness.tools.code``) — no new dependencies. Nothing here shells
 ``codegraph``; the CLI is the indexer's tool, never an agent's.
@@ -32,9 +33,7 @@ from harness.codegraph import (
     compare_sibling_route_security,
     find_shared_state_readers_writers,
     get_ast_slice,
-    graphql_surface,
     inspect_type_contract,
-    reconcile_manifest_imports,
     resolve_blind_spot,
     trace_effect_category,
     trace_egress_and_ssrf_targets,
@@ -46,7 +45,7 @@ from harness.codegraph import _db
 from ._compat import tool
 from .code import _resolve_limit
 
-# The 11 harness.codegraph tools, in the package's own order. Kept as names so
+# The 9 harness.codegraph tools, in the package's own order. Kept as names so
 # codegraph_tools() stays a single source of truth and __all__ is derived.
 CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
     "get_ast_slice",
@@ -58,8 +57,6 @@ CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
     "inspect_type_contract",
     "trace_egress_and_ssrf_targets",
     "trace_effect_category",
-    "reconcile_manifest_imports",
-    "graphql_surface",
 )
 
 # CodeGraph's uncertainty boundary (src/graph/dynamic-boundary-report.ts): below
@@ -87,9 +84,9 @@ ROUTE_LINE_RE = re.compile(
 
 
 def codegraph_tools() -> list:
-    """The 11 ``harness.codegraph`` tools, in a stable order.
+    """The 9 ``harness.codegraph`` tools, in a stable order.
 
-    ``harness/agents/toolsets.py`` binds this list beside the ``_db``-first grep
+    ``harness/agents/toolsets.py`` binds this list beside the ``_db``-first graph
     tools, so the whole code-intelligence surface is defined once and the roles
     cannot drift apart (plan § D3).
     """
@@ -217,93 +214,6 @@ def _paginate(lines: list[str], limit, offset, env_key: str, default: int) -> st
 
 def _cap_section(lines: list[str], lim: int) -> list[str]:
     return lines if lim <= 0 else lines[:lim]
-
-
-# ---------------------------------------------------------------------------
-# manifest_parse (unchanged: filesystem-only, no index)
-# ---------------------------------------------------------------------------
-
-@tool(parse_docstring=True)
-def manifest_parse(root: str = ".", limit: int | None = None) -> str:
-    """Summarize dependency manifests + container/IaC files under root. Paginated via limit (0=unlimited).
-
-    Args:
-        root: Directory containing manifests/IaC files.
-        limit: Max files to summarize. 0 = unlimited.
-    """
-    try:
-        base = _safe_root(root)
-    except ValueError as e:
-        return f"ERROR: {e}"
-    if not base.exists():
-        return "(no manifests found)"
-    lines: list[str] = []
-    known = [
-        "package.json", "package-lock.json", "requirements.txt",
-        "pyproject.toml", "setup.py", "setup.cfg", "Pipfile",
-        "go.mod", "go.sum", "pom.xml", "build.gradle", "build.gradle.kts",
-        "Gemfile", "Gemfile.lock", "composer.json", "composer.lock",
-        "Cargo.toml", "Cargo.lock", "packages.config",
-        "CMakeLists.txt", "Makefile",
-    ]
-    for proj in sorted(base.glob("*.csproj")):
-        try:
-            if proj.is_file():
-                lines.append(f"{proj.name} (.NET)")
-        except OSError:
-            continue
-    for name in known:
-        p = base / name
-        if p.is_file():
-            try:
-                size = p.stat().st_size
-            except OSError:
-                size = -1
-            try:
-                preview = p.read_text(errors="replace")[:1500].strip().replace("\n", " ")[:500]
-            except OSError:
-                preview = "(unreadable)"
-            lines.append(f"{name} ({size} bytes): {preview}")
-    for f in sorted(base.glob("requirements*.txt")):
-        if f.name == "requirements.txt":
-            continue
-        if len(lines) >= 20:
-            break
-        try:
-            if f.is_file():
-                lines.append(f"{f.name} ({f.stat().st_size} bytes)")
-        except OSError:
-            continue
-    for f in sorted(base.rglob("*")):
-        if len(lines) >= 30:
-            break
-        try:
-            if not f.is_file():
-                continue
-            n = f.name.lower()
-            if n == "dockerfile" or n.startswith("dockerfile.") or n == "docker-compose.yml" or n == "docker-compose.yaml":
-                try:
-                    rel = f.relative_to(base)
-                except ValueError:
-                    rel = f
-                lines.append(f"{rel} (docker)")
-            elif f.suffix.lower() == ".tf":
-                try:
-                    rel = f.relative_to(base)
-                except ValueError:
-                    rel = f
-                lines.append(f"{rel} (terraform)")
-        except OSError:
-            continue
-    if not lines:
-        return "(no manifests found)"
-    _lim = _resolve_limit(limit, "MANIFEST_LINES", 200)
-    total = len(lines)
-    page = lines if _lim <= 0 else lines[:_lim]
-    body = "\n".join(page)[:20000]
-    if total > len(page):
-        body += f"\n… +{total - len(page)} more manifests (total {total})"
-    return body
 
 
 # ---------------------------------------------------------------------------
@@ -684,6 +594,51 @@ def impact_radius(symbol: str, depth: int = 2) -> str:
 
 
 @tool(parse_docstring=True)
+def type_hierarchy(symbol: str) -> str:
+    """Map a class/interface's ancestors and descendants via extends/implements.
+
+    Use this for inherited auth guards, base-class validators, interface
+    implementers, and subclasses of a permissive base parser/deserializer.
+
+    Args:
+        symbol: Class, interface, struct, or trait name.
+    """
+    from harness.codegraph import native
+    res = native.type_hierarchy(symbol)
+    if res.get("error"):
+        return f"ERROR: type hierarchy unavailable: {res['error']}"
+    nodes = res.get("nodes", [])
+    edges = res.get("edges", [])
+    if not nodes:
+        return f"No type hierarchy found for {symbol}."
+
+    by_id = {n.get("id"): n for n in nodes}
+    type_word = "type" if len(nodes) == 1 else "types"
+    relation_word = "relation" if len(edges) == 1 else "relations"
+    lines = [
+        f"Type hierarchy for {symbol} "
+        f"({len(nodes)} {type_word}, {len(edges)} {relation_word}):"
+    ]
+    for n in nodes[:40]:
+        lines.append(
+            f"  [{n.get('kind', 'type')}] {n.get('name')} "
+            f"({n.get('filePath')}:{n.get('startLine')})"
+        )
+    if len(nodes) > 40:
+        lines.append(f"  ... ({len(nodes) - 40} more types)")
+
+    if edges:
+        lines.append("Relations:")
+        for edge in edges[:40]:
+            src = by_id.get(edge.get("source"), {}).get("name") or edge.get("source")
+            dst = by_id.get(edge.get("target"), {}).get("name") or edge.get("target")
+            lines.append(f"  {src} -[{edge.get('kind', 'relation')}]-> {dst}")
+        if len(edges) > 40:
+            lines.append(f"  ... ({len(edges) - 40} more relations)")
+    return "\n".join(lines)
+
+
+@tool(parse_docstring=True)
 def build_context(task: str, max_nodes: int = 20) -> str:
     """Assemble focused context for a task, identifying key entry points, related files, and symbols.
 
@@ -754,7 +709,6 @@ def get_routing_manifest() -> str:
 
 
 __all__ = [
-    "manifest_parse",
     "framework_routes",
     "callers",
     "callees",
@@ -762,6 +716,7 @@ __all__ = [
     "codegraph_explore",
     "find_path",
     "impact_radius",
+    "type_hierarchy",
     "build_context",
     "detect_circular_and_dead_code",
     "get_routing_manifest",

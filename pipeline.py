@@ -221,7 +221,7 @@ def indexer_node(state: ScanState) -> dict:
 
     def _codegraph_stage() -> tuple[list[dict], list[str]]:
         from harness.codegraph._index import index_build, index_summary
-        from harness.tools.codegraph import framework_routes, manifest_parse, get_routing_manifest
+        from harness.tools.codegraph import framework_routes, get_routing_manifest
 
         extra: list[dict] = []
         used: list[str] = []
@@ -229,10 +229,6 @@ def indexer_node(state: ScanState) -> dict:
         if db_path:
             extra.append(_info_candidate("codegraph", "codegraph index summary", repo, index_summary(repo)))
             used.append("codegraph_index")
-        man = _call_tool(manifest_parse, root=repo)
-        if man and "(no manifests found)" not in man and "(unavailable" not in man:
-            extra.append(_info_candidate("manifest", "repo manifest summary", repo, man))
-            used.append("manifest_parse")
         routes = _call_tool(framework_routes, root=repo)
         # "(no …" covers "(no matches)" and the no-index guidance string the
         # gate returns now that the grep fallback is gone; real route output

@@ -112,14 +112,12 @@ and, when wrong, overwrite.
 | Every repo symbol an unresolved reference could point at | `resolve_blind_spot` |
 | Can an entry point reach a sink across files | `reachability_check` |
 | What does this DTO / request body guarantee about its fields | `inspect_type_contract` |
+| Does this class inherit auth/validation from a base, or who extends/implements it | `type_hierarchy` |
 | Does this endpoint enforce what its sibling endpoints enforce | `compare_sibling_route_security` |
 | Who reads/writes this shared state, and is it unguarded | `find_shared_state_readers_writers` |
 | Which state transitions skip the workflow | `trace_state_machine_transitions` |
 | Do this function's network calls go to a fixed URL or an attacker's | `trace_egress_and_ssrf_targets` |
 | Which security-sensitive sinks (shell, db, crypto, network, etc.) are reached | `trace_effect_category` |
-| Reconcile package imports against manifest dependencies | `reconcile_manifest_imports` |
-| Map GraphQL schema, queries, mutations, types, and resolver handlers | `graphql_surface` |
-| Summarize dependency manifests + container/IaC under root | `manifest_parse` |
 | Read one code span by line | `ast_query` |
 
 Pick the narrowest tool: the domain tools already carry the route-node, guard,

@@ -1,6 +1,6 @@
 # CodeGraph package
 
-This package provides the 8 CodeGraph tools used by the harness. It reads a
+This package provides the 9 CodeGraph tools used by the harness. It reads a
 repository's CodeGraph index, renders bounded source and relationship evidence,
 and surfaces cached security summaries from the sidecar database. The tool names
 and their order are a pinned interface.
@@ -17,6 +17,11 @@ The harness exposes these tools in this order:
 6. `trace_state_machine_transitions`
 7. `inspect_type_contract`
 8. `trace_egress_and_ssrf_targets`
+9. `trace_effect_category`
+
+The native bridge (`native.py`) additionally backs `type_hierarchy`, bound
+separately by `harness.agents.toolsets`; the 9-name package surface above is
+unchanged.
 
 The order is defined by `harness.tools.codegraph.CODEGRAPH_TOOL_NAMES`.
 Keep package and binding containment helpers distinct: they have intentionally

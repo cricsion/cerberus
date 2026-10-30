@@ -42,9 +42,6 @@ Tool modules (the micro-agent partition from the SAST tool suite design):
                      :func:`trace_egress_and_ssrf_targets`.
     ``effects``    — Effect-category tracing (the egress view generalized to
                      every curated category): :func:`trace_effect_category`.
-    ``manifests``  — Manifest-vs-import reconciliation:
-                     :func:`reconcile_manifest_imports`.
-    ``graphql``    — GraphQL attack-surface mapping: :func:`graphql_surface`.
 """
 from __future__ import annotations
 
@@ -67,12 +64,6 @@ from harness.codegraph.supply import (
 from harness.codegraph.effects import (
     trace_effect_category,
 )
-from harness.codegraph.manifests import (
-    reconcile_manifest_imports,
-)
-from harness.codegraph.graphql import (
-    graphql_surface,
-)
 from harness.codegraph import native
 
 __all__: list = [
@@ -85,6 +76,4 @@ __all__: list = [
     "inspect_type_contract",
     "trace_egress_and_ssrf_targets",
     "trace_effect_category",
-    "reconcile_manifest_imports",
-    "graphql_surface",
 ]

@@ -7,6 +7,7 @@ Exposes CodeGraph's native features:
 - Framework routing manifest (``routing_manifest``): native framework route tables.
 - Graph topological hygiene (``circular_and_dead_code``): cycles & orphaned components.
 - Task-focused context assembly (``build_context``): relevant symbols, relationships & entry points.
+- Type hierarchy (``type_hierarchy``): ancestors + descendants across extends/implements.
 """
 from __future__ import annotations
 
@@ -220,18 +221,6 @@ def callees_json(func_name: str, repo: str | None = None, limit: int = 100, time
         return {"error": str(exc), "symbol": func_name}
 
 
-def call_graph(symbol: str, depth: int = 2, repo: str | None = None) -> dict:
-    """Retrieve the multi-hop call graph (callers + callees) for a function/method."""
-    res = _run_node_runner("callGraph", _resolve_repo(repo), symbol, str(depth))
-    if "error" in res:
-        return {"symbol": symbol, "nodes": [], "edges": [], "error": res["error"]}
-    return {
-        "symbol": symbol,
-        "nodes": res.get("nodes", []),
-        "edges": res.get("edges", []),
-    }
-
-
 def type_hierarchy(symbol: str, repo: str | None = None) -> dict:
     """Retrieve type hierarchy (ancestors + descendants, extends + implements) for a class/interface."""
     res = _run_node_runner("typeHierarchy", _resolve_repo(repo), symbol)
@@ -244,30 +233,6 @@ def type_hierarchy(symbol: str, repo: str | None = None) -> dict:
     }
 
 
-def node_metrics(symbol: str, repo: str | None = None) -> dict | None:
-    """Retrieve complexity metrics (fan-in, fan-out, callCount, callerCount, depth) for a symbol."""
-    res = _run_node_runner("metrics", _resolve_repo(repo), symbol)
-    if "error" in res:
-        return {"error": res["error"]}
-    return res.get("metrics")
-
-
-def usages(symbol: str, repo: str | None = None) -> list[dict] | dict:
-    """Find all usages and references to a symbol across the knowledge graph."""
-    res = _run_node_runner("usages", _resolve_repo(repo), symbol)
-    if "error" in res:
-        return {"error": res["error"]}
-    return res.get("usages", [])
-
-
-def node_context(symbol: str, repo: str | None = None) -> dict | None:
-    """Retrieve complete structural context (ancestors, children, incoming/outgoing refs, types) for a symbol."""
-    res = _run_node_runner("context", _resolve_repo(repo), symbol)
-    if "error" in res:
-        return {"error": res["error"]}
-    return res.get("context")
-
-
 __all__ = [
     "explore",
     "find_path",
@@ -275,11 +240,7 @@ __all__ = [
     "routing_manifest",
     "circular_and_dead_code",
     "build_context",
-    "call_graph",
     "type_hierarchy",
-    "node_metrics",
-    "usages",
-    "node_context",
     "callers_json",
     "callees_json",
 ]
