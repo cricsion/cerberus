@@ -288,6 +288,7 @@ def finish_scan() -> None:
 
 __all__ = [
     "enabled",
+    "run_config",
     "start_scan",
     "get_handler",
     "stable_role",

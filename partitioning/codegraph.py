@@ -1,19 +1,20 @@
-"""CodeGraph Native module partitioning.
+"""Architectural module partitioning for CodeGraph-indexed targets.
 
 Groups inventory files into hunter units by architectural depth: depth-1
 directories become units, single-child wrapper directories collapse into their
 child (``frontend/src`` rather than ``frontend``), and an oversized module is
 split one level deeper.
-
 """
 from __future__ import annotations
 
 
 def index_available(root: str = ".") -> bool:
     """True when a readable CodeGraph index exists for ``root`` (never raises)."""
-    from harness.codegraph import _db
-
-    return _db.connect(root) is not None
+    try:
+        from pathlib import Path
+        return (Path(root) / ".codegraph").is_dir()
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------

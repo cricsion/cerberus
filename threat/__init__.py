@@ -4,14 +4,7 @@ hunters/triage. Threats are class-level with closed enums (past vulns/CVEs are
 """
 from __future__ import annotations
 
-# Stdlib imports that leaked as module attributes of the pre-split monolith
-# (`threat.Path`, `threat._dt`); kept for surface parity only.
-import datetime as _dt
 import logging as _logging
-import re as _re
-import subprocess as _sp
-from pathlib import Path
-from typing import Any as _Any
 
 # --- public functions -------------------------------------------------------
 from .floor import bootstrap_threat, collect_docs, load_threat, measured_facts

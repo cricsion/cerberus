@@ -42,6 +42,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
     except OSError as e:
         print(f"cannot create output dir {out}: {e}", file=sys.stderr)
         return 1
+    run_id = os.environ.get("HARNESS_RUN_ID") or out.name or "latest"
+    os.environ["HARNESS_RUN_ID"] = run_id
     confirm = bool(args.confirm_critical)
     # Manifest: record target tree at scan start, compare at teardown.
     from harness.paths import canonical_repo

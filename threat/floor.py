@@ -198,38 +198,47 @@ def _surface_row_spec(surface_name: str, n_routes: int = 0) -> tuple[str, str, s
             "application data and system state, process integrity")
 
 
-def _format_detected_routes(route_lines: list[str], max_display: int = 15) -> str:
-    n_routes = len(route_lines)
+def _format_detected_routes(route_lines: list[str | dict] | str, max_display: int = 15) -> str:
+    if isinstance(route_lines, str):
+        route_lines = [ln.strip() for ln in route_lines.splitlines() if ln.strip()]
+    n_routes = len(route_lines or [])
     if not n_routes:
         return ""
 
     seen_endpoints: set[str] = set()
     formatted_items: list[str] = []
 
-    for line in route_lines:
-        line = line.strip()
-        if not line:
-            continue
-        cleaned = line
-        file_ref = ""
-        if ": [route] " in cleaned:
-            parts = cleaned.split(": [route] ", 1)
-            file_ref = parts[0].strip()
-            cleaned = parts[1].strip()
-        elif ":" in cleaned and any(cleaned.split(":", 1)[0].endswith(ext)
-                                    for ext in (".py", ".js", ".ts", ".go", ".java", ".rb", ".php", ".cs")):
-            parts = cleaned.split(":", 2)
-            if len(parts) >= 2:
-                file_ref = f"{parts[0]}:{parts[1]}"
-                cleaned = parts[2].strip() if len(parts) > 2 else ""
+    for item in route_lines:
+        if isinstance(item, dict):
+            endpoint = str(item.get("path") or item.get("url") or "/").strip()
+            handler = str(item.get("handler") or item.get("name") or "").strip()
+            f = str(item.get("filePath") or "").strip()
+            ln = item.get("startLine") or ""
+            file_ref = f"{f}:{ln}" if f and ln else f
+        else:
+            line = str(item).strip()
+            if not line:
+                continue
+            cleaned = line
+            file_ref = ""
+            if ": [route] " in cleaned:
+                parts = cleaned.split(": [route] ", 1)
+                file_ref = parts[0].strip()
+                cleaned = parts[1].strip()
+            elif ":" in cleaned and any(cleaned.split(":", 1)[0].endswith(ext)
+                                        for ext in (".py", ".js", ".ts", ".go", ".java", ".rb", ".php", ".cs")):
+                parts = cleaned.split(":", 2)
+                if len(parts) >= 2:
+                    file_ref = f"{parts[0]}:{parts[1]}"
+                    cleaned = parts[2].strip() if len(parts) > 2 else ""
 
-        handler = ""
-        if "->" in cleaned:
-            c_parts = cleaned.split("->", 1)
-            cleaned = c_parts[0].strip()
-            handler = c_parts[1].strip()
+            handler = ""
+            if "->" in cleaned:
+                c_parts = cleaned.split("->", 1)
+                cleaned = c_parts[0].strip()
+                handler = c_parts[1].strip()
 
-        endpoint = cleaned.strip()
+            endpoint = cleaned.strip()
         if not endpoint:
             continue
 

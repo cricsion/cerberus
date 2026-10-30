@@ -258,7 +258,7 @@ class AgentRegistry:
                                      unit=kw.get("unit", None),
                                      run_id=self.run_id,
                                      parent_stage=kw.get("parent_stage", ""),
-                                     model=None if model is None and kw.get("model") is None else kw.get("model", model))
+                                     model=kw.get("model", model))
                 self._agents[aid] = handle
                 if aid not in self._order:
                     self._order.append(aid)

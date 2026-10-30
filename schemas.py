@@ -67,8 +67,8 @@ class Finding(BaseModel):
         description="Structured file:line citations backing the claim")
     rationale: str = Field(default="", description="Why this is real: who controls the input, how it reaches the sink, what breaks")
     evidence: str = Field(default="", description="Supporting detail with file:line")
-    status: Literal["needs-review"] = Field(
-        default="needs-review", description="Always needs-review from discovery")
+    status: Literal["needs-review", "confirmed", "fp"] = Field(
+        default="needs-review", description="Status of finding: needs-review from discovery; confirmed or fp after validation")
 
 
 class DiscoveryResult(BaseModel):

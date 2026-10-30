@@ -243,10 +243,48 @@ def _with_skills_route(backend: Any) -> Any:
     return CompositeBackend(default=backend, routes=routes)
 
 
-def _with_scratch_route(backend: Any) -> Any:
-    from deepagents.backends import CompositeBackend, StateBackend
+def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
+                         run_id: str | None = None) -> Path | None:
+    """Resolve a persistent host directory for agent scratchpad files (under .harness/<run_id>/scratch/)."""
+    env_dir = os.environ.get("HARNESS_SCRATCH_DIR")
+    if env_dir:
+        base = Path(env_dir)
+    else:
+        repo_root = root_dir or os.environ.get("TARGET_REPO")
+        if not repo_root:
+            return None
+        rid = (
+            run_id
+            or os.environ.get("HARNESS_RUN_ID")
+            or os.environ.get("RUN_ID")
+            or "latest"
+        )
+        safe_rid = "".join(c if c.isalnum() or c in ("-", "_", ".") else "_" for c in str(rid).strip()) or "latest"
+        base = Path(repo_root) / ".harness" / safe_rid / "scratch"
 
-    routes = {SCRATCH_ROUTE: StateBackend()}
+    safe_agent = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in str(agent_name or "").strip())
+    p = base / safe_agent if safe_agent else base
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        return p
+    except OSError:
+        return None
+
+
+def _with_scratch_route(backend: Any, scratch_dir: Path | str | None = None) -> Any:
+    from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
+
+    if scratch_dir is not None:
+        try:
+            p = Path(scratch_dir)
+            p.mkdir(parents=True, exist_ok=True)
+            scratch_backend: Any = FilesystemBackend(root_dir=str(p), virtual_mode=True)
+        except Exception:
+            scratch_backend = StateBackend()
+    else:
+        scratch_backend = StateBackend()
+
+    routes = {SCRATCH_ROUTE: scratch_backend}
     if isinstance(backend, CompositeBackend):
         routes.update(backend.routes)
         return CompositeBackend(default=backend.default, routes=routes)
@@ -354,6 +392,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
 
     system_prompt = f"{UNTRUSTED_CONTEXT_NOTE}\n\n{system_prompt}"
 
+    target_repo = None
     if backend is None:
         if root_dir:
             rd = Path(root_dir)
@@ -365,6 +404,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                 "build_deep_agent requires root_dir or TARGET_REPO; "
                 "refusing to default to the harness working directory"
             )
+        target_repo = rd
         from harness.config import load_config_safe
         from harness.sandbox import _acquire_backend
         from harness.sandbox.local_backend import RepoLocalBackend
@@ -382,6 +422,15 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                 cfg, rd.resolve(), label=name or "agent", fallback="local",
                 refused_msg="[deep] sandbox backend refused ({exc}); "
                             "using the local backend")
+    else:
+        if root_dir:
+            target_repo = Path(root_dir)
+        elif os.environ.get("TARGET_REPO"):
+            target_repo = Path(os.environ["TARGET_REPO"])
+        elif hasattr(backend, "repo_path"):
+            target_repo = Path(backend.repo_path)
+        else:
+            target_repo = Path(".")
 
     # Scanner skill docs ride the deepagents skills mechanism (index injected
     # by SkillsMiddleware, full SKILL.md on demand via read_file); local mode
@@ -392,7 +441,8 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         backend = _with_skills_route(backend)
 
     if scratchpad:
-        backend = _with_scratch_route(backend)
+        scratch_dir = _resolve_scratch_dir(target_repo, name)
+        backend = _with_scratch_route(backend, scratch_dir=scratch_dir)
 
     # Profile keyed on this model's provider: the no-subagent/no-mutating posture must hold for any model.
     _register_profile(llm)

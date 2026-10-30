@@ -7,9 +7,9 @@ from ._compat import tool
 @tool(parse_docstring=True)
 def reachability_check(path: str, snippet: str, sanitizer_hint: str = "",
                        from_symbol: str = "", to_symbol: str = "") -> str:
-    """Heuristic static and call-graph reachability check.
+    """Call-graph and static reachability check.
 
-    Flags sanitizers and optionally traces call paths between an entry symbol and a sink.
+    Traces call paths between an entry symbol and a sink via CodeGraph native paths.
     Surfaces evidence only; the validator LLM makes the final call.
 
     Args:
@@ -40,6 +40,8 @@ def reachability_check(path: str, snippet: str, sanitizer_hint: str = "",
                 lines.append(f"Call-graph reachability: no path found between {from_symbol} and {to_symbol}.")
         except Exception as exc:
             lines.append(f"Call-graph reachability check failed: {exc}")
+    else:
+        lines.append("Call-graph reachability: specify both from_symbol and to_symbol to trace call paths.")
 
     from harness.tools.code import _safe_path
     try:
@@ -48,21 +50,17 @@ def reachability_check(path: str, snippet: str, sanitizer_hint: str = "",
         err_msg = f"ERROR: {e}"
         return f"{err_msg}\n" + "\n".join(lines) if lines else err_msg
 
-    context = ""
-    try:
-        if p.is_file() and not p.is_symlink():
-            context = p.read_text(errors="replace")[:20000]
-    except OSError:
-        pass
-    blob = f"{snippet}\n{context}\n{sanitizer_hint}".lower()
-    signals = []
-    for sig in ["parameterized", "placeholder", "execute(", "sanitize_html", "escape",
-                "int(", "allowlist", "realpath", "csrf", "auth_required",
-                "login_required", "permission", "prepared", "bound parameter"]:
-        if sig in blob:
-            signals.append(sig)
-    if signals:
-        lines.append(f"possible-sanitizer signals: {', '.join(signals)}. Validator must confirm they actually neutralize the sink.")
-    else:
-        lines.append("no obvious sanitizer signal found. Treat as potentially reachable.")
+    if not p.is_file():
+        lines.append(f"Warning: file {path} not found.")
+    elif snippet:
+        try:
+            content = p.read_text(errors="replace")
+            if snippet not in content:
+                lines.append("Warning: snippet not found verbatim in target file.")
+        except OSError:
+            pass
+
+    if sanitizer_hint:
+        lines.append(f"Sanitizer hint provided: '{sanitizer_hint}'. Validator must verify if it neutralizes the sink.")
+
     return "\n".join(lines)

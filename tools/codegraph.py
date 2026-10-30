@@ -3,12 +3,12 @@
 This is the ONE binding module for the code-intelligence family. Three groups
 live here:
 
-- **The ``_db``-first graph tools** — :func:`callers`, :func:`callees`,
+- **The native graph tools** — :func:`callers`, :func:`callees`,
   :func:`framework_routes`, :func:`affected`. Each answers from the prebuilt
-  CodeGraph index (``<root>/.codegraph/codegraph.db``, read-only) when it is
-  present AND the DB-visible half of the build gate passes (``pendingRefs`` is
-  zero); otherwise — and whenever the index yields nothing for the query — it
-  fails closed with clean guidance / ``(no matches)`` sentinels.
+  CodeGraph index via the native CodeGraph SDK when present AND the
+  build gate passes (``pendingRefs`` is zero); otherwise — and whenever the
+  index yields nothing for the query — it fails closed with clean guidance /
+  ``(no matches)`` sentinels.
 - **The native high-order tools** — :func:`codegraph_explore`, :func:`find_path`,
   :func:`impact_radius`, :func:`build_context`,
   :func:`detect_circular_and_dead_code`, :func:`get_routing_manifest`,
@@ -26,7 +26,6 @@ Import law: this module imports only ``harness.codegraph`` (the 9 +
 from __future__ import annotations
 
 import re
-from collections import deque
 from pathlib import Path
 
 from harness.codegraph import (
@@ -64,17 +63,7 @@ CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
 # explicit scepticism.
 UNCERTAIN_BELOW = 0.6
 
-# Container kinds whose children count as affected when the container is reached
-# (getImpactRadius semantics: a class reaching its methods counts).
-_CONTAINER_KINDS = frozenset({
-    "file", "class", "interface", "struct", "trait", "enum", "union",
-    "module", "namespace", "object", "record", "protocol", "impl",
-})
-
-# Definition kinds ``callers`` / ``callees`` will treat as the target symbol.
-_CALLABLE_KINDS = ("function", "method", "constructor", "macro")
-
-# The pinned route line, emitted by the ``_db``-first framework_routes path:
+# The pinned route line:
 #     <route_file>:<route_line>: [route] <url> -> <handler> (<handler_file>:<handler_line>)
 ROUTE_LINE_RE = re.compile(
     r"^(?P<route_file>.+?):(?P<route_line>\d+): \[route\] "
@@ -108,13 +97,15 @@ def _index_gate(root: str):
     ``ok`` is False when the index is absent/unreadable OR when the DB-visible
     half of CodeGraph's build gate fails — ``unresolved_refs`` still has
     ``pending`` rows, i.e. the resolution pass has not finished. That mirrors
-    D2's fail-open contract: a build/gate failure sends the agents to the grep
-    tools instead of answering from a half-resolved graph.
+    the fail-closed contract: a build/gate failure returns guidance instead
+    of answering from a half-resolved graph.
 
     ``conn`` is None whenever the index is unusable; callers only act on it when
     ``ok`` is True. Never raises.
     """
     try:
+        if not (Path(root) / ".codegraph").is_dir():
+            return None, False
         state = _db.index_state(root)
     except Exception:  # pragma: no cover - index_state already degrades
         return None, False
@@ -147,11 +138,7 @@ def _contained_file(root: str, file_path: str) -> Path | None:
 
 
 def _source_line(root: str, file_path: str, line: int) -> str:
-    """The raw source line (no newline, capped at 1000 chars) or ''.
-
-    The grep fallback emits ``rel:line: <raw text>``; the ``_db`` path reads the
-    same text back so the two paths share one line format.
-    """
+    """The raw source line (no newline, capped at 1000 chars) or ''."""
     if line <= 0:
         return ""
     path = _contained_file(root, file_path)
@@ -166,37 +153,6 @@ def _source_line(root: str, file_path: str, line: int) -> str:
     if 0 < line <= len(lines):
         return lines[line - 1][:1000]
     return ""
-
-
-def _file_matches(node_file, want: str) -> bool:
-    nf = str(node_file or "").replace("\\", "/")
-    w = str(want or "").replace("\\", "/").lstrip("./")
-    if not w:
-        return True
-    return (nf == want or nf == w or nf.endswith("/" + w)
-            or Path(nf).name == Path(w).name)
-
-
-def _def_nodes(conn, name: str, file: str | None, limit: int = 500) -> list[dict]:
-    """Definition nodes for ``name`` (tail), optionally disambiguated by ``file``.
-
-    Same-named symbols are common in scans, so ``file`` (the MCP-schema
-    disambiguator) narrows to one definition before the call edges are read.
-    """
-    tail = str(name).split(".")[-1]
-    if not tail:
-        return []
-    nodes = _db.find_nodes(conn, name=tail, limit=limit)
-    if not nodes:
-        return []
-    callables = [n for n in nodes if str(n.get("kind")) in _CALLABLE_KINDS]
-    if callables:
-        nodes = callables
-    if file:
-        matched = [n for n in nodes if _file_matches(n.get("file_path"), file)]
-        if matched:
-            nodes = matched
-    return nodes
 
 
 def _paginate(lines: list[str], limit, offset, env_key: str, default: int) -> str:
@@ -220,20 +176,6 @@ def _cap_section(lines: list[str], lim: int) -> list[str]:
 # framework_routes: route nodes from the index
 # ---------------------------------------------------------------------------
 
-def _routes_db(conn, limit, offset) -> str | None:
-    """The index's routing manifest in the pinned route format, or None."""
-    rows = _db.routing_manifest(conn, limit=5000)
-    if not rows:
-        return None
-    lines = []
-    for r in rows:
-        lines.append(
-            f"{r.get('route_file')}:{r.get('route_line')}: [route] {r.get('url')} "
-            f"-> {r.get('handler')} ({r.get('handler_file')}:{r.get('handler_line')})"
-        )
-    return _paginate(lines, limit, offset, "ROUTES_LIMIT", 500)
-
-
 @tool(parse_docstring=True)
 def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0) -> str:
     """Index-backed web-framework routes (URL + handler file:line). Paginated via limit/offset.
@@ -246,21 +188,21 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
     conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
-    db_out = _routes_db(conn, limit, offset)
-    if db_out is not None:
-        return db_out
     try:
         from harness.codegraph import native
         res = native.routing_manifest(root)
-        manifest = res.get("manifest")
-        if manifest and isinstance(manifest, list):
+        manifest = res.get("manifest") if isinstance(res, dict) else None
+        entries = manifest.get("entries") if isinstance(manifest, dict) else (manifest if isinstance(manifest, list) else [])
+        if entries:
             lines = []
-            for r in manifest:
-                url = r.get("path") or r.get("url") or "/"
+            for r in entries:
+                url = r.get("url") or r.get("path") or "/"
                 handler = r.get("handler") or r.get("name") or "handler"
-                rf = r.get("filePath") or "routes"
-                rl = r.get("startLine") or 1
-                lines.append(f"{rf}:{rl}: [route] {url} -> {handler} ({rf}:{rl})")
+                rf = r.get("routeFile") or r.get("filePath") or "routes"
+                rl = r.get("routeLine") or r.get("startLine") or 1
+                hf = r.get("handlerFile") or rf
+                hl = r.get("handlerLine") or rl
+                lines.append(f"{rf}:{rl}: [route] {url} -> {handler} ({hf}:{hl})")
             if lines:
                 return _paginate(lines, limit, offset, "ROUTES_LIMIT", 500)
     except Exception:
@@ -281,43 +223,6 @@ def _sanitize_func_name(func_name: str) -> str:
     return name
 
 
-def _callers_db(conn, root: str, name: str, file: str | None, limit) -> str | None:
-    """Call sites from incoming ``calls`` edges, or None when no def is indexed."""
-    defs = _def_nodes(conn, name, file)
-    if not defs:
-        return None
-    _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
-    out: list[str] = []
-    def_lines: list[str] = []
-    for n in defs:
-        line = int(n.get("start_line") or 0)
-        src = _source_line(root, n.get("file_path") or "", line)
-        text = src or str(n.get("signature") or n.get("name") or name)
-        def_lines.append(f"{n.get('file_path')}:{line}: {text}")
-    call_lines: list[str] = []
-    seen: set[tuple] = set()
-    for n in defs:
-        for e in _db.incoming_edges(conn, n["id"], kinds=["calls"], limit=500):
-            caller = _db.get_node(conn, e.get("source"))
-            if caller is None:
-                continue
-            fp = caller.get("file_path") or ""
-            line = int(e.get("line") or caller.get("start_line") or 0)
-            key = (fp, line)
-            if key in seen:
-                continue
-            seen.add(key)
-            src = _source_line(root, fp, line)
-            call_lines.append(f"{fp}:{line}: {src or caller.get('name') or ''}")
-    if def_lines:
-        out.append("## def")
-        out.extend(_cap_section(def_lines, _lim))
-    if call_lines:
-        out.append("## calls")
-        out.extend(_cap_section(call_lines, _lim))
-    return "\n".join(out)[:20000] or "(no matches)"
-
-
 @tool(parse_docstring=True)
 def callers(func_name: str, root: str = ".", file: str | None = None,
             limit: int | None = None, as_json: bool = False) -> str:
@@ -336,43 +241,41 @@ def callers(func_name: str, root: str = ".", file: str | None = None,
     conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
-    if as_json:
-        import json
+    try:
         from harness.codegraph import native
-        res = native.callers_json(name, repo=root, limit=limit or 100)
-        return json.dumps(res, indent=2)
-    db_out = _callers_db(conn, root, name, file, limit)
-    if db_out is not None:
-        return db_out
+        limit_arg = 100 if limit is None else limit
+        res = native.callers_json(name, repo=root, file=file, limit=limit_arg)
+        if as_json:
+            import json
+            return json.dumps(res, indent=2)
+        defs = res.get("definitions") or []
+        calls = res.get("callers") or []
+        if not defs and not calls:
+            return "(no matches)"
+        _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
+        out: list[str] = []
+        def_lines: list[str] = []
+        for d in defs:
+            line = int(d.get("startLine") or 0)
+            src = _source_line(root, d.get("filePath") or "", line)
+            text = src or str(d.get("signature") or d.get("name") or name)
+            def_lines.append(f"{d.get('filePath')}:{line}: {text}")
+        call_lines: list[str] = []
+        for c in calls:
+            fp = c.get("filePath") or ""
+            line = int(c.get("line") or 0)
+            src = _source_line(root, fp, line)
+            call_lines.append(f"{fp}:{line}: {src or c.get('name') or ''}")
+        if def_lines:
+            out.append("## def")
+            out.extend(_cap_section(def_lines, _lim))
+        if call_lines:
+            out.append("## calls")
+            out.extend(_cap_section(call_lines, _lim))
+        return "\n".join(out)[:20000] or "(no matches)"
+    except Exception:
+        pass
     return "(no matches)"
-
-
-def _callees_db(conn, root: str, name: str, file: str | None, limit) -> str | None:
-    """Callees from outgoing ``calls`` edges, or None when no def is indexed."""
-    defs = _def_nodes(conn, name, file)
-    if not defs:
-        return None
-    _lim = _resolve_limit(limit, "CALLERS_LIMIT", 100)
-    seen: list[str] = []
-    seen_set: set[str] = set()
-    for n in defs:
-        for e in _db.outgoing_edges(conn, n["id"], kinds=["calls"], limit=500):
-            target = _db.get_node(conn, e.get("target"))
-            if target is None:
-                continue
-            rel = target.get("file_path") or ""
-            label = f"{rel}:{target.get('name')}()"
-            if label in seen_set:
-                continue
-            seen_set.add(label)
-            seen.append(label)
-            if _lim > 0 and len(seen) >= _lim:
-                break
-        if _lim > 0 and len(seen) >= _lim:
-            break
-    if not seen:
-        return None
-    return _paginate(seen, limit, 0, "CALLERS_LIMIT", 100)
 
 
 @tool(parse_docstring=True)
@@ -393,87 +296,26 @@ def callees(func_name: str, root: str = ".", file: str | None = None,
     conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
-    if as_json:
-        import json
+    try:
         from harness.codegraph import native
-        res = native.callees_json(name, repo=root, limit=limit or 100)
-        return json.dumps(res, indent=2)
-    db_out = _callees_db(conn, root, name, file, limit)
-    if db_out is not None:
-        return db_out
+        limit_arg = 100 if limit is None else limit
+        res = native.callees_json(name, repo=root, file=file, limit=limit_arg)
+        if as_json:
+            import json
+            return json.dumps(res, indent=2)
+        callees_list = res.get("callees") or []
+        if not callees_list:
+            return "(no matches)"
+        seen = [c.get("label") or f"{c.get('filePath')}:{c.get('name')}()" for c in callees_list]
+        return _paginate(seen, limit, 0, "CALLERS_LIMIT", 100)
+    except Exception:
+        pass
     return "(no matches)"
 
 
 # ---------------------------------------------------------------------------
 # affected: getImpactRadius semantics over the index (no grep equivalent)
 # ---------------------------------------------------------------------------
-
-def _edge_confidence(edge: dict) -> float:
-    meta = edge.get("metadata") or {}
-    try:
-        return float(meta.get("confidence", 1.0))
-    except (TypeError, ValueError):
-        return 1.0
-
-
-def _affected_db(conn, root: str, name: str, file: str | None, depth: int, limit) -> str | None:
-    seeds = _def_nodes(conn, name, file)
-    if not seeds:
-        return None
-    try:
-        depth_cap = int(depth)
-    except (TypeError, ValueError):
-        depth_cap = 3
-    depth_cap = min(max(depth_cap, 1), 10)
-    seed_label = ", ".join(f"{n.get('file_path')}:{n.get('start_line')}" for n in seeds[:5])
-    seen: set[str] = {n["id"] for n in seeds}
-    results: list[dict] = []
-    queue: deque = deque((n["id"], 0) for n in seeds)
-    while queue:
-        nid, hop = queue.popleft()
-        if hop >= depth_cap:
-            continue
-        for e in _db.incoming_edges(conn, nid, limit=500):
-            if e.get("kind") == "contains":
-                continue
-            src = _db.get_node(conn, e.get("source"))
-            if src is None or src["id"] in seen:
-                continue
-            seen.add(src["id"])
-            results.append({"node": src, "hop": hop + 1, "kind": e.get("kind"),
-                            "confidence": _edge_confidence(e),
-                            "via_line": e.get("line")})
-            queue.append((src["id"], hop + 1))
-            # getImpactRadius: a container reached by an incoming edge also
-            # contributes its children (class -> its methods count).
-            if str(src.get("kind")) in _CONTAINER_KINDS:
-                for child in _db.node_children(conn, src["id"], limit=200):
-                    if child["id"] in seen:
-                        continue
-                    seen.add(child["id"])
-                    results.append({"node": child, "hop": hop + 1, "kind": "contains",
-                                    "confidence": 1.0,
-                                    "via_line": child.get("start_line")})
-                    queue.append((child["id"], hop + 1))
-    header = (f"Affected nodes for {name} (depth<={depth_cap}, total {len(results)}; "
-              f"seeds: {seed_label})")
-    lines = [header]
-    _lim = _resolve_limit(limit, "AFFECTED_LIMIT", 100)
-    page = results if _lim <= 0 else results[:_lim]
-    for r in page:
-        node = r["node"]
-        loc = f"{node.get('file_path')}:{r.get('via_line') or node.get('start_line')}"
-        flag = ""
-        if r["kind"] != "contains" and float(r["confidence"]) < UNCERTAIN_BELOW:
-            flag = " UNCERTAIN (name-only guess; do not follow)"
-        lines.append(f"- {node.get('name')} [{node.get('kind')}] {loc} "
-                     f"(hop {r['hop']}, {r['kind']}, confidence {float(r['confidence']):.2f}){flag}")
-    if not results:
-        lines.append("- (nothing reaches this symbol within the depth cap)")
-    elif len(results) > len(page):
-        lines.append(f"… +{len(results) - len(page)} more")
-    return "\n".join(lines)[:20000]
-
 
 @tool(parse_docstring=True)
 def affected(node: str, root: str = ".", file: str | None = None,
@@ -497,22 +339,38 @@ def affected(node: str, root: str = ".", file: str | None = None,
         return "(no matches)"
     conn, ok = _index_gate(root)
     if not ok:
-        # No grep equivalent for reachability: this is the success-shaped
-        # guidance the un-indexed contract uses everywhere else.
         return _db.guidance_no_db(root)
-    db_out = _affected_db(conn, root, name, file, depth, limit)
-    if db_out is not None:
-        return db_out
+    try:
+        depth_cap = int(depth)
+    except (TypeError, ValueError):
+        depth_cap = 3
+    depth_cap = min(max(depth_cap, 1), 10)
     try:
         from harness.codegraph import native
-        res = native.impact(name, depth=depth, repo=root)
-        nodes = res.get("nodes", [])
-        if nodes:
-            lines = [f"Affected nodes for {name} (native impact depth<={depth}, total {len(nodes)}):"]
-            lim = limit if limit and limit > 0 else 100
-            for n in nodes[:lim]:
-                lines.append(f"- {n.get('name')} [{n.get('kind')}] {n.get('filePath')}:{n.get('startLine')}")
-            return "\n".join(lines)
+        res = native.impact(name, depth=depth_cap, repo=root, file=file)
+        results = res.get("results") or []
+        roots = res.get("roots") or []
+        if not results and not roots:
+            return "(no matches)"
+        seed_label = ", ".join(f"{n.get('filePath')}:{n.get('startLine')}" for n in roots[:5]) if roots else name
+        lines = [f"Affected nodes for {name} (depth<={depth_cap}, total {len(results)}; seeds: {seed_label})"]
+        _lim = _resolve_limit(limit, "AFFECTED_LIMIT", 100)
+        page = results if _lim <= 0 else results[:_lim]
+        for r in page:
+            node_info = r.get("node") or {}
+            loc = f"{node_info.get('filePath')}:{r.get('viaLine') or node_info.get('startLine')}"
+            flag = ""
+            conf = float(r.get("confidence", 1.0))
+            if r.get("kind") != "contains" and conf < UNCERTAIN_BELOW:
+                flag = " UNCERTAIN (name-only guess; do not follow)"
+            lines.append(f"- {node_info.get('name')} [{node_info.get('kind')}] {loc} "
+                         f"(hop {r.get('hop', 1)}, {r.get('kind', 'calls')}, "
+                         f"confidence {conf:.2f}){flag}")
+        if not results:
+            lines.append("- (nothing reaches this symbol within the depth cap)")
+        elif len(results) > len(page):
+            lines.append(f"… +{len(results) - len(page)} more")
+        return "\n".join(lines)[:20000]
     except Exception:
         pass
     return "(no matches)"

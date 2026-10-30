@@ -221,7 +221,7 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
 
 @tool(parse_docstring=True)
 def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int | None = None, offset: int = 0) -> str:
-    """Structural query: Python AST for .py files (stdlib), grep fallback otherwise.
+    """Structural query: Python AST for .py files (stdlib).
 
     node: FunctionDef|ClassDef|Call|Import|Assign. Paginated via limit/offset.
 
@@ -245,9 +245,9 @@ def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int 
     if not p.is_file():
         return f"ERROR: not a file: {path}"
     if p.suffix.lower() != ".py":
-        rx = re.escape(name_pattern) if name_pattern else r"\w+"
-        return grep_files(regex=rf"\b{rx}\s*\(" if name_pattern else r"\b\w+\s*\(",
-                          include=p.name, root=str(p.parent))
+        return (f"ERROR: ast_query parses Python (.py) AST only; got {p.suffix or 'no extension'}. "
+                "For multi-language structural symbols, use codegraph_explore / get_symbol / find_references, "
+                "or read_file.")
     try:
         tree = _ast.parse(p.read_text(errors="replace"))
     except (SyntaxError, OSError) as e:

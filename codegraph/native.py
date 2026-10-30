@@ -114,17 +114,24 @@ def find_path(from_symbol: str, to_symbol: str, repo: str | None = None) -> list
     return res.get("path")
 
 
-def impact(symbol: str, depth: int = 2, repo: str | None = None) -> dict:
+def impact(symbol: str, depth: int = 3, repo: str | None = None, file: str | None = None) -> dict:
     """Multi-hop blast-radius analysis (calculates downstream transitive dependencies)."""
-    res = _run_node_runner("impact", _resolve_repo(repo), symbol, str(depth))
+    args = [symbol, str(depth)]
+    if file:
+        args.append(str(file))
+    res = _run_node_runner("impact", _resolve_repo(repo), *args)
     if "error" in res:
-        return {"symbol": symbol, "affected": [], "error": res["error"]}
-    nodes = res.get("nodes", [])
+        return {"symbol": symbol, "roots": [], "results": [], "nodes": [], "edges": [], "error": res["error"]}
+    results = res.get("results", [])
+    roots = res.get("roots", [])
+    nodes = res.get("nodes", [r["node"] for r in results if "node" in r])
     edges = res.get("edges", [])
     return {
         "symbol": symbol,
         "depth": depth,
-        "affected_count": len(nodes),
+        "affected_count": len(results) or len(nodes),
+        "roots": roots,
+        "results": results,
         "nodes": nodes,
         "edges": edges,
     }
@@ -154,71 +161,32 @@ def circular_and_dead_code(repo: str | None = None) -> dict:
 
 def build_context(task: str, repo: str | None = None, max_nodes: int = 20, timeout: int = 30) -> dict:
     """Task-focused context assembly that pulls relevant definitions, relationships, and entry points."""
-    codegraph_bin = shutil.which("codegraph")
-    repo_path = _resolve_repo(repo)
-    if not codegraph_bin or not (Path(repo_path) / ".codegraph").is_dir():
-        return {"error": "INDEX_NOT_AVAILABLE", "query": task}
-
-    cmd = [codegraph_bin, "context", "-p", repo_path, "-f", "json", "-n", str(max_nodes), "--no-code", task]
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env=_clean_env(),
-        )
-        if proc.returncode != 0:
-            return {"error": proc.stderr.strip() or "CONTEXT_FAILED", "query": task}
-        return json.loads(proc.stdout.strip())
-    except Exception as exc:
-        return {"error": str(exc), "query": task}
+    res = _run_node_runner("context", _resolve_repo(repo), task, str(max_nodes), timeout=timeout)
+    if "error" in res:
+        return {"error": res["error"], "query": task}
+    return res
 
 
-def callers_json(func_name: str, repo: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
+def callers_json(func_name: str, repo: str | None = None, file: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
     """Retrieve callers as structured JSON with enriched metadata (confidence, column, target ID)."""
-    codegraph_bin = shutil.which("codegraph")
-    repo_path = _resolve_repo(repo)
-    if not codegraph_bin or not (Path(repo_path) / ".codegraph").is_dir():
-        return {"error": "INDEX_NOT_AVAILABLE", "symbol": func_name}
-
-    cmd = [codegraph_bin, "callers", "-p", repo_path, "-j", "-l", str(limit), func_name]
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env=_clean_env(),
-        )
-        if proc.returncode != 0:
-            return {"error": proc.stderr.strip() or "CALLERS_FAILED", "symbol": func_name}
-        return json.loads(proc.stdout.strip())
-    except Exception as exc:
-        return {"error": str(exc), "symbol": func_name}
+    args = [func_name, str(limit)]
+    if file:
+        args.append(str(file))
+    res = _run_node_runner("callers", _resolve_repo(repo), *args, timeout=timeout)
+    if "error" in res:
+        return {"error": res["error"], "symbol": func_name, "definitions": [], "callers": []}
+    return res
 
 
-def callees_json(func_name: str, repo: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
+def callees_json(func_name: str, repo: str | None = None, file: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
     """Retrieve callees as structured JSON with enriched metadata (confidence, column, target ID)."""
-    codegraph_bin = shutil.which("codegraph")
-    repo_path = _resolve_repo(repo)
-    if not codegraph_bin or not (Path(repo_path) / ".codegraph").is_dir():
-        return {"error": "INDEX_NOT_AVAILABLE", "symbol": func_name}
-
-    cmd = [codegraph_bin, "callees", "-p", repo_path, "-j", "-l", str(limit), func_name]
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            env=_clean_env(),
-        )
-        if proc.returncode != 0:
-            return {"error": proc.stderr.strip() or "CALLEES_FAILED", "symbol": func_name}
-        return json.loads(proc.stdout.strip())
-    except Exception as exc:
-        return {"error": str(exc), "symbol": func_name}
+    args = [func_name, str(limit)]
+    if file:
+        args.append(str(file))
+    res = _run_node_runner("callees", _resolve_repo(repo), *args, timeout=timeout)
+    if "error" in res:
+        return {"error": res["error"], "symbol": func_name, "callees": []}
+    return res
 
 
 def type_hierarchy(symbol: str, repo: str | None = None) -> dict:
@@ -233,6 +201,14 @@ def type_hierarchy(symbol: str, repo: str | None = None) -> dict:
     }
 
 
+def file_dependency_pairs(repo: str | None = None, timeout: int = 30) -> list[dict]:
+    """Retrieve native cross-file dependency pairs from the CodeGraph SDK."""
+    res = _run_node_runner("fileDependencies", _resolve_repo(repo), timeout=timeout)
+    if isinstance(res, dict) and "pairs" in res and isinstance(res["pairs"], list):
+        return res["pairs"]
+    return []
+
+
 __all__ = [
     "explore",
     "find_path",
@@ -243,4 +219,5 @@ __all__ = [
     "type_hierarchy",
     "callers_json",
     "callees_json",
+    "file_dependency_pairs",
 ]

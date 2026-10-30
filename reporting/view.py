@@ -1,10 +1,8 @@
-"""Rich-backed CLI viewer helpers
+"""Rich-backed CLI viewer helpers.
 
 View-only rendering and console utilities used by ``harness.cli`` subcommands
-(status/inspect/runs/findings). Nothing here runs a scan — the
-interactive TUI was removed and ``harness scan`` is the single scan path.
-Non-TTY streams and ``NO_COLOR`` receive the same layout with styles stripped
-by rich.
+(status/inspect/runs/findings). Non-TTY streams and ``NO_COLOR`` receive the
+same layout with styles stripped by rich.
 """
 from __future__ import annotations
 

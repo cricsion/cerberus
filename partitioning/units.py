@@ -343,97 +343,6 @@ def _fold_to_cap(units: list[dict], max_units: int,
     return out
 
 
-def _attach_linked_support(files: list[str], units: list[dict],
-                           edges: dict | None,
-                           weight_of: dict[str, int] | None,
-                           target: int) -> list[str]:
-    """Attach linked templates/configs to the strongest owning community."""
-    if not edges or not units:
-        return files
-    records: list[tuple] = []
-    for f in sorted(files):
-        kind = support_file_kind(f)
-        if kind not in {"template", "config"}:
-            continue
-        candidates = []
-        for unit in units:
-            members = [member for member in unit.get("files", []) if member]
-            member_set = set(members)
-            weights = []
-            for other in member_set:
-                weight = max(int(edges.get((f, other), 0) or 0),
-                             int(edges.get((other, f), 0) or 0))
-                # Same-dir soft edges are weight 1; only weight >= 2 counts.
-                if weight >= 2:
-                    weights.append(weight)
-            if not weights:
-                continue
-            score = sum(weights)
-            size = _unit_bytes(unit, weight_of)
-            candidates.append((-max(weights), -score, size,
-                               str(unit.get("name", "")), unit))
-        if candidates:
-            candidates.sort(key=lambda item: item[:4])
-            records.append((-candidates[0][0], -candidates[0][1], f,
-                            kind, candidates))
-    records.sort(key=lambda item: (-item[0], -item[1], item[2]))
-    attached: set[str] = set()
-    for _, _, f, kind, candidates in records:
-        fsize = int((weight_of or {}).get(f, 0) or 0)
-        for _, _, _, _, unit in candidates:
-            current = _unit_bytes(unit, weight_of)
-            if target > 0 and current + fsize > target:
-                continue
-            unit["files"] = sorted(set(unit.get("files") or []) | {f})
-            prev = unit.get("reason", "")
-            reason = f"linked-support:{kind}"
-            if reason not in prev:
-                unit["reason"] = f"{prev}+{reason}" if prev else reason
-            attached.add(f)
-            break
-    # Propagate ownership via template inheritance/includes and config imports;
-    # sorted paths + iterate to fixpoint, so input order does not matter.
-    remaining = set(files) - attached
-    while remaining:
-        progress = False
-        for f in sorted(remaining):
-            kind = support_file_kind(f)
-            if kind not in {"template", "config"}:
-                continue
-            fsize = int((weight_of or {}).get(f, 0) or 0)
-            candidates = []
-            for unit in units:
-                members = [member for member in unit.get("files", [])
-                           if support_file_kind(member) == kind]
-                weights = []
-                for other in members:
-                    weight = max(int(edges.get((f, other), 0) or 0),
-                                 int(edges.get((other, f), 0) or 0))
-                    if weight >= 2:
-                        weights.append(weight)
-                if not weights:
-                    continue
-                size = _unit_bytes(unit, weight_of)
-                if target > 0 and size + fsize > target:
-                    continue
-                candidates.append((-max(weights), -sum(weights), size,
-                                   str(unit.get("name", "")), unit))
-            if not candidates:
-                continue
-            candidates.sort(key=lambda item: item[:4])
-            unit = candidates[0][4]
-            unit["files"] = sorted(set(unit.get("files") or []) | {f})
-            prev = unit.get("reason", "")
-            reason = f"linked-support:{kind}"
-            if reason not in prev:
-                unit["reason"] = f"{prev}+{reason}" if prev else reason
-            remaining.remove(f)
-            attached.add(f)
-            progress = True
-        if not progress:
-            break
-    return [f for f in files if f not in attached]
-
 
 def _support_group_units(groups: dict[tuple[str, str], list[str]],
                          prefix: str, weight_of: dict[str, int] | None,
@@ -964,30 +873,10 @@ def partition_units(repo: str, files: list[str],
     if not units:
         if edges is None:
             edges = _load_partition_edges(repo, app_files)
-        support_files = [
-            f for f in app_files
-            if support_file_kind(f) in {"template", "config"}]
-        if support_files:
-            support_set = set(support_files)
-            units = _units_from_dirs(
-                repo, [f for f in app_files if f not in support_set],
-                weight_of=weight_of, target=target, edges=edges)
-            unowned = _attach_linked_support(support_files, units, edges,
-                                             weight_of, target)
-            groups: dict[tuple[str, str], list[str]] = defaultdict(list)
-            for f in unowned:
-                kind = support_file_kind(f)
-                if kind:
-                    parent = str(PurePosixPath(f.replace("\\", "/")).parent)
-                    groups[(kind, parent)].append(f)
-            units.extend(_support_group_units(groups, "unmapped", weight_of,
-                                             target))
-            units = _normalize_units(units, weight_of, target, edges=edges)
-        else:
-            units = _units_from_dirs(repo, app_files, weight_of=weight_of,
-                                     target=target, edges=edges)
+        units = _units_from_dirs(repo, app_files, weight_of=weight_of,
+                                 target=target, edges=edges)
     if not units:
         units = _normalize_units(
             [{"name": "all", "files": sorted(set(app_files)),
-              "reason": "fallback-single-unit"}], weight_of, target, edges=edges)
+              "reason": "single-unit"}], weight_of, target, edges=edges)
     return _finish(units)

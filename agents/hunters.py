@@ -131,7 +131,6 @@ def _cand_ctx(candidates: list[dict], cfg: dict | None = None,
     real_cands = [c for c in (candidates or [])
                   if isinstance(c, dict) and c.get("id") != "prefilter" and c.get("severity") != "info"]
     slim = _slim_candidates(real_cands) if real_cands else ""
-    # The threat model reaches the task via build_discovery_task's labeled section.
     return slim
 
 
@@ -241,7 +240,7 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
 
     name = str(unit.get("name", "unit"))
     model_kwargs = get_model_kwargs(cfg, "hunter")
-    cand_ctx = _cand_ctx(candidates, cfg)
+    cand_ctx = _cand_ctx(candidates)
     task = build_discovery_task(name, repo, files or [], cand_ctx, threat_md,
                                 focus=focus_hint(focus))
     from harness.sandbox import acquired_backend
@@ -331,8 +330,6 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                 name="system-pass", backend=backend, root_dir=repo,
                 scratchpad=True),
             default=EMPTY_STRUCTURED, logger=_logger)
-    if _tools_out is not None:
-        _tools_out.append("deep-agent")
     norm = _findings_from_discovery(parsed, "system", files or [], repo)
     if not norm and raw_text.strip():
         norm = _parse_findings_json(raw_text, "system", files or [], repo)

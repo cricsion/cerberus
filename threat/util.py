@@ -83,7 +83,7 @@ def find_repo_file(repo: str) -> Path | None:
         return None
 
 
-_GIT_SAFE_OPTS = ("-c", "core.hooksPath=/dev/null", "-c", "diff.external=")
+_GIT_SAFE_OPTS = ("-c", "core.hooksPath=/dev/null", "-c", "diff.external=", "-c", "commit.gpgsign=false")
 
 
 def _detector_signals(candidates: list[dict]) -> list[str]:
