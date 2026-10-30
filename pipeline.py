@@ -152,7 +152,7 @@ def _is_shebang_script(path: Path) -> bool:
 
 
 def _inventory_files(base: Path) -> list[str]:
-    from harness.tools.graphify import GRAPHIFY_SKIP_DIRS
+    from harness.tools.code import SKIP_DIRS
     if base.is_file():
         graphify_ignored = _graphify_ignore_predicate(base.parent)
         if graphify_ignored is not None and graphify_ignored(base):
@@ -168,7 +168,7 @@ def _inventory_files(base: Path) -> list[str]:
         kept_dirs = []
         for name in sorted(dirs):
             directory = root_path / name
-            if name in GRAPHIFY_SKIP_DIRS or directory.is_symlink():
+            if name in SKIP_DIRS or directory.is_symlink():
                 continue
             if name == "plugins" and root_path.name == "public":
                 continue
@@ -282,25 +282,6 @@ def indexer_node(state: ScanState) -> dict:
     cands.extend(_extra)
     _tools_used.extend(_used)
 
-    def _graphify_stage() -> tuple[list[dict], list[str]]:
-        from harness.config import as_bool, config_default
-        from harness.tools import graphify as _gf
-
-        _gcfg = _node_cfg(state)
-        enabled = config_default("graphify.enabled")
-        _gen = str(((_gcfg.get("graphify") or {}).get("enabled", enabled))).lower()
-        if as_bool(_gen) and base.is_dir():
-            _gpath = _gf.graphify_build(repo)
-            if _gpath:
-                return [_info_candidate(
-                    "graphify", "code-graph structural summary", repo,
-                    _gf.graphify_summary(repo))], ["graphify_build"]
-        return [], []
-
-    _extra, _used = run_fail_open("graphify_build", _graphify_stage,
-                                  default=([], []), logger=logger)
-    cands.extend(_extra)
-    _tools_used.extend(_used)
     return {"files": files, "candidates": cands, "tools_used": sorted(set(_tools_used))}
 
 

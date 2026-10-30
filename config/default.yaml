@@ -68,8 +68,7 @@ partition:
   misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
   same_dir_edges: ${PARTITION_SAME_DIR_EDGES:-1}
-# codegraph is the index provider, and the graphify
-# file-graph is deprecated pending removal (P4).
+# codegraph is the index provider.
 codegraph:
   enabled: ${CODEGRAPH_ENABLED:-1}
   # Tool output caps (env-overridable). 0 = unlimited where supported.
@@ -78,17 +77,10 @@ codegraph:
   # Partitioning source:
   #   primary = serve codegraph-native units (depth-1 module grouping with
   #             pass-through collapsing); needs a readable index.
-  #   off     = serve the graphify file-graph partition instead; the codegraph
-  #             partition path never reads the index.
+  #   off     = deterministic directory units instead; the codegraph partition
+  #             path never reads the index.
   partition:
     mode: ${CODEGRAPH_PARTITION_MODE:-primary}
-graphify:
-  # Deprecated pending removal (P4); the codegraph stage replaces this build.
-  enabled: ${GRAPHIFY_ENABLED:-0}
-  # Subprocess budget (seconds) for the build path.
-  build_timeout: ${GRAPHIFY_BUILD_TIMEOUT:-600}
-  # Tool output cap (chars; 0 = unlimited).
-  chars: ${GRAPH_CHARS:-20000}
 sandbox:
   # local = repo-confined file tools only, NO shell (no `execute` tool;
   # SAST wrappers are the only scanner surface in this mode).

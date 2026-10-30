@@ -9,8 +9,8 @@ from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
 from harness.config import resolve_call_timeout, resolve_recursion_limit
 from harness.fallback import EMPTY_STRUCTURED, run_fail_open
 from harness.paths import to_repo_relative
-from harness.schemas import safe_float, safe_int
-from harness.prompts.discovery import (DiscoveryResult, SYSTEM_PASS_SYSTEM,
+from harness.schemas import DiscoveryResult, safe_float, safe_int
+from harness.prompts.discovery import (SYSTEM_PASS_SYSTEM,
                                        build_discovery_task,
                                        build_unit_system_prompt,
                                        build_system_pass_task,

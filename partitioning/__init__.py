@@ -2,7 +2,7 @@
 from harness.partitioning.config import max_units, min_files, partition_mode
 from harness.partitioning.units import (_balance_units, _file_weights,
                                         _normalize_units, _split_over_budget,
-                                        _units_from_dirs, _units_from_graphify,
+                                        _units_from_dirs,
                                         isolate_vendor, partition_target,
                                         partition_units, small_repo_unit,
                                         verify_partition)
@@ -12,6 +12,6 @@ __all__ = [
     "partition_units", "partition_target", "verify_partition",
     "isolate_vendor", "small_repo_unit",
     "_balance_units", "_file_weights", "_normalize_units",
-    "_split_over_budget", "_units_from_dirs", "_units_from_graphify",
+    "_split_over_budget", "_units_from_dirs",
     "partition_mode",
 ]

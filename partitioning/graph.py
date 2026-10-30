@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import posixpath
 import re
 from pathlib import Path, PurePosixPath
@@ -51,10 +50,6 @@ _ENV_REFERENCE_PATTERNS = tuple(re.compile(p, re.IGNORECASE) for p in (
     r"\b(?:config|env)\s*\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]",
     r"\$\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}",
 ))
-
-_DEF_USE_RELATIONS = frozenset({
-    "imports", "imports_from", "references", "re_exports", "inherits"})
-_CALL_RELATIONS = frozenset({"calls", "indirect_call"})
 
 _RENDER_PATTERNS = tuple(re.compile(p) for p in (
     r"""render_template\(\s*["']([^"']+)["']""",
@@ -114,86 +109,6 @@ def support_file_kind(path: str) -> str | None:
     }:
         return "asset"
     return None
-
-
-def load_partition_graph(repo: str) -> dict:
-    from harness.tools.graphify import graph_path_for
-
-    try:
-        gp = graph_path_for(repo)
-        if not gp.is_file():
-            return {}
-        g = json.loads(gp.read_text())
-        return g if isinstance(g, dict) else {}
-    except Exception:
-        return {}
-
-
-def file_communities(graph: dict) -> dict[str, int]:
-    if not graph or not isinstance(graph, dict):
-        return {}
-    nodes = graph.get("nodes")
-    if not nodes or not isinstance(nodes, list):
-        return {}
-    out: dict[str, int] = {}
-    for n in nodes:
-        if not isinstance(n, dict):
-            continue
-        sf = str(n.get("source_file") or "")
-        comm = n.get("community")
-        if sf and comm is not None and sf not in out:
-            try:
-                out[sf] = int(comm)
-            except (TypeError, ValueError):
-                continue
-    return out
-
-
-def _relation_weight(rel: object) -> int:
-    r = str(rel or "").lower()
-    if r in _DEF_USE_RELATIONS:
-        return 2
-    if r in _CALL_RELATIONS or r.startswith("uses"):
-        return 1
-    return 0
-
-
-def file_edges(graph: dict, files: list[str]) -> dict[tuple[str, str], int]:
-    if not graph or not isinstance(graph, dict) or not files:
-        return {}
-    links = graph.get("links") or graph.get("edges")
-    if not links:
-        return {}
-    id2file: dict[str, str] = {}
-    for n in graph.get("nodes", []) or []:
-        if isinstance(n, dict) and n.get("source_file"):
-            id2file[str(n.get("id"))] = str(n["source_file"])
-    if not id2file:
-        return {}
-    fs = set(files)
-    canon: dict[str, str] = {}
-    for gf in sorted(set(id2file.values())):
-        if gf in fs:
-            canon[gf] = gf
-            continue
-        parts = gf.split("/")
-        for i in range(1, len(parts)):
-            if (c := "/".join(parts[i:])) in fs:
-                canon[gf] = c
-                break
-    out: dict[tuple[str, str], int] = {}
-    for l in graph.get("links", graph.get("edges", [])) or []:
-        if not isinstance(l, dict):
-            continue
-        w = _relation_weight(l.get("relation"))
-        if w <= 0:
-            continue
-        a = canon.get(id2file.get(str(l.get("source", "")), ""))
-        b = canon.get(id2file.get(str(l.get("target", "")), ""))
-        if a and b and a != b:
-            k = (a, b)
-            out[k] = out.get(k, 0) + w
-    return out
 
 
 def _resolve_render_targets(name: str, fs: set[str],
@@ -419,7 +334,4 @@ def augment_edges(repo: str, files: list[str],
     return out
 
 
-__all__ = [
-    "load_partition_graph", "file_communities",
-    "file_edges", "augment_edges", "support_file_kind",
-]
+__all__ = ["augment_edges", "support_file_kind"]

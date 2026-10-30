@@ -1,4 +1,4 @@
-"""Partitioning - deep-agent proposer with deterministic + Graphify baseline."""
+"""Partitioning - deep-agent proposer with deterministic baseline."""
 from __future__ import annotations
 
 import hashlib
@@ -204,8 +204,8 @@ def _build_partition_message(ctx: str, baseline: list[dict]) -> str:
             baseline_lines.append(f"    {f}")
 
     return msg + (
-        "\n\nDeterministic baseline (Graphify-promoted, cached, complete, "
-        "byte-bounded) — refine it:\n"
+        "\n\nDeterministic baseline (cached, complete, byte-bounded) — "
+        "refine it:\n"
         "- Keep every file assigned exactly as in the baseline unless there "
         "is a strong semantic reason to move it.\n"
         "- Merge tiny support/config/test shards into the nearest owning "

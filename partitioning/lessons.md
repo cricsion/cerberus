@@ -21,8 +21,8 @@ it (`max_units = ceil(total / budget)`). A number that cannot be derived is a
 number nobody can justify.
 
 **Rule:** dropping a cap means fixing the O(n×k) hotspots that only survived
-because of it (graphify community match was O(files × communities); it is now a
-suffix index, O(files)).
+because of it; directory
+grouping is O(files)).
 
 ## 2. Bytes as the weight, LOC as the knob
 

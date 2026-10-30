@@ -244,9 +244,8 @@ def _open_connection(db: Path) -> tuple[sqlite3.Connection | None, str]:
 def connect(root: str = ".") -> sqlite3.Connection | None:
     """Cached read-only connection, or None when the index is missing/unreadable.
 
-    The cache is keyed by (resolved db path, mtime) — the same staleness rule
-    ``graphify.py._load_nx`` uses — so a re-index or a fresh ``codegraph sync``
-    re-opens instead of serving the old inode.
+    The cache is keyed by (resolved db path, mtime), so a re-index or a fresh
+    ``codegraph sync`` re-opens instead of serving the old inode.
 
     Never raises. A hostile root — one whose path components are longer than
     NAME_MAX, or that the OS refuses to address at all — degrades to ``None``

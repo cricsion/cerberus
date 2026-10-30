@@ -1,5 +1,5 @@
 """Deterministic partitioning: which files each hunter sees: vendor isolation ->
-small-repo collapse -> community/dir grouping -> byte budget -> normalization.
+small-repo collapse -> dir grouping -> byte budget -> normalization.
 Units are [{name, files, reason}] (+ budget_exempt on the vendor unit)."""
 from __future__ import annotations
 
@@ -14,8 +14,7 @@ from harness.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
                                          min_files, misc_code_merge_enabled,
                                          single_unit_max_files,
                                          single_unit_enabled, vendor_unit_enabled)
-from harness.partitioning.graph import (file_communities, load_partition_graph,
-                                        support_file_kind)
+from harness.partitioning.graph import support_file_kind
 
 _logger = logging.getLogger(__name__)
 
@@ -470,56 +469,6 @@ def _support_group_units(groups: dict[tuple[str, str], list[str]],
     return units
 
 
-def _units_from_graphify(repo: str, files: list[str],
-                          weight_of: dict[str, int] | None = None,
-                          target: int = 0,
-                          edges: dict | None = None) -> list[dict] | None:
-    file_community = file_communities(load_partition_graph(repo))
-    if not file_community:
-        return None
-    # Graph paths are repo-relative, the file list may carry a prefix: match on
-    # exact key, key-suffix-of-file, or file-suffix-of-key; first match wins.
-    exact: dict[str, int] = {}
-    key_suffix: dict[str, int] = {}
-    for key, comm in file_community.items():
-        exact.setdefault(key, comm)
-        parts = key.split("/")
-        for i in range(1, len(parts)):
-            key_suffix.setdefault("/".join(parts[i:]), comm)
-
-    def _match(f: str) -> int | None:
-        if f in exact:
-            return exact[f]
-        parts = f.split("/")
-        for i in range(1, len(parts)):
-            if (s := "/".join(parts[i:])) in exact:
-                return exact[s]
-        return key_suffix.get(f)
-
-    by_comm: dict[int, list[str]] = defaultdict(list)
-    unmapped: list[str] = []
-    support_files: list[str] = []
-    for f in files:
-        if support_file_kind(f) in {"template", "config"}:
-            support_files.append(f)
-            continue
-        hit = _match(f)
-        if hit is None:
-            unmapped.append(f)
-        else:
-            by_comm[hit].append(f)
-    units = [{"name": f"community-{c}", "files": sorted(fs),
-              "reason": "graphify-leiden-community"}
-             for c, fs in sorted(by_comm.items())]
-    unowned_support = _attach_linked_support(support_files, units, edges,
-                                             weight_of, target)
-    unmapped.extend(unowned_support)
-    if unmapped:
-        units.extend(_raw_units_from_dirs(repo, unmapped, prefix="unmapped",
-                                          weight_of=weight_of, target=target))
-    return _normalize_units(units, weight_of, target, edges=edges)
-
-
 def _raw_units_from_dirs(repo: str, files: list[str], prefix: str = "",
                            weight_of: dict[str, int] | None = None,
                            target: int = 0) -> list[dict]:
@@ -968,16 +917,11 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
 
 
 def _load_partition_edges(repo: str, files: list[str]) -> dict:
-    """File-coupling edges; "no signal" ({}) when the graph is absent or
-    unreadable (``load_partition_graph`` fails open); a harness defect
-    propagates instead of silently degrading coverage."""
+    """File-coupling edges from source-level framework/same-dir analysis."""
     from harness.partitioning.config import framework_edges_enabled
-    from harness.partitioning.graph import (augment_edges, file_edges,
-                                            load_partition_graph)
+    from harness.partitioning.graph import augment_edges
 
-    edges = file_edges(load_partition_graph(repo), files)
-    if framework_edges_enabled():
-        edges = augment_edges(repo, files, edges)
+    edges = augment_edges(repo, files, {}) if framework_edges_enabled() else {}
     return dict(edges or {})
 
 
@@ -1016,7 +960,7 @@ def partition_units(repo: str, files: list[str],
         edges = None
     else:
         edges = _load_partition_edges(repo, app_files)
-        units = _units_from_graphify(repo, app_files, weight_of, target, edges=edges)
+        units = None
     if not units:
         if edges is None:
             edges = _load_partition_edges(repo, app_files)
