@@ -263,7 +263,8 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
                 out.append(_vendor_unit(vendor_files, {single["name"]}))
             return out
 
-    # Imported here so tests can monkeypatch harness.config.get_model_kwargs.
+    # Local import: the model-kwargs lookup stays resolvable at call time
+    # for embedders without an import cycle.
     from harness.config import get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")

@@ -282,17 +282,6 @@ def connect(root: str = ".") -> sqlite3.Connection | None:
     return conn
 
 
-def close_cached() -> None:
-    """Drop every cached connection (tests, long-lived processes)."""
-    with _LOCK:
-        for _mtime, _mode, conn in _CONN_CACHE.values():
-            try:
-                conn.close()
-            except Exception:
-                pass
-        _CONN_CACHE.clear()
-
-
 def guidance_no_db(root: str = ".") -> str:
     """The guidance string every tool returns when connect() is None.
 

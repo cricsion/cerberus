@@ -6,7 +6,7 @@ which is also where its false positives live: an ``UUID`` field decorated
 :func:`inspect_type_contract` renders declared fields/parameters plus matching
 ``CREATE TABLE`` columns.
 
-Laws (each pinned by ``tests/test_codgraph_contracts.py``):
+Laws (each an invariant of this module):
 
 - LAW-1 — contracts are DECLARED, FOUND or RECORDED, never inferred: indexed
   structure only, and ``.sql`` columns only when a ``.sql`` file exists.

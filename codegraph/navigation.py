@@ -3,7 +3,7 @@
 The graph answers WHO is connected to WHOM; these tools answer what the code
 around a hop looks like and what an argument became once it crossed.
 
-Laws (pinned by ``tests/test_codgraph_navigation.py``):
+Laws (each an invariant of this module):
 
 - LAW-1 — graph is coordinates, source is content: every answer is a token view
   over an index-located span, sectioned above ``_SMALL_SPAN_LINES``.

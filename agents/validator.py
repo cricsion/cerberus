@@ -502,7 +502,8 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
     _stage_line(f"[validator] unit '{name}' cell {ci + 1}/{n_cells}: "
                 f"{len(cell_items)} findings, {n_votes} vote(s)...")
     try:
-        # repo passed only when known; 5-arg test fakes keep the shorter form.
+        # repo passed only when known; the positional window ends at n_votes
+        # and everything after is keyword-only (stable call shape).
         res = _validate_unit_batch(name, cell_items, cfg, threat_md,
                                    n_votes, repo=repo,
                                    cell_no=ci + cell_offset,

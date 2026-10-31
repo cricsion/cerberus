@@ -405,7 +405,7 @@ def classify_effect(text: str, language: str | None = None, kind: str = "calls",
     for rule in EFFECT_RULES:
         if rule["only"] and not (rule["only"] & set(families)):
             # An ungated language (no family) still gets the JS rows — the table
-            # grew up on them and the old tests call with no language.
+            # grew up on them, and language can be unknown at the call site.
             if language:
                 continue
             if "js" not in rule["only"]:

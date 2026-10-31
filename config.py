@@ -104,16 +104,13 @@ def load_config(path: str | Path | None = None, *,
     """Build one config from YAML defaults and environment.
 
     Precedence: process environment (or ``env``) > ``.env`` > the YAML
-    ``${VAR:-default}`` value. ``path`` is for tests/standalone configs; the
+    ``${VAR:-default}`` value. ``path`` is for standalone configs; the
     packaged file is the production source and is parsed once per process.
     """
     env_map = _read_env() if env is None else env
     raw = (copy.deepcopy(_raw_default_config()) if path is None
            else _read_yaml(Path(path)))
     return _normalize(_interpolate(raw, env_map))
-
-
-_DEFAULT_LOAD_CONFIG = load_config
 
 
 def _deep_merge(base: dict, override: dict) -> dict:
@@ -292,10 +289,7 @@ def get_config() -> dict:
     if _CFG is None:
         with _CFG_LOCK:
             if _CFG is None:
-                if load_config is _DEFAULT_LOAD_CONFIG:
-                    _CFG = load_config()
-                else:
-                    _CFG = _normalize(_deep_merge(_defaults(), load_config()))
+                _CFG = load_config()
     return _CFG
 
 

@@ -67,7 +67,7 @@ def is_fatal_error(exc: BaseException) -> bool:
 
 def sanitize_model_kwargs(model_kwargs: dict | None) -> dict:
     mk = dict(model_kwargs or {})
-    # "dummy" is this function's offline placeholder (tests/keyless runs): only a real key must fail loudly on a missing model.
+    # "dummy" is this function's offline placeholder (keyless runs): only a real key must fail loudly on a missing model.
     _key = mk.get("api_key")
     _real_key = bool(_key) and _key != "dummy"
     if not mk.get("model"):
@@ -478,7 +478,7 @@ def message_text(msg: Any, *, sep: str = " ") -> str:
     try:
         content = getattr(msg, "content", "") or ""
         if isinstance(content, list):
-            # LangChain .text joins typed text blocks with no separator; untyped blocks (fakes, tests) join with sep.
+            # LangChain .text joins typed text blocks with no separator; untyped blocks join with sep.
             typed = any(isinstance(b, dict) and b.get("type") == "text"
                         for b in content)
             joiner = "" if typed else sep
