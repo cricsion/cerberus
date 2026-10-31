@@ -20,8 +20,8 @@ def _bookkeep_method(fn):
     pipeline/cli call sites stay bare (no per-call try/except guards)."""
     @functools.wraps(fn)
     def wrapper(self, *args, **kwargs):
-        from harness.fallback import run_fail_open  # lazy: fallback → deep imports at call time
-        return run_fail_open(
+        from harness.fallback import runner  # lazy: fallback → deep imports at call time
+        return runner(
             f"agent-registry.{fn.__name__}",
             lambda: fn(self, *args, **kwargs),
             default=None,

@@ -63,8 +63,7 @@ REFUTE_REASONS = ("not_reachable", "sanitized", "misread_code",
                   "exclusion_rule", "duplicate", "not_a_vulnerability")
 
 # Ballot reasons: a needs-review verdict names which coverage failure produced it.
-ROUND_FAILED_NOTE = "validator round failed (no reply)"
-UNPARSEABLE_NOTE = "unparseable batch reply"
+ROUND_FAILED_NOTE = "validator round failed (no structured output)"
 OMITTED_NOTE = "omitted from batch reply"
 
 

@@ -8,7 +8,7 @@ import os
 from pathlib import PurePosixPath
 
 from harness.config import get_model_kwargs
-from harness.fallback import run_fail_open
+from harness.fallback import runner
 from harness.partitioning import partition_units as _det_partition_units
 from harness.partitioning.config import max_units, vendor_unit_enabled
 from harness.partitioning.units import (
@@ -177,7 +177,7 @@ def _deterministic_baseline(repo: str, files: list[str],
         except (OSError, json.JSONDecodeError):
             pass
 
-    baseline = run_fail_open(
+    baseline = runner(
         "partition-baseline",
         lambda: _det_partition_units(repo, files, cfg),
         default=[], logger=_logger)
@@ -223,7 +223,7 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
     an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
     from harness.agents.deep import run_structured
     from harness.agents.toolsets import graph_tools
-    from harness.llmjson import structured_items
+    from harness.schemas import structured_items
     from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
 
     def _partition_llm() -> list[dict]:
@@ -233,8 +233,8 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
             backend=backend, root_dir=repo)
         return structured_items(parsed, field="units")
 
-    return run_fail_open("partitioner-llm", _partition_llm, default=[],
-                         logger=_logger)
+    return runner("partitioner-llm", _partition_llm, default=[],
+                  logger=_logger)
 
 
 def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],

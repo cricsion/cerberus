@@ -42,9 +42,9 @@ def is_fatal_error(exc: BaseException) -> bool:
     return _is_fatal_error(exc)
 
 
-def run_fail_open(action: str, fn: Callable[[], Any], *,
-                  default: Any = None,
-                  logger: logging.Logger | None = None) -> Any:
+def runner(action: str, fn: Callable[[], Any], *,
+           default: Any = None,
+           logger: logging.Logger | None = None) -> Any:
     """Run ``fn``; non-fatal exceptions fail open, fatal-class ones (bad key, wrong
     model, harness defect) re-raise."""
     try:

@@ -158,7 +158,7 @@ def _history_text(history: list[tuple[str, str]]) -> str:
 def interview_questions(draft_md: str, history: list[tuple[str, str]],
                         cfg: dict, max_questions: int = 5) -> list | None:
     from harness.agents.deep import run_structured_batch
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
     from harness.prompts.threat import (INTERVIEWER_SYSTEM, QuestionList,
                                         build_interview_task)
     human = build_interview_task(draft_md, _history_text(history),
@@ -178,8 +178,8 @@ def interview_questions(draft_md: str, history: list[tuple[str, str]],
             raise parsed
         return parsed.questions[:max_questions]
 
-    return run_fail_open("threat:interviewer", _ask, default=None,
-                         logger=_logger)
+    return runner("threat:interviewer", _ask, default=None,
+                  logger=_logger)
 
 
 def finalize_threat(draft_md: str, history: list[tuple[str, str]], cfg: dict,
@@ -256,20 +256,9 @@ def _model_dump(parsed: Any) -> dict:
         return {}
 
 
-def _swarm_stage_open(action: str, build) -> tuple[dict, str]:
-    """One fail-open for the swarm's LLM stages (research/history/plan): a
-    fatal-class error (bad key, wrong model, harness defect) re-raises via
-    run_fail_open's is_fatal_error gate; anything else degrades to
-    `({}, "failed (error)")` with a debug log. The "failed (" prefix is
-    load-bearing: enrich_threat's swarm-unreachable check keys on it."""
-    from harness.fallback import run_fail_open
-
-    return run_fail_open(action, build, default=({}, "failed (error)"),
-                         logger=_logger)
-
-
 def _swarm_research(repo: str, files: list[str], draft: str,
                     cfg: dict) -> tuple[dict, str]:
+    from harness.fallback import runner
     from harness.prompts.threat import (RESEARCHER_SYSTEM, SwarmResearch,
                                         build_research_task)
 
@@ -281,11 +270,13 @@ def _swarm_research(repo: str, files: list[str], draft: str,
             return {}, "failed"
         return data, "ok"
 
-    return _swarm_stage_open("threat researcher", _build)
+    return runner("threat researcher", _build,
+                  default=({}, "failed (error)"), logger=_logger)
 
 
 def _swarm_history(repo: str, draft: str, cfg: dict,
                     vulns: list[dict] | None = None) -> tuple[dict, str]:
+    from harness.fallback import runner
     from harness.prompts.threat import (HISTORIAN_SYSTEM, SwarmHistory,
                                         build_historian_task)
 
@@ -298,7 +289,8 @@ def _swarm_history(repo: str, draft: str, cfg: dict,
             return {}, "failed"
         return data, "ok"
 
-    return _swarm_stage_open("threat historian", _build)
+    return runner("threat historian", _build,
+                  default=({}, "failed (error)"), logger=_logger)
 
 
 def _bound_json(data: Any, max_len: int = 12000) -> str:
@@ -335,6 +327,7 @@ def _swarm_plan(repo: str, draft: str, research: dict, history: dict,
                 cfg: dict, measured_facts: str = "",
                 narrow: bool = False) -> dict:
     # Planner returns a judgment payload; code renders every deterministic cell — LLM-written markdown never ships (no phrasing slip can corrupt a measured fact).
+    from harness.fallback import runner
     from harness.prompts.threat import SYNTH_SYSTEM, SwarmPlan
 
     def _build() -> tuple[dict, str]:
@@ -347,7 +340,8 @@ def _swarm_plan(repo: str, draft: str, research: dict, history: dict,
                                      narrow=narrow))
         return _model_dump(parsed), "ok"
 
-    return _swarm_stage_open("threat planner", _build)[0]
+    return runner("threat planner", _build,
+                  default=({}, "failed (error)"), logger=_logger)[0]
 
 
 def enrich_threat(repo: str, files: list[str], candidates: list[dict],
@@ -368,8 +362,6 @@ def enrich_threat(repo: str, files: list[str], candidates: list[dict],
                                        cfg or {}, vulns),
             }
             for name, fut in futs.items():
-                # Stage workers fail open internally (run_fail_open); an
-                # escape here is a fatal-class error and must propagate.
                 payload, status = fut.result()
                 meta["agents"][name] = status
                 if status == "ok":

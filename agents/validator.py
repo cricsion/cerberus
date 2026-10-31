@@ -10,11 +10,10 @@ from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
 from harness.config import get_default_config, int_setting
 from harness.progress import AgentState
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
-                              needs_review_verdicts, run_fail_open)
-from harness.llmjson import extract_structured_items
+                              needs_review_verdicts, runner)
+from harness.schemas import structured_items
 from harness.prompts.validation import (OMITTED_NOTE, REFUTE_METHOD,
-                                        ROUND_FAILED_NOTE, UNPARSEABLE_NOTE,
-                                        VALIDATOR_SYSTEM)
+                                        ROUND_FAILED_NOTE, VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
 
@@ -274,7 +273,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     # One agent build for every vote/chunk of this cell group.
     from harness.agents.deep import build_deep_agent, make_llm, run_structured
     from harness.prompts.validation import VerdictBatch
-    agent = run_fail_open(
+    agent = runner(
         f"agent validator-{group_name}",
         lambda: build_deep_agent(
             make_llm(mk, timeout=_timeout, max_retries=_max_retries),
@@ -318,14 +317,14 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                                     "vote": str(_vote)},
                         agent=agent)
 
-                parsed, raw_text = EMPTY_STRUCTURED, ""
+                parsed: Any = None
                 verdicts: list[dict] = []
                 try:
-                    parsed, raw_text = run_fail_open(
+                    parsed, _ = runner(
                         "validator batch", _call_validator_structured,
                         default=EMPTY_STRUCTURED, logger=_logger)
-                    verdicts = extract_structured_items(
-                        parsed, raw_text, field="verdicts", require_id=True)
+                    verdicts = [v for v in structured_items(parsed, field="verdicts")
+                                if v.get("id")]
                 except Exception as e:
                     if agent_registry is not None:
                         agent_registry.transition(
@@ -343,8 +342,8 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                         agent_registry.transition(
                             _aid, AgentState.failed, role="validator",
                             unit=group_name, parent_stage="validation",
-                            error=("no reply" if not str(raw_text or "").strip()
-                                   else "unparseable reply"))
+                            error=("no structured output" if parsed is None
+                                   else "no verdicts"))
                 covered: set[str] = set()
                 for v in verdicts:
                     vid = str(v.get("id", ""))
@@ -353,12 +352,12 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                         covered.add(vid)
 
                 # An omitted id is a partial reply, never an implicit confirmed/fp.
-                if verdicts:
+                # No structured response at all is a failed round, not an empty
+                # verdict set.
+                if verdicts or parsed is not None:
                     note = OMITTED_NOTE
-                elif not str(raw_text or "").strip():
-                    note = ROUND_FAILED_NOTE
                 else:
-                    note = UNPARSEABLE_NOTE
+                    note = ROUND_FAILED_NOTE
                 missing = [f for f in chunk
                            if str(f.get("id", "")) not in covered]
                 for ballot in needs_review_verdicts(missing, note):
@@ -373,7 +372,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
         votes = ballots.get(vid, [])
         if not votes:
             # Batch reply omitted this id: fail open, never crash.
-            out.append(_one_fallback(f, "no validator verdicts"))
+            out.append(_degraded_finding(f, "no validator verdicts"))
             continue
         merged_votes = []
         for v in votes:
@@ -382,7 +381,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     return out
 
 
-def _one_fallback(f: dict, note: str) -> dict:
+def _degraded_finding(f: dict, note: str) -> dict:
     fb = dict(f) if isinstance(f, dict) else {}
     fb["status"] = "needs-review"
     prev = str(fb.get("evidence") or "")
@@ -528,7 +527,7 @@ def _run_cell(name: str, cell_items: list[dict], ci: int,
             raise
         # Batch failed and its own retries are exhausted: the cell fails open
         # to needs-review per finding (never dropped)
-        return [_one_fallback(f, f"cell fallback ({type(e).__name__})")
+        return [_degraded_finding(f, f"cell fallback ({type(e).__name__})")
                 for f in cell_items]
 
 
@@ -546,7 +545,8 @@ def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
     def _fallback(gi: int, cidx: int) -> list[dict]:
         _n, items, _o, _d, cells = planned[gi]
         idx = cells[cidx][0]
-        return [_one_fallback(items[i], "validator fail-open") for i in idx]
+        return [_degraded_finding(items[i], "validator fail-open")
+                for i in idx]
 
     def _safe(key: tuple[int, int]) -> list[dict]:
         gi, cidx = key

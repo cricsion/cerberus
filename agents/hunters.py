@@ -7,7 +7,7 @@ import sys
 # Prompt text lives in harness/prompts/discovery.py (re-exported for `h.<name>`).
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
 from harness.config import resolve_call_timeout, resolve_recursion_limit
-from harness.fallback import EMPTY_STRUCTURED, run_fail_open
+from harness.fallback import EMPTY_STRUCTURED, runner
 from harness.paths import to_repo_relative
 from harness.schemas import DiscoveryResult, safe_float, safe_int
 from harness.prompts.discovery import (SYSTEM_PASS_SYSTEM,
@@ -158,12 +158,6 @@ def _findings_from_discovery(parsed: object, hunter: str,
         return []
 
 
-def _extract_agent_text(result) -> str:
-    from harness.agents.deep import final_text
-
-    return final_text(result, sep="\n")
-
-
 def _agent_tools_used(result) -> list[str]:
     used: list[str] = []
     try:
@@ -180,36 +174,6 @@ def _agent_tools_used(result) -> list[str]:
     except Exception:
         pass
     return used
-
-
-def _parse_findings_json(text: str, hunter: str, files: list[str], repo: str) -> list[dict]:
-    norm, _ok = _parse_findings_with_status(text, hunter, files, repo)
-    return norm
-
-
-def _parse_findings_with_status(text: str, hunter: str, files: list[str], repo: str) -> tuple[list[dict], bool]:
-    import json as _json
-
-    from harness.llmjson import candidate_jsons
-    if not text or not text.strip():
-        return [], False
-    parsed = None
-    for candidate in candidate_jsons(text):
-        try:
-            parsed = _json.loads(candidate)
-            break
-        except Exception:
-            continue
-    if isinstance(parsed, dict):
-        parsed = parsed.get("findings")
-    if not isinstance(parsed, list):
-        return [], False
-    norm = []
-    for i, it in enumerate(parsed):
-        if isinstance(it, dict):
-            norm.append(_normalize_finding(it, hunter, i,
-                                           files[0] if files else repo, repo))
-    return norm, True
 
 
 def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
@@ -265,10 +229,8 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
             if sr is not None and hasattr(sr, "findings"):
                 norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
                 return _sort_by_confidence(norm)
-            text = _extract_agent_text(res)
-            norm, ok = _parse_findings_with_status(text, f"unit-{name}", files or [], repo)
-            if ok:
-                return _sort_by_confidence(norm)
+            return [_fallback_finding(f"unit-{name}", repo, files,
+                                      "no structured output")]
         except Exception as e:
             if is_fatal_error(e):
                 raise
@@ -276,8 +238,6 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
             return [_fallback_finding(f"unit-{name}", repo, files,
                                       f"unit hunt produced no parseable findings "
                                       f"({type(e).__name__})")]
-    return [_fallback_finding(f"unit-{name}", repo, files,
-                              "unparseable reply")]
 
 
 def _run_system_pass(repo: str, files: list[str], findings: list[dict],
@@ -322,7 +282,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
         ctx += f"[UNIT FINDINGS]\n{slim}"
         from harness.agents.deep import run_structured
         msg = build_system_pass_task(repo, scope, ctx, files)
-        parsed, raw_text = run_fail_open(
+        parsed, _ = runner(
             "system pass",
             lambda: run_structured(
                 mk, DiscoveryResult, sys_prompt, msg,
@@ -331,8 +291,9 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                 scratchpad=True),
             default=EMPTY_STRUCTURED, logger=_logger)
     norm = _findings_from_discovery(parsed, "system", files or [], repo)
-    if not norm and raw_text.strip():
-        norm = _parse_findings_json(raw_text, "system", files or [], repo)
+    if parsed is None:
+        norm = [_fallback_finding("system", repo, files,
+                                  "no structured output")]
     for f in norm:
         if isinstance(f, dict):
             f.setdefault("unit", "system")

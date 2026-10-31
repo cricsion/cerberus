@@ -125,6 +125,25 @@ class DiscoveryResult(BaseModel):
                                     description="Candidate findings from this pass")
 
 
+def structured_items(parsed: object, field: str = "verdicts") -> list[dict]:
+    """List of dicts from a parsed structured-output payload."""
+    out: list[dict] = []
+    try:
+        raw = (parsed.get(field) if isinstance(parsed, dict)
+               else getattr(parsed, field, None))
+        items = raw or []
+        for it in items:
+            try:
+                data = it.model_dump() if hasattr(it, "model_dump") else dict(it)
+            except Exception:
+                continue
+            if isinstance(data, dict):
+                out.append(data)
+    except Exception:
+        return []
+    return out
+
+
 def sort_findings(findings) -> list[dict]:
     """The one findings ordering: severity rank asc, confidence desc.
 

@@ -198,7 +198,7 @@ def _node_cfg(state: dict) -> dict:
 
 
 def indexer_node(state: ScanState) -> dict:
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
     from harness.tools.sast import (iac_check, sca_scan, secrets_scan,
                                     regex_prefilter)
     repo = state.get("repo", ".")
@@ -218,8 +218,8 @@ def indexer_node(state: ScanState) -> dict:
             c.setdefault("status", "needs-review")
         return _tpl
 
-    _tpl = run_fail_open("template_reflect", _template_stage,
-                         default=[], logger=logger)
+    _tpl = runner("template_reflect", _template_stage,
+                  default=[], logger=logger)
     if _tpl:
         _tools_used.append("template_reflect")
         cands.extend(_tpl)
@@ -262,8 +262,8 @@ def indexer_node(state: ScanState) -> dict:
                 used.append("get_routing_manifest")
         return extra, used
 
-    _extra, _used = run_fail_open("codegraph_signals", _codegraph_stage,
-                                  default=([], []), logger=logger)
+    _extra, _used = runner("codegraph_signals", _codegraph_stage,
+                           default=([], []), logger=logger)
     cands.extend(_extra)
     _tools_used.extend(_used)
 
@@ -383,10 +383,10 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
             stage_err["exc"] = e
             raise
 
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
 
-    _stage_updates = run_fail_open("threat_model.doc", _threat_doc_probe,
-                                   default={}, logger=logger)
+    _stage_updates = runner("threat_model.doc", _threat_doc_probe,
+                            default={}, logger=logger)
     out.update(_stage_updates)
     if stage_err.get("exc") is not None:
         e = stage_err["exc"]
@@ -446,10 +446,10 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
             _partition_exc["exc"] = e
             raise
 
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
 
-    units = run_fail_open("partitioner", _partition_probe, default=[],
-                          logger=logger)
+    units = runner("partitioner", _partition_probe, default=[],
+                   logger=logger)
     _partition_failed = _partition_exc.get("exc") is not None
     if agent_registry is not None:
         if _partition_failed:
@@ -621,11 +621,11 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
             _sysfail["fail"] = True
             raise
 
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
 
     try:
-        out, _sys_tools = run_fail_open("system_pass", _system_pass_probe,
-                                        default=([], []), logger=logger)
+        out, _sys_tools = runner("system_pass", _system_pass_probe,
+                                 default=([], []), logger=logger)
     except Exception as e:
         if agent_registry is not None:
             agent_registry.transition("system-pass", AgentState.failed,
@@ -794,7 +794,7 @@ def threat_update_node(state: ScanState) -> dict:
     md = state.get("threat_model_md", "") or ""
     if not md.strip():
         return {}
-    from harness.fallback import run_fail_open
+    from harness.fallback import runner
 
     def _threat_update_stage() -> dict:
         from harness import threat as _th5
@@ -805,8 +805,8 @@ def threat_update_node(state: ScanState) -> dict:
             return {"threat_model_md": updated}
         return {}
 
-    return run_fail_open("threat_update", _threat_update_stage,
-                         default={}, logger=logger)
+    return runner("threat_update", _threat_update_stage,
+                  default={}, logger=logger)
 
 
 def scorer_node(state: ScanState) -> dict:
@@ -825,7 +825,7 @@ def scorer_node(state: ScanState) -> dict:
     return {"verified": Overwrite(out)}
 
 
-def _safe_max_concurrency(state: dict) -> int:
+def _max_concurrency(state: dict) -> int:
     from harness.config import get_concurrency
 
     return get_concurrency(_node_cfg(state))
@@ -909,7 +909,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                   parent_stage="hunters", model=model,
                                   state=AgentState.queued)
 
-    def _one(p: dict) -> dict:
+    def _hunt_one_unit(p: dict) -> dict:
         unit = str(p.get("unit", "unit"))
         aid = "hunter:" + p["_ukey"]
         cfg = p.get("cfg") or state.get("cfg") or {}
@@ -1049,7 +1049,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
 
     try:
         for p in payloads:
-            pending[executor.submit(_timed, _one, p)] = (
+            pending[executor.submit(_timed, _hunt_one_unit, p)] = (
                 "hunt", p, None)
         while pending:
             done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
@@ -1181,7 +1181,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
 
         def _hunters_stage():
             result = _fan_out_hunters(
-                state, _safe_max_concurrency(state),
+                state, _max_concurrency(state),
                 agent_registry=_agent_registry)
             prog = _get_progress()
             if prog is not None:

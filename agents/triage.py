@@ -11,8 +11,7 @@ _logger = _logging.getLogger(__name__)
 
 from harness.agents.deep import is_fatal_error
 from harness.config import int_setting
-from harness.llmjson import extract_structured_items
-from harness.schemas import safe_int
+from harness.schemas import safe_int, structured_items
 
 
 def _norm_path(path: str) -> str:
@@ -298,7 +297,7 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                    if root is not None else nullcontext(None))
     with backend_ctx as backend:
         try:
-            def _one(message):
+            def _triage_one_batch(message):
                 parsed, _ = run_structured(
                     mk, TriageBatch, TRIAGE_SYSTEM, message,
                     tools=tools, timeout=_timeout, max_retries=_max_retries,
@@ -308,7 +307,8 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
             max_workers = max(1, int(_tw)) if _tw else None
             results = []
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(_one, m) for m in messages]
+                futures = [executor.submit(_triage_one_batch, m)
+                           for m in messages]
                 for fut in futures:
                     try:
                         results.append(fut.result())
@@ -335,8 +335,8 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
             else:
                 completed += 1
                 try:
-                    verdicts = extract_structured_items(
-                        res, "", field="verdicts", require_id=True)
+                    verdicts = [v for v in structured_items(res, field="verdicts")
+                                if v.get("id")]
                 except Exception as e:
                     if is_fatal_error(e):
                         raise
