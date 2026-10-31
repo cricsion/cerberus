@@ -28,13 +28,8 @@ from .settings_defaults import (CPUS as DEFAULT_CPUS,
                                 PIDS_LIMIT as DEFAULT_PIDS_LIMIT)
 from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
 
-from harness.config import config_default
+from harness.config import get_config
 from harness.paths import resolve_tool_path
-
-
-def _docker_bin(value: str | None = None) -> str:
-    return str(value or config_default("sandbox.docker_bin")
-               or DEFAULT_DOCKER_BIN)
 
 
 __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
@@ -132,7 +127,8 @@ class RunSandbox(RunSandboxBase):
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress (Docker NAT), none = none; host is refused (host netns). Validated here: a bad sandbox.network fails first.
         self.network = validate_network(network)
-        self.docker_bin = _docker_bin(docker_bin)
+        self.docker_bin = str(docker_bin or get_config()["sandbox"]["docker_bin"]
+                              or DEFAULT_DOCKER_BIN)
         super().__init__(repo_path=repo_path, image=image,
                          command_timeout=command_timeout,
                          max_output_bytes=max_output_bytes,
@@ -316,7 +312,8 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
         self.pids_limit = max(16, int(pids_limit))
         # Egress: bridge = full egress, none = none; host refused (host netns).
         network_mode = validate_network(network)
-        self.docker_bin = _docker_bin(docker_bin)
+        self.docker_bin = str(docker_bin or get_config()["sandbox"]["docker_bin"]
+                              or DEFAULT_DOCKER_BIN)
         super().__init__(
             repo_path=repo_path,
             run_factory=lambda: RunSandbox(

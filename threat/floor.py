@@ -8,7 +8,7 @@ from .render import (NON_EXCLUSION_NOTE, THREAT_COLUMNS, render_md,
                      validate_threat_md)
 from .util import (CACHE_DIRNAME, CACHE_HEADER, _GIT_SAFE_OPTS,
                    _attack_surfaces, _detector_signals, _now_iso, _repo_root,
-                   find_repo_file, threat_enabled)
+                   find_repo_file)
 
 _logger = _logging.getLogger(__name__)
 
@@ -21,7 +21,9 @@ def load_threat(repo: str, override: str | None = None,
         except OSError:
             return "none", ""
         return ("override", text) if text.strip() else ("none", "")
-    if not threat_enabled(cfg, "use_repo_file"):
+    from harness.config import effective_config
+
+    if not effective_config(cfg)["threat"]["use_repo_file"]:
         return "none", ""
     found = find_repo_file(repo)
     if found is None:

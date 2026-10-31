@@ -6,14 +6,16 @@ values; the runtime settings builders still override them per scan.
 """
 from __future__ import annotations
 
-from harness.config import get_default_config
+from harness.config import get_config
 
-IMAGE = str(get_default_config("sandbox.image"))
-COMMAND_TIMEOUT = int(get_default_config("sandbox.command_timeout"))
-MAX_OUTPUT_BYTES = int(get_default_config("sandbox.max_output_bytes"))
-MEMORY = str(get_default_config("sandbox.memory"))
-CPUS = str(get_default_config("sandbox.cpus"))
-PIDS_LIMIT = int(get_default_config("sandbox.pids_limit"))
-NETWORK = str(get_default_config("sandbox.network"))
-DOCKER_BIN = str(get_default_config("sandbox.docker_bin"))
-RULES_DIR = str(get_default_config("sandbox.rules_dir"))
+_SANDBOX = get_config()["sandbox"]
+
+IMAGE = str(_SANDBOX["image"])
+COMMAND_TIMEOUT = int(_SANDBOX["command_timeout"])
+MAX_OUTPUT_BYTES = int(_SANDBOX["max_output_bytes"])
+MEMORY = str(_SANDBOX["memory"])
+CPUS = str(_SANDBOX["cpus"])
+PIDS_LIMIT = int(_SANDBOX["pids_limit"])
+NETWORK = str(_SANDBOX["network"])
+DOCKER_BIN = str(_SANDBOX["docker_bin"])
+RULES_DIR = str(_SANDBOX["rules_dir"])

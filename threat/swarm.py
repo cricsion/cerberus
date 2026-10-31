@@ -39,15 +39,6 @@ def _threat_mk(cfg: dict) -> dict:
         get_model_kwargs(cfg or {}, "hunter", agent="threat"))
 
 
-
-def _threat_timeout(cfg: dict, mk: dict | None = None) -> int:
-    from harness.config import resolve_call_timeout
-
-    # _threat_mk resolves operator config and raises config-shaped ValueErrors
-    # loudly; resolve_call_timeout then returns a numeric value of at least 1.
-    return resolve_call_timeout(mk if mk is not None else _threat_mk(cfg), cfg)
-
-
 def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     from harness.prompts.threat import (SwarmHistory, SwarmPlan,
                                         SwarmResearch)
@@ -67,10 +58,11 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
         raise ValueError("threat-stage repository is not a directory")
 
     from harness.agents.deep import run_structured
-    from harness.config import resolve_call_retries
+    from harness.config import effective_config
     from harness.sandbox import _acquire_backend, close_backend
     from deepagents.backends.protocol import SandboxBackendProtocol
 
+    cfg = effective_config(cfg)
     backend = None
     if agent_name != "threat:synthesizer":
         # A refused sandbox falls back to the repo-confined local backend.
@@ -104,9 +96,9 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     system = f"{system}\n\nRUNTIME EXECUTION POSTURE: {runtime_note}"
 
     try:
-        _mk = _threat_mk(cfg or {})
-        _timeout = _threat_timeout(cfg or {}, _mk)
-        _retries = resolve_call_retries(_mk, cfg or {})
+        _mk = _threat_mk(cfg)
+        _timeout = int(cfg["timeout"])
+        _retries = int(cfg["max_retries"])
         if agent_name == "threat:synthesizer":
             from harness.agents.deep import run_structured_batch
             out = run_structured_batch(
@@ -130,18 +122,19 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
 def _llm_text(cfg: dict, system: str, human: str,
               root_dir: str | None = None) -> str:
     from harness.agents.deep import run_structured
-    from harness.config import resolve_call_retries
+    from harness.config import effective_config
     from harness.sandbox import _acquire_backend, close_backend
 
+    cfg = effective_config(cfg)
     _mk = _threat_mk(cfg)
     backend = None
     if root_dir:
-        backend = _acquire_backend(cfg or {}, root_dir, label="threat",
+        backend = _acquire_backend(cfg, root_dir, label="threat",
                                    fallback="local")
     try:
         _, text = run_structured(
-            _mk, None, system, human, timeout=_threat_timeout(cfg, _mk),
-            max_retries=resolve_call_retries(_mk, cfg), name="threat",
+            _mk, None, system, human, timeout=int(cfg["timeout"]),
+            max_retries=int(cfg["max_retries"]), name="threat",
             backend=backend, root_dir=root_dir)
     finally:
         close_backend(backend)
@@ -165,13 +158,14 @@ def interview_questions(draft_md: str, history: list[tuple[str, str]],
                                  max_questions)
 
     def _ask() -> list:
-        from harness.config import resolve_call_retries
+        from harness.config import effective_config
 
-        _mk = _threat_mk(cfg or {})
+        cfg_full = effective_config(cfg or {})
+        _mk = _threat_mk(cfg_full)
         out = run_structured_batch(
             _mk, QuestionList, INTERVIEWER_SYSTEM, [human],
-            timeout=_threat_timeout(cfg or {}, _mk),
-            max_retries=resolve_call_retries(_mk, cfg or {}),
+            timeout=int(cfg_full["timeout"]),
+            max_retries=int(cfg_full["max_retries"]),
             name="threat:interviewer")
         parsed = out[0] if out else RuntimeError("empty interview batch")
         if isinstance(parsed, BaseException):

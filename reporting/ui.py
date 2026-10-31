@@ -17,7 +17,6 @@ names resolve through :data:`harness.reporting.view.THEME` (semantic keys:
 """
 from __future__ import annotations
 
-import os
 import re
 import sys
 import threading
@@ -30,6 +29,7 @@ from harness.reporting.view import (
     THEME,
     clean_untrusted,
 )
+from harness.config import get_config
 
 from rich.cells import cell_len
 from rich.console import Console
@@ -113,13 +113,6 @@ def _int(value: Any, default: int = 0) -> int:
             return default
 
 
-def _hb_interval() -> float:
-    """Heartbeat cadence in seconds (env ``HARNESS_HEARTBEAT_S``). Values
-    outside 5-600 (or unparseable) fall back to the 30s default."""
-    value = _int(os.environ.get("HARNESS_HEARTBEAT_S", ""), 30)  # "" → 30
-    return float(value) if 5 <= value <= 600 else 30.0
-
-
 def _clip(text: str, width: int) -> str:
     if width <= 0:
         return ""
@@ -137,23 +130,6 @@ def _pad(text: str, width: int) -> str:
     if cell_len(text) > width:
         text = _clip(text, width)
     return text + " " * max(0, width - cell_len(text))
-
-
-def _sandbox_backend(cfg: dict | None) -> str:
-    """The configured sandbox backend."""
-    section = (cfg or {}).get("sandbox")
-    section = section if isinstance(section, dict) else {}
-    backend = str(section.get("backend") or "").strip().lower()
-    if not backend:
-        backend = str(os.environ.get("SANDBOX_BACKEND") or "").strip().lower()
-    if not backend:
-        try:
-            from harness.config import config_default
-
-            backend = str(config_default("sandbox.backend") or "").strip().lower()
-        except Exception:
-            backend = ""
-    return backend or "local"
 
 
 def _model_name(cfg: dict, role: str) -> str:
@@ -216,7 +192,7 @@ class ScanReporter:
         self._starts: dict[str, float] = {}
         self._hb_thread: threading.Thread | None = None
         self._hb_stop = threading.Event()
-        self._hb_s = _hb_interval()
+        self._hb_s = float(get_config()["ui"]["heartbeat_s"])
         kwargs = {"markup": False, "emoji": False, "highlight": False,
                   "theme": THEME}
         if no_color:
@@ -239,13 +215,14 @@ class ScanReporter:
         validator = _model_name(cfg, "validator") or "default"
         rows.append(("models", f"hunter {hunter} · validator {validator}"))
         try:
-            from harness.config import get_concurrency, get_effort
+            from harness.config import effective_config
 
-            conc, effort = get_concurrency(cfg), get_effort(cfg)
+            run_cfg = effective_config(cfg)
+            conc, effort = run_cfg["concurrency"], run_cfg["effort"]
+            backend = str(run_cfg["sandbox"].get("backend") or "local").strip().lower()
         except Exception:
-            conc, effort = "?", "?"
+            conc, effort, backend = "?", "?", "?"
         rows.append(("run", f"conc {conc} · effort {effort} · gate {fail_on}"))
-        backend = _sandbox_backend(cfg)
         if backend == "docker":
             rows.append(("sandbox", backend))
         options: list[str] = []

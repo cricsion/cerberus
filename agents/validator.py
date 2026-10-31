@@ -7,7 +7,7 @@ import time
 from typing import Any
 
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
-from harness.config import get_default_config, int_setting
+from harness.config import effective_config
 from harness.progress import AgentState
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, runner)
@@ -96,16 +96,6 @@ def evidence_gate(finding: dict) -> bool:
         return True  # fail-open: never drop on gate error
 
 
-def _resolve_votes(cfg: dict | None, override: int | None = None) -> int:
-    if override is not None:
-        try:
-            return min(5, max(1, int(override)))
-        except (TypeError, ValueError):
-            pass
-    return int_setting(cfg, "verification.votes",
-                       fallback_path="verification.votes", minimum=1, maximum=5)
-
-
 def _majority_verdict(base: dict, votes: list[dict]) -> dict:
     n = len(votes) or 1
     counts = {"confirmed": 0, "fp": 0, "needs-review": 0}
@@ -142,14 +132,6 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
     g["evidence"] = _append_note(prev, tag)
     return g
 
-
-def _cell_size(cfg: dict | None) -> int:
-    """Findings per validator cell (clamped 1-100)."""
-    return int_setting(cfg, "verification.cell_size",
-                       fallback_path="verification.cell_size", minimum=1,
-                       maximum=100)
-
-CELL_SIZE = int(get_default_config("verification.cell_size"))
 
 def _route_finding(f: dict) -> tuple[str, dict]:
     if (f.get("status") == "fp"
@@ -240,8 +222,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                           repo: str | None = None,
                           cell_no: int = 0,
                           agent_registry: Any = None) -> list[dict]:
-    from harness.config import (get_model_kwargs, resolve_call_retries,
-                                resolve_call_timeout)
+    from harness.config import get_model_kwargs
 
     if not items:
         return []
@@ -250,10 +231,11 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     except (TypeError, ValueError):
         cell_no = 0
     cell_scope = f"{group_name}:c{cell_no + 1}"
+    cfg = effective_config(cfg)
     model_kwargs = get_model_kwargs(cfg, "validator")
     mk = sanitize_model_kwargs(model_kwargs)
-    _timeout = resolve_call_timeout(mk, cfg)
-    _max_retries = resolve_call_retries(mk, cfg)
+    _timeout = int(cfg["timeout"])
+    _max_retries = int(cfg["max_retries"])
 
     ballots: dict[str, list[dict]] = {str(f.get("id")): [] for f in items
                                        if isinstance(f, dict)}
@@ -411,9 +393,12 @@ def _evidence_gate_findings(findings: list[dict]) -> list[dict]:
 
 
 def _classify_group(pair: tuple[str, list[dict], list[int]],
-                    cell_size: int = CELL_SIZE
+                    cell_size: int | None = None
                     ) -> tuple[str, list[dict], list[int], dict[int, dict],
                                list[tuple[list[int], list[dict]]]]:
+    if cell_size is None:
+        from harness.config import get_config
+        cell_size = int(get_config()["verification"]["cell_size"])
     name, items, origins = pair
     batch_idx: list[int] = []
     direct: dict[int, dict] = {}
@@ -431,7 +416,7 @@ def _classify_group(pair: tuple[str, list[dict], list[int]],
 
 def _plan_validation_cells(
     groups: list[tuple[str, list[dict], list[int]]],
-    cell_size: int = CELL_SIZE,
+    cell_size: int | None = None,
 ) -> list[tuple[str, list[dict], list[int], dict[int, dict], list[tuple[list[int], list[dict]]]]]:
     """Plan validation cells across partition units and pooled remainders.
 
@@ -447,6 +432,9 @@ def _plan_validation_cells(
     This eliminates 1-item straggler cells and dramatically cuts verification wall-clock time.
     Every finding in ``gated`` is validated in exactly one cell with zero drops or duplicates.
     """
+    if cell_size is None:
+        from harness.config import get_config
+        cell_size = int(get_config()["verification"]["cell_size"])
     if len(groups) <= 1:
         return [_classify_group(pair, cell_size) for pair in groups]
 
@@ -619,9 +607,15 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
                    repo: str | None = None,
                    cell_offset: int = 0,
                    agent_registry: Any = None) -> list[dict]:
-    cfg = cfg or {}
+    cfg = effective_config(cfg)
     threat_md = threat_md or ""
-    n_votes = _resolve_votes(cfg, votes)
+    if votes is not None:
+        try:
+            n_votes = min(5, max(1, int(votes)))
+        except (TypeError, ValueError):
+            n_votes = int(cfg["verification"]["votes"])
+    else:
+        n_votes = int(cfg["verification"]["votes"])
     findings = [dict(f) for f in (findings or [])]
     if not findings:
         return []
@@ -635,15 +629,14 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     todo = list(gated)
 
     try:
-        from harness.config import get_concurrency as _gc
-        _vw = int(max_workers or _gc(cfg))
+        _vw = int(max_workers or cfg["concurrency"])
     except Exception:
         _vw = 4
     groups = _group_by_unit(todo, units)
     _stage_line(f"[validator] {len(todo)} findings across "
                 f"{len(groups)} partition(s)")
 
-    _cs = _cell_size(cfg)
+    _cs = int(cfg["verification"]["cell_size"])
     planned = _plan_validation_cells(groups, _cs)
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,

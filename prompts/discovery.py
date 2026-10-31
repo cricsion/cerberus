@@ -37,14 +37,13 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
     from deepagents.backends.protocol import SandboxBackendProtocol
     if not isinstance(backend, SandboxBackendProtocol):
         return ""
-    from harness.config import config_default
+    from harness.config import get_config
 
+    sandbox = get_config()["sandbox"]
     rules = getattr(backend, "rules_dir", DEFAULT_RULES_DIR)
-    timeout = getattr(backend, "command_timeout",
-                     config_default("sandbox.command_timeout"))
+    timeout = getattr(backend, "command_timeout", sandbox["command_timeout"])
     # Must match the container's real posture, not an assumed one.
-    mode = str(getattr(backend, "network",
-                       config_default("sandbox.network"))).lower()
+    mode = str(getattr(backend, "network", sandbox["network"])).lower()
     if mode == "none":
         net = "Network egress is disabled."
     elif mode == "balanced":

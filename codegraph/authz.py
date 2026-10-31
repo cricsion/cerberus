@@ -40,7 +40,7 @@ from collections import Counter
 
 from harness.codegraph import _db, _ts, summaries
 from harness.codegraph._common import (
-    CHAR_CAP, ENV_CHARS, HARD_MAX_SECTION, Report, _CONF_MAX, _CONF_MIN,
+    HARD_MAX_SECTION, Report, _CONF_MAX, _CONF_MIN,
     _HANDLER_KINDS, _ROUTE_EDGE_KINDS, _assign_value, _callee_tail_full,
     _candidate_finding, _cap_chars, _cap_rows, _confidence, _contained_file,
     _end_line_of, _env_int, _finding_lines, _guard_condition, _is_low_value,

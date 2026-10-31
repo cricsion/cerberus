@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import datetime as _dt
 import logging as _logging
-import os as _os
 from pathlib import Path
 
 _logger = _logging.getLogger(__name__)
@@ -20,32 +19,6 @@ def _now_iso() -> str:
     """Today's UTC date (ISO) for provenance stamps; every threat-stage stamp
     shares this helper so no site wraps its own datetime.now guard."""
     return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
-
-
-def _as_bool(value: object, default: bool = True) -> bool:
-    from harness.config import as_bool
-    return as_bool(value, default)
-
-
-def threat_enabled(cfg: dict | None, key: str, default: bool | None = None) -> bool:
-    """Read `threat.<key>` from config with lenient bool parsing. For
-    ``llm_enrich`` an explicit ``HARNESS_THREAT_LLM`` value overrides config."""
-    if default is None:
-        try:
-            from harness.config import config_default
-
-            value = config_default(f"threat.{key}")
-            default = value if isinstance(value, bool) else _as_bool(value, True)
-        except Exception:
-            default = True
-    if key == "llm_enrich":
-        env = _os.environ.get("HARNESS_THREAT_LLM")
-        if env is not None and str(env).strip() != "":
-            return _as_bool(env, default)
-    try:
-        return _as_bool((cfg or {}).get("threat", {}).get(key, default), default)
-    except AttributeError:
-        return default
 
 
 def _repo_root(repo: str) -> Path | None:

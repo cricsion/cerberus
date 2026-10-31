@@ -1,4 +1,3 @@
-provider: openai_compatible
 base_url: ${BASE_URL}
 hunter_model: ${HUNTER_MODEL}
 validator_model: ${VALIDATOR_MODEL}
@@ -27,7 +26,7 @@ max_retries: ${HARNESS_MAX_RETRIES:-3}
 # stall an agent for minutes between attempts.
 retry_sleep_cap: ${HARNESS_RETRY_SLEEP_CAP:-2}
 # Connect-leg timeout (seconds) for the LLM HTTP client; the read/write legs
-# use `timeout`. Clamped to >= 1 in harness.config.get_harness_connect_timeout.
+# use `timeout`. Clamped to >= 1 at config load.
 connect_timeout: ${HARNESS_CONNECT_TIMEOUT:-10}
 # Model-profile pins (docs: langchain models, "Model profiles"). A model
 # behind a custom base_url carries no profile, so deepagents would fall
@@ -37,8 +36,7 @@ model_profile:
   max_input_tokens: ${MODEL_MAX_INPUT_TOKENS:-400000}
   structured_output: ${MODEL_STRUCTURED_OUTPUT:-}
 # Concurrency: THE single knob = max parallel agents at a time
-# Values are clamped to 1-32 in
-# harness.config.get_concurrency. Applies from the next run.
+# Values are clamped to 1-32 at config load. Applies from the next run.
 concurrency: ${CONCURRENCY:-8}
 # Max LangGraph supersteps per agent.
 recursion_limit: ${RECURSION_LIMIT:-4000}
@@ -54,23 +52,18 @@ model_call_limit: ${MODEL_CALL_LIMIT:-1000}
 partition:
   loc_budget: ${PARTITION_LOC_BUDGET:-10000}
   bytes_per_loc: ${PARTITION_BYTES_PER_LOC:-40}
-  # Edge-scan caps (read by harness/partitioning/graph.py): files over the byte
-  # cap, and reads past the total cap, contribute no framework edges.
-  edge_max_file_bytes: ${PARTITION_EDGE_MAX_FILE_BYTES:-262144}
-  edge_read_cap_bytes: ${PARTITION_EDGE_READ_CAP_BYTES:-20000000}
   # Hard cap on unit count, each unit one hunter agent (0 = unlimited). The
   # cap is a soft bound: the byte budget above is the asserted invariant.
   max_units: ${MAX_UNITS:-20}
   # Minimum files for a group to stand alone; smaller groups merge upward
   min_files: ${MIN_FILES:-10}
-  # Partition policy switches (read via harness/partitioning/config.py).
+  # Partition policy switches
   vendor_unit: ${PARTITION_VENDOR_UNIT:-0}
   single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-50}
   misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
 # codegraph is the index provider.
 codegraph:
-  enabled: ${CODEGRAPH_ENABLED:-1}
   # Tool output caps (env-overridable). 0 = unlimited where supported.
   chars: ${CODEGRAPH_CHARS:-20000}
   candidates: ${CODEGRAPH_CANDIDATES:-200}
@@ -135,13 +128,13 @@ threat:
   use_repo_file: true
   write_artifact: true
   llm_enrich: true
-discovery:
-  system_pass: true
 verification:
   votes: ${VERIFIER_VOTES:-1}
   cell_size: ${VERIFIER_CELL_SIZE:-15}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
 triage:
   batch_size: ${TRIAGE_BATCH:-30}
+ui:
+  heartbeat_s: ${HARNESS_HEARTBEAT_S:-30}
 observability:
   enabled: ${LANGFUSE_ENABLED:-auto}

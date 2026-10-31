@@ -7,10 +7,9 @@ import logging
 import os
 from pathlib import PurePosixPath
 
-from harness.config import get_model_kwargs
+from harness.config import effective_config, get_model_kwargs
 from harness.fallback import runner
 from harness.partitioning import partition_units as _det_partition_units
-from harness.partitioning.config import max_units, vendor_unit_enabled
 from harness.partitioning.units import (
     _file_weights,
     _load_partition_edges,
@@ -18,7 +17,6 @@ from harness.partitioning.units import (
     _vendor_unit,
     isolate_vendor,
     partition_target,
-    single_unit_enabled,
     small_repo_unit,
 )
 
@@ -45,7 +43,8 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
     valid = [f for f in (files or []) if isinstance(f, str) and f]
     if not valid:
         return []
-    if vendor_unit_enabled(cfg):
+    part = effective_config(cfg)["partition"]
+    if part["vendor_unit"]:
         app_files, vendor_files = isolate_vendor(valid, repo)
     else:
         app_files, vendor_files = list(valid), []
@@ -53,11 +52,11 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
     weights = _file_weights(repo, app_files) if repo is not None else {}
     pt = partition_target(weights, cfg) if weights else 0
 
-    if single_unit_enabled() and app_files:
+    if app_files:
         single = small_repo_unit(app_files, weights, pt, repo or ".", cfg=cfg)
         if single is not None:
             out = [single]
-            if vendor_files and vendor_unit_enabled():
+            if vendor_files and part["vendor_unit"]:
                 out.append(_vendor_unit(vendor_files, {single["name"]}))
             return out
 
@@ -80,7 +79,7 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
 
     # Missing app files attach by parent-dir match, then core/platform/config.
     missing = [f for f in app_files if f not in seen]
-    edges = _load_partition_edges(repo, app_files) if repo is not None else {}
+    edges = _load_partition_edges(repo, app_files, cfg) if repo is not None else {}
     if missing and app_units:
         unit_parents = []
         core_idx = 0
@@ -132,9 +131,9 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
         for f in missing:
             app_units.append({"name": f"orphan/{f}", "files": [f], "reason": "orphan"})
 
-    out = _normalize_units(app_units, weights or None, pt, edges=edges)
+    out = _normalize_units(app_units, weights or None, pt, edges=edges, cfg=cfg)
 
-    if vendor_files and vendor_unit_enabled():
+    if vendor_files and part["vendor_unit"]:
         out = list(out) + [_vendor_unit(vendor_files, set(u.get("name", "") for u in out))]
 
     return out
@@ -190,11 +189,13 @@ def _deterministic_baseline(repo: str, files: list[str],
     return baseline
 
 
-def _build_partition_message(ctx: str, baseline: list[dict]) -> str:
+def _build_partition_message(ctx: str, baseline: list[dict],
+                             cfg: dict | None = None) -> str:
     """Task prompt for the LLM partitioner."""
     from harness.partitioning.prompts import build_partition_task
 
-    msg = build_partition_task(ctx, max_units())
+    cap = int(effective_config(cfg)["partition"]["max_units"])
+    msg = build_partition_task(ctx, cap)
     baseline_lines = []
     for u in baseline:
         uname = u.get("name") or "unit"
@@ -244,7 +245,8 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
         return []
 
     # Separate vendor files first so dependencies never skew code analysis
-    if vendor_unit_enabled():
+    part = effective_config(cfg)["partition"]
+    if part["vendor_unit"]:
         app_files, vendor_files = isolate_vendor(valid, repo)
     else:
         app_files, vendor_files = list(valid), []
@@ -253,27 +255,27 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     pt = partition_target(weights, cfg) if weights else 0
 
     # Small-repo collapse skips the LLM call entirely.
-    if single_unit_enabled() and app_files:
+    if app_files:
         single = small_repo_unit(app_files, weights, pt, repo or ".", cfg=cfg)
         if single is not None:
             out = [single]
-            if vendor_files and vendor_unit_enabled():
+            if vendor_files and part["vendor_unit"]:
                 out.append(_vendor_unit(vendor_files, {single["name"]}))
             return out
 
     # Imported here so tests can monkeypatch harness.config.get_model_kwargs.
-    from harness.config import get_model_kwargs, resolve_call_timeout
+    from harness.config import get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")
     mk = dict(model_kwargs or {})
     if not mk.get("api_key") or not mk.get("model"):
         raise ValueError("no model configured")
 
-    timeout = resolve_call_timeout(mk, cfg)
+    timeout = int(effective_config(cfg)["timeout"])
 
     ctx = _structure_context(repo, files, candidates, threat_md=threat_md)
     baseline = _deterministic_baseline(repo, files, candidates, cfg)
-    msg = _build_partition_message(ctx, baseline)
+    msg = _build_partition_message(ctx, baseline, cfg)
 
     from harness.sandbox import acquired_backend
     from pathlib import Path

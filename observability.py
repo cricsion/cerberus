@@ -74,29 +74,19 @@ def _keys_present() -> bool:
     return all(bool(os.environ.get(key)) for key in _ENV_KEYS)
 
 
-def _try_load_config() -> dict:
-    """Best-effort anchored ``load_config()``; {} when unavailable."""
-    try:
-        from harness.config import load_config
-
-        cfg = load_config()
-        return cfg if isinstance(cfg, dict) else {}
-    except Exception:
-        return {}
-
-
 def enabled(cfg: dict | None = None) -> bool:
     """Enable gate (plan §2 D2, §3). Never raises — fail-open to ``False``."""
     try:
         _load_env_files()
+        from harness.config import get_config
+
         if not cfg:
-            cfg = _try_load_config()
+            cfg = get_config()
         obs = cfg.get("observability", {}) if isinstance(cfg, dict) else {}
         if not isinstance(obs, dict):
             obs = {}
-        from harness.config import config_default
-
-        raw = str(obs.get("enabled", config_default("observability.enabled"))).strip().lower()
+        fallback = get_config().get("observability", {}).get("enabled", "auto")
+        raw = str(obs.get("enabled", fallback)).strip().lower()
         keys_ok = _keys_present()
         if raw in _FALSE_VALUES:
             return False

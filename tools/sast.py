@@ -5,10 +5,9 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from harness.config import get_default_config
+from harness.config import get_config
 
-from ._compat import SAST_MAX_BYTES, env_int, run_cli, tool
-SAST_MAX_FINDINGS = int(get_default_config("sast.findings"))
+from ._compat import run_cli, tool
 
 
 def _resolve_targets(target: str) -> list[str]:
@@ -24,7 +23,8 @@ def _resolve_targets(target: str) -> list[str]:
 
 
 def _paginate(s: str, max_chars: int | None, *, total: bool = False) -> str:
-    lim = env_int("SAST_BYTES", SAST_MAX_BYTES) if max_chars is None else int(max_chars or 0)
+    lim = int(get_config()["sandbox"]["max_output_bytes"]) \
+        if max_chars is None else int(max_chars or 0)
     if lim <= 0 or len(s) <= lim:
         return s
     suffix = f" (total {len(s)})" if total else ""
@@ -58,8 +58,8 @@ def _run(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) -> di
         return {"tool": cmd[0], "skipped": True, "reason": "timeout"}
     if res.error:
         return {"tool": cmd[0], "skipped": True, "reason": res.error}
-    cap = env_int("SAST_BYTES", SAST_MAX_BYTES) if max_bytes is None \
-        else int(max_bytes or 0)
+    cap = int(get_config()["sandbox"]["max_output_bytes"]) \
+        if max_bytes is None else int(max_bytes or 0)
     stdout = res.stdout
     truncated = bool(cap > 0 and len(stdout) > cap)
     if truncated:
@@ -260,7 +260,7 @@ def template_reflect_candidates(target: str = ".") -> list[dict]:
         return []
     base = Path(resolved[0])
     out: list[dict] = []
-    max_tpl = env_int("SAST_FINDINGS", SAST_MAX_FINDINGS)
+    max_tpl = int(get_config()["sast"]["findings"])
     if max_tpl <= 0:
         max_tpl = 10**9
     try:

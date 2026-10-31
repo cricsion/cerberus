@@ -4,9 +4,8 @@ import logging
 import re
 import sys
 
-# Prompt text lives in harness/prompts/discovery.py (re-exported for `h.<name>`).
 from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
-from harness.config import resolve_call_timeout, resolve_recursion_limit
+from harness.config import effective_config
 from harness.fallback import EMPTY_STRUCTURED, runner
 from harness.paths import to_repo_relative
 from harness.schemas import DiscoveryResult, safe_float, safe_int
@@ -184,9 +183,8 @@ def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
     from harness.agents.toolsets import graph_tools
 
     mk = sanitize_model_kwargs(model_kwargs)
-    _timeout = resolve_call_timeout(mk, cfg)
+    _timeout = int(effective_config(cfg)["timeout"])
     llm = make_llm(mk, timeout=_timeout)
-    # Caching optimization: system prompt is static across all units
     prompt = build_unit_system_prompt("", backend=backend)
     tools = graph_tools()
     return build_deep_agent(llm, system_prompt=prompt, tools=tools,
@@ -213,7 +211,7 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
         if backend is None:
             print(f"[hunters] {name}: no sandbox backend; "
                   "falling back to the builder default")
-        rec_lim = resolve_recursion_limit(cfg)
+        rec_lim = int(effective_config(cfg)["recursion_limit"])
         try:
             agent = build_unit_hunter_agent(name, model_kwargs, focus, repo=repo,
                                             backend=backend, cfg=cfg)
@@ -251,7 +249,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     findings = [f for f in (findings or []) if isinstance(f, dict)]
     model_kwargs = get_model_kwargs(cfg, "hunter")
     mk = sanitize_model_kwargs(model_kwargs)
-    _timeout = resolve_call_timeout(mk, cfg)
+    _timeout = int(effective_config(cfg)["timeout"])
     with acquired_backend(cfg, repo, label="system-pass") as backend:
         if backend is None:
             print("[system-pass] no sandbox backend; "

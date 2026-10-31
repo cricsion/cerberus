@@ -55,15 +55,15 @@ def cmd_scan(args: argparse.Namespace) -> int:
     no_color = bool(getattr(args, "no_color", False))
     from harness.reporting.ui import build_reporter
 
-    reporter = build_reporter(no_color=no_color, agent_log=agent_log)
+    from harness.config import get_config, set_config
     try:
-        from harness.config import load_config_safe
-
-        _cfg, _cfg_err = load_config_safe()
-        if not isinstance(_cfg, dict):
-            _cfg = {}
+        _cfg = get_config()
     except Exception:
-        _cfg = {}
+        try:
+            _cfg = set_config({})
+        except Exception:
+            _cfg = {}
+    reporter = build_reporter(no_color=no_color, agent_log=agent_log)
     try:
         reporter.header(repo, _cfg,
                         fail_on=getattr(args, "fail_on", "high"),
@@ -97,14 +97,14 @@ def cmd_scan(args: argparse.Namespace) -> int:
         write_junit(findings, out / "junit.xml")
         threat_md = state.get("threat_model_md", "") or ""
         from harness import threat
+        from harness.config import effective_config
         cfg = state.get("cfg") or {}
         _write_tm = True
         try:
-            _write_tm = threat.threat_enabled(cfg, "write_artifact")
+            _write_tm = bool(effective_config(cfg)["threat"]["write_artifact"])
         except Exception:
             _write_tm = True
-        # threat_update node already folded validator findings into state; CLI
-        # only writes (single writer).
+
         threat_persisted = ""
         if threat_md.strip() and _write_tm:
             (out / "THREAT_MODEL.md").write_text(threat_md)
@@ -112,8 +112,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
         triage_log = state.get("triage_log", []) or []
         if triage_log:
             try:
-                from harness.agents.triage import _resolve_batch, render_triage_log
-                _batch = _resolve_batch(cfg)
+                from harness.agents.triage import render_triage_log
+                from harness.config import effective_config
+                _batch = int(effective_config(cfg)["triage"]["batch_size"])
                 _calls = max((int(e.get("batch", 0) or 0) for e in triage_log
                               if isinstance(e, dict)), default=0)
                 (out / "triage.log").write_text(
@@ -188,8 +189,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 def cmd_threat_model(args: argparse.Namespace) -> int:
     """Create THREAT_MODEL.md for a repo (reference 8-section schema): deterministic
-    floor + swarm enrichment (`threat.llm_enrich: false` / HARNESS_THREAT_LLM=0
-    offline); --interview asks on stdin; without a key it degrades to Shostack.
+    floor + swarm enrichment (`threat.llm_enrich: false` offline); --interview
+    asks on stdin; without a key it degrades to Shostack.
     """
     from harness import threat as _th
     from harness.pipeline import indexer_node, threat_summary
@@ -251,11 +252,12 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
         print(f"warning: --vulns {_vulns_path} parsed to 0 rows "
               "(missing or unrecognized format); continuing on git history")
     if bool(getattr(args, "interview", False)):
-        from harness.config import api_key_present, load_config_safe
-        _cfg_tm, _cfg_tm_err = load_config_safe()
-        if _cfg_tm_err is not None:
-            logger.debug("threat-model config load failed; using defaults: %s",
-                         _cfg_tm_err)
+        from harness.config import api_key_present, get_config
+        try:
+            _cfg_tm = get_config()
+        except Exception as e:
+            logger.debug("threat-model config load failed; using defaults: %s", e)
+            _cfg_tm = {}
         if not api_key_present(_cfg_tm):
             answers: dict[str, str] = {}
             print("Answer Shostack's four questions (empty = skip):")
@@ -291,12 +293,13 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"bootstrap failed: {e}", file=sys.stderr)
             return 1
         try:
-            from harness.config import api_key_present, load_config
-            _cfg_enrich = load_config()
+            from harness.config import (api_key_present, effective_config,
+                                        get_config)
+            _cfg_enrich = get_config()
             if not api_key_present(_cfg_enrich):
                 print("API_KEY not set: skipping swarm enrichment; kept "
                       "deterministic threat model.")
-            elif _th.threat_enabled(_cfg_enrich, "llm_enrich"):
+            elif effective_config(_cfg_enrich)["threat"]["llm_enrich"]:
                 enriched, meta = _th.enrich_threat(
                     repo, files, cands, summary, md, _cfg_enrich,
                     vulns=vulns, vulns_path=_vulns_path,

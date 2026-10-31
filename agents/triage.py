@@ -10,7 +10,7 @@ import logging as _logging
 _logger = _logging.getLogger(__name__)
 
 from harness.agents.deep import is_fatal_error
-from harness.config import int_setting
+from harness.config import effective_config
 from harness.schemas import safe_int, structured_items
 
 
@@ -161,14 +161,6 @@ def _apply_verdicts(findings: list[dict], verdicts: list[dict]) -> int:
     return applied
 
 
-def _resolve_batch(cfg: dict | None) -> int:
-    """Max findings per triage LLM call;
-    0 = unlimited, else clamped to 1-200). Never raises."""
-    return int_setting(cfg, "triage.batch_size",
-                       fallback_path="triage.batch_size", minimum=1,
-                       maximum=200, zero_is_unlimited=True)
-
-
 def _log_entry(f: dict, batch: int) -> dict:
     """One written-log row per finding."""
     try:
@@ -249,10 +241,10 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                    key=lambda f: (_family(f.get("cwe", "")),
                                   _norm_path(f.get("path", "")),
                                   safe_int(f.get("start_line", 0))))
-    batch_size = _resolve_batch(cfg)
+    cfg = effective_config(cfg)
+    batch_size = int(cfg["triage"]["batch_size"])
     log: list[dict] = []
-    from harness.config import get_concurrency as _gc
-    _tw = _gc(cfg)
+    max_workers = int(cfg["concurrency"])
     chunks = [order[i:i + batch_size]
               for i in range(0, len(order), batch_size)]
     completed = 0
@@ -262,15 +254,14 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
           file=sys.stderr, flush=True)
 
     from harness.agents.deep import run_structured, sanitize_model_kwargs
-    from harness.config import (get_model_kwargs, resolve_call_retries,
-                                resolve_call_timeout)
+    from harness.config import get_model_kwargs
     from harness.prompts.triage import TRIAGE_SYSTEM, TriageBatch
 
     try:
         mk = sanitize_model_kwargs(
             get_model_kwargs(cfg, "validator", agent="triager"))
-        _timeout = resolve_call_timeout(mk, cfg)
-        _max_retries = resolve_call_retries(mk, cfg)
+        _timeout = int(cfg["timeout"])
+        _max_retries = int(cfg["max_retries"])
     except Exception as e:
         if is_fatal_error(e):
             raise
@@ -304,7 +295,7 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                     name="triage", backend=backend, root_dir=repo or None)
                 return parsed
 
-            max_workers = max(1, int(_tw)) if _tw else None
+            max_workers = max(1, int(max_workers)) if max_workers else None
             results = []
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(_triage_one_batch, m)

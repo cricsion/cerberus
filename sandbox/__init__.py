@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import logging
-import os
 import sys
 import uuid
 from contextlib import contextmanager
@@ -79,29 +78,18 @@ def _sandbox_section(cfg: dict | None) -> dict:
 
 def _sandbox_setting(cfg: dict | None, key: str, default: Any) -> Any:
     value = _sandbox_section(cfg).get(key)
-    if value in (None, ""):
-        env_value = os.environ.get(f"SANDBOX_{key.upper()}")
-        return env_value if env_value not in (None, "") else default
-    return value
+    return default if value in (None, "") else value
 
 
 def _sandbox_defaults(*path: str) -> dict:
-    """Defaults from harness/config/default.yaml only; The file is a repo invariant, so this fallback path can rely on it.
-    """
-    from harness.config import config_default
+    """The ``sandbox`` section of the one cfg."""
+    from harness.config import get_config
 
-    value = config_default(".".join(path))
-    return value if isinstance(value, dict) else {}
+    node: Any = get_config()
+    for part in path:
+        node = node.get(part) if isinstance(node, dict) else None
+    return node if isinstance(node, dict) else {}
 
-
-def _backend_choice(cfg: dict | None) -> str:
-    """Which backend the config names — ``sandbox.backend``, env escape
-    ``SANDBOX_BACKEND`` included — normalized. ``resolve_backend`` matches it
-    against the backend table; the system lane's ``sandbox_lane`` compares it
-    to ``docker``."""
-    defaults = _sandbox_defaults("sandbox")
-    return str(_sandbox_setting(cfg, "backend",
-                                defaults["backend"])).strip().lower()
 
 def _coerce_int(key: str, value: Any) -> int:
     """A garbage sandbox setting fails the resolve (callers degrade to the
@@ -176,7 +164,9 @@ def _iter_backends() -> Iterator[tuple[tuple[Any, ...], Any]]:
 
 def resolve_backend(cfg: dict | None, repo: str | Path,
                     *, agent_id: str | None = None) -> RepoLocalBackend:
-    which = _backend_choice(cfg)
+    from harness.config import effective_config
+
+    which = str(effective_config(cfg)["sandbox"]["backend"])
     for name, build_settings, cls_name, getter, _shutdown in _BACKENDS:
         if which != name:
             continue

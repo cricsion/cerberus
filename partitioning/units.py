@@ -7,13 +7,11 @@ import logging
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
+from harness.config import effective_config
 from harness.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
-                                         VENDOR_DIR_SEGMENTS,
+                                         PARTITION_MODES, VENDOR_DIR_SEGMENTS,
                                          VENDOR_FILE_SUFFIXES,
-                                         VENDOR_UNIT_NAME, max_units,
-                                         min_files, misc_code_merge_enabled,
-                                         single_unit_max_files,
-                                         single_unit_enabled, vendor_unit_enabled)
+                                         VENDOR_UNIT_NAME)
 from harness.partitioning.graph import support_file_kind
 
 _logger = logging.getLogger(__name__)
@@ -124,7 +122,7 @@ def small_repo_unit(app_files: list[str],
                     repo: str = ".",
                     cfg: dict | None = None) -> dict | None:
     """One unit when the repo fits both the file count and byte budget; None otherwise."""
-    max_files = single_unit_max_files(cfg)
+    max_files = effective_config(cfg)["partition"]["single_unit_max_files"]
     if max_files <= 0:
         return None
     fs = sorted({f for f in (app_files or []) if _is_path(f)})
@@ -380,7 +378,8 @@ def _support_group_units(groups: dict[tuple[str, str], list[str]],
 
 def _raw_units_from_dirs(repo: str, files: list[str], prefix: str = "",
                            weight_of: dict[str, int] | None = None,
-                           target: int = 0) -> list[dict]:
+                           target: int = 0,
+                           cfg: dict | None = None) -> list[dict]:
     """Raw directory and support-group units without normalization."""
     groups: dict[str, list[str]] = defaultdict(list)
     support_groups: dict[tuple[str, str], list[str]] = defaultdict(list)
@@ -395,7 +394,8 @@ def _raw_units_from_dirs(repo: str, files: list[str], prefix: str = "",
         # Strip repo-prefix noise: a lone dir equal to repo basename merges to root.
         groups[key].append(f)
     base = Path(repo).name.lower()
-    if base in groups and len(groups) > 1 and len(groups[base]) <= min_files():
+    min_files = effective_config(cfg)["partition"]["min_files"]
+    if base in groups and len(groups) > 1 and len(groups[base]) <= min_files:
         groups["root"].extend(groups.pop(base))
     units = [{"name": f"{prefix}/{k}" if prefix else k, "files": sorted(v),
                "reason": "top-level-directory"}
@@ -407,9 +407,11 @@ def _raw_units_from_dirs(repo: str, files: list[str], prefix: str = "",
 def _units_from_dirs(repo: str, files: list[str], prefix: str = "",
                       weight_of: dict[str, int] | None = None,
                       target: int = 0,
-                      edges: dict | None = None) -> list[dict]:
-    units = _raw_units_from_dirs(repo, files, prefix=prefix, weight_of=weight_of, target=target)
-    return _normalize_units(units, weight_of, target, edges=edges)
+                      edges: dict | None = None,
+                      cfg: dict | None = None) -> list[dict]:
+    units = _raw_units_from_dirs(repo, files, prefix=prefix,
+                                 weight_of=weight_of, target=target, cfg=cfg)
+    return _normalize_units(units, weight_of, target, edges=edges, cfg=cfg)
 
 
 def _file_weights(repo: str, files: list[str]) -> dict[str, int]:
@@ -434,19 +436,12 @@ def _file_weights(repo: str, files: list[str]) -> dict[str, int]:
 def partition_target(weight_of: dict[str, int], cfg: dict | None = None) -> int:
     """Per-unit byte ceiling: max(loc_budget x bytes_per_loc, code_bytes / MAX_UNITS);
     binary assets excluded."""
-    from harness.config import config_default
-
-    loc_default = int(config_default("partition.loc_budget"))
-    bpl_default = float(config_default("partition.bytes_per_loc"))
-    try:
-        _part = (cfg or {}).get("partition") or {}
-        loc = int(_part.get("loc_budget", loc_default) or 0)
-        bpl = float(_part.get("bytes_per_loc", bpl_default) or bpl_default)
-    except (TypeError, ValueError):
-        loc, bpl = loc_default, bpl_default
+    part = effective_config(cfg)["partition"]
+    loc = int(part["loc_budget"])
+    bpl = float(part["bytes_per_loc"])
     nominal = int(loc * bpl) if loc > 0 and bpl > 0 else 0
     total = sum(v for f, v in weight_of.items() if support_file_kind(f) != "asset")
-    cap = max_units(cfg)  # MAX_UNITS (env), <= 0 meaning unlimited
+    cap = int(part["max_units"])  # normalized: 0 becomes the unlimited sentinel
     derived = -(-total // cap) if total > 0 else 0  # ceil division
     return max(nominal, derived)
 
@@ -708,14 +703,12 @@ def _rebalance_units(units: list[dict], weight_of: dict[str, int] | None,
 
 
 def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
-                      target: int = 0, edges: dict | None = None) -> list[dict]:
-    """Merge tiny units, cap at MAX_UNITS, re-enforce the budget, unique names (MIN_FILES /
-    MAX_UNITS env-overridable). Tiny code units never land in misc; budget_exempt safe."""
-    cap = max_units()  # MAX_UNITS (env), <= 0 meaning unlimited
-    # Read MIN_FILES live so tests/env can change it without reimport.
-    _min = min_files()
-    if _min < 0:
-        _min = 0
+                      target: int = 0, edges: dict | None = None,
+                      cfg: dict | None = None) -> list[dict]:
+    """Merge tiny units, cap at MAX_UNITS, re-enforce the budget, unique names."""
+    part = effective_config(cfg)["partition"]
+    cap = int(part["max_units"])
+    _min = max(0, int(part["min_files"]))
     # 1. Combine same-named units (inner + outer misc must fuse, never coexist).
     merged: dict[str, dict] = {}
     for u in units:
@@ -743,7 +736,7 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
         units = _balance_units(units, weight_of, target, edges=edges)
     # 2. Merge tiny units: legacy (singletons into misc) or P1.3 (only non-code into
     # misc; a tiny code unit couples or stays a singleton).
-    if misc_code_merge_enabled():
+    if part["misc_code_merge"]:
         big, misc = _merge_tiny_policy(units, _min, edges, weight_of, target)
     else:
         big, misc = _merge_tiny_legacy(units)
@@ -825,12 +818,13 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
     return [u for u in big if u.get("files")]
 
 
-def _load_partition_edges(repo: str, files: list[str]) -> dict:
+def _load_partition_edges(repo: str, files: list[str],
+                          cfg: dict | None = None) -> dict:
     """File-coupling edges from source-level framework/same-dir analysis."""
-    from harness.partitioning.config import framework_edges_enabled
     from harness.partitioning.graph import augment_edges
 
-    edges = augment_edges(repo, files, {}) if framework_edges_enabled() else {}
+    enabled = effective_config(cfg)["partition"]["framework_edges"]
+    edges = augment_edges(repo, files, {}) if enabled else {}
     return dict(edges or {})
 
 
@@ -841,8 +835,9 @@ def partition_units(repo: str, files: list[str],
     files = [f for f in (files or []) if f]
     if not files:
         return []
+    part = effective_config(cfg)["partition"]
     app_files, vendor_files = files, []
-    if vendor_unit_enabled():
+    if part["vendor_unit"]:
         app_files, vendor_files = isolate_vendor(files, repo)
 
     def _finish(units: list[dict]) -> list[dict]:
@@ -856,27 +851,30 @@ def partition_units(repo: str, files: list[str],
     weight_of = _file_weights(repo, app_files)
     target = partition_target(weight_of, cfg)
     # P0.2 small-repo single unit (file count AND byte budget must both fit).
-    if single_unit_enabled():
-        single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
-        if single is not None:
-            return _finish([single])
-    from harness.partitioning.config import partition_mode
+    single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
+    if single is not None:
+        return _finish([single])
+    from harness.partitioning.config import PARTITION_MODES
     from harness.partitioning import codegraph as _cg
-    mode = partition_mode(cfg)
+    mode = str(effective_config(cfg)["codegraph"]["partition"]["mode"]).strip().lower()
+    if mode not in PARTITION_MODES:
+        mode = "primary"
     if mode == "primary" and _cg.index_available(repo):
         raw_units = _cg.partition_codegraph_native(app_files)
-        units = _normalize_units(raw_units, weight_of, target) if raw_units else []
+        units = (_normalize_units(raw_units, weight_of, target, cfg=cfg)
+                 if raw_units else [])
         edges = None
     else:
-        edges = _load_partition_edges(repo, app_files)
+        edges = _load_partition_edges(repo, app_files, cfg)
         units = None
     if not units:
         if edges is None:
-            edges = _load_partition_edges(repo, app_files)
+            edges = _load_partition_edges(repo, app_files, cfg)
         units = _units_from_dirs(repo, app_files, weight_of=weight_of,
-                                 target=target, edges=edges)
+                                 target=target, edges=edges, cfg=cfg)
     if not units:
         units = _normalize_units(
             [{"name": "all", "files": sorted(set(app_files)),
-              "reason": "single-unit"}], weight_of, target, edges=edges)
+              "reason": "single-unit"}], weight_of, target, edges=edges,
+            cfg=cfg)
     return _finish(units)

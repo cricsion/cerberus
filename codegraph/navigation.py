@@ -32,12 +32,12 @@ import re
 from harness.codegraph import _common, _db, _ts, summaries
 from harness.codegraph._common import (
     HARD_MAX_SECTION, Report, _as_int, _cap_chars, _cap_rows, _contained_file,
-    _end_line_of, _env_int, _line_of, _walk,
+    _end_line_of, _line_of, _walk,
 )
-from harness.config import get_default_config
+from harness.config import get_config
 from harness.tools._compat import tool
 
-# Shared bodies stay module-level names: the pin suite reaches some directly.
+
 _args_node = _common._args_node
 _call_args = _common._call_arg_texts
 _callee_tail = _common._callee_tail_tail
@@ -914,8 +914,7 @@ def _render_ref(conn, position: int, ref: dict, root: str, src_cache: dict,
     if call_arity is not None:
         lines.append(f"   call-site arity: {call_arity} (parsed from "
                      f"{from_path}:{ref.get('line')})")
-    cap = min(_env_int("CODEGRAPH_CANDIDATES",
-                       int(get_default_config("codegraph.candidates"))),
+    cap = min(int(get_config()["codegraph"]["candidates"]),
               _db.HARD_MAX_ROWS)
     pool = [c for c in _candidate_pool(conn, ref, cap)
             if str(c.get("id")) != str(ref.get("from_node_id"))]

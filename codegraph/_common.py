@@ -25,13 +25,11 @@ import re
 from pathlib import Path
 
 from harness.codegraph import _db, _ts
-from harness.config import get_default_config
+from harness.config import get_config
 from harness.tools._compat import env_int
 from harness.tools.code import _safe_path
 
 HARD_MAX_SECTION = 200
-CHAR_CAP = int(get_default_config("codegraph.chars"))
-ENV_CHARS = "CODEGRAPH_CHARS"
 _CONF_MIN, _CONF_MAX = 0.30, 0.85
 _MAX_VALUE_CHARS = 160
 _HANDLER_KINDS = ("function", "method", "class", "constant", "variable", "component")
@@ -64,8 +62,8 @@ def _section_cap(env_key: str, default: int) -> int:
     return min(_env_int(env_key, default), HARD_MAX_SECTION)
 
 def _cap_chars(text: str) -> str:
-    """Apply the ``CODEGRAPH_CHARS`` budget, preserving the pinned tail."""
-    lim = _env_int(ENV_CHARS, CHAR_CAP)
+    """Apply the ``codegraph.chars`` budget, preserving the pinned tail."""
+    lim = int(get_config()["codegraph"]["chars"])
     if lim <= 0 or len(text) <= lim:
         return text
     return text[:lim] + f"\n… +{len(text) - lim} more chars (total {len(text)})"

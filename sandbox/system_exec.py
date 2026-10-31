@@ -85,16 +85,15 @@ def sandbox_lane() -> str:
     degrade deep.py applies — the local lane, never a silent ``{}`` resolve
     that could still pick docker via env interpolation behind a broken cfg.
     """
-    from harness.config import load_config_safe
+    from harness.config import get_config
 
-    cfg, cfg_err = load_config_safe()
-    if cfg_err is not None:
+    try:
+        cfg = get_config()
+    except Exception as cfg_err:
         _logger.debug("sandbox lane degraded to local: config load failed: "
                       "%s: %s", type(cfg_err).__name__, cfg_err)
         return "local"
-    from . import _backend_choice
-
-    return _backend_choice(cfg)
+    return str(cfg["sandbox"]["backend"])
 
 
 def _env_exports(env: dict[str, str] | None) -> str:
@@ -110,16 +109,14 @@ def _env_exports(env: dict[str, str] | None) -> str:
 
 
 def _run_for(repo: str):
-    from harness.config import load_config_safe
+    from harness.config import get_config
     from . import _docker_settings
     from .docker_backend import get_run_sandbox
 
     # The SAME cfg the agent lane resolves with, so the registry's one
     # container per repo carries one settings set (image, network, limits)
-    # whichever lane constructs it first. A config failure degrades to {}
-    # here (defaults + env ladder) exactly as sandbox_lane degrades to local.
-    cfg, _cfg_err = load_config_safe()
-    return get_run_sandbox(repo, _docker_settings(cfg, repo))
+    # whichever lane constructs it first.
+    return get_run_sandbox(repo, _docker_settings(get_config(), repo))
 
 
 def system_execute(repo: str, command: str, *, timeout: int = 300,

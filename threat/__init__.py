@@ -13,7 +13,7 @@ from .render import render_md, validate_threat_md
 from .swarm import (apply_interview, conduct_interview, enrich_threat,
                     finalize_threat, interview_questions, persist_threat,
                     update_threat_with_findings)
-from .util import find_repo_file, threat_enabled
+from .util import find_repo_file
 from .vulns import parse_vulns_file
 
 # --- public constants -------------------------------------------------------

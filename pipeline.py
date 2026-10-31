@@ -191,10 +191,9 @@ def _node_cfg(state: dict) -> dict:
     cfg = state.get("cfg") if isinstance(state, dict) else None
     if isinstance(cfg, dict):
         return cfg
-    from harness.config import load_config_safe
+    from harness.config import get_config
 
-    loaded, _error = load_config_safe()
-    return loaded
+    return get_config()
 
 
 def indexer_node(state: ScanState) -> dict:
@@ -309,7 +308,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
 
     def _threat_doc_stage() -> dict:
         from harness import threat as _th
-        from harness.config import api_key_present
+        from harness.config import api_key_present, effective_config
 
         _cfg2 = _node_cfg(state)
         override = state.get("threat_model_override") or ""
@@ -337,7 +336,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
         enrich_meta: dict = {}
         _enrich_wanted = (
             source not in ("override", "repo-file")
-            and _th.threat_enabled(_cfg2, "llm_enrich"))
+            and bool(effective_config(_cfg2)["threat"]["llm_enrich"]))
         if _enrich_wanted and not api_key_present(_cfg2):
             enrich_meta = {"skipped": "API_KEY not set"}
         elif _enrich_wanted:
@@ -578,15 +577,10 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    from harness.config import (api_key_present, as_bool, config_default,
-                                effective_model)
+    from harness.config import api_key_present, effective_model
 
     _cfg_sys = _node_cfg(state)
     if not api_key_present(_cfg_sys):
-        return {}
-    enabled = config_default("discovery.system_pass")
-    _enabled = str(((_cfg_sys.get("discovery") or {}).get("system_pass", enabled))).lower()
-    if not as_bool(_enabled):
         return {}
     if agent_registry is not None:
         agent_registry.create(
@@ -825,29 +819,17 @@ def scorer_node(state: ScanState) -> dict:
     return {"verified": Overwrite(out)}
 
 
-def _max_concurrency(state: dict) -> int:
-    from harness.config import get_concurrency
-
-    return get_concurrency(_node_cfg(state))
-
-
 def _reset_agent_scratch_phase(repo: str) -> None:
     # Hygiene only: config-gated, best-effort — NOT a security boundary.
     try:
-        from harness.config import as_bool, config_default, load_config
+        from harness.config import as_bool, get_config
         from harness.sandbox import reset_agent_scratch
 
-        # NOTE: load_config() must stay a zero-arg call here — tests pin a
-        # zero-arg mock for harness.config.load_config (load_config_safe
-        # forwards a path argument and would break that contract).
-        try:
-            cfg = load_config()
-        except Exception:
-            cfg = {}
+        cfg = get_config()
         sandbox = cfg.get("sandbox")
         sandbox = sandbox if isinstance(sandbox, dict) else {}
-        enabled = config_default("sandbox.reset_agent_scratch")
-        if not as_bool(sandbox.get("reset_agent_scratch", enabled)):
+        enabled = sandbox.get("reset_agent_scratch", True)
+        if not as_bool(enabled):
             return
         for err in reset_agent_scratch(repo):
             print(f"[sandbox] {err}", file=sys.stderr)
@@ -857,18 +839,14 @@ def _reset_agent_scratch_phase(repo: str) -> None:
 
 def _sweep_orphan_sandboxes() -> None:
     try:
-        from harness.config import as_bool, config_default, load_config
+        from harness.config import as_bool, get_config
         from harness.sandbox import sweep_orphans
 
-        # Zero-arg load_config() — see note in _reset_agent_scratch_phase.
-        try:
-            cfg = load_config()
-        except Exception:
-            cfg = {}
+        cfg = get_config()
         sandbox = cfg.get("sandbox")
         sandbox = sandbox if isinstance(sandbox, dict) else {}
-        enabled = config_default("sandbox.sweep_orphans")
-        if not as_bool(sandbox.get("sweep_orphans", enabled)):
+        enabled = sandbox.get("sweep_orphans", True)
+        if not as_bool(enabled):
             return
         removed = sweep_orphans()
         if removed:
@@ -882,8 +860,8 @@ def _fan_out_hunters(state: dict, max_workers: int,
                      agent_registry: Any = None) -> dict[str, float]:
     import time as _time
 
-    from harness.agents.validator import _cell_size
-    from harness.config import effective_model
+    from harness.agents.validator import _evidence_gate_findings, _route_finding
+    from harness.config import effective_config, effective_model
 
     payloads = list(state.get("fanout_payloads", []) or [])
     busy = {"hunt": 0.0, "validation": 0.0, "system_pass": 0.0}
@@ -981,9 +959,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         unit = str(p.get("unit", "unit"))
         merged = _ctx(p)
         cfg = merged.get("cfg") or state.get("cfg") or {}
-        size = _cell_size(cfg)
-        from harness.agents.validator import (_evidence_gate_findings,
-                                              _route_finding)
+        size = int(effective_config(cfg)["verification"]["cell_size"])
 
         try:
             gated = _evidence_gate_findings(list(findings))
@@ -995,11 +971,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                            if _route_finding(g)[0] != "llm"]
         except Exception:
             llm_items, passthrough = list(findings), []
-        from harness.config import as_bool, config_default
-        couple_default = config_default("verification.couple_remainders")
-        if couple_default is None:
-            couple_default = 1
-        couple = as_bool((cfg.get("verification") or {}).get("couple_remainders", couple_default))
+        couple = bool(effective_config(cfg)["verification"]["couple_remainders"])
 
         if couple:
             n_full = len(llm_items) // size
@@ -1115,15 +1087,24 @@ def run_scan(repo: str, confirm_critical: bool = False,
     try:
         repo = str(canonical_repo(repo))
         os.environ["TARGET_REPO"] = repo
-        _sweep_orphan_sandboxes()
+        from harness.config import get_config, set_config
+
         if cfg is None:
-            from harness.config import load_config_safe
-            cfg, cfg_err = load_config_safe()
-            if cfg_err is not None:
+            try:
+                cfg = get_config()
+            except Exception as cfg_err:
                 print(f"warning: config load failed ({type(cfg_err).__name__}: "
                       f"{cfg_err}); continuing with packaged defaults",
                       file=sys.stderr, flush=True)
                 logger.debug("config load failed; using defaults: %s", cfg_err)
+                try:
+                    cfg = set_config({})
+                except Exception as cfg_err2:
+                    logger.debug("defaults degrade failed: %s", cfg_err2)
+                    cfg = {}
+        else:
+            cfg = set_config(cfg)
+        _sweep_orphan_sandboxes()
         state: dict[str, Any] = {"repo": repo, "cfg": cfg}
         if _obs is not None:
             _scan_id = _obs.start_scan(repo, cfg=cfg)
@@ -1180,8 +1161,10 @@ def run_scan(repo: str, confirm_critical: bool = False,
                 stage_timings[name] = round(_stage_time.time() - _t0, 3)
 
         def _hunters_stage():
+            from harness.config import effective_config
+
             result = _fan_out_hunters(
-                state, _max_concurrency(state),
+                state, int(effective_config(_node_cfg(state))["concurrency"]),
                 agent_registry=_agent_registry)
             prog = _get_progress()
             if prog is not None:
