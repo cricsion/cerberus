@@ -24,31 +24,34 @@ def clear_manifests() -> None:
 
 
 def _digest_repo(repo: str | Path) -> dict[str, Any]:
-    """Digest source paths and contents so same-size edits are detected."""
+    """Fast stat-based manifest: hashes relative path, size, and mtime without
+    reading file contents into memory, avoiding multi-megabyte host I/O."""
     manifest = hashlib.sha256()
     count = 0
     base = Path(repo)
-    for path in sorted(base.rglob("*")):
-        try:
-            rel = path.relative_to(base)
-        except ValueError:
-            continue
-        if any(part in SKIP_PARTS for part in rel.parts):
-            continue
-        try:
-            if path.is_symlink() or not path.is_file():
+    try:
+        for path in sorted(base.rglob("*")):
+            try:
+                rel = path.relative_to(base)
+            except ValueError:
                 continue
-            manifest.update(str(rel).encode("utf-8"))
-            manifest.update(b"\0")
-            manifest.update(str(path.stat().st_size).encode("utf-8"))
-            manifest.update(b"\0")
-            with path.open("rb") as fh:
-                while chunk := fh.read(_HASH_CHUNK):
-                    manifest.update(chunk)
+            if any(part in SKIP_PARTS for part in rel.parts):
+                continue
+            try:
+                if path.is_symlink() or not path.is_file():
+                    continue
+                st = path.stat()
+                manifest.update(str(rel).encode("utf-8"))
                 manifest.update(b"\0")
-            count += 1
-        except OSError:
-            continue
+                manifest.update(str(st.st_size).encode("utf-8"))
+                manifest.update(b"\0")
+                manifest.update(str(st.st_mtime_ns).encode("utf-8"))
+                manifest.update(b"\0")
+                count += 1
+            except OSError:
+                continue
+    except OSError:
+        pass
     return {"manifest_hash": manifest.hexdigest(), "manifest_files": count}
 
 

@@ -35,8 +35,9 @@ connect_timeout: ${HARNESS_CONNECT_TIMEOUT:-10}
 # calibrate context compression for long hunter units.
 model_profile:
   max_input_tokens: ${MODEL_MAX_INPUT_TOKENS:-400000}
-# Concurrency: THE single knob = max parallel agents at a time (hunter
-# fan-out, validator pool, legacy pool). Values are clamped to 1-32 in
+  structured_output: ${MODEL_STRUCTURED_OUTPUT:-}
+# Concurrency: THE single knob = max parallel agents at a time
+# Values are clamped to 1-32 in
 # harness.config.get_concurrency. Applies from the next run.
 concurrency: ${CONCURRENCY:-8}
 # Max LangGraph supersteps per agent.
@@ -67,7 +68,6 @@ partition:
   single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-50}
   misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
-  same_dir_edges: ${PARTITION_SAME_DIR_EDGES:-1}
 # codegraph is the index provider.
 codegraph:
   enabled: ${CODEGRAPH_ENABLED:-1}
@@ -139,7 +139,7 @@ discovery:
   system_pass: true
 verification:
   votes: ${VERIFIER_VOTES:-1}
-  cell_size: ${VERIFIER_CELL_SIZE:-10}
+  cell_size: ${VERIFIER_CELL_SIZE:-15}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
 triage:
   batch_size: ${TRIAGE_BATCH:-30}

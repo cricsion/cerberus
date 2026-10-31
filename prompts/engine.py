@@ -62,12 +62,6 @@ def _read(name: str, base: Path) -> tuple[dict[str, Any], str]:
     return result
 
 
-def meta(name: str, *, base: Path | None = None) -> dict[str, Any]:
-    """The frontmatter mapping for one template."""
-    front, _body = _read(name, (base or TEMPLATES_DIR).resolve())
-    return dict(front)
-
-
 def block(name: str, *, base: Path | None = None, **variables: Any) -> str:
     """The prompt copy for one template, placeholders substituted.
 

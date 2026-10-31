@@ -10,15 +10,7 @@ from harness.config import get_default_config
 
 SAST_MAX_BYTES = int(get_default_config("sandbox.max_output_bytes"))
 
-try:
-    from langchain_core.tools import tool
-except ImportError:  # pragma: no cover - allow import without langchain installed
-    def tool(*dargs, **dkwargs):  # type: ignore
-        def deco(fn):
-            return fn
-        if dargs and callable(dargs[0]):
-            return dargs[0]
-        return deco
+from langchain_core.tools import tool
 
 
 def env_int(name: str, default: int) -> int:

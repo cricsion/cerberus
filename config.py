@@ -178,13 +178,10 @@ def config_default(path: str) -> Any:
 
 
 def get_default_config(path: str) -> Any:
-    """The literal ``${VAR:-fallback}`` value from harness/config/default.yaml.
-
-    Import-time constants use this so a malformed `.env`/process value cannot
-    crash an import; normal resolution goes through ``config_default`` (env
-    and .env win). A missing path returns None. Non-scalar results are refs
-    into the process cache — treat as read-only (``config_default`` copies).
-    """
+    """A setting from harness/.env or harness/config/default.yaml."""
+    val = config_default(path)
+    if val is not None:
+        return val
     node = _dotted(_raw_default_config(), path.split("."))
     if isinstance(node, str):
         match = _ENV_PATTERN.fullmatch(node)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import sys
 import time
@@ -565,10 +566,17 @@ def _run_validation_cells(planned, workers: int, *, cfg: dict, n_votes: int,
             return _fallback(gi, cidx)
 
     try:
-        from langchain_core.runnables import RunnableLambda
-        results = RunnableLambda(_safe).batch(
-            tasks, config={"max_concurrency": max(1, int(workers))},
-            return_exceptions=True)
+        max_workers = max(1, int(workers))
+        results = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(_safe, t) for t in tasks]
+            for fut in futures:
+                try:
+                    results.append(fut.result())
+                except Exception as e:
+                    if is_fatal_error(e):
+                        raise
+                    results.append(e)
     except Exception as e:
         if is_fatal_error(e):
             raise

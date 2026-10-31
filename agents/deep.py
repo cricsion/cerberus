@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import threading
 from pathlib import Path
@@ -57,7 +58,7 @@ CONFIG_ERRORS = (ModelAuthenticationError, ModelPermissionDeniedError,
 # Harness bugs must bubble up (never fail open into needs-review); excludes ValueError (pydantic) and RuntimeError (transport stand-in).
 PROGRAMMING_ERRORS = (AttributeError, NameError, UnboundLocalError, TypeError,
                       IndexError, KeyError, AssertionError,
-                      NotImplementedError, SyntaxError)
+                      NotImplementedError, SyntaxError, re.error)
 
 
 _registered: set[str] = set()
@@ -178,6 +179,9 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
                 profile["max_input_tokens"] = int(val)
             except (TypeError, ValueError):
                 pass
+        val_so = raw.get("structured_output")
+        if val_so not in (None, ""):
+            profile["structured_output"] = as_bool(val_so)
         if profile:
             kwargs["profile"] = profile
 

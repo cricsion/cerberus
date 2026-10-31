@@ -5,11 +5,19 @@ import os
 import sys
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from langchain_core.runnables import RunnableLambda
 from pathlib import Path
 from typing import Any, TypedDict
 
-from langgraph.types import Overwrite
+
+class Overwrite:
+    """Explicit value container to replace rather than append a channel list."""
+    __slots__ = ("value",)
+
+    def __init__(self, value: Any) -> None:
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"Overwrite({self.value!r})"
 
 from harness.schemas import SEVERITY_ORDER, safe_float, safe_int
 from harness.paths import canonical_repo
@@ -194,7 +202,7 @@ def indexer_node(state: ScanState) -> dict:
     from harness.tools.sast import (iac_check, sca_scan, secrets_scan,
                                     regex_prefilter)
     repo = state.get("repo", ".")
-    # No file-count cap; per-agent work is bounded by the partition budget (harness/units.py partition_target).
+    # No file-count cap; per-agent work is bounded by the partition budget.
     base = Path(repo)
     files = _inventory_files(base)
     cands = [_info_candidate(
@@ -1017,7 +1025,6 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                   model=effective_model(cfg, "validator"),
                                   state=AgentState.queued)
         remaining_bundles[ukey] = len(chunks)
-        val_counts[p["_seq"]] = len(chunks)
         threat_md = merged.get("threat_model_md") or ""
         votes = merged.get("votes_override")
         repo = merged.get("repo") or state.get("repo", ".")
@@ -1033,10 +1040,6 @@ def _fan_out_hunters(state: dict, max_workers: int,
     remaining_bundles: dict[str, int] = {}
     hunt_buf: dict[int, dict] = {}
     hunt_next = 0
-    hunt_done: set[int] = set()
-    val_buf: dict[tuple[int, int], list] = {}
-    val_ptr = [0, 0]
-    val_counts: dict[int, int] = {}
 
     def _flush_hunts() -> None:
         nonlocal hunt_next
@@ -1044,25 +1047,9 @@ def _fan_out_hunters(state: dict, max_workers: int,
             apply_update(state, hunt_buf.pop(hunt_next))
             hunt_next += 1
 
-    def _flush_validations() -> None:
-        while True:
-            seq, k = val_ptr
-            if seq not in val_counts:
-                if seq in hunt_done:
-                    val_ptr[0], val_ptr[1] = seq + 1, 0
-                    continue
-                return
-            if (seq, k) not in val_buf:
-                return
-            apply_update(state, {"verified": val_buf.pop((seq, k))})
-            if k + 1 < val_counts[seq]:
-                val_ptr[1] = k + 1
-            else:
-                val_ptr[0], val_ptr[1] = seq + 1, 0
-
     try:
         for p in payloads:
-            pending[executor.submit(_timed, RunnableLambda(_one).invoke, p)] = (
+            pending[executor.submit(_timed, _one, p)] = (
                 "hunt", p, None)
         while pending:
             done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
@@ -1078,17 +1065,13 @@ def _fan_out_hunters(state: dict, max_workers: int,
                             error=str(e))
                     for r in hunt_buf.values():
                         apply_update(state, r)
-                    for r in val_buf.values():
-                        apply_update(state, {"verified": r})
                     hunt_buf.clear()
-                    val_buf.clear()
                     executor.shutdown(wait=True, cancel_futures=True)
                     raise
                 busy[kind] += elapsed
                 if kind == "hunt":
                     res = res if isinstance(res, dict) else {}
                     hunt_buf[p["_seq"]] = res
-                    hunt_done.add(p["_seq"])
                     _flush_hunts()
                     _submit_bundles(p, list(res.get("findings") or []))
                     if hunt_next == len(payloads):
@@ -1097,8 +1080,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                             agent_registry=agent_registry)
                         pending[sfut] = ("system_pass", p, None)
                 elif kind == "validation":
-                    val_buf[(p["_seq"], k)] = res or []
-                    _flush_validations()
+                    apply_update(state, {"verified": res or []})
                     ukey = p["_ukey"]
                     remaining_bundles[ukey] -= 1
                     if remaining_bundles[ukey] <= 0:

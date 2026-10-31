@@ -7,7 +7,7 @@ and triage stages add ``status``, ``fix_suggestion``, ``control_type``,
 """
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,8 +16,52 @@ SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 UNKNOWN_SEVERITY_RANK = 5
 
 
+class TaintDict(TypedDict, total=False):
+    source: str
+    sink: str
+    path: list[str]
+
+
+class EvidenceRefDict(TypedDict, total=False):
+    file: str
+    line: int
+    note: str
+
+
+class FindingDict(TypedDict, total=False):
+    """The canonical vulnerability finding dictionary representation."""
+    id: str
+    title: str
+    cwe: str
+    severity: Literal["critical", "high", "medium", "low", "info"]
+    confidence: float
+    path: str
+    start_line: int
+    end_line: int
+    snippet: str
+    taint: TaintDict
+    refs: list[EvidenceRefDict]
+    rationale: str
+    evidence: str
+    status: Literal["needs-review", "confirmed", "fp"]
+    hunter_evidence: str
+    hunter_snippet: str
+    control_type: str
+    fix_suggestion: str
+    duplicate_of: str
+    triage: dict
+    cvss: float
+    rank: int
+    fallback_note: str
+
+
+class DiscoveryResultDict(TypedDict, total=False):
+    findings: list[FindingDict]
+
+
 class Taint(BaseModel):
     """Source-to-sink chain. All optional: partial chains still carry signal."""
+    model_config = ConfigDict(extra="allow")
 
     source: str = Field(default="", description="Where untrusted input enters")
     sink: str = Field(default="", description="Dangerous operation it reaches")
@@ -26,13 +70,8 @@ class Taint(BaseModel):
 
 
 class EvidenceRef(BaseModel):
-    """One structured file:line citation.
-
-    The audit schema's evidence objects are ``[{file, line, note}]``
-    and required: machine-checkable, never parsed out of prose. Hunters
-    attach these alongside the free-text evidence so ``evidence_gate`` and
-    the reporters can decide on typed data instead of heuristics.
-    """
+    """One structured file:line citation."""
+    model_config = ConfigDict(extra="allow")
 
     file: str = Field(default="", description="Repo-relative file path")
     line: int = Field(default=0, ge=0,
@@ -42,11 +81,8 @@ class EvidenceRef(BaseModel):
 
 
 class Finding(BaseModel):
-    """One candidate finding. Lenient by design: missing fields fall back to
-    fail-open defaults downstream, so a thin-but-real claim is never lost to
-    schema strictness. Values that matter are constrained (Literal/bounds/
-    pattern) so a wrong one is re-prompted in-loop instead of being silently
-    clamped by the normalizer."""
+    """One candidate finding with all lifecycle stages supported."""
+    model_config = ConfigDict(extra="allow")
 
     id: str = Field(default="", description="Stable finding id")
     title: str = Field(default="", description="Short vulnerability title")
@@ -69,6 +105,15 @@ class Finding(BaseModel):
     evidence: str = Field(default="", description="Supporting detail with file:line")
     status: Literal["needs-review", "confirmed", "fp"] = Field(
         default="needs-review", description="Status of finding: needs-review from discovery; confirmed or fp after validation")
+    hunter_evidence: str = Field(default="", description="Original hunter evidence preserved before validation")
+    hunter_snippet: str = Field(default="", description="Original hunter snippet preserved before validation")
+    control_type: str = Field(default="", description="Validator identified control type")
+    fix_suggestion: str = Field(default="", description="Fix suggestion")
+    duplicate_of: str = Field(default="", description="ID of primary finding if duplicate")
+    triage: dict | None = Field(default=None, description="Triage rubric metadata")
+    cvss: float | None = Field(default=None, description="CVSS base score")
+    rank: int = Field(default=0, description="Rank ordered by severity and confidence")
+    fallback_note: str = Field(default="", description="Note if fallback triggered")
 
 
 class DiscoveryResult(BaseModel):

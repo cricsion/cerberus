@@ -161,10 +161,6 @@ def edge_read_cap_bytes(cfg: dict | None = None) -> int:
                 int(_yaml_default("partition.edge_read_cap_bytes")))
 
 
-def same_dir_soft_edges(cfg: dict | None = None) -> bool:
-    return _as_flag(_policy_value(cfg, "same_dir_edges"), True)
-
-
 # --- codegraph partition source ----------------------------------------------
 #
 # Read at call time from ``codegraph.partition.mode`` in the scan config

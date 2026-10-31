@@ -4,6 +4,7 @@ Stage A is deterministic (normalized path + CWE family); Stage B+C is batched
 LLM. Nothing is dropped."""
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import logging as _logging
 
 _logger = _logging.getLogger(__name__)
@@ -297,8 +298,6 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                    if root is not None else nullcontext(None))
     with backend_ctx as backend:
         try:
-            from langchain_core.runnables import RunnableLambda
-
             def _one(message):
                 parsed, _ = run_structured(
                     mk, TriageBatch, TRIAGE_SYSTEM, message,
@@ -306,10 +305,17 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
                     name="triage", backend=backend, root_dir=repo or None)
                 return parsed
 
-            results = RunnableLambda(_one).batch(
-                messages,
-                config={"max_concurrency": _tw} if _tw else None,
-                return_exceptions=True)
+            max_workers = max(1, int(_tw)) if _tw else None
+            results = []
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(_one, m) for m in messages]
+                for fut in futures:
+                    try:
+                        results.append(fut.result())
+                    except Exception as e:
+                        if is_fatal_error(e):
+                            raise
+                        results.append(e)
         except Exception as e:
             if is_fatal_error(e):
                 raise

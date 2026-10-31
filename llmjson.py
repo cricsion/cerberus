@@ -20,17 +20,39 @@ def candidate_jsons(text: object) -> list[str]:
 
 
 def extract_json_array(text: object) -> list | None:
-    """First JSON array in an LLM reply, or None. Scans each '[' offset; the most
-    dict-heavy array wins, so citation arrays cannot shadow findings."""
+    """First JSON array in an LLM reply, or None. Tries direct JSON decode,
+    code fences, and then bracket offsets with preference for dict-heavy arrays."""
     if not text or not str(text).strip():
         return None
-    s = str(text)
+    s = str(text).strip()
+    try:
+        parsed = json.loads(s)
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict):
+            for v in parsed.values():
+                if isinstance(v, list) and any(isinstance(it, dict) for it in v):
+                    return v
+    except (ValueError, TypeError):
+        pass
+
+    for m in _FENCE_RE.finditer(s):
+        try:
+            parsed = json.loads(m.group(1).strip())
+            if isinstance(parsed, list):
+                return parsed
+            if isinstance(parsed, dict):
+                for v in parsed.values():
+                    if isinstance(v, list) and any(isinstance(it, dict) for it in v):
+                        return v
+        except (ValueError, TypeError):
+            continue
+
     dec = json.JSONDecoder()
     best: list | None = None
     best_key: tuple[int, int, int] | None = None
-    for i, ch in enumerate(s):
-        if ch != "[":
-            continue
+    for m in re.finditer(r"\[", s):
+        i = m.start()
         try:
             parsed, _ = dec.raw_decode(s[i:])
         except ValueError:

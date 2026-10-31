@@ -8,7 +8,6 @@ def graph_tools() -> list:
     Scanners are not bound as tools: the sandbox `execute` shell + scanner
     skills are the scan surface.
     """
-    from harness.tools.code import ast_query
     from harness.tools.codegraph import (
         affected,
         build_context,
@@ -26,7 +25,6 @@ def graph_tools() -> list:
     from harness.tools.verify import reachability_check
 
     return [
-        ast_query,
         codegraph_explore,
         find_path,
         impact_radius,

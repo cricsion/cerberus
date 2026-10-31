@@ -1,5 +1,5 @@
 """Code-reading primitives shared by the tool modules: ``_safe_path`` (repo
-containment), ``grep_files`` (capped shared engine), ``ast_query``. Read-only,
+containment) and ``grep_files`` (capped shared engine). Read-only,
 no exec, no network; agent reads come from FilesystemMiddleware."""
 from __future__ import annotations
 
@@ -219,82 +219,4 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
     return body or "(no matches)"
 
 
-@tool(parse_docstring=True)
-def ast_query(path: str, node: str = "Call", name_pattern: str = "", limit: int | None = None, offset: int = 0) -> str:
-    """Structural query: Python AST for .py files (stdlib).
 
-    node: FunctionDef|ClassDef|Call|Import|Assign. Paginated via limit/offset.
-
-    Args:
-        path: File path to parse, relative to the repo root.
-        node: AST node kind to collect, e.g. "Call".
-        name_pattern: Regex to filter node names / called funcs / imports.
-        limit: Max nodes per page. 0 = unlimited.
-        offset: Node index to start from, for paging.
-    """
-    import ast as _ast
-
-    lim = _resolve_limit(limit, "AST_LIMIT", 500)
-    off = int(offset or 0)
-    if off < 0:
-        off = 0
-    try:
-        p = _safe_path(path)
-    except ValueError as e:
-        return f"ERROR: {e}"
-    if not p.is_file():
-        return f"ERROR: not a file: {path}"
-    if p.suffix.lower() != ".py":
-        return (f"ERROR: ast_query parses Python (.py) AST only; got {p.suffix or 'no extension'}. "
-                "For multi-language structural symbols, use codegraph_explore / get_symbol / find_references, "
-                "or read_file.")
-    try:
-        tree = _ast.parse(p.read_text(errors="replace"))
-    except (SyntaxError, OSError) as e:
-        return f"ERROR: cannot parse {path}: {e}"
-    try:
-        npat = re.compile(name_pattern) if name_pattern else None
-    except re.error as e:
-        return f"ERROR: bad regex: {e}"
-    hits: list[str] = []
-
-    def _name_ok(n: str) -> bool:
-        return bool(npat.search(n)) if npat else True
-
-    for n in _ast.walk(tree):
-        if node == "FunctionDef" and isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
-            if _name_ok(n.name):
-                hits.append(f"{path}:{n.lineno}: def {n.name}(args={[a.arg for a in n.args.args][:8]})")
-        elif node == "ClassDef" and isinstance(n, _ast.ClassDef):
-            if _name_ok(n.name):
-                hits.append(f"{path}:{n.lineno}: class {n.name}")
-        elif node == "Call" and isinstance(n, _ast.Call):
-            fn = n.func
-            fname = ""
-            if isinstance(fn, _ast.Name):
-                fname = fn.id
-            elif isinstance(fn, _ast.Attribute):
-                fname = fn.attr
-            if fname and _name_ok(fname):
-                hits.append(f"{path}:{n.lineno}: call {fname}()")
-        elif node == "Import" and isinstance(n, (_ast.Import, _ast.ImportFrom)):
-            mods = [a.name for a in n.names] if isinstance(n, _ast.Import) else [n.module or ""]
-            for m in mods:
-                if _name_ok(m):
-                    hits.append(f"{path}:{n.lineno}: import {m}")
-        elif node == "Assign" and isinstance(n, _ast.Assign):
-            targets = []
-            for t in n.targets:
-                if isinstance(t, _ast.Name):
-                    targets.append(t.id)
-            for t in targets:
-                if _name_ok(t):
-                    hits.append(f"{path}:{n.lineno}: assign {t} = ...")
-    total = len(hits)
-    page = hits[off:] if lim <= 0 else hits[off: off + lim]
-    if not page and total == 0:
-        return "(no matches)"
-    body = "\n".join(page)
-    if total > len(page) or off > 0:
-        body += f"\n… showing {off + 1}-{off + len(page)} of {total} (use offset={off + len(page)} to page)"
-    return body or "(no matches)"

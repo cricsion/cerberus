@@ -118,7 +118,6 @@ and, when wrong, overwrite.
 | Which state transitions skip the workflow | `trace_state_machine_transitions` |
 | Do this function's network calls go to a fixed URL or an attacker's | `trace_egress_and_ssrf_targets` |
 | Which security-sensitive sinks (shell, db, crypto, network, etc.) are reached | `trace_effect_category` |
-| Read one code span by line | `ast_query` |
 
 Pick the narrowest tool: the domain tools already carry the route-node, guard,
 and contract semantics you would otherwise reconstruct by hand.
