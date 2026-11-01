@@ -218,14 +218,18 @@ def stamp_receipts(findings: list[dict], backend: Any, cfg: dict | None = None,
                 continue
 
             # Universal Execution:
-            # 1. If script has a shebang (#!/...), execute directly via container chmod +x
-            # 2. Else if extension matches a known interpreter, invoke that interpreter
-            # 3. Else fallback to direct execution
+            # 1. If agent provided a verified command referencing the script, use it
+            # 2. Else if script has a shebang (#!/...), execute directly via container chmod +x
+            # 3. Else if extension matches a known interpreter, invoke that interpreter
+            # 4. Else fallback to direct execution
             script_text = poc.get("script") or poc.get("code") or ""
             first_line = script_text.split("\n", 1)[0].strip() if script_text else ""
             ext = Path(container_path).suffix.lower()
+            agent_cmd = str(poc.get("command") or "").strip()
 
-            if first_line.startswith("#!"):
+            if agent_cmd and (container_path in agent_cmd or Path(container_path).name in agent_cmd):
+                cmd = agent_cmd
+            elif first_line.startswith("#!"):
                 cmd = container_path
             elif ext in RUNNER_BY_EXT:
                 cmd = f"{RUNNER_BY_EXT[ext]} {container_path}"
@@ -301,97 +305,16 @@ def stamp_receipts(findings: list[dict], backend: Any, cfg: dict | None = None,
 def run_poc_regen(refuted_findings: list[dict], backend: Any, cfg: dict,
                   threat_md: str = "", run_id: str | None = None,
                   round_num: int = 1) -> list[dict]:
-    """Bounded regeneration loop for findings where vulnerability survived static check
+    """Lightweight PoC verification pass for findings that survived static checks.
 
-    but the initial reproduction test failed or was refuted.
+    Since Hunters author and verify reproduction tests interactively in
+    the container, this pass ensures scripts are materialized and stamps mechanical receipts.
     """
     if not refuted_findings or backend is None:
         return refuted_findings
 
-    cfg = cfg or {}
-    max_rounds = int(cfg.get("verification", {}).get("poc_rounds", 2))
-    if round_num > max_rounds:
-        for f in refuted_findings:
+    stamp_receipts(refuted_findings, backend, cfg=cfg, run_id=run_id)
+    for f in refuted_findings:
+        if isinstance(f, dict):
             f["_needs_poc_regen"] = False
-        return refuted_findings
-
-    from harness.config import get_model_kwargs
-    from harness.agents.deep import build_deep_agent, extract_structured, make_llm, sanitize_model_kwargs
-    from harness.agents.toolsets import graph_tools
-    from harness.schemas import DiscoveryResult
-
-    regen_role = cfg.get("poc", {}).get("regen_role", "validator") if isinstance(cfg.get("poc"), dict) else "validator"
-    model_kwargs = get_model_kwargs(cfg, regen_role)
-    mk = sanitize_model_kwargs(model_kwargs)
-    timeout = int(cfg.get("timeout", 60))
-    llm = make_llm(mk, timeout=timeout)
-
-    regen_prompt = (
-        "You are an expert security engineer generating in-process reproduction tests. "
-        "For each candidate vulnerability below, the previous test failed or was refuted. "
-        "Write a robust in-process direct-call test (mocking external dependencies) that "
-        "implements the Two-Sided Sentinel Contract:\n"
-        "- Default execution emits [POC_PROVEN] and exits 0 only when invariant is broken.\n"
-        "- Execution with --control emits [POC_CONTROL_PASSED] and exits 0 on benign baseline input.\n"
-    )
-
-    batch_size = int(cfg.get("poc", {}).get("regen_batch", 10))
-    updated_map: dict[str, dict] = {f["id"]: copy.deepcopy(f) for f in refuted_findings if "id" in f}
-
-    for i in range(0, len(refuted_findings), batch_size):
-        chunk = refuted_findings[i : i + batch_size]
-        task_lines = ["Regenerate in-process reproduction tests for these findings:"]
-        for f in chunk:
-            receipt = (f.get("poc") or {}).get("receipt") or {}
-            last_err = receipt.get("error") or "Test failed invariant or control contract"
-            task_lines.append(
-                f"- ID: {f.get('id')}\n"
-                f"  Title: {f.get('title')}\n"
-                f"  Path: {f.get('path')}:{f.get('start_line')}\n"
-                f"  Snippet: {f.get('snippet')}\n"
-                f"  Previous Failure: {last_err}\n"
-            )
-
-        try:
-            agent = build_deep_agent(
-                llm,
-                system_prompt=regen_prompt,
-                tools=graph_tools(),
-                response_format=DiscoveryResult,
-                name=f"poc-regen-r{round_num}-{i}"[:60],
-                backend=backend,
-                scratchpad=True,
-            )
-            res = agent.invoke({"messages": [{"role": "user", "content": "\n".join(task_lines)}]})
-            sr = extract_structured(res, DiscoveryResult)
-            if sr is not None:
-                for rf in getattr(sr, "findings", []):
-                    rd = rf.model_dump() if hasattr(rf, "model_dump") else dict(rf)
-                    fid = rd.get("id")
-                    if fid in updated_map and rd.get("poc"):
-                        target = updated_map[fid]
-                        target["poc"] = rd["poc"]
-                        target["_needs_poc_regen"] = False
-        except Exception as exc:
-            _logger.warning("PoC regen batch failed: %s", exc)
-
-    regenerated = list(updated_map.values())
-    stamp_receipts(regenerated, backend, cfg=cfg, run_id=run_id)
-
-    # Recurse if any findings are still not proven and rounds remain
-    still_failing = [
-        f for f in regenerated
-        if (f.get("poc") or {}).get("status") != "proven"
-    ]
-    if still_failing and round_num < max_rounds:
-        next_results = run_poc_regen(
-            still_failing, backend, cfg, threat_md=threat_md,
-            run_id=run_id, round_num=round_num + 1
-        )
-        next_map = {rf["id"]: rf for rf in next_results if "id" in rf}
-        for idx, f in enumerate(regenerated):
-            fid = f.get("id")
-            if fid in next_map:
-                regenerated[idx] = next_map[fid]
-
-    return regenerated
+    return refuted_findings

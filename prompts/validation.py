@@ -18,13 +18,18 @@ REFUTE_METHOD = block("validator/refute_method")
 EXCLUSION_RULES = block("validator/exclusion_rules")
 
 POC_REFUTE_METHOD = (
-    "## Stage 1 (Static) vs Stage 2 (Dynamic) Verification & Receipts\n"
+    "## Stage 1 (Static) vs Stage 2 (Dynamic) Verification & PoC Repair\n"
     "1. Stage 1 (Static Code Analysis): If the source code neutralizes the issue "
     "(sanitizer, auth gate, dead code, unreachable path), immediately mark status='fp'. "
     "Do NOT rely on a PoC if the vulnerability does not exist in code.\n"
-    "2. Stage 2 (Receipt Inspection): If the claim survives static scrutiny, inspect the mechanical receipt: "
-    "If receipt has successes == runs and control_status == 'passed', the defect is mechanically proven. "
-    "If control_status is 'violated' or 'invalid', the PoC failed: set needs_poc_regen=true.\n"
+    "2. Stage 2 (Receipt Inspection & Repair): If the claim is verified as a real vulnerability in code:\n"
+    "   - Inspect the PoC under `/work/_shared/poc/<id>/`.\n"
+    "   - If the receipt has successes == runs and control_status == 'passed', it is already mechanically proven.\n"
+    "   - If the vulnerability is REAL but the hunter's PoC crashed, failed, or was missing: YOU (the validator) "
+    "SHOULD REPAIR IT. Use your `execute` and `write_file`/`edit_file` tools to repair the test script under "
+    "`/work/_shared/poc/<id>/`. Verify both the exploit invariant and `--control` benign baseline exit 0.\n"
+    "   - In your verdict, return the repaired script in `poc_script`, test command in `poc_command`, "
+    "and set `poc_status='proven'`.\n"
 )
 
 # Fence contract: near-miss `</untrusted_data ...>` lookalikes are rewritten,
@@ -115,6 +120,10 @@ class VerdictItem(VerdictUpdate):
                     "or none")
     poc_status: Literal["proven", "refuted", "blocked", "skipped"] | None = Field(
         default=None, description="Audited PoC status based on mechanical receipt")
+    poc_script: str | None = Field(
+        default=None, description="Repaired in-process reproduction script if the validator repaired a flawed PoC")
+    poc_command: str | None = Field(
+        default=None, description="Repaired test execution command if repaired by the validator")
     needs_poc_regen: bool = Field(
         default=False, description="True if vulnerability survived static check but PoC needs regeneration")
 

@@ -7,10 +7,12 @@ from harness.schemas import DiscoveryResult
 # Reproduction test and finding standard guidance
 REPRO_CONTRACT = (
     "REPRODUCTION TEST CONTRACT (poc field):\n"
-    "- Author a direct-call in-process reproduction test in poc.script (<= 8KB).\n"
-    "- Polyglot: Write in any language matching the target repo (poc.py, poc.js, poc.go, poc.sh). Set poc.filename accordingly.\n"
-    "- Default execution: assert invariant violation, print '[POC_PROVEN]', and exit with 0.\n"
-    "- Control execution (with '--control'): assert benign baseline passes, print '[POC_CONTROL_PASSED]', and exit with 0.\n"
+    "- Interactively author and prove an in-process reproduction test using your `write_file` and `execute` tools.\n"
+    "- Write the test script under `/work/_shared/poc/<finding_id>/<filename>` (e.g., test_repro.py, test_repro.js, test_repro.go, test_repro.sh).\n"
+    "- Run the script in the container using `execute`. If execution fails due to missing mocks or syntax, edit and re-run until it passes.\n"
+    "- Exploit verification: assert the security invariant is violated and exit with code 0.\n"
+    "- Control verification: when invoked with '--control', assert benign baseline input passes and exit with code 0.\n"
+    "- Record the verified script in `poc.script`, filename in `poc.filename`, and test command in `poc.command`.\n"
     "- Report ONE finding per distinct vulnerable function or endpoint with exact start_line, end_line, and 1-4 line snippet containing the sink.\n"
     "- Weak or uncertain candidates are welcome: give low confidence and explain in rationale what is unproven — never silently drop a suspicion."
 )
@@ -61,7 +63,8 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
     return (
         "\nSHELL SANDBOX: you have an `execute` tool — bash inside a "
         "container, working directory set to the unit's repo. Use it for "
-        "preinstalled static scanners and read-only source inspection. You "
+        "preinstalled static scanners, read-only source inspection, and "
+        "executing in-process reproduction tests under /work/_shared/poc/. You "
         "may run a bounded project test or fuzzer only when network egress is "
         "disabled, after inspecting the exact command and any setup script; "
         "required dependencies must already be present. Use dummy inputs, "

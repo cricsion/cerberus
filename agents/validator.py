@@ -56,6 +56,14 @@ def _merge_verdict(base: dict, data: dict) -> dict:
                 if not isinstance(merged.get("poc"), dict):
                     merged["poc"] = {}
                 merged["poc"]["status"] = data["poc_status"]
+        if "poc_script" in data and data["poc_script"]:
+            if not isinstance(merged.get("poc"), dict):
+                merged["poc"] = {}
+            merged["poc"]["script"] = data["poc_script"]
+        if "poc_command" in data and data["poc_command"]:
+            if not isinstance(merged.get("poc"), dict):
+                merged["poc"] = {}
+            merged["poc"]["command"] = data["poc_command"]
         if "needs_poc_regen" in data:
             merged["_needs_poc_regen"] = bool(data["needs_poc_regen"])
         vsnip = data.get("snippet")
@@ -656,31 +664,27 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
         repo=repo, cell_offset=cell_offset, agent_registry=agent_registry)
     validated = _reassemble_validation(planned, gated, cell_out)
 
-    # Bounded PoC-Regeneration Loop:
     poc_cfg = cfg.get("poc") if isinstance(cfg.get("poc"), dict) else {}
     if poc_cfg.get("enabled", True):
-        refuted = [f for f in validated if f.get("_needs_poc_regen") and f.get("status") != "fp"]
-        if refuted:
+        to_verify = [f for f in validated if f.get("status") != "fp" and (f.get("poc") or {}).get("script")]
+        if to_verify:
             try:
                 from harness.sandbox import acquired_backend
-                from harness.agents.poc import run_poc_regen
-                with acquired_backend(cfg, repo or ".", label="validator-poc-regen") as backend:
+                from harness.agents.poc import stamp_receipts
+                with acquired_backend(cfg, repo or ".", label="validator-poc-verify") as backend:
                     if backend is not None:
-                        regen_results = run_poc_regen(refuted, backend, cfg, threat_md=threat_md,
-                                                      run_id=cfg.get("run_id"), round_num=1)
-                        regen_by_id = {rf["id"]: rf for rf in regen_results if "id" in rf}
+                        stamp_receipts(to_verify, backend, cfg=cfg, run_id=cfg.get("run_id"))
                         for f in validated:
-                            fid = f.get("id")
-                            if fid in regen_by_id:
-                                rf = regen_by_id[fid]
-                                f["poc"] = rf.get("poc", f.get("poc"))
-                                receipt = (f.get("poc") or {}).get("receipt") or {}
-                                if (receipt.get("successes") == receipt.get("runs")
-                                        and receipt.get("control_status") == "passed"):
-                                    f["status"] = "confirmed"
-                                    f.setdefault("poc", {})["status"] = "proven"
-                                f.pop("_needs_poc_regen", None)
+                            receipt = (f.get("poc") or {}).get("receipt") or {}
+                            if (receipt.get("successes") == receipt.get("runs")
+                                    and receipt.get("control_status") == "passed"):
+                                f["status"] = "confirmed"
+                                f.setdefault("poc", {})["status"] = "proven"
+                            f.pop("_needs_poc_regen", None)
             except Exception as exc:
+                _logger.warning("Validator PoC receipt verification failed: %s", exc)
+                for f in validated:
+                    f.pop("_needs_poc_regen", None)
                 _logger.warning("Validator PoC regen loop encountered error: %s", exc)
                 for f in validated:
                     f.pop("_needs_poc_regen", None)
