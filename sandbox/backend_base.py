@@ -25,7 +25,7 @@ class SandboxShellBackend(SandboxBackendProtocol):
     ``BaseSandbox`` base beside it — with same-path mounts those FS ops run
     inside the container, not in this process. Repo-confined HOST filesystem
     reads remain the job of ``RepoLocalBackend`` (SANDBOX_BACKEND=local); this
-    class no longer inherits it.
+    class does not inherit it.
     """
 
     HANG_NOTE = HANG_NOTE

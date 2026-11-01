@@ -4,7 +4,7 @@ File contract
 - Byte 0 opens the frontmatter fence: ``---``, metadata lines, ``---``.
 - Frontmatter keys: ``role`` (must equal the file's parent directory name; one
   of hunter | validator | triage | threat | partition) and ``module``
-  (provenance pointer to the consuming prompts module; test-checked).
+  (provenance pointer to the consuming prompts module).
 - Body: plain Markdown, byte-preserved. Writers end the file with a single
   newline that is NOT part of the payload (standard POSIX editor behavior);
   every other byte — including trailing newlines inside the payload — is

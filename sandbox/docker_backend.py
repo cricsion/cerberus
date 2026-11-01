@@ -281,9 +281,9 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
     container: the host only receives the scripts' output. Before delegating,
     each op confines its path through :func:`~harness.paths.resolve_tool_path`
     — an escaping path resolves onto a never-created in-repo sentinel, so the
-    refusal reads as the sandbox's own not-found (RepositoryLocalBackend's
-    denial mechanic, the test_confinement contract) and no path outside the
-    repo — and, with same-path mounts, no host path — is ever addressed. The
+    refusal reads as the sandbox's own not-found (:class:`RepoLocalBackend`'s
+    denial mechanic) and no path outside the repo — and, with same-path
+    mounts, no host path — is ever addressed. The
     repo bind is read-only, so in-repo writes surface as container-side
     permission errors and never mutate the target tree.
 

@@ -103,6 +103,14 @@ def _normalize_finding(raw: dict, hunter: str, idx: int, fallback_path: str = ""
     # path/evidence need no repair: fallback_path and the `or` defaults above keep them non-empty.
     if not out["snippet"]:
         out["snippet"] = out["evidence"] or f"{hunter} needs review"
+    poc = d.get("poc")
+    if isinstance(poc, dict) and poc:
+        out["poc"] = poc
+    elif hasattr(poc, "model_dump"):
+        out["poc"] = poc.model_dump()
+    conditions = d.get("conditions")
+    if isinstance(conditions, list):
+        out["conditions"] = [str(c) for c in conditions]
     return out
 
 
@@ -175,6 +183,49 @@ def _agent_tools_used(result) -> list[str]:
     return used
 
 
+def _extract_discovery_result(res: Any) -> Any:
+    """Extract DiscoveryResult via ToolStrategy response, tool calls, or validated JSON."""
+    if not isinstance(res, dict):
+        return None
+    sr = res.get("structured_response")
+    if sr is not None and hasattr(sr, "findings"):
+        return sr
+
+    msgs = res.get("messages", [])
+    for m in reversed(msgs):
+        for tc in (getattr(m, "tool_calls", None) or []):
+            name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", "")
+            if name == "DiscoveryResult":
+                args = tc.get("args") if isinstance(tc, dict) else getattr(tc, "args", {})
+                if isinstance(args, dict) and "findings" in args:
+                    try:
+                        return DiscoveryResult.model_validate(args)
+                    except Exception:
+                        pass
+
+    from harness.agents.deep import final_text
+    text = final_text(res)
+    if text and '"findings"' in text:
+        import json as _json, re as _re
+        cands = []
+        for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", text):
+            cands.append(match.group(1).strip())
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end > start:
+            cands.append(text[start:end+1].strip())
+
+        for cand in cands:
+            try:
+                d = _json.loads(cand)
+                if isinstance(d, dict) and "findings" in d and isinstance(d["findings"], list):
+                    return DiscoveryResult.model_validate(d)
+            except Exception:
+                continue
+
+    return None
+
+
 def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
                             focus: list[str] | str | None = None,
                             repo: str = ".", backend=None,
@@ -223,9 +274,15 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
                                config=invoke_config)
             if _tools_out is not None:
                 _tools_out.extend(_agent_tools_used(res))
-            sr = res.get("structured_response") if isinstance(res, dict) else None
+            sr = _extract_discovery_result(res)
             if sr is not None and hasattr(sr, "findings"):
                 norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
+                if backend is not None:
+                    try:
+                        from harness.agents.poc import stamp_receipts
+                        stamp_receipts(norm, backend, cfg=cfg, run_id=cfg.get("run_id"))
+                    except Exception as e:
+                        _logger.warning("PoC receipt stamping failed for unit %s: %s", name, e)
                 return _sort_by_confidence(norm)
             return [_fallback_finding(f"unit-{name}", repo, files,
                                       "no structured output")]
@@ -280,7 +337,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
         ctx += f"[UNIT FINDINGS]\n{slim}"
         from harness.agents.deep import run_structured
         msg = build_system_pass_task(repo, scope, ctx, files)
-        parsed, _ = runner(
+        parsed, raw_text = runner(
             "system pass",
             lambda: run_structured(
                 mk, DiscoveryResult, sys_prompt, msg,
@@ -288,7 +345,30 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                 name="system-pass", backend=backend, root_dir=repo,
                 scratchpad=True),
             default=EMPTY_STRUCTURED, logger=_logger)
-    norm = _findings_from_discovery(parsed, "system", files or [], repo)
+        if parsed is None and raw_text and '"findings"' in raw_text:
+            import json as _json, re as _re
+            cands = []
+            for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_text):
+                cands.append(match.group(1).strip())
+            start = raw_text.find("{")
+            end = raw_text.rfind("}")
+            if start != -1 and end > start:
+                cands.append(raw_text[start:end+1].strip())
+            for cand in cands:
+                try:
+                    d = _json.loads(cand)
+                    if isinstance(d, dict) and "findings" in d and isinstance(d["findings"], list):
+                        parsed = DiscoveryResult.model_validate(d)
+                        break
+                except Exception:
+                    continue
+        norm = _findings_from_discovery(parsed, "system", files or [], repo)
+        if backend is not None:
+            try:
+                from harness.agents.poc import stamp_receipts
+                stamp_receipts(norm, backend, cfg=cfg, run_id=cfg.get("run_id"))
+            except Exception as e:
+                _logger.warning("PoC receipt stamping failed for system pass: %s", e)
     if parsed is None:
         norm = [_fallback_finding("system", repo, files,
                                   "no structured output")]

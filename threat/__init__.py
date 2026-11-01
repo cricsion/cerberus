@@ -10,6 +10,7 @@ import logging as _logging
 from .floor import bootstrap_threat, collect_docs, load_threat, measured_facts
 from .quality import threat_quality, verify_threat
 from .render import render_md, validate_threat_md
+from .synthesizer import get_synthesizer_contract
 from .swarm import (apply_interview, conduct_interview, enrich_threat,
                     finalize_threat, interview_questions, persist_threat,
                     update_threat_with_findings)

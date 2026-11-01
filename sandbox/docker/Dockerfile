@@ -33,10 +33,9 @@
 #       semgrep scan --config /opt/scan-rules/harness --metrics off /repo
 
 # Global scope: each stage redeclares the args it uses. These single-name
-# lines also mirror build.sh's `for v in ...` build-arg loop (checked by
-# tests/test_skills.py::test_every_build_script_arg_is_declared_in_dockerfile
-# ); no defaults for the version pins -- empty pins must fail the build
-# loudly, not silently build an unpinned image.
+# lines also mirror build.sh's `for v in ...` build-arg loop (keep the two
+# in lockstep); no defaults for the version pins -- empty pins must fail the
+# build loudly, not silently build an unpinned image.
 ARG TARGETARCH
 # Digest-pinned base (manifest-list digest so amd64+arm64 both resolve).
 ARG PYTHON_BASE_IMAGE

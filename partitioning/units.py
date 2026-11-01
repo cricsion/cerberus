@@ -442,7 +442,7 @@ def partition_target(weight_of: dict[str, int], cfg: dict | None = None) -> int:
     nominal = int(loc * bpl) if loc > 0 and bpl > 0 else 0
     total = sum(v for f, v in weight_of.items() if support_file_kind(f) != "asset")
     cap = int(part["max_units"])  # normalized: 0 becomes the unlimited sentinel
-    derived = -(-total // cap) if total > 0 else 0  # ceil division
+    derived = -(-total // cap) if (total > 0 and cap > 0) else 0  # ceil division
     return max(nominal, derived)
 
 
@@ -530,6 +530,26 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
                     compacted_parts.append(p)
                     compacted_weights.append(pw)
             parts = compacted_parts
+
+        # Best-fit compact remaining small parts under the target budget
+        if len(parts) > 1:
+            final_parts: list[list[str]] = []
+            final_weights: list[int] = []
+            for p in parts:
+                pw = sum(weight_of.get(f, 0) for f in p)
+                best_idx = -1
+                for fi, (fp, fpw) in enumerate(zip(final_parts, final_weights)):
+                    if fpw + pw <= target:
+                        best_idx = fi
+                        break
+                if best_idx >= 0:
+                    final_parts[best_idx].extend(p)
+                    final_parts[best_idx].sort()
+                    final_weights[best_idx] += pw
+                else:
+                    final_parts.append(p)
+                    final_weights.append(pw)
+            parts = final_parts
 
         return [p for p in parts if p]
 
@@ -730,18 +750,19 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
                 entry["budget_exempt"] = True
             merged[u["name"]] = entry
     units = list(merged.values())
-    # 1b. Split units over the byte budget; skipped without weights (direct unit
-    # tests keep the pure structural behavior).
+    # 1b. Split units over the byte budget; skipped when no weights are given
+    # (pure structural normalization).
     if weight_of is not None and target > 0:
         units = _balance_units(units, weight_of, target, edges=edges)
-    # 2. Merge tiny units: legacy (singletons into misc) or P1.3 (only non-code into
-    # misc; a tiny code unit couples or stays a singleton).
+    # 2. Merge tiny units: with misc_code_merge, only non-code units fold into
+    # misc; otherwise every
+    # singleton folds into misc.
     if part["misc_code_merge"]:
         big, misc = _merge_tiny_policy(units, _min, edges, weight_of, target)
     else:
         big, misc = _merge_tiny_legacy(units)
     # 3. Cap: fold overflow by support category, never into the code catch-all.
-    if len(big) > cap:
+    if cap > 0 and len(big) > cap:
         big.sort(key=lambda u: (-len(u["files"]), str(u.get("name", ""))))
         keep_len = min(cap, len(big) - 1)
 
@@ -800,6 +821,9 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
             def _over(u: dict) -> bool:
                 return not u.get("budget_exempt") and len(u.get("files") or []) > 1 and sum(weight_of.get(f, 0) for f in u["files"]) > target
 
+            if len(folded) <= cap:
+                big = folded
+                break
             big = split if any(_over(u) for u in folded) else folded
     # 3c. Rebalance micro/giant units from stage 2.
     if weight_of and target > 0:
@@ -860,10 +884,13 @@ def partition_units(repo: str, files: list[str],
     if mode not in PARTITION_MODES:
         mode = "primary"
     if mode == "primary" and _cg.index_available(repo):
-        raw_units = _cg.partition_codegraph_native(app_files)
-        units = (_normalize_units(raw_units, weight_of, target, cfg=cfg)
+        max_uf = int(effective_config(cfg)["partition"].get("max_module_files", 100))
+        edges = _load_partition_edges(repo, app_files, cfg)
+        raw_units = _cg.partition_codegraph_native(app_files, max_unit_files=max_uf,
+                                                   edges=edges, weights=weight_of,
+                                                   target=target)
+        units = (_normalize_units(raw_units, weight_of, target, edges=edges, cfg=cfg)
                  if raw_units else [])
-        edges = None
     else:
         edges = _load_partition_edges(repo, app_files, cfg)
         units = None

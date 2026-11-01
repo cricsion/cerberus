@@ -24,7 +24,7 @@ def _resolve_limit(explicit: int | None, env_key: str, default: int) -> int:
 SKIP_DIRS = frozenset({
     ".angular", ".bloop", ".build", ".cache", ".codegraph", ".cxx",
     ".dart_tool", ".docusaurus", ".eggs", ".env", ".externalNativeBuild",
-    ".git", ".gradle", ".hg", ".hypothesis", ".ipynb_checkpoints",
+    ".git", ".gradle", ".harness", ".hg", ".hypothesis", ".ipynb_checkpoints",
     ".luarocks", ".metals", ".mypy_cache", ".netlify", ".next", ".nitro",
     ".nox", ".nuxt", ".nyc_output", ".output", ".parcel-cache",
     ".pdm-build", ".pixi", ".pnpm-store", ".pub-cache", ".pytest_cache",

@@ -61,8 +61,102 @@ def _effective_dir_levels(file_path: str, pass_through: set[str] | None = None) 
     return levels
 
 
-def partition_codegraph_native(files: list[str], max_unit_files: int = 50) -> list[dict]:
-    """CodeGraph Native module partitioning based on architectural depth + pass-through collapsing."""
+def _fuse_coupled_modules(units: list[dict], edges: dict | None,
+                          weights: dict[str, int] | None,
+                          target: int = 0) -> list[dict]:
+    """Capacitated Architectural Affinity Clustering (CAAC).
+    Agglomeratively fuses modules using a multi-factor affinity score:
+      1. CodeGraph static call/import coupling (W_graph: 1000x)
+      2. Directory hierarchy proximity / LCA depth (W_tree: 25x)
+      3. File extension / role similarity (W_role: 2x)
+      4. Entrypoint / root attachment preference (W_root: 10x)
+    Merged units are strictly bounded by the nominal budget (target), with
+    a 25% tolerance buffer (1.25x target) reserved for strongly-coupled modules.
+    """
+    if not weights or target <= 0 or len(units) <= 1:
+        return units
+    from pathlib import PurePosixPath
+    from harness.partitioning.units import _edge_index, _cross_weight, _dominant_top_dir
+
+    idx = _edge_index(edges) if edges else {}
+    current = [dict(u, files=list(u.get("files") or [])) for u in units]
+    max_ceiling = int(target * 1.25)
+
+    def lca_depth(p1: str, p2: str) -> int:
+        pts1 = PurePosixPath(p1).parts
+        pts2 = PurePosixPath(p2).parts
+        d = 0
+        for a, b in zip(pts1, pts2):
+            if a == b:
+                d += 1
+            else:
+                break
+        return d
+
+    def affinity(u1: dict, u2: dict, gw: int) -> float:
+        f1, f2 = u1["files"], u2["files"]
+        score = gw * 1000.0
+        max_lca = max((lca_depth(a, b) for a in f1[:6] for b in f2[:6]), default=0)
+        score += max_lca * 25.0
+        ext1 = set(PurePosixPath(f).suffix for f in f1 if PurePosixPath(f).suffix)
+        ext2 = set(PurePosixPath(f).suffix for f in f2 if PurePosixPath(f).suffix)
+        shared_ext = len(ext1 & ext2)
+        score += shared_ext * 2.0
+        n1, n2 = str(u1.get("name", "")), str(u2.get("name", ""))
+        if "(root)" in n1 or "(root)" in n2:
+            score += 10.0
+        score += 1.0
+        return score
+
+    changed = True
+    while changed:
+        changed = False
+        best_pair = None
+        best_score = -1.0
+        for i in range(len(current)):
+            u1 = current[i]
+            if u1.get("budget_exempt") or str(u1.get("name", "")).startswith("vendor"):
+                continue
+            w1 = sum(weights.get(f, 0) for f in u1.get("files", []))
+            for j in range(i + 1, len(current)):
+                u2 = current[j]
+                if u2.get("budget_exempt") or str(u2.get("name", "")).startswith("vendor"):
+                    continue
+                w2 = sum(weights.get(f, 0) for f in u2.get("files", []))
+                f1, f2 = u1.get("files", []), u2.get("files", [])
+                gw = _cross_weight(f1, f2, idx) if idx else 0
+                allowed_budget = max_ceiling if gw > 0 else target
+                if w1 + w2 > allowed_budget:
+                    continue
+                score = affinity(u1, u2, gw)
+                if score > best_score:
+                    best_score = score
+                    best_pair = (i, j)
+
+        if best_pair is not None:
+            i, j = best_pair
+            u1, u2 = current[i], current[j]
+            merged_files = sorted(set(u1.get("files", [])) | set(u2.get("files", [])))
+            u1["files"] = merged_files
+            name1 = str(u1.get("name", "")).split("+")[0]
+            name2 = str(u2.get("name", "")).split("+")[0]
+            if name1 == name2:
+                u1["name"] = name1
+            elif len(name1) + len(name2) < 25:
+                u1["name"] = f"{name1}+{name2}"
+            else:
+                u1["name"] = _dominant_top_dir(merged_files, weights)
+            current.pop(j)
+            changed = True
+
+    return current
+
+
+def partition_codegraph_native(files: list[str], max_unit_files: int = 100,
+                               edges: dict | None = None,
+                               weights: dict[str, int] | None = None,
+                               target: int = 0) -> list[dict]:
+    """CodeGraph Native module partitioning based on architectural depth + pass-through collapsing + CAAC clustering."""
     from collections import defaultdict
 
     pt = pass_through_dirs(files)
@@ -94,6 +188,10 @@ def partition_codegraph_native(files: list[str], max_unit_files: int = 50) -> li
             "files": sorted(ufiles),
             "reason": "codegraph-native-module",
         })
+
+    if weights and target > 0:
+        units = _fuse_coupled_modules(units, edges, weights, target)
+
     return units
 
 

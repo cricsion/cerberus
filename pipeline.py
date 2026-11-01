@@ -404,7 +404,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
 
 
 def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
-    from harness.config import api_key_present, effective_model
+    from harness.config import api_key_present, effective_model, effective_config
 
     cfg = _node_cfg(state)
     if not api_key_present(cfg):
@@ -425,38 +425,41 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
     if isinstance(_focus, str):
         _focus = [f.strip() for f in _focus.split(",") if f.strip()]
     units: list[dict] = []
-    if agent_registry is not None:
-        agent_registry.create("partitioner", "partitioner", parent_stage="partition",
-                              model=effective_model(cfg, "hunter", "partitioner"),
-                              state=AgentState.queued)
-        agent_registry.transition("partitioner", AgentState.running,
-                                  parent_stage="partition")
-
-    _partition_exc: dict = {}
-
-    def _partition_probe() -> list[dict]:
-        from harness.partitioning.llm import run_partitioner_agent
-
-        try:
-            return run_partitioner_agent(
-                state.get("repo", "."), payload_files, payload_cands, cfg,
-                threat_md=threat_md)
-        except Exception as e:
-            _partition_exc["exc"] = e
-            raise
-
-    from harness.fallback import runner
-
-    units = runner("partitioner", _partition_probe, default=[],
-                   logger=logger)
-    _partition_failed = _partition_exc.get("exc") is not None
-    if agent_registry is not None:
-        if _partition_failed:
-            agent_registry.transition("partitioner", AgentState.failed,
+    _enable_agent = effective_config(cfg).get("partition", {}).get("enable_agent", False)
+    if _enable_agent:
+        if agent_registry is not None:
+            agent_registry.create("partitioner", "partitioner", parent_stage="partition",
+                                  model=effective_model(cfg, "hunter", "partitioner"),
+                                  state=AgentState.queued)
+            agent_registry.transition("partitioner", AgentState.running,
                                       parent_stage="partition")
-        else:
-            agent_registry.transition("partitioner", AgentState.succeeded,
-                                      parent_stage="partition")
+
+        _partition_exc: dict = {}
+
+        def _partition_probe() -> list[dict]:
+            from harness.partitioning.llm import run_partitioner_agent
+
+            try:
+                return run_partitioner_agent(
+                    state.get("repo", "."), payload_files, payload_cands, cfg,
+                    threat_md=threat_md)
+            except Exception as e:
+                _partition_exc["exc"] = e
+                raise
+
+        from harness.fallback import runner
+
+        units = runner("partitioner", _partition_probe, default=[],
+                       logger=logger)
+        _partition_failed = _partition_exc.get("exc") is not None
+        if agent_registry is not None:
+            if _partition_failed:
+                agent_registry.transition("partitioner", AgentState.failed,
+                                          parent_stage="partition")
+            else:
+                agent_registry.transition("partitioner", AgentState.succeeded,
+                                          parent_stage="partition")
+
     if not units:
         from harness.partitioning import partition_units
         units = partition_units(state.get("repo", "."), payload_files, cfg)
@@ -474,7 +477,7 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
                  "threat_model_md": threat_md, "focus": list(_focus),
                  "votes_override": state.get("votes_override"),
                  "reason": u.get("reason", "")}
-                for u in units]}
+                for u in units if not u.get("name", "").startswith("vendor")]}
 
 
 def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
@@ -559,8 +562,26 @@ def _norm_key(f: dict) -> str:
 
 def _merge_dup(a: dict, b: dict) -> dict:
     prio = {"confirmed": 2, "needs-review": 1, "fp": 0}
-    keep, drop = (a, b) if prio.get(a.get("status"), 1) >= prio.get(b.get("status"), 1) else (b, a)
+    a_stat = prio.get(a.get("status"), 1)
+    b_stat = prio.get(b.get("status"), 1)
+    if a_stat > b_stat:
+        keep, drop = a, b
+    elif b_stat > a_stat:
+        keep, drop = b, a
+    else:
+        # Tie-breaker: prioritize finding with proven PoC receipt
+        a_succ = safe_int(((a.get("poc") or {}).get("receipt") or {}).get("successes", 0))
+        b_succ = safe_int(((b.get("poc") or {}).get("receipt") or {}).get("successes", 0))
+        keep, drop = (a, b) if a_succ >= b_succ else (b, a)
     g = dict(keep)
+    drop_poc = drop.get("poc") if isinstance(drop.get("poc"), dict) else {}
+    keep_poc = g.get("poc") if isinstance(g.get("poc"), dict) else {}
+    if drop_poc.get("status") == "proven" and keep_poc.get("status") != "proven":
+        g["poc"] = drop_poc
+        if g.get("status") != "fp":
+            g["status"] = "confirmed"
+    elif not keep_poc and drop_poc:
+        g["poc"] = drop_poc
     try:
         g["confidence"] = max(float(keep.get("confidence", 0) or 0),
                               float(drop.get("confidence", 0) or 0))
@@ -577,9 +598,11 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    from harness.config import api_key_present, effective_model
+    from harness.config import api_key_present, effective_model, as_bool
 
     _cfg_sys = _node_cfg(state)
+    if not as_bool((_cfg_sys.get("discovery") or {}).get("system_pass", True)):
+        return {}
     if not api_key_present(_cfg_sys):
         return {}
     if agent_registry is not None:

@@ -1,9 +1,8 @@
 # Partitioning lessons
 
-Everything here was paid for: design decisions argued out, then a blocker found by
-adversarial validation of our own work. Written down so the next person doesn't
-re-buy the lesson. Code lives in `harness/partitioning/` (units.py, llm.py);
-current invariants are asserted in `tests/test_units.py`.
+Everything here was paid for: design decisions argued out, then a blocker found
+by adversarial validation of our own work. Written down so the next person
+doesn't re-buy the lesson. Code lives in `harness/partitioning/` (units.py, llm.py).
 
 ---
 

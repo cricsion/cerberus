@@ -11,7 +11,7 @@ threat_model: ${THREAT_MODEL:-}
 # xhigh/max passed through verbatim — backend-verified). No token
 # caps anywhere: the model always uses its full output budget. The pipeline
 # always runs full depth regardless of effort — effort never drops coverage.
-effort: ${EFFORT:-max}
+effort: ${EFFORT:-medium}
 # Per-agent thinking effort (each: low|medium|high|xhigh|max). Empty falls
 # back to global effort. E.g. fast hunters + deep validator.
 effort_by_agent:
@@ -39,10 +39,10 @@ model_profile:
 # Values are clamped to 1-32 at config load. Applies from the next run.
 concurrency: ${CONCURRENCY:-8}
 # Max LangGraph supersteps per agent.
-recursion_limit: ${RECURSION_LIMIT:-4000}
+recursion_limit: ${RECURSION_LIMIT:-64000}
 # Model-call budget per agent run. This is the real
 # budget: each agent run may make at most this many model calls.
-model_call_limit: ${MODEL_CALL_LIMIT:-1000}
+model_call_limit: ${MODEL_CALL_LIMIT:-16000}
 # Per-agent review budget. Units are weighted by file BYTES (stat-only, no
 # reads); loc_budget is converted at bytes_per_loc (measured: source code
 # averages ~40 bytes/line, so 10k LOC ~= 400k bytes ~= 100k tokens).
@@ -50,6 +50,7 @@ model_call_limit: ${MODEL_CALL_LIMIT:-1000}
 # max_units)): a repo too big to fit max_units units at the nominal budget
 # spreads across max_units equal units instead of collapsing into one blob.
 partition:
+  enable_agent: ${PARTITION_ENABLE_AGENT:-false}
   loc_budget: ${PARTITION_LOC_BUDGET:-10000}
   bytes_per_loc: ${PARTITION_BYTES_PER_LOC:-40}
   # Hard cap on unit count, each unit one hunter agent (0 = unlimited). The
@@ -58,8 +59,8 @@ partition:
   # Minimum files for a group to stand alone; smaller groups merge upward
   min_files: ${MIN_FILES:-10}
   # Partition policy switches
-  vendor_unit: ${PARTITION_VENDOR_UNIT:-0}
-  single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-50}
+  vendor_unit: ${PARTITION_VENDOR_UNIT:-1}
+  single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-1000}
   misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
 # codegraph is the index provider.
@@ -127,13 +128,20 @@ sast:
 threat:
   use_repo_file: true
   write_artifact: true
-  llm_enrich: true
+  llm_enrich: ${HARNESS_THREAT_LLM:-true}
 verification:
   votes: ${VERIFIER_VOTES:-1}
   cell_size: ${VERIFIER_CELL_SIZE:-15}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
+  poc_rounds: ${POC_ROUNDS:-2}
+poc:
+  enabled: ${POC_ENABLED:-1}
+  repro_runs: ${POC_REPRO_RUNS:-3}
+  regen_batch: ${POC_REGEN_BATCH:-10}
+  regen_role: ${POC_REGEN_ROLE:-validator}
+  timeout: ${POC_TIMEOUT:-600}
 triage:
-  batch_size: ${TRIAGE_BATCH:-30}
+  batch_size: ${TRIAGE_BATCH:-100}
 ui:
   heartbeat_s: ${HARNESS_HEARTBEAT_S:-30}
 observability:

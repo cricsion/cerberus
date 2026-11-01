@@ -234,8 +234,7 @@ def run_config(cfg: dict, *, name: str | None = None,
     tracing keys (``recursion_limit``, ``max_concurrency``) are seeded by the
     caller. With ``name`` the role defaults to ``stable_role(name)`` and the
     stage to that role; explicit ``role``/``stage``/``unit`` override for the
-    hunters shape. Every caller used to re-roll this dance and they had
-    drifted; observability wiring itself is unchanged. Never raises.
+    hunters shape. Never raises.
     """
     try:
         handler = get_handler()

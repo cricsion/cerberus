@@ -113,6 +113,9 @@ def load_config(path: str | Path | None = None, *,
     return _normalize(_interpolate(raw, env_map))
 
 
+_DEFAULT_LOAD_CONFIG = load_config
+
+
 def _deep_merge(base: dict, override: dict) -> dict:
     out = copy.deepcopy(base)
     for key, value in (override or {}).items():
@@ -197,12 +200,12 @@ _INT_BOUNDS: dict[str, tuple[int, int, int | None, bool]] = {
     "max_retries": (3, 0, None, False),
     "retry_sleep_cap": (2, 0, None, False),
     "connect_timeout": (10, 1, None, False),
-    "recursion_limit": (4000, 1, None, False),
-    "model_call_limit": (1000, 1, None, False),
+    "recursion_limit": (64000, 1, None, False),
+    "model_call_limit": (16000, 1, None, False),
     "partition.loc_budget": (10000, 0, None, False),
     "partition.max_units": (20, 0, None, True),
     "partition.min_files": (10, 0, None, False),
-    "partition.single_unit_max_files": (50, 0, None, False),
+    "partition.single_unit_max_files": (1000, 0, None, False),
     "codegraph.chars": (20000, 0, None, False),
     "codegraph.candidates": (200, 0, None, False),
     "sandbox.command_timeout": (120, 1, None, False),
@@ -211,11 +214,14 @@ _INT_BOUNDS: dict[str, tuple[int, int, int | None, bool]] = {
     "sast.findings": (5000, 0, None, True),
     "verification.votes": (1, 1, 5, False),
     "verification.cell_size": (15, 1, 100, False),
-    "triage.batch_size": (30, 1, 200, True),
+    "triage.batch_size": (100, 1, 200, True),
+    "poc.timeout": (600, 1, None, False),
+    "poc.repro_runs": (3, 1, None, False),
 }
 
 _BOOL_PATHS: dict[str, bool] = {
-    "partition.vendor_unit": False,
+    "partition.enable_agent": False,
+    "partition.vendor_unit": True,
     "partition.misc_code_merge": True,
     "partition.framework_edges": True,
     "sandbox.pull_image": False,
@@ -289,8 +295,18 @@ def get_config() -> dict:
     if _CFG is None:
         with _CFG_LOCK:
             if _CFG is None:
-                _CFG = load_config()
+                if load_config is _DEFAULT_LOAD_CONFIG:
+                    _CFG = load_config()
+                else:
+                    _CFG = _normalize(_deep_merge(_defaults(), load_config()))
     return _CFG
+
+
+def reset_config() -> None:
+    """Clear cached process configuration."""
+    global _CFG
+    with _CFG_LOCK:
+        _CFG = None
 
 
 def set_config(cfg: dict | None) -> dict:
@@ -375,7 +391,7 @@ def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
 
     Empty values never shadow the next source."""
     # A caller-supplied profile is used verbatim; only a cfg without one falls
-    # back to the process profile (partial test/caller configs stay partial).
+    # back to the process profile (partial caller configs stay partial).
     caller_profile = cfg.get("model_profile") if isinstance(cfg, dict) else None
     cfg = effective_config(cfg)
     model_name = effective_model(cfg, role, agent)

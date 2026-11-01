@@ -10,7 +10,7 @@ Python modules in `prompts/` compose blocks and weave fenced untrusted data
 ```
 ---
 role: <dirname>               # hunter | validator | triage | threat | partition (must equal the directory)
-module: harness.prompts.<m>   # provenance pointer to the consuming module (test-checked)
+module: harness.prompts.<m>   # provenance pointer to the consuming module
 ---
 <dto — plain Markdown, byte-preserving>
 ```
@@ -30,8 +30,7 @@ One block per file; the loader name is the path under this directory without
   cover the template's placeholders: unresolved or unused names raise.
 - Conditional assembly (narrow retry brief, sandbox posture, nonce-fenced
   untrusted blocks) belongs in the Python builders, never here.
-- Keep edits pin-compatible: `tests/test_prompt_engine.py` plus the suite's
-  content pins must stay green. A byte drift in a composed prompt is a
+- Keep edits byte-compatible: a byte drift in a composed prompt is a
   behavior change for every agent that ships it.
 - `UNTRUSTED_CONTEXT_NOTE` (in `prompts/__init__.py`) intentionally stays
   code: it is shared across all agent roles and has no single owning

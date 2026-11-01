@@ -1,8 +1,8 @@
 # Custom Semgrep taint rules — sink families the public registry misses or
 # under-specifies for our harness (project-wrapper sinks, framework gaps).
 # Every rule carries metadata.cwe so each hit carries its CWE into the finding
-# contract directly; tests/test_rules.py pins the pack and its regex-prefilter
-# lockstep (every family here must keep an always-available prefilter signal).
+# contract directly; the pack and the regex prefilter are kept in lockstep
+# (every family here must keep an always-available prefilter signal).
 # Taint mode: sources -> sinks unless a sanitizer fires.
 rules:
   # ---------------- Python ----------------

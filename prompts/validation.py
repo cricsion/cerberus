@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from harness.prompts.contract import structured_output_contract
 from harness.prompts.engine import block
 from harness.prompts.untrusted import make_nonce, untrusted_block
 
@@ -16,8 +17,18 @@ REFUTE_METHOD = block("validator/refute_method")
 
 EXCLUSION_RULES = block("validator/exclusion_rules")
 
-# Fence contract (tests/test_validator.py): near-miss `</untrusted_data ...>`
-# lookalikes are rewritten, so nothing can close the block early.
+POC_REFUTE_METHOD = (
+    "## Stage 1 (Static) vs Stage 2 (Dynamic) Verification & Receipts\n"
+    "1. Stage 1 (Static Code Analysis): If the source code neutralizes the issue "
+    "(sanitizer, auth gate, dead code, unreachable path), immediately mark status='fp'. "
+    "Do NOT rely on a PoC if the vulnerability does not exist in code.\n"
+    "2. Stage 2 (Receipt Inspection): If the claim survives static scrutiny, inspect the mechanical receipt: "
+    "If receipt has successes == runs and control_status == 'passed', the defect is mechanically proven. "
+    "If control_status is 'violated' or 'invalid', the PoC failed: set needs_poc_regen=true.\n"
+)
+
+# Fence contract: near-miss `</untrusted_data ...>` lookalikes are rewritten,
+# so nothing can close the block early.
 _UNTRUSTED_PREAMBLE = block("validator/untrusted_preamble")
 
 
@@ -102,6 +113,10 @@ class VerdictItem(VerdictUpdate):
         description="Named control that acquits this finding: sanitizer "
                     "(input neutralization), auth_check (only an auth gate), "
                     "or none")
+    poc_status: Literal["proven", "refuted", "blocked", "skipped"] | None = Field(
+        default=None, description="Audited PoC status based on mechanical receipt")
+    needs_poc_regen: bool = Field(
+        default=False, description="True if vulnerability survived static check but PoC needs regeneration")
 
 
 class VerdictBatch(BaseModel):
@@ -133,6 +148,7 @@ def build_batch_task(group_name: str, threat_md: str, payload: list,
         "proves otherwise — your job is to kill anything that is not actually exploitable.",
         _environment_block(repo, tools),
         REFUTE_METHOD,
+        POC_REFUTE_METHOD,
         EXCLUSION_RULES,
         FALSIFY_INSTRUCTIONS,
     ]
@@ -148,11 +164,15 @@ def build_batch_task(group_name: str, threat_md: str, payload: list,
               "into the sink. Scope/deprioritization opinions belong in "
               "EVIDENCE text, never in STATUS.")
     parts.append(
-        "## Output Format\n\n"
-        "Emit verdicts JSON only — no surrounding prose. Where your evidence "
-        "overrides the finder's labels (cwe, severity, snippet, path), your "
-        "corrected values replace the finder's wording; keep every finding "
-        "id unchanged.")
+        structured_output_contract(
+            VerdictBatch,
+            guidance=(
+                "Submit all verdicts in a single batch matching the candidate finding IDs under test.\n"
+                "Where your evidence overrides the finder's labels (cwe, severity, snippet, path), "
+                "your corrected values replace the finder's wording; keep every finding id unchanged."
+            ),
+        )
+    )
     parts.append(VERDICT_EXAMPLE)
 
     # Dynamic tail: candidate findings for this specific partition cell

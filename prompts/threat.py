@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+from harness.prompts.contract import structured_output_contract
 from harness.prompts.engine import block
 
 
@@ -94,6 +95,18 @@ class SwarmPlan(BaseModel):
     deprioritized: list[SwarmParked] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)
     mitigations: list[SwarmMitigation] = Field(default_factory=list)
+
+
+SYNTHESIZER_CONTRACT = structured_output_contract(
+    SwarmPlan,
+    guidance=(
+        "- Submit your complete threat model plan by invoking the `SwarmPlan` tool call.\n"
+        "- Do NOT output raw markdown or text; you MUST invoke the `SwarmPlan` tool call.\n"
+        "- The `threats` list MUST contain at least 1-8 concrete threat rows (never return an empty list).\n"
+        "- Every entry point from section 3 must appear in at least one threat's surface.\n"
+        "- Mitigations must provide class-level controls covering the identified threat classes."
+    ),
+)
 
 
 class QuestionList(BaseModel):
@@ -252,7 +265,8 @@ def build_synth_task(repo: str, draft_md: str, research_json: str,
         "INVARIANTS (checked by code): every entry point must be named by "
         "at least one threat surface; at least one threat row must have an "
         "EMPTY evidence cell (the gap-fill ran). Order does not matter — "
-        "the harness sorts threats and assigns ids."
+        "the harness sorts threats and assigns ids.\n\n"
+        f"{SYNTHESIZER_CONTRACT}"
     )
 
 

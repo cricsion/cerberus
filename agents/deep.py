@@ -454,7 +454,14 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         from langchain.agents.structured_output import ToolStrategy
         response_format = ToolStrategy(response_format, handle_errors=True)
 
-    # Sort tools deterministically by name to guarantee identical schema order across LLM calls for prefix caching
+    if response_format is not None:
+        target_schema = getattr(response_format, "schema", response_format)
+        target_name = getattr(target_schema, "__name__", None)
+        if target_name and target_name not in (system_prompt or ""):
+            from harness.prompts.contract import structured_output_contract
+            contract_suffix = structured_output_contract(target_name)
+            system_prompt = f"{system_prompt.strip()}\n\n{contract_suffix}" if system_prompt else contract_suffix
+
     sorted_tools = sorted(list(tools or []),
                           key=lambda t: str(getattr(t, "name", None) or getattr(t, "__name__", "") or t))
     kwargs: dict[str, Any] = dict(
@@ -542,6 +549,13 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
                          meta_extra: dict | None = None) -> list[Any]:
     """Batched one-shot structured output : one LLM call per
     input;"""
+    target_schema = getattr(model, "schema", model)
+    target_name = getattr(target_schema, "__name__", None)
+    if target_name and target_name not in (system or ""):
+        from harness.prompts.contract import structured_output_contract
+        contract_suffix = structured_output_contract(target_name)
+        system = f"{system.strip()}\n\n{contract_suffix}" if system else contract_suffix
+
     llm = make_llm(mk, timeout=timeout, max_retries=max_retries)
     structured = llm.with_structured_output(model, method="function_calling")
     msgs = [[{"role": "system", "content": system},

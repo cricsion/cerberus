@@ -1,19 +1,27 @@
+from harness.prompts.contract import structured_output_contract
 from harness.prompts.engine import block
 from harness.prompts.untrusted import make_nonce, untrusted_block
 from harness.sandbox.run_base import DEFAULT_RULES_DIR
+from harness.schemas import DiscoveryResult
 
-# The prompt asks the model to reason about rationale first; that prose order is
-# a cognitive instruction, not a mirror of the schema's field order.
-FINDING_SPEC = (
-    "reason through each finding in this order: rationale (why this is real: "
-    "WHO controls the input, HOW it reaches "
-    "the sink, WHAT breaks), id, title, cwe, severity, confidence, path, "
-    "start_line, end_line, snippet (exact 1-4 lines containing the sink only; never paste entire functions), "
-    "taint (source, sink, path), evidence, "
-    "status=needs-review. Weak or uncertain candidates are welcome: give low "
-    "confidence and say plainly in rationale what is unproven — never silently "
-    "drop a suspicion. Report ONE finding per distinct vulnerable function or endpoint "
-    "with exact start_line, end_line, and function name — do not aggregate multiple functions into one finding."
+# Reproduction test and finding standard guidance
+REPRO_CONTRACT = (
+    "REPRODUCTION TEST CONTRACT (poc field):\n"
+    "- Author a direct-call in-process reproduction test in poc.script (<= 8KB).\n"
+    "- Polyglot: Write in any language matching the target repo (poc.py, poc.js, poc.go, poc.sh). Set poc.filename accordingly.\n"
+    "- Default execution: assert invariant violation, print '[POC_PROVEN]', and exit with 0.\n"
+    "- Control execution (with '--control'): assert benign baseline passes, print '[POC_CONTROL_PASSED]', and exit with 0.\n"
+    "- Report ONE finding per distinct vulnerable function or endpoint with exact start_line, end_line, and 1-4 line snippet containing the sink.\n"
+    "- Weak or uncertain candidates are welcome: give low confidence and explain in rationale what is unproven — never silently drop a suspicion."
+)
+
+FINDING_SPEC = structured_output_contract(
+    DiscoveryResult,
+    guidance=(
+        "- An empty findings array is valid ONLY after inspecting every assigned file, including the enumerated remainder.\n"
+        "- Reason through each finding in this order: rationale (WHO controls input, HOW it reaches the sink, WHAT breaks), "
+        "title, cwe, severity, confidence, path, start_line, end_line, snippet, taint, refs, poc, conditions."
+    ),
 )
 
 # Discovery contract: findings are the only machine-consumed output.
@@ -132,8 +140,9 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
         "## Procedure\n" + AUDIT_PROCEDURE,
         "## What counts\n" + FINDING_BAR,
         "## Candidate gate\n" + CANDIDATE_GATE,
+        "## Reproduction test & findings standard\n" + REPRO_CONTRACT,
         PATH_CONTRACT,
-        "## Output\n" + DISCOVERY_CONTRACT,
+        DISCOVERY_CONTRACT,
     ]
 
     # Shared repo-wide threat model (deterministic nonce)

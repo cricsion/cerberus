@@ -48,6 +48,16 @@ def _merge_verdict(base: dict, data: dict) -> dict:
                   "cwe", "fix_suggestion", "control_type"):
             if k in data and data[k] not in (None, ""):
                 merged[k] = data[k]
+        if "poc_status" in data and data["poc_status"]:
+            poc_dict = merged.get("poc") if isinstance(merged.get("poc"), dict) else {}
+            receipt = poc_dict.get("receipt") if isinstance(poc_dict.get("receipt"), dict) else {}
+            is_proven = (poc_dict.get("status") == "proven" and receipt.get("control_status") == "passed")
+            if not is_proven:
+                if not isinstance(merged.get("poc"), dict):
+                    merged["poc"] = {}
+                merged["poc"]["status"] = data["poc_status"]
+        if "needs_poc_regen" in data:
+            merged["_needs_poc_regen"] = bool(data["needs_poc_regen"])
         vsnip = data.get("snippet")
         if vsnip not in (None, ""):
             merged["snippet"] = vsnip
@@ -212,9 +222,11 @@ def _compact_finding(f: dict) -> dict:
         return {k: d.get(k) for k in (
             "id", "title", "cwe", "severity", "confidence", "path",
             "start_line", "end_line", "snippet", "taint", "refs",
-            "evidence")}
-    except TypeError:
-        return {"id": f.get("id", ""), "title": f.get("title", "")}
+            "evidence", "poc", "conditions")}
+    except (TypeError, AttributeError):
+        if isinstance(f, dict):
+            return {"id": f.get("id", ""), "title": f.get("title", "")}
+        return {"id": "", "title": ""}
 
 
 def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
@@ -302,9 +314,27 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 parsed: Any = None
                 verdicts: list[dict] = []
                 try:
-                    parsed, _ = runner(
+                    parsed, raw_text = runner(
                         "validator batch", _call_validator_structured,
                         default=EMPTY_STRUCTURED, logger=_logger)
+                    if parsed is None and raw_text and '"verdicts"' in raw_text:
+                        import json as _json, re as _re
+                        cands = []
+                        for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_text):
+                            cands.append(match.group(1).strip())
+                        start = raw_text.find("{")
+                        end = raw_text.rfind("}")
+                        if start != -1 and end > start:
+                            cands.append(raw_text[start:end+1].strip())
+                        for cand in cands:
+                            try:
+                                d = _json.loads(cand)
+                                if isinstance(d, dict) and "verdicts" in d and isinstance(d["verdicts"], list):
+                                    from harness.prompts.validation import VerdictBatch
+                                    parsed = VerdictBatch.model_validate(d)
+                                    break
+                            except Exception:
+                                continue
                     verdicts = [v for v in structured_items(parsed, field="verdicts")
                                 if v.get("id")]
                 except Exception as e:
@@ -642,4 +672,34 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     cell_out = _run_validation_cells(
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
         repo=repo, cell_offset=cell_offset, agent_registry=agent_registry)
-    return _reassemble_validation(planned, gated, cell_out)
+    validated = _reassemble_validation(planned, gated, cell_out)
+
+    # Bounded PoC-Regeneration Loop:
+    poc_cfg = cfg.get("poc") if isinstance(cfg.get("poc"), dict) else {}
+    if poc_cfg.get("enabled", True):
+        refuted = [f for f in validated if f.get("_needs_poc_regen") and f.get("status") != "fp"]
+        if refuted:
+            try:
+                from harness.sandbox import acquired_backend
+                from harness.agents.poc import run_poc_regen
+                with acquired_backend(cfg, repo or ".", label="validator-poc-regen") as backend:
+                    if backend is not None:
+                        regen_results = run_poc_regen(refuted, backend, cfg, threat_md=threat_md,
+                                                      run_id=cfg.get("run_id"), round_num=1)
+                        regen_by_id = {rf["id"]: rf for rf in regen_results if "id" in rf}
+                        for f in validated:
+                            fid = f.get("id")
+                            if fid in regen_by_id:
+                                rf = regen_by_id[fid]
+                                f["poc"] = rf.get("poc", f.get("poc"))
+                                receipt = (f.get("poc") or {}).get("receipt") or {}
+                                if (receipt.get("successes") == receipt.get("runs")
+                                        and receipt.get("control_status") == "passed"):
+                                    f["status"] = "confirmed"
+                                    f.setdefault("poc", {})["status"] = "proven"
+                                f.pop("_needs_poc_regen", None)
+            except Exception as exc:
+                _logger.warning("Validator PoC regen loop encountered error: %s", exc)
+                for f in validated:
+                    f.pop("_needs_poc_regen", None)
+    return validated

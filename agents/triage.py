@@ -39,11 +39,22 @@ def _group_key(f: dict) -> tuple[str, str] | None:
 
 
 def _elect_primary(out: list[dict], idxs: list[int]) -> None:
-    """Highest confidence wins the subgroup; rest point at it. Never drops."""
+    """Highest PoC proof score then highest confidence wins the subgroup; rest point at it. Never drops."""
     if not idxs:
         return
+
+    def _rank_key(i: int) -> tuple[int, float]:
+        f = out[i] if isinstance(out[i], dict) else {}
+        poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
+        proven = 1 if poc.get("status") == "proven" else 0
+        try:
+            conf = float(f.get("confidence", 0) or 0)
+        except (TypeError, ValueError):
+            conf = 0.0
+        return (proven, conf)
+
     try:
-        primary = max(idxs, key=lambda i: float(out[i].get("confidence", 0) or 0))
+        primary = max(idxs, key=_rank_key)
     except (TypeError, ValueError):
         primary = idxs[0]
     pid = str(out[primary].get("id", ""))
@@ -85,6 +96,17 @@ def _capped_view(text: str, limit: int) -> str:
     return text[:limit] + f"\n... [truncated {len(text) - limit} chars]"
 
 
+def _format_snippet(snippet: str, max_lines: int = 20) -> str:
+    """Format code snippet to first max_lines lines, noting remaining line count."""
+    if not snippet:
+        return ""
+    lines = snippet.splitlines()
+    if len(lines) <= max_lines:
+        return snippet
+    rem = len(lines) - max_lines
+    return "\n".join(lines[:max_lines]) + f"\n... [{rem} lines remaining]"
+
+
 def _slim_for_triage(f: dict) -> dict:
     taint = f.get("taint")
     if isinstance(taint, dict):
@@ -100,20 +122,20 @@ def _slim_for_triage(f: dict) -> dict:
         }
     elif taint is not None:
         taint = str(taint)
-    return {"id": f.get("id"),
-            "unit": f.get("unit", ""),
-            "path": f.get("path"),
-            "start_line": f.get("start_line"), "end_line": f.get("end_line"),
-            "cwe": f.get("cwe"),
-            "title": str(f.get("title", "")),
-            "severity": f.get("severity"), "confidence": f.get("confidence"),
-            "status": f.get("status"),
-            "control_type": f.get("control_type", ""),
-            "duplicate_of": f.get("duplicate_of", ""),
-            "snippet": str(f.get("snippet", "")),
-            "rationale": _capped_view(str(f.get("rationale", "")), 2_000),
-            "taint": taint,
-            "evidence": _capped_view(str(f.get("evidence", "")), 2000)}
+    return {
+        "id": f.get("id"),
+        "path": f.get("path"),
+        "start_line": f.get("start_line"),
+        "end_line": f.get("end_line"),
+        "cwe": f.get("cwe"),
+        "title": str(f.get("title", "")),
+        "severity": f.get("severity"),
+        "control_type": f.get("control_type", ""),
+        "duplicate_of": f.get("duplicate_of", ""),
+        "snippet": _format_snippet(str(f.get("snippet", ""))),
+        "taint": taint,
+        "evidence": _capped_view(str(f.get("evidence", "")), 2_000),
+    }
 
 
 def _triage_messages(chunks: list[list[dict]], threat_md: str) -> list[str]:
@@ -179,7 +201,7 @@ def _log_entry(f: dict, batch: int) -> dict:
 
 
 def render_triage_log(log: list[dict], n_calls: int = 0,
-                      batch_size: int = 30) -> str:
+                      batch_size: int = 100) -> str:
     """Render the audit trail: one row per finding plus run totals. Pure function."""
     try:
         log = [e for e in (log or []) if isinstance(e, dict)]
@@ -289,10 +311,27 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     with backend_ctx as backend:
         try:
             def _triage_one_batch(message):
-                parsed, _ = run_structured(
+                parsed, raw_text = run_structured(
                     mk, TriageBatch, TRIAGE_SYSTEM, message,
                     tools=tools, timeout=_timeout, max_retries=_max_retries,
                     name="triage", backend=backend, root_dir=repo or None)
+                if parsed is None and raw_text and '"verdicts"' in raw_text:
+                    import json as _json, re as _re
+                    cands = []
+                    for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_text):
+                        cands.append(match.group(1).strip())
+                    start = raw_text.find("{")
+                    end = raw_text.rfind("}")
+                    if start != -1 and end > start:
+                        cands.append(raw_text[start:end+1].strip())
+                    for cand in cands:
+                        try:
+                            d = _json.loads(cand)
+                            if isinstance(d, dict) and "verdicts" in d and isinstance(d["verdicts"], list):
+                                parsed = TriageBatch.model_validate(d)
+                                break
+                        except Exception:
+                            continue
                 return parsed
 
             max_workers = max(1, int(max_workers)) if max_workers else None

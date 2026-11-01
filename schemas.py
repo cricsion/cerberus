@@ -28,6 +28,30 @@ class EvidenceRefDict(TypedDict, total=False):
     note: str
 
 
+class PocReceiptDict(TypedDict, total=False):
+    runs: int
+    successes: int
+    control_status: Literal["passed", "violated", "invalid", "skipped"]
+    outputs: list[str]
+    error: str | None
+    stamped_by: str
+
+
+class PocItemDict(TypedDict, total=False):
+    approach: str
+    command: str
+    script: str
+    filename: str
+    language: str
+    expected: str
+    control: str
+    runs: int
+    successes: int
+    flaky: bool
+    status: Literal["proven", "attempted", "blocked", "planned"]
+    receipt: PocReceiptDict
+
+
 class FindingDict(TypedDict, total=False):
     """The canonical vulnerability finding dictionary representation."""
     id: str
@@ -53,6 +77,8 @@ class FindingDict(TypedDict, total=False):
     cvss: float
     rank: int
     fallback_note: str
+    poc: PocItemDict
+    conditions: list[str]
 
 
 class DiscoveryResultDict(TypedDict, total=False):
@@ -78,6 +104,34 @@ class EvidenceRef(BaseModel):
                       description="Line number, 0 when unknown")
     note: str = Field(default="",
                       description="What this line shows for the claim")
+
+
+class PocReceipt(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    runs: int = 0
+    successes: int = 0
+    control_status: Literal["passed", "violated", "invalid", "skipped"] = "skipped"
+    outputs: list[str] = Field(default_factory=list)
+    error: str | None = None
+    stamped_by: str = "harness"
+
+
+class PocItem(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    approach: str = Field(default="", description="Why this test proves the claim")
+    command: str = Field(default="", description="Replay command relative to repo root")
+    script: str = Field(default="", description="Full repro script source (<= 8KB)")
+    filename: str = Field(default="poc.py", description="Script filename, e.g. poc.py, poc.js, poc.go, poc.sh")
+    language: str = Field(default="", description="Optional language identifier: python, javascript, go, bash, etc.")
+    expected: str = Field(default="[POC_PROVEN]", description="Sentinel line that MUST appear on stdout")
+    control: str = Field(default="--control", description="Control flag requiring [POC_CONTROL_PASSED]")
+    runs: int = 3
+    successes: int = 0
+    flaky: bool = False
+    status: Literal["proven", "attempted", "blocked", "planned"] = "planned"
+    receipt: PocReceipt | None = None
 
 
 class Finding(BaseModel):
@@ -114,6 +168,8 @@ class Finding(BaseModel):
     cvss: float | None = Field(default=None, description="CVSS base score")
     rank: int = Field(default=0, description="Rank ordered by severity and confidence")
     fallback_note: str = Field(default="", description="Note if fallback triggered")
+    poc: PocItem | dict = Field(default_factory=dict, description="In-process reproduction test or exploit item")
+    conditions: list[str] = Field(default_factory=list, description="Prerequisite conditions for exploitability")
 
 
 class DiscoveryResult(BaseModel):

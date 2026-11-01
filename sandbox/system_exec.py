@@ -1,11 +1,10 @@
 """System-lane execution: harness-owned commands run in the repo sandbox.
 
 The deterministic pipeline stages (SAST scanners, the codegraph CLI, the
-compute runner behind the graph tools and partitioning) used to fork host
-subprocesses that read or parse the target tree. They now execute INSIDE the
-per-repo run container on the shared exec channel (D1: one container per repo,
+compute runner behind the graph tools and partitioning) execute INSIDE the
+per-repo run container on the shared exec channel — one container per repo,
 zero additional containers; the host runs only the orchestrator and its store
-reads). This module is that single seam.
+reads. This module is that single seam.
 
 It rides the SAME exec channel, exec markers and pkill hygiene as agent
 shells (the channel's ``exec_core`` path, via ``RunSandbox.exec_streams``)
