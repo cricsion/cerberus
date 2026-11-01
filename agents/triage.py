@@ -311,27 +311,10 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     with backend_ctx as backend:
         try:
             def _triage_one_batch(message):
-                parsed, raw_text = run_structured(
+                parsed, _ = run_structured(
                     mk, TriageBatch, TRIAGE_SYSTEM, message,
                     tools=tools, timeout=_timeout, max_retries=_max_retries,
                     name="triage", backend=backend, root_dir=repo or None)
-                if parsed is None and raw_text and '"verdicts"' in raw_text:
-                    import json as _json, re as _re
-                    cands = []
-                    for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_text):
-                        cands.append(match.group(1).strip())
-                    start = raw_text.find("{")
-                    end = raw_text.rfind("}")
-                    if start != -1 and end > start:
-                        cands.append(raw_text[start:end+1].strip())
-                    for cand in cands:
-                        try:
-                            d = _json.loads(cand)
-                            if isinstance(d, dict) and "verdicts" in d and isinstance(d["verdicts"], list):
-                                parsed = TriageBatch.model_validate(d)
-                                break
-                        except Exception:
-                            continue
                 return parsed
 
             max_workers = max(1, int(max_workers)) if max_workers else None

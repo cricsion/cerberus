@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -379,6 +380,17 @@ def _sandbox_permissions(backend: Any, *, scratchpad: bool = False) -> list:
     return perms
 
 
+def _coerce_response_format(response_format: Any) -> Any:
+    from langchain.agents.structured_output import ToolStrategy
+    if response_format is not None and isinstance(response_format, (type, dict)):
+        schema_name = getattr(response_format, "__name__", None)
+        if schema_name is None and isinstance(response_format, dict):
+            schema_name = str(response_format.get("title") or "Structured output")
+        return ToolStrategy(response_format, handle_errors=True,
+                            tool_message_content=f"{schema_name} accepted.")
+    return response_format
+
+
 def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                      response_format: Any = None, name: str | None = None,
                      backend: Any = None, root_dir: Any = None,
@@ -449,10 +461,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
             f"{type(llm).__name__} (use make_llm or a langchain fake model)"
         )
 
-    # A bare schema becomes AutoStrategy->ProviderStrategy (strict json_schema, no handle_errors): one garbled reply kills the stage; ToolStrategy is uniform.
-    if response_format is not None and isinstance(response_format, (type, dict)):
-        from langchain.agents.structured_output import ToolStrategy
-        response_format = ToolStrategy(response_format, handle_errors=True)
+    response_format = _coerce_response_format(response_format)
 
     if response_format is not None:
         target_schema = getattr(response_format, "schema", response_format)
@@ -512,6 +521,73 @@ def final_text(result: Any, *, sep: str = " ") -> str:
     return ""
 
 
+def _first_list_field(schema: Any) -> str | None:
+    try:
+        for name, info in (getattr(schema, "model_fields", None) or {}).items():
+            if getattr(getattr(info, "annotation", None), "__origin__", None) is list:
+                return name
+    except Exception:
+        pass
+    return None
+
+
+def recover_structured(text: Any, schema: Any, list_field: str | None = None) -> Any:
+    if not isinstance(text, str):
+        return None
+    if list_field is None:
+        list_field = _first_list_field(schema)
+    cands = [m.group(1) for m in re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", text)]
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        cands.append(text[start:end + 1])
+    for cand in cands:
+        try:
+            d = json.loads(cand)
+        except Exception:
+            continue
+        if not isinstance(d, dict):
+            continue
+        if list_field is not None and not isinstance(d.get(list_field), list):
+            continue
+        try:
+            return schema.model_validate(d)
+        except Exception:
+            continue
+    return None
+
+
+def extract_structured(result: Any, schema: Any, *, tool_name: str | None = None,
+                       list_field: str | None = None) -> Any:
+    if not isinstance(result, dict):
+        return None
+    sr = result.get("structured_response")
+    if list_field is None:
+        list_field = _first_list_field(schema)
+    if sr is not None and (list_field is None or hasattr(sr, list_field)):
+        return sr
+    tool_name = tool_name or getattr(schema, "__name__", None)
+    for m in reversed(result.get("messages") or []):
+        tool_calls = getattr(m, "tool_calls", None) or []
+        try:
+            iter(tool_calls)
+        except TypeError:
+            continue
+        for tc in tool_calls:
+            name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", "")
+            if tool_name and name != tool_name:
+                continue
+            args = tc.get("args") if isinstance(tc, dict) else getattr(tc, "args", None)
+            if not isinstance(args, dict):
+                continue
+            if list_field is not None and not isinstance(args.get(list_field), list):
+                continue
+            try:
+                return schema.model_validate(args)
+            except Exception:
+                continue
+    return recover_structured(final_text(result), schema, list_field)
+
+
 def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
                    tools: list | None = None, timeout: int | None = None,
                    max_retries: int | None = None,
@@ -539,6 +615,8 @@ def run_structured(mk: dict | None, model: Any, system: str, human: str, *,
     result = agent.invoke({"messages": [{"role": "user", "content": human}]},
                           config=config)
     parsed = result.get("structured_response") if isinstance(result, dict) else None
+    if parsed is None:
+        parsed = extract_structured(result, model) if model is not None else None
     return parsed, final_text(result)
 
 
@@ -549,7 +627,7 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
                          meta_extra: dict | None = None) -> list[Any]:
     """Batched one-shot structured output : one LLM call per
     input;"""
-    target_schema = getattr(model, "schema", model)
+    target_schema = model if isinstance(model, type) else getattr(model, "schema", model)
     target_name = getattr(target_schema, "__name__", None)
     if target_name and target_name not in (system or ""):
         from harness.prompts.contract import structured_output_contract
@@ -557,7 +635,10 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
         system = f"{system.strip()}\n\n{contract_suffix}" if system else contract_suffix
 
     llm = make_llm(mk, timeout=timeout, max_retries=max_retries)
-    structured = llm.with_structured_output(model, method="function_calling")
+    method = ("json_schema"
+              if (getattr(llm, "profile", None) or {}).get("structured_output")
+              else "function_calling")
+    structured = llm.with_structured_output(model, include_raw=True, method=method)
     msgs = [[{"role": "system", "content": system},
              {"role": "user", "content": h}] for h in humans]
     config: dict[str, Any] = (
@@ -567,6 +648,15 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
     if not msgs:
         return []
     results = structured.batch(msgs, config=config, return_exceptions=True)
-    return [r if r is not None
-            else RuntimeError("structured reply contained no tool call")
-            for r in results]
+    out: list[Any] = []
+    for r in results:
+        if isinstance(r, dict) and ("raw" in r or "parsing_error" in r):
+            parsed = r.get("parsed")
+            if parsed is None:
+                parsed = recover_structured(message_text(r.get("raw")), model)
+            out.append(parsed if parsed is not None else
+                       RuntimeError("structured reply contained no tool call"))
+        else:
+            out.append(r if r is not None else
+                       RuntimeError("structured reply contained no tool call"))
+    return out

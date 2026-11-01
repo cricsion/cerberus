@@ -314,27 +314,9 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 parsed: Any = None
                 verdicts: list[dict] = []
                 try:
-                    parsed, raw_text = runner(
+                    parsed, _raw = runner(
                         "validator batch", _call_validator_structured,
                         default=EMPTY_STRUCTURED, logger=_logger)
-                    if parsed is None and raw_text and '"verdicts"' in raw_text:
-                        import json as _json, re as _re
-                        cands = []
-                        for match in _re.finditer(r"```(?:json)?\s*([\s\S]*?)\s*```", raw_text):
-                            cands.append(match.group(1).strip())
-                        start = raw_text.find("{")
-                        end = raw_text.rfind("}")
-                        if start != -1 and end > start:
-                            cands.append(raw_text[start:end+1].strip())
-                        for cand in cands:
-                            try:
-                                d = _json.loads(cand)
-                                if isinstance(d, dict) and "verdicts" in d and isinstance(d["verdicts"], list):
-                                    from harness.prompts.validation import VerdictBatch
-                                    parsed = VerdictBatch.model_validate(d)
-                                    break
-                            except Exception:
-                                continue
                     verdicts = [v for v in structured_items(parsed, field="verdicts")
                                 if v.get("id")]
                 except Exception as e:

@@ -316,7 +316,7 @@ def run_poc_regen(refuted_findings: list[dict], backend: Any, cfg: dict,
         return refuted_findings
 
     from harness.config import get_model_kwargs
-    from harness.agents.deep import build_deep_agent, make_llm, sanitize_model_kwargs
+    from harness.agents.deep import build_deep_agent, extract_structured, make_llm, sanitize_model_kwargs
     from harness.agents.toolsets import graph_tools
     from harness.schemas import DiscoveryResult
 
@@ -363,8 +363,8 @@ def run_poc_regen(refuted_findings: list[dict], backend: Any, cfg: dict,
                 scratchpad=True,
             )
             res = agent.invoke({"messages": [{"role": "user", "content": "\n".join(task_lines)}]})
-            sr = res.get("structured_response") if isinstance(res, dict) else None
-            if sr and hasattr(sr, "findings"):
+            sr = extract_structured(res, DiscoveryResult)
+            if sr is not None:
                 for rf in getattr(sr, "findings", []):
                     rd = rf.model_dump() if hasattr(rf, "model_dump") else dict(rf)
                     fid = rd.get("id")
