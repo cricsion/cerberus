@@ -6,13 +6,13 @@ import sys
 import time
 from typing import Any
 
-from harness.agents.deep import is_fatal_error, sanitize_model_kwargs
-from harness.config import effective_config
-from harness.progress import AgentState
-from harness.fallback import (EMPTY_STRUCTURED, _append_note,
+from cerberus.agents.deep import is_fatal_error, sanitize_model_kwargs
+from cerberus.config import effective_config
+from cerberus.progress import AgentState
+from cerberus.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, runner)
-from harness.schemas import structured_items
-from harness.prompts.validator import (OMITTED_NOTE, REFUTE_METHOD,
+from cerberus.schemas import structured_items
+from cerberus.prompts.validator import (OMITTED_NOTE, REFUTE_METHOD,
                                         ROUND_FAILED_NOTE, VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def _stage_line(text: str) -> None:
     # these lines into the stage line instead of double-printing.
     """
     try:
-        from harness import pipeline as _pipeline
+        from cerberus import pipeline as _pipeline
     except Exception:
         _pipeline = None
     sd = getattr(_pipeline, "_stage_detail", None)
@@ -242,7 +242,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                           repo: str | None = None,
                           cell_no: int = 0,
                           agent_registry: Any = None) -> list[dict]:
-    from harness.config import get_model_kwargs
+    from cerberus.config import get_model_kwargs
 
     if not items:
         return []
@@ -265,16 +265,16 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     chunks = [items]
 
     # Backend resolved once like hunters._run_unit (fail-soft).
-    from harness.agents.toolsets import graph_tools
-    from harness.sandbox import _acquire_backend, close_backend
+    from cerberus.agents.toolsets import graph_tools
+    from cerberus.sandbox import _acquire_backend, close_backend
     backend = (_acquire_backend(cfg, repo,
                                 label=f"validator-{group_name}") if repo else None)
     tools = graph_tools()
     tool_names = [getattr(t, "name", None) or getattr(t, "__name__", "tool")
                   for t in tools]
     # One agent build for every vote/chunk of this cell group.
-    from harness.agents.deep import build_deep_agent, make_llm, run_structured
-    from harness.prompts.validator import VerdictBatch
+    from cerberus.agents.deep import build_deep_agent, make_llm, run_structured
+    from cerberus.prompts.validator import VerdictBatch
     agent = runner(
         f"agent validator-{group_name}",
         lambda: build_deep_agent(
@@ -290,7 +290,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
             _vote = _round + 1
             for chunk in chunks:
                 payload = [_compact_finding(f) for f in chunk]
-                from harness.prompts.validator import build_batch_task
+                from cerberus.prompts.validator import build_batch_task
                 msg = build_batch_task(group_name, threat_md, payload,
                                        repo=repo, tools=tool_names)
                 _stage_line(f"[validator] unit '{group_name}' cell {cell_no + 1}: "
@@ -417,7 +417,7 @@ def _classify_group(pair: tuple[str, list[dict], list[int]],
                     ) -> tuple[str, list[dict], list[int], dict[int, dict],
                                list[tuple[list[int], list[dict]]]]:
     if cell_size is None:
-        from harness.config import get_config
+        from cerberus.config import get_config
         cell_size = int(get_config()["verification"]["cell_size"])
     name, items, origins = pair
     batch_idx: list[int] = []
@@ -453,7 +453,7 @@ def _plan_validation_cells(
     Every finding in ``gated`` is validated in exactly one cell with zero drops or duplicates.
     """
     if cell_size is None:
-        from harness.config import get_config
+        from cerberus.config import get_config
         cell_size = int(get_config()["verification"]["cell_size"])
     if len(groups) <= 1:
         return [_classify_group(pair, cell_size) for pair in groups]
@@ -644,7 +644,7 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
     if not gated:
         return []
     # No API key: fail open, return gated as-is.
-    from harness.config import api_key_present
+    from cerberus.config import api_key_present
     if not api_key_present(cfg):
         return gated
     todo = list(gated)

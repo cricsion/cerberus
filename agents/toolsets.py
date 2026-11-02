@@ -8,7 +8,7 @@ def graph_tools() -> list:
     Scanners are not bound as tools: the sandbox `execute` shell + scanner
     skills are the scan surface.
     """
-    from harness.tools.codegraph import (
+    from cerberus.tools.codegraph import (
         affected,
         build_context,
         callees,
@@ -22,7 +22,7 @@ def graph_tools() -> list:
         impact_radius,
         type_hierarchy,
     )
-    from harness.tools.verify import reachability_check
+    from cerberus.tools.verify import reachability_check
 
     return [
         codegraph_explore,

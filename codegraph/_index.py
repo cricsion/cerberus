@@ -4,7 +4,7 @@ Purpose
 Manage the target root's own index without authorizing an ancestor's index.
 
 The indexer stage owns the CLI (``init``/``index``/``sync``/``status``); the
-hunt reads the index through :mod:`harness.codegraph._db` (read-only SQL, D1).
+hunt reads the index through :mod:`cerberus.codegraph._db` (read-only SQL, D1).
 This is the writable half; every public function returns instead of raising.
 
 Laws
@@ -40,7 +40,7 @@ import subprocess
 from pathlib import Path
 from subprocess import TimeoutExpired
 
-from harness.codegraph import _db
+from cerberus.codegraph import _db
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def _cli_path() -> str | None:
 
 def _scan_env() -> dict[str, str]:
     """The single env every CLI call in this module uses (D9 + scrub)."""
-    from harness.tools._compat import scrubbed_env
+    from cerberus.tools._compat import scrubbed_env
 
     env = scrubbed_env()
     env.update(SCAN_ENV)

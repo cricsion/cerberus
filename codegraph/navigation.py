@@ -29,13 +29,13 @@ from __future__ import annotations
 import json
 import re
 
-from harness.codegraph import _common, _db, _ts, summaries
-from harness.codegraph._common import (
+from cerberus.codegraph import _common, _db, _ts, summaries
+from cerberus.codegraph._common import (
     HARD_MAX_SECTION, Report, _as_int, _cap_chars, _cap_rows, _contained_file,
     _end_line_of, _line_of, _walk,
 )
-from harness.config import get_config
-from harness.tools._compat import tool
+from cerberus.config import get_config
+from cerberus.tools._compat import tool
 
 
 _args_node = _common._args_node

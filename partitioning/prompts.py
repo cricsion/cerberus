@@ -1,7 +1,7 @@
 """Partitioner prompts: split a codebase into logical units for parallel review."""
 from pydantic import BaseModel, Field
 
-from harness.prompts.engine import block
+from cerberus.prompts.engine import block
 
 PARTITIONER_SYSTEM = block("partition/partitioner_system")
 

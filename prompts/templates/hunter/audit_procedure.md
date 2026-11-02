@@ -1,6 +1,6 @@
 ---
 role: hunter
-module: harness.prompts.hunter
+module: cerberus.prompts.hunter
 ---
 AT EACH ENTRY POINT, work through these four questions before moving on:
 1. REACH — what can the lower-trust caller fully control here: field values, headers, paths, identifiers, timing, size, or the mere fact of the call?

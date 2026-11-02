@@ -1,6 +1,6 @@
 ---
 role: validator
-module: harness.prompts.validator
+module: cerberus.prompts.validator
 ---
 EXCLUSION RULES (mark status='fp' citing the rule number if any apply):
 1. Test-only scaffolding, fixtures, dead code, or crashes with no security impact. Do not exclude a build, CI, IaC, or release path when it crosses an in-scope security boundary. In benchmark repositories or intentionally vulnerable demo suites, the triggers and routes being evaluated are in scope.

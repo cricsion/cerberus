@@ -11,8 +11,8 @@ Design law: never give a security agent open-ended filesystem tools. Every
 ``@tool`` here accepts structured graph/AST coordinates (node ids, route ids,
 edge ids) and returns bounded, high-signal telemetry; raw file reads are
 confined to the exact spans the graph points at
-(:func:`harness.tools.code._safe_path`), and every failure is a success-shaped
-string (``ERROR: ...`` or :func:`harness.codegraph._db.guidance_no_db`), never
+(:func:`cerberus.tools.code._safe_path`), and every failure is a success-shaped
+string (``ERROR: ...`` or :func:`cerberus.codegraph._db.guidance_no_db`), never
 an exception.
 
 Foundation:
@@ -45,26 +45,26 @@ Tool modules (the micro-agent partition from the SAST tool suite design):
 """
 from __future__ import annotations
 
-from harness.codegraph.authz import (
+from cerberus.codegraph.authz import (
     compare_sibling_route_security,
     find_shared_state_readers_writers,
     trace_state_machine_transitions,
 )
-from harness.codegraph.contracts import (
+from cerberus.codegraph.contracts import (
     inspect_type_contract,
 )
-from harness.codegraph.navigation import (
+from cerberus.codegraph.navigation import (
     get_ast_slice,
     resolve_blind_spot,
     trace_interprocedural_hop,
 )
-from harness.codegraph.supply import (
+from cerberus.codegraph.supply import (
     trace_egress_and_ssrf_targets,
 )
-from harness.codegraph.effects import (
+from cerberus.codegraph.effects import (
     trace_effect_category,
 )
-from harness.codegraph import native
+from cerberus.codegraph import native
 
 __all__: list = [
     "get_ast_slice",

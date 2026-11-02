@@ -9,9 +9,9 @@ import logging as _logging
 
 _logger = _logging.getLogger(__name__)
 
-from harness.agents.deep import is_fatal_error
-from harness.config import effective_config
-from harness.schemas import safe_int, structured_items
+from cerberus.agents.deep import is_fatal_error
+from cerberus.config import effective_config
+from cerberus.schemas import safe_int, structured_items
 
 
 def _norm_path(path: str) -> str:
@@ -144,7 +144,7 @@ def _triage_messages(chunks: list[list[dict]], threat_md: str) -> list[str]:
 
     scope = (("[THREAT MODEL]\n" + threat_md.strip() + "\n\n")
              if (threat_md or "").strip() else "")
-    from harness.prompts.triage import build_triage_batch_task
+    from cerberus.prompts.triage import build_triage_batch_task
 
     return [build_triage_batch_task(
                 scope, _json.dumps([_slim_for_triage(f) for f in chunk],
@@ -252,7 +252,7 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     if not staged:
         return {"findings": staged, **stats}
     stats["triage_log"] = [_log_entry(f, 0) for f in staged]
-    from harness.config import api_key_present
+    from cerberus.config import api_key_present
     if not api_key_present(cfg):
         stats["n_duplicates"] = sum(1 for f in staged if f.get("duplicate_of"))
         return {"findings": staged, **stats}
@@ -275,9 +275,9 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     print(f"[triage] {len(order)} findings in {len(chunks)} batch(es)...",
           file=sys.stderr, flush=True)
 
-    from harness.agents.deep import run_structured, sanitize_model_kwargs
-    from harness.config import get_model_kwargs
-    from harness.prompts.triage import TRIAGE_SYSTEM, TriageBatch
+    from cerberus.agents.deep import run_structured, sanitize_model_kwargs
+    from cerberus.config import get_model_kwargs
+    from cerberus.prompts.triage import TRIAGE_SYSTEM, TriageBatch
 
     try:
         mk = sanitize_model_kwargs(
@@ -299,8 +299,8 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     for s in staged:
         by_id.setdefault(str(s.get("id")), s)  # first match, like the old lookup
 
-    from harness.agents.toolsets import graph_tools
-    from harness.sandbox import acquired_backend
+    from cerberus.agents.toolsets import graph_tools
+    from cerberus.sandbox import acquired_backend
     from pathlib import Path
     from contextlib import nullcontext
 

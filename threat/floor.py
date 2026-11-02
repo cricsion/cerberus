@@ -21,7 +21,7 @@ def load_threat(repo: str, override: str | None = None,
         except OSError:
             return "none", ""
         return ("override", text) if text.strip() else ("none", "")
-    from harness.config import effective_config
+    from cerberus.config import effective_config
 
     if not effective_config(cfg)["threat"]["use_repo_file"]:
         return "none", ""

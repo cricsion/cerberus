@@ -193,7 +193,7 @@ def resolve_db_path(root: str = ".") -> Path:
     address it (NAME_MAX component, unreadable parent), so tool callers get the
     error string they know; nothing here raises ``OSError``.
     """
-    from harness.tools.code import _safe_path
+    from cerberus.tools.code import _safe_path
     try:
         base = _safe_path(str(root) if root is not None else ".")
         try:

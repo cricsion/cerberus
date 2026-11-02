@@ -22,7 +22,7 @@ def reachability_check(path: str, snippet: str, sanitizer_hint: str = "",
     lines = []
     if from_symbol and to_symbol:
         try:
-            from harness.codegraph import native
+            from cerberus.codegraph import native
             call_path = native.find_path(from_symbol, to_symbol)
             if isinstance(call_path, dict) and call_path.get("error"):
                 lines.append(f"Call-graph reachability unavailable: {call_path['error']}")
@@ -43,7 +43,7 @@ def reachability_check(path: str, snippet: str, sanitizer_hint: str = "",
     else:
         lines.append("Call-graph reachability: specify both from_symbol and to_symbol to trace call paths.")
 
-    from harness.tools.code import _safe_path
+    from cerberus.tools.code import _safe_path
     try:
         p = _safe_path(path)
     except ValueError as e:

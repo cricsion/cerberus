@@ -2,7 +2,7 @@
 
 ``trace_effect_category`` generalizes :func:`supply.trace_egress_and_ssrf_targets`
 from the ``network`` category to every curated effect family in
-:mod:`harness.codegraph.sinks` — the processes a recognized call spawns, the
+:mod:`cerberus.codegraph.sinks` — the processes a recognized call spawns, the
 paths it touches, the stores it writes, the mail/queue/payment systems it
 reaches. The workflow is identical: match calls in one function span, resolve
 the argument that matters through one earlier assignment, render honest
@@ -26,11 +26,11 @@ from __future__ import annotations
 import json
 import re
 
-from harness.codegraph import _common, _ts, sinks
-from harness.codegraph.supply import (_callee_text, _egress_span,
+from cerberus.codegraph import _common, _ts, sinks
+from cerberus.codegraph.supply import (_callee_text, _egress_span,
                                       _one_hop_assignment,
                                       _strip_keyword_prefix, _url_skeleton)
-from harness.tools._compat import tool
+from cerberus.tools._compat import tool
 
 # ---------------------------------------------------------------------------
 # caps — the package-wide env idiom; values frozen

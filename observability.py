@@ -63,7 +63,7 @@ def _load_env_files() -> None:
     never overrides already-set vars, so this works from any cwd.
     """
     try:
-        from harness.config import _load_dotenv
+        from cerberus.config import _load_dotenv
 
         _load_dotenv()
     except Exception:
@@ -79,7 +79,7 @@ def enabled(cfg: dict | None = None) -> bool:
     """Enable gate (plan §2 D2, §3). Never raises — fail-open to ``False``."""
     try:
         _load_env_files()
-        from harness.config import get_config
+        from cerberus.config import get_config
 
         if not cfg:
             cfg = get_config()

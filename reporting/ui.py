@@ -1,6 +1,6 @@
 """Scan-time UI: header, append-only stage/agent progress lines, end receipt.
 
-This module is the only place that decides how ``harness scan`` renders.
+This module is the only place that decides how ``cerberus scan`` renders.
 
 * Two visual weights only — content normal, metadata dim.
 * One glyph vocabulary: ``✓`` done, ``▶`` running, ``✗`` failed, ``⏱``
@@ -12,7 +12,7 @@ This module is the only place that decides how ``harness scan`` renders.
 
 Rendering is Rich-only. Non-TTY streams and
 ``NO_COLOR`` naturally receive the same layout with styles stripped. Style
-names resolve through :data:`harness.reporting.view.THEME` (semantic keys:
+names resolve through :data:`cerberus.reporting.view.THEME` (semantic keys:
 ``meta``/``ok``/``err``/...), so the vocabulary lives in one place.
 """
 from __future__ import annotations
@@ -24,12 +24,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from harness.reporting.view import (
+from cerberus.reporting.view import (
     SEVERITY_STYLE,
     THEME,
     clean_untrusted,
 )
-from harness.config import get_config
+from cerberus.config import get_config
 
 from rich.cells import cell_len
 from rich.console import Console
@@ -134,7 +134,7 @@ def _pad(text: str, width: int) -> str:
 
 def _model_name(cfg: dict, role: str) -> str:
     try:
-        from harness.config import get_model_kwargs
+        from cerberus.config import get_model_kwargs
 
         return str((get_model_kwargs(cfg, role) or {}).get("model") or "")
     except Exception:
@@ -177,7 +177,7 @@ def _severity_counts(findings: Any) -> dict[str, int]:
 
 
 class ScanReporter:
-    """Renders harness scan progress to stderr and the receipt to stdout."""
+    """Renders cerberus scan progress to stderr and the receipt to stdout."""
 
     def __init__(self, *, no_color: bool = False, agent_log: str = "normal",
                  err_console: Any = None, out_console: Any = None,
@@ -215,7 +215,7 @@ class ScanReporter:
         validator = _model_name(cfg, "validator") or "default"
         rows.append(("models", f"hunter {hunter} · validator {validator}"))
         try:
-            from harness.config import effective_config
+            from cerberus.config import effective_config
 
             run_cfg = effective_config(cfg)
             conc, effort = run_cfg["concurrency"], run_cfg["effort"]

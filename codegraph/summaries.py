@@ -33,7 +33,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from harness.codegraph._db import _safe_param
+from cerberus.codegraph._db import _safe_param
 
 DEFAULT_DB_NAME = "sast_summaries.db"
 
@@ -81,7 +81,7 @@ def store_path(root: str = ".") -> Path:
     override = (os.environ.get("SAST_SUMMARIES_DB") or "").strip()
     if override:
         return Path(override).expanduser().resolve()
-    from harness.tools.code import _safe_path
+    from cerberus.tools.code import _safe_path
     try:
         base = _safe_path(str(root) if root is not None else ".")
         try:
@@ -289,7 +289,7 @@ def record_summary(root, node_id: str, role: str, cwe_scope, notes: str) -> str:
 def _codegraph_connect(root):
     """The read-only CodeGraph handle, or None. Never raises."""
     try:
-        from harness.codegraph import _db
+        from cerberus.codegraph import _db
         return _db.connect(str(root))
     except Exception:
         return None

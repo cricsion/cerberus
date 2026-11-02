@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
-from harness.prompts.contract import structured_output_contract
-from harness.prompts.engine import block
+from cerberus.prompts.contract import structured_output_contract
+from cerberus.prompts.engine import block
 
 
 # Output contract for both swarm stages and the synthesizer; mirrors the threat-model skill's schema contract.

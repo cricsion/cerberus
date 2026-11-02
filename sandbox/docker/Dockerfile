@@ -1,14 +1,14 @@
 # Scan sandbox image: everything the agent's shell needs at scan time, so the
 # RUNNING container rarely needs egress (which `sandbox.network` controls:
 # bridge = full egress by default, none = no egress; see
-# harness/sandbox/docker_backend.py).
+# cerberus/sandbox/docker_backend.py).
 #
 # Network is available HERE (build time) and only here for the pinned
 # toolchain -- the build-then-pin posture from DESIGN_GUIDE.md step 2.
 #
 # BUILD VIA build.sh, which fills the pins from versions.env into
 # --build-args and drives a stable BuildKit builder:
-#   ./harness/sandbox/docker/build.sh cerberus-sandbox:local
+#   ./cerberus/sandbox/docker/build.sh cerberus-sandbox:local
 # A bare `docker build` without --build-arg fails closed at the first FROM:
 # the python base is digest-pinned via PYTHON_BASE_IMAGE (versions.env), and
 # an unpinned gray-area version is a failed build, never a soft fallback.
@@ -391,7 +391,7 @@ RUN if [ "$WITH_GO" = "1" ]; then \
         && if [ -d /usr/local/go/bin ]; then ln -sf /usr/local/go/bin/* /usr/local/bin/; fi; \
     fi
 
-# --- scan toolchain (mirrors harness/tools/sast.py, one tool per sast tool) --
+# --- scan toolchain (mirrors cerberus/tools/sast.py, one tool per sast tool) --
 # semgrep_scan     -> semgrep
 # opengrep_scan    -> opengrep    (NOT on PyPI: built from its own repo tag)
 # secrets_scan     -> gitleaks (no network ever needed)
@@ -402,7 +402,7 @@ RUN if [ "$WITH_GO" = "1" ]; then \
 #                     checkov calls Prisma Cloud's API to enrich remediation links.
 #                     The host indexer wrapper is left as-is.)
 # Extra agent-driven scanners (semgrep/opengrep siblings, run via `execute`,
-# one skill each under harness/skills/): bandit (pip), bearer (dataflow),
+# one skill each under cerberus/skills/): bandit (pip), bearer (dataflow),
 # trufflehog (verified secrets), gosec (Go), njsscan (Node), atheris
 # (verification fuzzing), flawfinder (C/C++). NEVER installed on the host: these
 # are image-only, so the only consumer is the in-sandbox agent.
@@ -520,19 +520,19 @@ RUN apt-get purge -y curl && apt-get autoremove -y \
     && find /usr/local/lib/python3.11 -type f -name "*.pyc" -delete 2>/dev/null || true
 
 # The harness's OWN custom rules (always applied by semgrep_scan on the
-# host). Copied in so an in-container `semgrep --config /opt/scan-rules/
-# harness` matches host behavior EXACTLY. Registry packs (p/...) are NOT
+# host). Copied in so an in-container `semgrep
+# --config /opt/scan-rules/cerberus` matches host behavior EXACTLY. Registry packs (p/...) are NOT
 # baked in: registry packs download on first use, which needs the egress
 # that `sandbox.network` may or may not allow at run time
 # at run time. Extend this dir if you need more offline rulesets.
-COPY harness/rules /opt/scan-rules/cerberus
+COPY cerberus/rules /opt/scan-rules/cerberus
 # Scanner usage skills: served to the agent through the skills route on its
-# backend (harness/agents/deep.py, SKILLS_ROUTE); copied in at the SAME path
+# backend (cerberus/agents/deep.py, SKILLS_ROUTE); copied in at the SAME path
 # so in-container reads (e.g. `cat` via execute) agree with the routed file
 # tools. Content is the build-time snapshot -- rebuild after editing skills.
 # These two COPY layers are the LAST content layers, so a skills/rules edit
 # invalidates seconds of build, not minutes of downloads.
-COPY harness/skills /opt/cerberus-skills
+COPY cerberus/skills /opt/cerberus-skills
 
 USER 1000:1000
 ENV HOME=/work TMPDIR=/tmp GIT_PAGER=cat PAGER=cat TERM=dumb

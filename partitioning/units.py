@@ -7,12 +7,12 @@ import logging
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
-from harness.config import effective_config
-from harness.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
+from cerberus.config import effective_config
+from cerberus.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
                                          PARTITION_MODES, VENDOR_DIR_SEGMENTS,
                                          VENDOR_FILE_SUFFIXES,
                                          VENDOR_UNIT_NAME)
-from harness.partitioning.graph import support_file_kind
+from cerberus.partitioning.graph import support_file_kind
 
 _logger = logging.getLogger(__name__)
 
@@ -845,7 +845,7 @@ def _normalize_units(units: list[dict], weight_of: dict[str, int] | None = None,
 def _load_partition_edges(repo: str, files: list[str],
                           cfg: dict | None = None) -> dict:
     """File-coupling edges from source-level framework/same-dir analysis."""
-    from harness.partitioning.graph import augment_edges
+    from cerberus.partitioning.graph import augment_edges
 
     enabled = effective_config(cfg)["partition"]["framework_edges"]
     edges = augment_edges(repo, files, {}) if enabled else {}
@@ -878,8 +878,8 @@ def partition_units(repo: str, files: list[str],
     single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
     if single is not None:
         return _finish([single])
-    from harness.partitioning.config import PARTITION_MODES
-    from harness.partitioning import codegraph as _cg
+    from cerberus.partitioning.config import PARTITION_MODES
+    from cerberus.partitioning import codegraph as _cg
     mode = str(effective_config(cfg)["codegraph"]["partition"]["mode"]).strip().lower()
     if mode not in PARTITION_MODES:
         mode = "primary"

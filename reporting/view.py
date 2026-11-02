@@ -1,6 +1,6 @@
 """Rich-backed CLI viewer helpers.
 
-View-only rendering and console utilities used by ``harness.cli`` subcommands
+View-only rendering and console utilities used by ``cerberus.cli`` subcommands
 (status/inspect/runs/findings). Non-TTY streams and ``NO_COLOR`` receive the
 same layout with styles stripped by rich.
 """
@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness.schemas import sort_findings
+from cerberus.schemas import sort_findings
 
 from rich.console import Console
 from rich.panel import Panel

@@ -8,7 +8,7 @@ import os
 import re
 from pathlib import Path
 
-from harness.paths import canonical_repo, resolve_tool_path
+from cerberus.paths import canonical_repo, resolve_tool_path
 
 from ._compat import env_int, tool
 
@@ -24,7 +24,7 @@ def _resolve_limit(explicit: int | None, env_key: str, default: int) -> int:
 SKIP_DIRS = frozenset({
     ".angular", ".bloop", ".build", ".cache", ".codegraph", ".cxx",
     ".dart_tool", ".docusaurus", ".eggs", ".env", ".externalNativeBuild",
-    ".git", ".gradle", ".harness", ".hg", ".hypothesis", ".ipynb_checkpoints",
+    ".git", ".gradle", ".cerberus", ".hg", ".hypothesis", ".ipynb_checkpoints",
     ".luarocks", ".metals", ".mypy_cache", ".netlify", ".next", ".nitro",
     ".nox", ".nuxt", ".nyc_output", ".output", ".parcel-cache",
     ".pdm-build", ".pixi", ".pnpm-store", ".pub-cache", ".pytest_cache",
@@ -217,6 +217,3 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
     if skipped_large:
         body += f"\n[{skipped_large} files >10MB skipped]"
     return body or "(no matches)"
-
-
-

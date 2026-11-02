@@ -2,7 +2,7 @@
 
 Everything here was paid for: design decisions argued out, then a blocker found
 by adversarial validation of our own work. Written down so the next person
-doesn't re-buy the lesson. Code lives in `harness/partitioning/` (units.py, llm.py).
+doesn't re-buy the lesson. Code lives in `cerberus/partitioning/` (units.py, llm.py).
 
 ---
 
@@ -188,4 +188,4 @@ Log violations in production even when you believe they're impossible.
   but very large repos still send it as one flat path list. Add hierarchical
   summaries that preserve every file while reducing prompt size.
 - Doc rot: `pipeline.py` comments and `eval/partition_grade.py` still cite the
-  pre-move `harness/units.py` path
+  pre-move `cerberus/units.py` path

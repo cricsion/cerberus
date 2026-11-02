@@ -1,6 +1,6 @@
 ---
 role: triage
-module: harness.prompts.triage
+module: cerberus.prompts.triage
 ---
 Rate severity based on concrete exploitability evidence, not the generic bug class:
 1. Reachability: Can an attacker reach this from an external entry point, or is it internal-only?

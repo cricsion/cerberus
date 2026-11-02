@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from harness.schemas import safe_float
+from cerberus.schemas import safe_float
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ def prompt_confirm(payload: dict) -> bool:
     run) counts as a decline. Single read, prompt-level "[y/N]" hint: empty
     input declines, junk declines; rich's Confirm.ask was probed and REJECTED
     — it re-prompts on "yes"/<Enter>, breaking this gate's convention."""
-    from harness.reporting.ui import render_confirmation
-    from harness.reporting.view import make_console
+    from cerberus.reporting.ui import render_confirmation
+    from cerberus.reporting.view import make_console
 
     console = make_console()
     render_confirmation(console, payload if isinstance(payload, dict) else {})
@@ -33,8 +33,8 @@ def prompt_confirm(payload: dict) -> bool:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    from harness.pipeline import SEVERITY_ORDER, run_scan
-    from harness.reporting.reports import write_html, write_json, write_junit, write_markdown, write_sarif
+    from cerberus.pipeline import SEVERITY_ORDER, run_scan
+    from cerberus.reporting.reports import write_html, write_json, write_junit, write_markdown, write_sarif
 
     out = Path(args.out)
     try:
@@ -46,16 +46,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
     os.environ["RUN_ID"] = run_id
     confirm = bool(args.confirm_critical)
     # Manifest: record target tree at scan start, compare at teardown.
-    from harness.paths import canonical_repo
-    from harness.sandbox import shutdown_run_sandbox
-    from harness.scan_manifest import close_scan, record_scan_manifest
+    from cerberus.paths import canonical_repo
+    from cerberus.sandbox import shutdown_run_sandbox
+    from cerberus.scan_manifest import close_scan, record_scan_manifest
     repo = str(canonical_repo(args.repo))
     scan_record: dict = {}
     agent_log = getattr(args, "agent_log", "normal")
     no_color = bool(getattr(args, "no_color", False))
-    from harness.reporting.ui import build_reporter
+    from cerberus.reporting.ui import build_reporter
 
-    from harness.config import get_config, set_config
+    from cerberus.config import get_config, set_config
     try:
         _cfg = get_config()
     except Exception:
@@ -96,8 +96,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         write_html(findings, out / "report.html")
         write_junit(findings, out / "junit.xml")
         threat_md = state.get("threat_model_md", "") or ""
-        from harness import threat
-        from harness.config import effective_config
+        from cerberus import threat
+        from cerberus.config import effective_config
         cfg = state.get("cfg") or {}
         _write_tm = True
         try:
@@ -112,8 +112,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         triage_log = state.get("triage_log", []) or []
         if triage_log:
             try:
-                from harness.agents.triage import render_triage_log
-                from harness.config import effective_config
+                from cerberus.agents.triage import render_triage_log
+                from cerberus.config import effective_config
                 _batch = int(effective_config(cfg)["triage"]["batch_size"])
                 _calls = max((int(e.get("batch", 0) or 0) for e in triage_log
                               if isinstance(e, dict)), default=0)
@@ -122,7 +122,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
             except OSError as e:
                 print(f"warning: cannot write triage.log: {e}", file=sys.stderr)
         # Persist only models this scan generated (floor/swarm/cache); owner files
-        # and --threat-model overrides are never overwritten (cache: .harness/).
+        # and --threat-model overrides are never overwritten (cache: .cerberus/).
         try:
             if (threat_md.strip() and _write_tm
                     and state.get("threat_model_source") not in ("override", "repo-file")):
@@ -192,8 +192,8 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     floor + swarm enrichment (`threat.llm_enrich: false` offline); --interview
     asks on stdin; without a key it degrades to Shostack.
     """
-    from harness import threat as _th
-    from harness.pipeline import indexer_node, threat_summary
+    from cerberus import threat as _th
+    from cerberus.pipeline import indexer_node, threat_summary
 
     repo = args.repo
     if bool(getattr(args, "verify", False)):
@@ -252,7 +252,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
         print(f"warning: --vulns {_vulns_path} parsed to 0 rows "
               "(missing or unrecognized format); continuing on git history")
     if bool(getattr(args, "interview", False)):
-        from harness.config import api_key_present, get_config
+        from cerberus.config import api_key_present, get_config
         try:
             _cfg_tm = get_config()
         except Exception as e:
@@ -293,7 +293,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"bootstrap failed: {e}", file=sys.stderr)
             return 1
         try:
-            from harness.config import (api_key_present, effective_config,
+            from cerberus.config import (api_key_present, effective_config,
                                         get_config)
             _cfg_enrich = get_config()
             if not api_key_present(_cfg_enrich):
@@ -334,20 +334,20 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
 
 
 def cmd_runs(args: argparse.Namespace) -> int:
-    from harness.reporting.view import make_console, list_runs
+    from cerberus.reporting.view import make_console, list_runs
 
     console = make_console()
     return int(list_runs(args.runs_dir, limit=args.limit, console=console) or 0)
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    from harness.reporting.view import agent_status, make_console
+    from cerberus.reporting.view import agent_status, make_console
 
     return agent_status(Path(args.run), make_console())
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
-    from harness.reporting.view import make_console, view_run
+    from cerberus.reporting.view import make_console, view_run
 
     console = make_console()
     return int(view_run(Path(args.run), console=console,
@@ -385,7 +385,7 @@ def cmd_cancel(args: argparse.Namespace) -> int:
 
 
 def cmd_findings(args: argparse.Namespace) -> int:
-    from harness.reporting.view import make_console, render_findings
+    from cerberus.reporting.view import make_console, render_findings
 
     console = make_console()
     run_dir = Path(args.run)
@@ -445,7 +445,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="read-only: report quality score and factual failures, write nothing")
     t.add_argument("--update-from", default=None, metavar="FINDINGS_JSON",
                    help="fold validator-released findings into the machine cache "
-                        "(.harness/THREAT_MODEL.md); owner files are never touched")
+                        "(.cerberus/THREAT_MODEL.md); owner files are never touched")
     t.set_defaults(func=cmd_threat_model)
 
     r = sub.add_parser("runs", help="list discovered scan runs")

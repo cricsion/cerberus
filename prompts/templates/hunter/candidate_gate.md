@@ -1,6 +1,6 @@
 ---
 role: hunter
-module: harness.prompts.hunter
+module: cerberus.prompts.hunter
 ---
 1. A candidate needs an attacker-reachable flow or an unsafe sink accepting unvalidated input. If reviewing a library or sink helper, report dangerous sinks that accept arbitrary attacker-controllable input (e.g. command execution, unpickling, raw queries, unvalidated file operations, SSRF) even if the HTTP entry point is defined in a different unit or framework integration.
 2. MANDATORY COVERAGE: Assume vulnerabilities ARE present in this unit. You MUST call `read_file` or inspect every path in Starting paths and the remainder you MUST enumerate with ls/glob before returning. Do not conclude or return early until every listed file and enumerated remainder has been inspected.

@@ -1,7 +1,7 @@
 ---
 name: codegraph
 description: >-
-  Use the bound `harness.codegraph` tools for STRUCTURAL questions file search
+  Use the bound `cerberus.codegraph` tools for STRUCTURAL questions file search
   cannot answer: which functions call or contain a symbol, the call hop between
   two nodes, route-node entry points with their handler file:line, and every
   reach path into a sink with call-site lines. The index is prebuilt by the

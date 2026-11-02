@@ -44,8 +44,8 @@ def _resolve_repo(repo: str | Path | None = None) -> str:
     cwd = Path.cwd().resolve()
     if (cwd / ".codegraph").is_dir():
         return str(cwd)
-    if (cwd / "harness" / ".codegraph").is_dir():
-        return str((cwd / "harness").resolve())
+    if (cwd / "cerberus" / ".codegraph").is_dir():
+        return str((cwd / "cerberus").resolve())
     return str(cwd)
 
 

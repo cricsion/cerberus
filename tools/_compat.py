@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 
-from harness.config import get_config
+from cerberus.config import get_config
 from langchain_core.tools import tool
 
 

@@ -1,6 +1,6 @@
 ---
 role: threat
-module: harness.prompts.threat
+module: cerberus.prompts.threat
 ---
 Surface lookup seeds (extend with the target's own idioms):
 - Network: socket listen/accept/bind; HTTP route definitions (e.g. @app.route, app.get); RPC/gRPC/GraphQL service definitions

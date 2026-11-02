@@ -8,8 +8,8 @@ from __future__ import annotations
 
 def get_synthesizer_contract() -> str:
     """Format the structured output contract for the threat synthesizer."""
-    from harness.prompts.contract import structured_output_contract
-    from harness.prompts.threat import SwarmPlan
+    from cerberus.prompts.contract import structured_output_contract
+    from cerberus.prompts.threat import SwarmPlan
 
     return structured_output_contract(
         SwarmPlan,

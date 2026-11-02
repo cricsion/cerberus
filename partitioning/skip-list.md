@@ -19,9 +19,9 @@ file lists: `runs/llm_eval_results/skip_list_materialized.json`.
 
 ## Where this plugs in
 
-- Apply in `harness/pipeline.py :: _inventory_files`, after the existing
+- Apply in `cerberus/pipeline.py :: _inventory_files`, after the existing
   extension/Dockerfile/shebang filter, before units are built
-  (`harness/partitioning/units.py` then never sees these paths).
+  (`cerberus/partitioning/units.py` then never sees these paths).
 - Independent of the walk's directory skip policy (`tools/code.is_skipped_dir`):
   these rules apply after the extension/Dockerfile/shebang filter regardless of
   which directories the walk pruned.
@@ -59,7 +59,7 @@ nodegoat 19/69, lets-be-bad-guys 15/63, vulnnodeapp 9/1782, dvws-node 7/53.
 ### Reference predicate (proposed wiring)
 
 ```python
-# harness/pipeline.py — call after the extension/Dockerfile/shebang filter.
+# cerberus/pipeline.py — call after the extension/Dockerfile/shebang filter.
 _VENDOR_SEGS = {"vendor", "bower_components", "jspm_packages"}
 _TEST_SEGS = {"test", "tests", "spec", "specs", "__tests__", "fixtures", "e2e"}
 _BUILD_CONFIG_RE = re.compile(

@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 from pydantic import BaseModel, Field
 
-from harness.agents.deep import (
+from cerberus.agents.deep import (
     build_deep_agent,
     extract_structured,
     is_fatal_error,
@@ -23,11 +23,11 @@ from harness.agents.deep import (
     recover_structured,
     sanitize_model_kwargs,
 )
-from harness.agents.poc import stamp_receipts
-from harness.config import effective_config, effective_model, get_model_kwargs
-from harness.progress import AgentState
-from harness.prompts.untrusted import make_nonce, untrusted_block
-from harness.schemas import SEVERITY_ORDER
+from cerberus.agents.poc import stamp_receipts
+from cerberus.config import effective_config, effective_model, get_model_kwargs
+from cerberus.progress import AgentState
+from cerberus.prompts.untrusted import make_nonce, untrusted_block
+from cerberus.schemas import SEVERITY_ORDER
 
 _logger = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ def run_poc_generation(findings: list[dict], cfg: dict, backend: Any,
         _logger.info("Sandbox backend not provided; skipping dynamic PoC generation")
         return findings
 
-    from harness.config import api_key_present
+    from cerberus.config import api_key_present
     if not api_key_present(cfg):
         _logger.info("No API key present; skipping LLM PoC generation and stamping existing PoCs")
         stamp_receipts(findings, backend, cfg=cfg, run_id=cfg.get("run_id"))

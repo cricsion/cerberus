@@ -28,8 +28,8 @@ from .settings_defaults import (CPUS as DEFAULT_CPUS,
                                 PIDS_LIMIT as DEFAULT_PIDS_LIMIT)
 from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
 
-from harness.config import get_config
-from harness.paths import resolve_tool_path
+from cerberus.config import get_config
+from cerberus.paths import resolve_tool_path
 
 
 __all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
@@ -279,7 +279,7 @@ class DockerSandboxBackend(SandboxShellBackend, BaseSandbox):
     Every other FS op (``ls/read/write/edit/delete/glob/grep``) is DERIVED by
     ``BaseSandbox`` from those primitives and therefore executes INSIDE the
     container: the host only receives the scripts' output. Before delegating,
-    each op confines its path through :func:`~harness.paths.resolve_tool_path`
+    each op confines its path through :func:`~cerberus.paths.resolve_tool_path`
     — an escaping path resolves onto a never-created in-repo sentinel, so the
     refusal reads as the sandbox's own not-found (:class:`RepoLocalBackend`'s
     denial mechanic) and no path outside the repo — and, with same-path

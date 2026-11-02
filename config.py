@@ -1,6 +1,6 @@
 """The one config: packaged YAML defaults + environment, resolved once.
 
-``harness/config/default.yaml`` is the single source of default values.
+``cerberus/config/default.yaml`` is the single source of default values.
 ``load_config()`` builds a full config from it; ``get_config()`` returns the
 process-wide instance (loaded on first use, replaceable via ``set_config``).
 Everything downstream reads ``cfg`` instead of re-reading YAML or env.
@@ -47,7 +47,7 @@ def _load_dotenv(path: Path | str = DEFAULT_DOTENV_PATH) -> None:
 
 
 def _read_env() -> dict:
-    """The process environment, after loading ``harness/.env`` (missing-only)."""
+    """The process environment, after loading ``cerberus/.env`` (missing-only)."""
     _load_dotenv()
     return dict(os.environ)
 
@@ -70,7 +70,7 @@ def _raw_default_config() -> dict:
             _RAW_DEFAULT = _read_yaml(DEFAULT_CONFIG_PATH)
         except Exception as exc:
             raise RuntimeError(
-                "harness/config/default.yaml is a repo invariant and is "
+                "cerberus/config/default.yaml is a repo invariant and is "
                 f"missing/unreadable: {exc}") from exc
     return _RAW_DEFAULT
 

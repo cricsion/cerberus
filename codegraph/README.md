@@ -20,10 +20,10 @@ The harness exposes these tools in this order:
 9. `trace_effect_category`
 
 The native bridge (`native.py`) additionally backs `type_hierarchy`, bound
-separately by `harness.agents.toolsets`; the 9-name package surface above is
+separately by `cerberus.agents.toolsets`; the 9-name package surface above is
 unchanged.
 
-The order is defined by `harness.tools.codegraph.CODEGRAPH_TOOL_NAMES`.
+The order is defined by `cerberus.tools.codegraph.CODEGRAPH_TOOL_NAMES`.
 Keep package and binding containment helpers distinct: they have intentionally
 different path rules.
 

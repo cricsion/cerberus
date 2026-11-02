@@ -10,7 +10,7 @@ from pathlib import Path
 
 from deepagents.backends.filesystem import FilesystemBackend
 
-from harness.paths import resolve_tool_path
+from cerberus.paths import resolve_tool_path
 
 
 class RepoLocalBackend(FilesystemBackend):

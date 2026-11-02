@@ -24,7 +24,7 @@ scratch dirs live under ``/work/_system`` / ``/tmp/_system`` — outside the
 ``SANDBOX_BACKEND=local`` keeps a host-subprocess lane (cwd=repo, scrubbed
 env) so dev scans without docker behave exactly as before. Both lanes capture
 stdout/stderr separately (demuxed) — the scanner seam (:func:`system_shell`,
-harness/tools/sast.py) parses stdout JSON, so stderr noise must never touch
+cerberus/tools/sast.py) parses stdout JSON, so stderr noise must never touch
 that stream; there is no merged shape.
 """
 from __future__ import annotations
@@ -84,7 +84,7 @@ def sandbox_lane() -> str:
     degrade deep.py applies — the local lane, never a silent ``{}`` resolve
     that could still pick docker via env interpolation behind a broken cfg.
     """
-    from harness.config import get_config
+    from cerberus.config import get_config
 
     try:
         cfg = get_config()
@@ -108,7 +108,7 @@ def _env_exports(env: dict[str, str] | None) -> str:
 
 
 def _run_for(repo: str):
-    from harness.config import get_config
+    from cerberus.config import get_config
     from . import _docker_settings
     from .docker_backend import get_run_sandbox
 
@@ -135,7 +135,7 @@ def system_execute(repo: str, command: str, *, timeout: int = 300,
 
 def _local_exec(repo: str, command: str, timeout: int, max_bytes: int | None,
                 env: dict[str, str] | None) -> ExecResult:
-    from harness.tools._compat import scrubbed_env
+    from cerberus.tools._compat import scrubbed_env
 
     merged = {**scrubbed_env(), **(env or {})}
     cap = max(1, int(max_bytes or DEFAULT_MAX_OUTPUT_BYTES)) * BYTE_CAP_FACTOR
@@ -211,7 +211,7 @@ def system_shell(argv, *, repo: str | None = None, timeout: int = 300,
     if not _MISSING_OK.match(str(argv[0])):
         return ShellResult(error=f"refused: unusable argv[0]: {argv[0]!r}")
     if repo is None:
-        from harness.paths import canonical_repo
+        from cerberus.paths import canonical_repo
 
         repo = str(canonical_repo(os.environ.get("TARGET_REPO") or "."))
 

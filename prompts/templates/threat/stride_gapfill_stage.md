@@ -1,6 +1,6 @@
 ---
 role: threat
-module: harness.prompts.threat
+module: cerberus.prompts.threat
 ---
 STAGE 4 — Gap-fill (the part past vulns can't give you). Past vulns are biased toward what was already found. For every entry point with no threat row yet, walk STRIDE and add the plausible ones with EMPTY evidence:
 - Spoofing: could an attacker pretend to be a trusted source?

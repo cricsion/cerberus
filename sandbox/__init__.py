@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from harness.sandbox.local_backend import RepoLocalBackend
+from cerberus.sandbox.local_backend import RepoLocalBackend
 
 __all__ = [
     "RepoLocalBackend",
@@ -36,7 +36,7 @@ def _acquire_backend(cfg: dict | None, root: str | Path, *, label: str,
                      agent_id: str | None = None) -> Any:
     """Resolve a backend with the harness's one fail-open ladder.
     """
-    from harness.fallback import is_fatal_error
+    from cerberus.fallback import is_fatal_error
 
     try:
         return resolve_backend(
@@ -83,7 +83,7 @@ def _sandbox_setting(cfg: dict | None, key: str, default: Any) -> Any:
 
 def _sandbox_defaults(*path: str) -> dict:
     """The ``sandbox`` section of the one cfg."""
-    from harness.config import get_config
+    from cerberus.config import get_config
 
     node: Any = get_config()
     for part in path:
@@ -131,7 +131,7 @@ def _docker_settings(cfg: dict | None, repo: str | Path) -> dict:
         "network": str(_sandbox_setting(cfg, "network", defaults["network"])),
         "docker_bin": str(_sandbox_setting(cfg, "docker_bin",
                                            defaults["docker_bin"])),
-        # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- harness/agents/deep.py.
+        # In-image rules dir for offline scans: read via `execute` (file tools are repo-confined). Scanner skills need no setting: the image bakes them and the agent is served them by the skills route -- cerberus/agents/deep.py.
         "rules_dir": str(_sandbox_setting(cfg, "rules_dir",
                                           defaults["rules_dir"])),
         # Opt-in SDK-lane pull-on-missing-image (docker_backend.RunSandbox);
@@ -164,7 +164,7 @@ def _iter_backends() -> Iterator[tuple[tuple[Any, ...], Any]]:
 
 def resolve_backend(cfg: dict | None, repo: str | Path,
                     *, agent_id: str | None = None) -> RepoLocalBackend:
-    from harness.config import effective_config
+    from cerberus.config import effective_config
 
     which = str(effective_config(cfg)["sandbox"]["backend"])
     for name, build_settings, cls_name, getter, _shutdown in _BACKENDS:
@@ -196,7 +196,7 @@ def reset_agent_scratch(repo: str | Path) -> list[str]:
 
 def sweep_orphans() -> list[str]:
     # Backends are fail-soft by contract (each returns [] on infra failure);
-    # the scan-start gate in harness/pipeline.py is the real boundary.
+    # the scan-start gate in cerberus/pipeline.py is the real boundary.
     removed: list[str] = []
     for _row, module in _iter_backends():
         removed.extend(module.sweep_orphans())

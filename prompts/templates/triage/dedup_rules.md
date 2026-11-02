@@ -1,6 +1,6 @@
 ---
 role: triage
-module: harness.prompts.triage
+module: cerberus.prompts.triage
 ---
 Two findings are DUPLICATES if fixing one would automatically fix the other (e.g. the exact same code line reported twice, or identical vulnerability reported by two different scanners).
 Two findings are DISTINCT if they are in different functions, different methods, different routes, or different line numbers that each require an independent code change — even if they share the same file or CWE category (e.g. multiple distinct vulnerable functions in a trigger or utility module).

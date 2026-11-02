@@ -19,12 +19,12 @@ class Overwrite:
     def __repr__(self) -> str:
         return f"Overwrite({self.value!r})"
 
-from harness.schemas import SEVERITY_ORDER, safe_float, safe_int
-from harness.paths import canonical_repo
-from harness.progress import AgentRegistry, AgentState
+from cerberus.schemas import SEVERITY_ORDER, safe_float, safe_int
+from cerberus.paths import canonical_repo
+from cerberus.progress import AgentRegistry, AgentState
 
 try:
-    from harness import observability as _obs
+    from cerberus import observability as _obs
 except Exception:  # observability module unavailable → tracing disabled (fail-open)
     _obs = None
 
@@ -148,7 +148,7 @@ def _is_shebang_script(path: Path) -> bool:
 
 
 def _inventory_files(base: Path) -> list[str]:
-    from harness.tools.code import is_skipped_dir
+    from cerberus.tools.code import is_skipped_dir
 
     if base.is_file():
         return [str(base)]
@@ -191,14 +191,14 @@ def _node_cfg(state: dict) -> dict:
     cfg = state.get("cfg") if isinstance(state, dict) else None
     if isinstance(cfg, dict):
         return cfg
-    from harness.config import get_config
+    from cerberus.config import get_config
 
     return get_config()
 
 
 def indexer_node(state: ScanState) -> dict:
-    from harness.fallback import runner
-    from harness.tools.sast import (iac_check, sca_scan, secrets_scan,
+    from cerberus.fallback import runner
+    from cerberus.tools.sast import (iac_check, sca_scan, secrets_scan,
                                     regex_prefilter)
     repo = state.get("repo", ".")
     # No file-count cap; per-agent work is bounded by the partition budget.
@@ -210,7 +210,7 @@ def indexer_node(state: ScanState) -> dict:
     _tools_used = ["regex_prefilter"]
 
     def _template_stage() -> list[dict]:
-        from harness.tools.sast import template_reflect_candidates
+        from cerberus.tools.sast import template_reflect_candidates
 
         _tpl = template_reflect_candidates(repo)
         for c in _tpl:
@@ -235,8 +235,8 @@ def indexer_node(state: ScanState) -> dict:
                                 "iac": "iac_check"}[cid])
 
     def _codegraph_stage() -> tuple[list[dict], list[str]]:
-        from harness.codegraph._index import index_build, index_summary
-        from harness.tools.codegraph import framework_routes, get_routing_manifest
+        from cerberus.codegraph._index import index_build, index_summary
+        from cerberus.tools.codegraph import framework_routes, get_routing_manifest
 
         extra: list[dict] = []
         used: list[str] = []
@@ -271,7 +271,7 @@ def indexer_node(state: ScanState) -> dict:
 
 def threat_summary(repo: str, cands: list[dict]) -> str:
     """One-line STRIDE summary from indexer candidates. Shared by the scan's
-    threat_model_node and `harness threat-model` so the CLI bootstrap sees the
+    threat_model_node and `cerberus threat-model` so the CLI bootstrap sees the
     same stack/route context the scan path does."""
     cands = [c for c in (cands or []) if isinstance(c, dict)]
     pre = next((c.get("snippet", "") for c in cands if c.get("id") == "prefilter"), "")
@@ -289,7 +289,7 @@ def threat_summary(repo: str, cands: list[dict]) -> str:
 
 
 def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
-    from harness.config import effective_model
+    from cerberus.config import effective_model
 
     repo = state.get("repo", ".") or "."
     cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
@@ -307,8 +307,8 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     # Artifact writing stays in the CLI (single writer).
 
     def _threat_doc_stage() -> dict:
-        from harness import threat as _th
-        from harness.config import api_key_present, effective_config
+        from cerberus import threat as _th
+        from cerberus.config import api_key_present, effective_config
 
         _cfg2 = _node_cfg(state)
         override = state.get("threat_model_override") or ""
@@ -355,7 +355,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
             stage_out["threat_model_md"] = md
             if enrich_meta:
                 stage_out["threat_enrich"] = enrich_meta
-            from harness.agents.deep import is_fatal_error
+            from cerberus.agents.deep import is_fatal_error
 
             try:
                 stage_out["threat_quality"] = _th.threat_quality(md, files, cands)
@@ -382,7 +382,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
             stage_err["exc"] = e
             raise
 
-    from harness.fallback import runner
+    from cerberus.fallback import runner
 
     _stage_updates = runner("threat_model.doc", _threat_doc_probe,
                             default={}, logger=logger)
@@ -404,7 +404,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
 
 
 def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
-    from harness.config import api_key_present, effective_model, effective_config
+    from cerberus.config import api_key_present, effective_model, effective_config
 
     cfg = _node_cfg(state)
     if not api_key_present(cfg):
@@ -437,7 +437,7 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
         _partition_exc: dict = {}
 
         def _partition_probe() -> list[dict]:
-            from harness.partitioning.llm import run_partitioner_agent
+            from cerberus.partitioning.llm import run_partitioner_agent
 
             try:
                 return run_partitioner_agent(
@@ -447,7 +447,7 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
                 _partition_exc["exc"] = e
                 raise
 
-        from harness.fallback import runner
+        from cerberus.fallback import runner
 
         units = runner("partitioner", _partition_probe, default=[],
                        logger=logger)
@@ -461,11 +461,11 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
                                           parent_stage="partition")
 
     if not units:
-        from harness.partitioning import partition_units
+        from cerberus.partitioning import partition_units
         units = partition_units(state.get("repo", "."), payload_files, cfg)
     if not units:
         return {"findings": [], "fanout_payloads": []}
-    from harness.partitioning import verify_partition
+    from cerberus.partitioning import verify_partition
     try:
         verify_partition(units, payload_files)
     except Exception as e:
@@ -485,7 +485,7 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
                      repo: str | None = None,
                      cell_offset: int = 0,
                      agent_registry: Any = None) -> list[dict]:
-    from harness.agents.validator import run_validation
+    from cerberus.agents.validator import run_validation
 
     try:
         return run_validation(findings, cfg or {}, threat_md or "", votes,
@@ -493,7 +493,7 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
                               repo=repo, cell_offset=cell_offset,
                               agent_registry=agent_registry)
     except Exception as e:
-        from harness.agents.deep import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
 
         # Fail-open for infra noise; a config-class failure must sink the scan.
         if is_fatal_error(e):
@@ -505,7 +505,7 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
 def hunter_worker(state: dict) -> dict:
     import time as _time
 
-    from harness.agents.hunters import _fallback_finding, _run_unit
+    from cerberus.agents.hunters import _fallback_finding, _run_unit
 
     repo = state.get("repo", ".")
     files = list(state.get("files", []))
@@ -531,7 +531,7 @@ def hunter_worker(state: dict) -> dict:
         return ret
     except Exception as e:
         # A config error must sink the scan, not become a unit fallback finding.
-        from harness.agents.deep import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
 
         if is_fatal_error(e):
             raise
@@ -598,7 +598,7 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    from harness.config import api_key_present, effective_model, as_bool
+    from cerberus.config import api_key_present, effective_model, as_bool
 
     _cfg_sys = _node_cfg(state)
     if not as_bool((_cfg_sys.get("hunter") or {}).get("system_pass", True)):
@@ -618,7 +618,7 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
 
     def _system_pass_probe() -> tuple[list[dict], list[str]]:
         try:
-            from harness.agents.hunters import _run_system_pass
+            from cerberus.agents.hunters import _run_system_pass
 
             focus = state.get("focus", []) or []
             _tools: list = []
@@ -638,7 +638,7 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
             _sysfail["fail"] = True
             raise
 
-    from harness.fallback import runner
+    from cerberus.fallback import runner
 
     try:
         out, _sys_tools = runner("system_pass", _system_pass_probe,
@@ -676,8 +676,8 @@ def aggregator_node(state: ScanState) -> dict:
 
 
 def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
-    from harness.agents.validator import run_validation
-    from harness.config import effective_model
+    from cerberus.agents.validator import run_validation
+    from cerberus.config import effective_model
 
     cfg = _node_cfg(state)
     pending = [dict(f) for f in (state.get("pending", []) or [])]
@@ -707,7 +707,7 @@ def validator_node(state: ScanState, agent_registry: Any = None) -> dict:
             agent_registry.transition("validator", AgentState.succeeded,
                                       parent_stage="validation")
     except Exception as e:
-        from harness.agents.deep import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
 
         # Never drop on validator error, unless it is the operator's config.
         if is_fatal_error(e):
@@ -759,7 +759,7 @@ def confirm_critical_step(state: ScanState,
 
 def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
     import time as _time
-    from harness.config import effective_model
+    from cerberus.config import effective_model
 
     t0 = _time.time()
     verified = list(state.get("verified", []))
@@ -773,7 +773,7 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
         agent_registry.transition("triage:1", AgentState.running,
                                   parent_stage="triage")
     try:
-        from harness.agents.triage import run_triage
+        from cerberus.agents.triage import run_triage
         res = run_triage(verified, _cfg4, state.get("threat_model_md", "") or "",
                          repo=state.get("repo", "."))
         out = res.get("findings", verified)
@@ -790,7 +790,7 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
             ret["triage_log"] = res["triage_log"]
         return ret
     except Exception as e:
-        from harness.agents.deep import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
 
         if is_fatal_error(e):
             if agent_registry is not None:
@@ -809,7 +809,7 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
 def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
     """Dedicated post-triage PoC generation stage on canonical non-FP findings."""
     import time as _time
-    from harness.config import as_bool
+    from cerberus.config import as_bool
 
     t0 = _time.time()
     verified = list(state.get("verified", []))
@@ -823,8 +823,8 @@ def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
 
     repo = state.get("repo", ".")
     try:
-        from harness.sandbox import acquired_backend
-        from harness.agents.poc_generator import run_poc_generation
+        from cerberus.sandbox import acquired_backend
+        from cerberus.agents.poc_generator import run_poc_generation
 
         with acquired_backend(_cfg, repo, label="poc-generator") as backend:
             if backend is None:
@@ -841,7 +841,7 @@ def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
         _stage_detail("poc_generator", detail_msg)
         return {"verified": Overwrite(out)}
     except Exception as exc:
-        from harness.agents.deep import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
         if is_fatal_error(exc):
             raise
         logger.warning("PoC generation node encountered error (failing open): %s", exc)
@@ -853,10 +853,10 @@ def threat_update_node(state: ScanState) -> dict:
     md = state.get("threat_model_md", "") or ""
     if not md.strip():
         return {}
-    from harness.fallback import runner
+    from cerberus.fallback import runner
 
     def _threat_update_stage() -> dict:
-        from harness import threat as _th5
+        from cerberus import threat as _th5
 
         updated = _th5.update_threat_with_findings(
             md, list(state.get("verified", [])), state.get("repo", "."))
@@ -887,8 +887,8 @@ def scorer_node(state: ScanState) -> dict:
 def _reset_agent_scratch_phase(repo: str) -> None:
     # Hygiene only: config-gated, best-effort — NOT a security boundary.
     try:
-        from harness.config import as_bool, get_config
-        from harness.sandbox import reset_agent_scratch
+        from cerberus.config import as_bool, get_config
+        from cerberus.sandbox import reset_agent_scratch
 
         cfg = get_config()
         sandbox = cfg.get("sandbox")
@@ -904,8 +904,8 @@ def _reset_agent_scratch_phase(repo: str) -> None:
 
 def _sweep_orphan_sandboxes() -> None:
     try:
-        from harness.config import as_bool, get_config
-        from harness.sandbox import sweep_orphans
+        from cerberus.config import as_bool, get_config
+        from cerberus.sandbox import sweep_orphans
 
         cfg = get_config()
         sandbox = cfg.get("sandbox")
@@ -925,8 +925,8 @@ def _fan_out_hunters(state: dict, max_workers: int,
                      agent_registry: Any = None) -> dict[str, float]:
     import time as _time
 
-    from harness.agents.validator import _evidence_gate_findings, _route_finding
-    from harness.config import effective_config, effective_model
+    from cerberus.agents.validator import _evidence_gate_findings, _route_finding
+    from cerberus.config import effective_config, effective_model
 
     payloads = list(state.get("fanout_payloads", []) or [])
     busy = {"hunt": 0.0, "validation": 0.0, "system_pass": 0.0}
@@ -978,7 +978,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                          findings_produced=produced)
             return res
         except Exception as e:  # pragma: no cover - hunter_worker is fail-open
-            from harness.agents.deep import is_fatal_error
+            from cerberus.agents.deep import is_fatal_error
 
             # Operator config errors must sink the scan, not become fallbacks.
             if is_fatal_error(e):
@@ -987,7 +987,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                               parent_stage="hunters",
                                               model=model, error=str(e))
                 raise
-            from harness.agents.hunters import _fallback_finding
+            from cerberus.agents.hunters import _fallback_finding
             fb = _fallback_finding(str(p.get("unit", "unit")), p.get("repo", "."),
                                    list(p.get("files", [])), str(e))
             fb["unit"] = str(p.get("unit", "unit"))
@@ -1152,7 +1152,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
     try:
         repo = str(canonical_repo(repo))
         os.environ["TARGET_REPO"] = repo
-        from harness.config import get_config, set_config
+        from cerberus.config import get_config, set_config
 
         if cfg is None:
             try:
@@ -1226,7 +1226,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
                 stage_timings[name] = round(_stage_time.time() - _t0, 3)
 
         def _hunters_stage():
-            from harness.config import effective_config
+            from cerberus.config import effective_config
 
             result = _fan_out_hunters(
                 state, int(effective_config(_node_cfg(state))["concurrency"]),

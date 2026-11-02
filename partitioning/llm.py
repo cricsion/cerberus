@@ -7,10 +7,10 @@ import logging
 import os
 from pathlib import PurePosixPath
 
-from harness.config import effective_config, get_model_kwargs
-from harness.fallback import runner
-from harness.partitioning import partition_units as _det_partition_units
-from harness.partitioning.units import (
+from cerberus.config import effective_config, get_model_kwargs
+from cerberus.fallback import runner
+from cerberus.partitioning import partition_units as _det_partition_units
+from cerberus.partitioning.units import (
     _file_weights,
     _load_partition_edges,
     _normalize_units,
@@ -157,7 +157,7 @@ def _deterministic_baseline(repo: str, files: list[str],
                             candidates: list[dict],
                             cfg: dict | None = None) -> list[dict]:
     """Compute, cache, and return the deterministic partition baseline."""
-    cache_dir = os.path.join(repo, ".harness")
+    cache_dir = os.path.join(repo, ".cerberus")
     try:
         os.makedirs(cache_dir, exist_ok=True)
     except OSError:
@@ -192,7 +192,7 @@ def _deterministic_baseline(repo: str, files: list[str],
 def _build_partition_message(ctx: str, baseline: list[dict],
                              cfg: dict | None = None) -> str:
     """Task prompt for the LLM partitioner."""
-    from harness.partitioning.prompts import build_partition_task
+    from cerberus.partitioning.prompts import build_partition_task
 
     cap = int(effective_config(cfg)["partition"]["max_units"])
     msg = build_partition_task(ctx, cap)
@@ -222,10 +222,10 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
                  backend: Any = None) -> list[dict]:
     """Run the Deep-Agent partitioner with hunter tools and extract parsed units;
     an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
-    from harness.agents.deep import run_structured
-    from harness.agents.toolsets import graph_tools
-    from harness.schemas import structured_items
-    from harness.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
+    from cerberus.agents.deep import run_structured
+    from cerberus.agents.toolsets import graph_tools
+    from cerberus.schemas import structured_items
+    from cerberus.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
 
     def _partition_llm() -> list[dict]:
         parsed, _ = run_structured(
@@ -265,7 +265,7 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
 
     # Local import: the model-kwargs lookup stays resolvable at call time
     # for embedders without an import cycle.
-    from harness.config import get_model_kwargs
+    from cerberus.config import get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")
     mk = dict(model_kwargs or {})
@@ -278,7 +278,7 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     baseline = _deterministic_baseline(repo, files, candidates, cfg)
     msg = _build_partition_message(ctx, baseline, cfg)
 
-    from harness.sandbox import acquired_backend
+    from cerberus.sandbox import acquired_backend
     from pathlib import Path
 
     root = Path(repo).resolve() if repo else Path(".").resolve()

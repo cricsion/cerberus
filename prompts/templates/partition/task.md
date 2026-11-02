@@ -1,6 +1,6 @@
 ---
 role: partition
-module: harness.partitioning.prompts
+module: cerberus.partitioning.prompts
 ---
 ## Goal
 Partition this repository into cohesive, independently reviewable units for parallel security hunters. Keep files together when they implement the same capability or connected trust-sensitive flow, even when they sit in different directories. Separate distinct capabilities or input subsystems when different hunters can review them without repeatedly covering the same code.

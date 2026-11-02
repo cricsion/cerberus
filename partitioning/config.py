@@ -1,7 +1,7 @@
 """Partitioning constants: policy values live in the one cfg.
 
 Every tunable (``partition.*``, ``codegraph.partition.mode``) is normalized at
-load in :mod:`harness.config`; callers read it from ``cfg``.
+load in :mod:`cerberus.config`; callers read it from ``cfg``.
 """
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 ---
 role: validator
-module: harness.prompts.validator
+module: cerberus.prompts.validator
 ---
 ## Verdict rules
 

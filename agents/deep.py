@@ -11,10 +11,10 @@ from typing import Any
 from langchain_core.exceptions import (ModelAuthenticationError, ModelInvalidRequestError, ModelNotFoundError, ModelPermissionDeniedError)
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from harness.config import as_bool, get_config
+from cerberus.config import as_bool, get_config
 
 try:
-    from harness import observability as _obs
+    from cerberus import observability as _obs
 except Exception:  # observability module unavailable → tracing disabled (fail-open)
     _obs = None
 
@@ -27,7 +27,7 @@ FS_WRITE_TOOLS = ("write_file", "edit_file")
 FS_TOOLS = FS_READ_TOOLS
 # FilesystemMiddleware rejects unscoped permission rules on execution-capable
 # backends. model_call_limit is the real budget: each agent run may make at most
-# harness/config/default.yaml's model_call_limit model calls.
+# cerberus/config/default.yaml's model_call_limit model calls.
 
 # Scanner skill docs are served the deepagents way: routed into the agent's
 # own backend (no write tool exists for the agent, and a route-scoped deny
@@ -218,7 +218,7 @@ _skills_shadow_warned = False
 
 def _with_skills_route(backend: Any) -> Any:
     # Skills live outside the repo, where the repo-confined file tools cannot
-    # reach them: route harness/skills into the agent's own backend so
+    # reach them: route cerberus/skills into the agent's own backend so
     # SkillsMiddleware and `read_file` can serve the docs.
     global _skills_shadow_warned
     repo = getattr(backend, "repo_path", None)
@@ -242,7 +242,7 @@ def _with_skills_route(backend: Any) -> Any:
 
 def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
                          run_id: str | None = None) -> Path | None:
-    """Resolve a persistent host directory for agent scratchpad files (under .harness/<run_id>/scratch/)."""
+    """Resolve a persistent host directory for agent scratchpad files (under .cerberus/<run_id>/scratch/)."""
     env_dir = os.environ.get("SCRATCH_DIR")
     if env_dir:
         base = Path(env_dir)
@@ -256,7 +256,7 @@ def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
             or "latest"
         )
         safe_rid = "".join(c if c.isalnum() or c in ("-", "_", ".") else "_" for c in str(rid).strip()) or "latest"
-        base = Path(repo_root) / ".harness" / safe_rid / "scratch"
+        base = Path(repo_root) / ".cerberus" / safe_rid / "scratch"
 
     safe_agent = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in str(agent_name or "").strip())
     p = base / safe_agent if safe_agent else base
@@ -396,7 +396,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                      backend: Any = None, root_dir: Any = None,
                      scratchpad: bool = False):
     from deepagents import create_deep_agent
-    from harness.prompts import UNTRUSTED_CONTEXT_NOTE
+    from cerberus.prompts import UNTRUSTED_CONTEXT_NOTE
 
     system_prompt = f"{UNTRUSTED_CONTEXT_NOTE}\n\n{system_prompt}"
 
@@ -413,8 +413,8 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                 "refusing to default to the harness working directory"
             )
         target_repo = rd
-        from harness.sandbox import _acquire_backend
-        from harness.sandbox.local_backend import RepoLocalBackend
+        from cerberus.sandbox import _acquire_backend
+        from cerberus.sandbox.local_backend import RepoLocalBackend
 
         try:
             cfg = get_config()
@@ -467,7 +467,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
         target_schema = getattr(response_format, "schema", response_format)
         target_name = getattr(target_schema, "__name__", None)
         if target_name and target_name not in (system_prompt or ""):
-            from harness.prompts.contract import structured_output_contract
+            from cerberus.prompts.contract import structured_output_contract
             contract_suffix = structured_output_contract(target_name)
             system_prompt = f"{system_prompt.strip()}\n\n{contract_suffix}" if system_prompt else contract_suffix
 
@@ -630,7 +630,7 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
     target_schema = model if isinstance(model, type) else getattr(model, "schema", model)
     target_name = getattr(target_schema, "__name__", None)
     if target_name and target_name not in (system or ""):
-        from harness.prompts.contract import structured_output_contract
+        from cerberus.prompts.contract import structured_output_contract
         contract_suffix = structured_output_contract(target_name)
         system = f"{system.strip()}\n\n{contract_suffix}" if system else contract_suffix
 

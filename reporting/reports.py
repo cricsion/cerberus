@@ -6,7 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from harness.schemas import (SEVERITY_ORDER, group_duplicates, safe_float,
+from cerberus.schemas import (SEVERITY_ORDER, group_duplicates, safe_float,
                              safe_int, sort_findings)
 
 SEV_TO_SARIF = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}

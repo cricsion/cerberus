@@ -70,7 +70,7 @@ def augment_edges(repo: str, files: list[str],
             out[k] = w
 
     try:
-        from harness.codegraph import native
+        from cerberus.codegraph import native
         pairs = native.file_dependency_pairs(repo)
         for pair in pairs:
             src, dst = pair.get("source"), pair.get("target")

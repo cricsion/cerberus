@@ -76,7 +76,7 @@ def _fuse_coupled_modules(units: list[dict], edges: dict | None,
     if not weights or target <= 0 or len(units) <= 1:
         return units
     from pathlib import PurePosixPath
-    from harness.partitioning.units import _edge_index, _cross_weight, _dominant_top_dir
+    from cerberus.partitioning.units import _edge_index, _cross_weight, _dominant_top_dir
 
     idx = _edge_index(edges) if edges else {}
     current = [dict(u, files=list(u.get("files") or [])) for u in units]

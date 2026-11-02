@@ -14,7 +14,7 @@ Laws (each an invariant of this module):
   ``(resolved by …)``; a miss is an ``ERROR:``/guidance string, never a raise.
 - LAW-3 — sections are bounded: ``HARD_MAX_SECTION`` rows, ``---
   <section> (k of n)`` headers, and the ``CODEGRAPH_CHARS`` budget applied once
-  at the end (see :class:`harness.codegraph._common.Report`).
+  at the end (see :class:`cerberus.codegraph._common.Report`).
 - LAW-4 — the report never mutates the index: reads only.
 """
 from __future__ import annotations
@@ -23,14 +23,14 @@ import json
 import re
 from pathlib import Path
 
-from harness.codegraph import _common, _db, _ts, summaries
-from harness.codegraph._common import (
+from cerberus.codegraph import _common, _db, _ts, summaries
+from cerberus.codegraph._common import (
     _as_int,
     _cap_chars,
     _cap_rows,
     _split_top_level,
 )
-from harness.tools.code import _safe_path
+from cerberus.tools.code import _safe_path
 
 try:
     from langchain_core.tools import tool

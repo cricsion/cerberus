@@ -37,7 +37,7 @@ def needs_review_verdicts(items: list[dict], note: str) -> list[dict]:
 def is_fatal_error(exc: BaseException) -> bool:
     """Config error or harness bug: re-raise. Model, parse, and transport
     failures are the fail-open cases."""
-    from harness.agents.deep import is_fatal_error as _is_fatal_error
+    from cerberus.agents.deep import is_fatal_error as _is_fatal_error
 
     return _is_fatal_error(exc)
 

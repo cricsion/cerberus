@@ -1,7 +1,7 @@
 # Prompt templates
 
-Prompt copy for `harness.prompts` lives here as Markdown files with a small
-YAML frontmatter; `harness/prompts/engine.py` is the single loader. The
+Prompt copy for `cerberus.prompts` lives here as Markdown files with a small
+YAML frontmatter; `cerberus/prompts/engine.py` is the single loader. The
 Python modules in `prompts/` compose blocks and weave fenced untrusted data
 — this directory is the single place prompt text changes.
 
@@ -10,7 +10,7 @@ Python modules in `prompts/` compose blocks and weave fenced untrusted data
 ```
 ---
 role: <dirname>               # hunter | validator | triage | threat | partition (must equal the directory)
-module: harness.prompts.<m>   # provenance pointer to the consuming module
+module: cerberus.prompts.<m>   # provenance pointer to the consuming module
 ---
 <dto — plain Markdown, byte-preserving>
 ```

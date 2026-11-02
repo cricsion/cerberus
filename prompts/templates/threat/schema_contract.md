@@ -1,6 +1,6 @@
 ---
 role: threat
-module: harness.prompts.threat
+module: cerberus.prompts.threat
 ---
 Emit markdown with these eight sections, headings exactly:
 # Threat Model: <name>

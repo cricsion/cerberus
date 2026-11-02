@@ -15,9 +15,9 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from harness.config import as_bool
-from harness.paths import to_repo_relative
-from harness.schemas import PocItem, PocReceipt
+from cerberus.config import as_bool
+from cerberus.paths import to_repo_relative
+from cerberus.schemas import PocItem, PocReceipt
 
 _logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ def materialize_poc(finding: dict, backend: Any, run_id: str | None = None,
                     repo_path: str | Path | None = None) -> tuple[Path | None, str | None]:
     """Write repro script to host persistent storage and container shared tmpfs.
 
-    Host path: harness/<run_id>/scratch/poc/<finding_id>/poc.py
+    Host path: .cerberus/<run_id>/scratch/poc/<finding_id>/poc.py
     Container path: /work/_shared/poc/<finding_id>/poc.py
     """
     poc = finding.get("poc")
@@ -156,9 +156,9 @@ def materialize_poc(finding: dict, backend: Any, run_id: str | None = None,
     rid = _safe_id(run_id or os.environ.get("RUN_ID") or "latest")
     fname = _resolve_filename(poc, script)
 
-    # 1. Host persistent path (confined under .harness)
+    # 1. Host persistent path (confined under .cerberus)
     host_repo = Path(repo_path or os.environ.get("TARGET_REPO") or ".").resolve()
-    host_poc_dir = host_repo / ".harness" / rid / "scratch" / "poc" / fid
+    host_poc_dir = host_repo / ".cerberus" / rid / "scratch" / "poc" / fid
     host_file = host_poc_dir / fname
     try:
         host_poc_dir.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,5 @@
 ---
 role: hunter
-module: harness.prompts.hunter
+module: cerberus.prompts.hunter
 ---
 {{ finding_spec }}

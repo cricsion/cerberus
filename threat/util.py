@@ -11,7 +11,7 @@ _logger = _logging.getLogger(__name__)
 
 
 FILENAME = "THREAT_MODEL.md"
-CACHE_DIRNAME = ".harness"  # machine-managed per-repo cache (see persist_threat)
+CACHE_DIRNAME = ".cerberus"  # machine-managed per-repo cache (see persist_threat)
 CACHE_HEADER = "<!-- machine-managed by cerberus: safe to delete, regenerated+updated each scan -->"
 
 
@@ -38,7 +38,7 @@ def _repo_root(repo: str) -> Path | None:
 
 def find_repo_file(repo: str) -> Path | None:
     """Locate a threat model for future-run reuse, owner file first:
-    `<repo>/THREAT_MODEL.md`, then `<repo>/.harness/THREAT_MODEL.md` (machine cache).
+    `<repo>/THREAT_MODEL.md`, then `<repo>/.cerberus/THREAT_MODEL.md` (machine cache).
     """
     try:
         root = _repo_root(repo)

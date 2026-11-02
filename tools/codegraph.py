@@ -13,14 +13,14 @@ live here:
   :func:`impact_radius`, :func:`build_context`,
   :func:`detect_circular_and_dead_code`, :func:`get_routing_manifest`,
   :func:`type_hierarchy`.
-- **The 9 ``harness.codegraph`` tools** (navigation / authz / contracts /
+- **The 9 ``cerberus.codegraph`` tools** (navigation / authz / contracts /
   supply / effects). They answer ``_db``-first internally;
-  they are re-exported here so ``harness/agents/toolsets.py`` binds the whole
+  they are re-exported here so ``cerberus/agents/toolsets.py`` binds the whole
   code-intelligence surface from one place (:func:`codegraph_tools`).
 
-Import law: this module imports only ``harness.codegraph`` (the 9 +
+Import law: this module imports only ``cerberus.codegraph`` (the 9 +
 ``_db``), stdlib, and the existing harness tool helpers
-(``harness.tools.code``) — no new dependencies. Nothing here shells
+(``cerberus.tools.code``) — no new dependencies. Nothing here shells
 ``codegraph``; the CLI is the indexer's tool, never an agent's.
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from harness.codegraph import (
+from cerberus.codegraph import (
     compare_sibling_route_security,
     find_shared_state_readers_writers,
     get_ast_slice,
@@ -39,12 +39,12 @@ from harness.codegraph import (
     trace_interprocedural_hop,
     trace_state_machine_transitions,
 )
-from harness.codegraph import _db
+from cerberus.codegraph import _db
 
 from ._compat import tool
 from .code import _resolve_limit
 
-# The 9 harness.codegraph tools, in the package's own order. Kept as names so
+# The 9 cerberus.codegraph tools, in the package's own order. Kept as names so
 # codegraph_tools() stays a single source of truth and __all__ is derived.
 CODEGRAPH_TOOL_NAMES: tuple[str, ...] = (
     "get_ast_slice",
@@ -73,9 +73,9 @@ ROUTE_LINE_RE = re.compile(
 
 
 def codegraph_tools() -> list:
-    """The 9 ``harness.codegraph`` tools, in a stable order.
+    """The 9 ``cerberus.codegraph`` tools, in a stable order.
 
-    ``harness/agents/toolsets.py`` binds this list beside the ``_db``-first graph
+    ``cerberus/agents/toolsets.py`` binds this list beside the ``_db``-first graph
     tools, so the whole code-intelligence surface is defined once and the roles
     cannot drift apart (plan § D3).
     """
@@ -83,7 +83,7 @@ def codegraph_tools() -> list:
 
 
 def _safe_root(root: str) -> Path:
-    from harness.tools.code import _safe_path
+    from cerberus.tools.code import _safe_path
     return _safe_path(root)
 
 
@@ -189,7 +189,7 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
     if not ok:
         return _db.guidance_no_db(root)
     try:
-        from harness.codegraph import native
+        from cerberus.codegraph import native
         res = native.routing_manifest(root)
         manifest = res.get("manifest") if isinstance(res, dict) else None
         entries = manifest.get("entries") if isinstance(manifest, dict) else (manifest if isinstance(manifest, list) else [])
@@ -242,7 +242,7 @@ def callers(func_name: str, root: str = ".", file: str | None = None,
     if not ok:
         return _db.guidance_no_db(root)
     try:
-        from harness.codegraph import native
+        from cerberus.codegraph import native
         limit_arg = 100 if limit is None else limit
         res = native.callers_json(name, repo=root, file=file, limit=limit_arg)
         if as_json:
@@ -297,7 +297,7 @@ def callees(func_name: str, root: str = ".", file: str | None = None,
     if not ok:
         return _db.guidance_no_db(root)
     try:
-        from harness.codegraph import native
+        from cerberus.codegraph import native
         limit_arg = 100 if limit is None else limit
         res = native.callees_json(name, repo=root, file=file, limit=limit_arg)
         if as_json:
@@ -346,7 +346,7 @@ def affected(node: str, root: str = ".", file: str | None = None,
         depth_cap = 3
     depth_cap = min(max(depth_cap, 1), 10)
     try:
-        from harness.codegraph import native
+        from cerberus.codegraph import native
         res = native.impact(name, depth=depth_cap, repo=root, file=file)
         results = res.get("results") or []
         roots = res.get("roots") or []
@@ -393,7 +393,7 @@ def codegraph_explore(query: str, max_files: int = 5) -> str:
         query: Natural language question or symbol/file names (e.g. 'auth verify_token').
         max_files: Maximum number of files to include verbatim source from (default: 5).
     """
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     return native.explore(query, max_files=max_files)
 
 
@@ -408,7 +408,7 @@ def find_path(from_symbol: str, to_symbol: str) -> str:
         from_symbol: Starting function or method name (e.g. 'handle_request').
         to_symbol: Target function or sink name (e.g. 'execute_query').
     """
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.find_path(from_symbol, to_symbol)
     if isinstance(res, dict) and res.get("error"):
         return f"ERROR: call-path search unavailable: {res['error']}"
@@ -436,7 +436,7 @@ def impact_radius(symbol: str, depth: int = 2) -> str:
         symbol: Function, class, or variable name.
         depth: Traversal depth (default: 2).
     """
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.impact(symbol, depth=depth)
     if "error" in res:
         return f"Error computing impact for {symbol}: {res['error']}"
@@ -461,7 +461,7 @@ def type_hierarchy(symbol: str) -> str:
     Args:
         symbol: Class, interface, struct, or trait name.
     """
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.type_hierarchy(symbol)
     if res.get("error"):
         return f"ERROR: type hierarchy unavailable: {res['error']}"
@@ -504,7 +504,7 @@ def build_context(task: str, max_nodes: int = 20) -> str:
         task: Security task or focus description (e.g. 'investigate SSRF in webhook handler').
         max_nodes: Maximum symbols to include (default: 20).
     """
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.build_context(task, max_nodes=max_nodes)
     if "error" in res:
         return f"Context assembly error: {res['error']}"
@@ -524,7 +524,7 @@ def build_context(task: str, max_nodes: int = 20) -> str:
 @tool(parse_docstring=True)
 def detect_circular_and_dead_code() -> str:
     """Find circular dependencies and unreferenced dead code in the repository."""
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.circular_and_dead_code()
     if res.get("error"):
         return f"ERROR: circular/dead analysis unavailable: {res['error']}"
@@ -548,7 +548,7 @@ def detect_circular_and_dead_code() -> str:
 def get_routing_manifest() -> str:
     """Retrieve the native framework routing manifest and detected web frameworks (Next.js, Express, Django, FastAPI, Rails, etc.)."""
     import json
-    from harness.codegraph import native
+    from cerberus.codegraph import native
     res = native.routing_manifest()
     if res.get("error"):
         return f"ERROR: routing manifest unavailable: {res['error']}"

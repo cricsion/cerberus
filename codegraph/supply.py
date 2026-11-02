@@ -18,8 +18,8 @@ from __future__ import annotations
 import json
 import re
 
-from harness.codegraph import _common, _db, _ts, sinks
-from harness.tools._compat import tool
+from cerberus.codegraph import _common, _db, _ts, sinks
+from cerberus.tools._compat import tool
 
 # ---------------------------------------------------------------------------
 # caps — the package-wide env idiom; values frozen

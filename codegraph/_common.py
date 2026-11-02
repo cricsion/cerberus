@@ -24,10 +24,10 @@ import json
 import re
 from pathlib import Path
 
-from harness.codegraph import _db, _ts
-from harness.config import get_config
-from harness.tools._compat import env_int
-from harness.tools.code import _safe_path
+from cerberus.codegraph import _db, _ts
+from cerberus.config import get_config
+from cerberus.tools._compat import env_int
+from cerberus.tools.code import _safe_path
 
 HARD_MAX_SECTION = 200
 _CONF_MIN, _CONF_MAX = 0.30, 0.85

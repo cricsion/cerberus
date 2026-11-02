@@ -1,8 +1,8 @@
 """Triage prompts: duplicate rules and severity rubric for the dedup pass."""
 from pydantic import BaseModel, Field
 
-from harness.prompts.contract import structured_output_contract
-from harness.prompts.engine import block
+from cerberus.prompts.contract import structured_output_contract
+from cerberus.prompts.engine import block
 
 DEDUP_RULES = block("triage/dedup_rules")
 

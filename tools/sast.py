@@ -5,13 +5,13 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from harness.config import get_config
+from cerberus.config import get_config
 
 from ._compat import run_cli, tool
 
 
 def _resolve_targets(target: str) -> list[str]:
-    from harness.tools.code import _safe_path
+    from cerberus.tools.code import _safe_path
     out: list[str] = []
     for t in re.split(r"[\s,]+", (target or "").strip()):
         if not t:
@@ -71,7 +71,7 @@ def _run(cmd: list[str], timeout: int = 300, max_bytes: int | None = None) -> di
 
 def config_lane() -> str:
     """The scanner execution lane (thin alias for the system sandbox lane)."""
-    from harness.sandbox.system_exec import sandbox_lane
+    from cerberus.sandbox.system_exec import sandbox_lane
 
     return sandbox_lane()
 
@@ -122,7 +122,7 @@ def regex_prefilter(target: str = ".") -> str:
     Args:
         target: Directory or file to scan.
     """
-    from harness.tools.code import grep_files
+    from cerberus.tools.code import grep_files
     patterns: list[tuple[str, list[str], str]] = [
         ("hardcoded-secret", ["*"],
          r"(?i)(password|passwd|secret|api[_-]?key|aws_.{0,20}key|token)\s*[:=]\s*['\"][^'\"]+['\"]"),

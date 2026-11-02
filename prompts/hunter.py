@@ -1,8 +1,8 @@
-from harness.prompts.contract import structured_output_contract
-from harness.prompts.engine import block
-from harness.prompts.untrusted import make_nonce, untrusted_block
-from harness.sandbox.run_base import DEFAULT_RULES_DIR
-from harness.schemas import HunterResult
+from cerberus.prompts.contract import structured_output_contract
+from cerberus.prompts.engine import block
+from cerberus.prompts.untrusted import make_nonce, untrusted_block
+from cerberus.sandbox.run_base import DEFAULT_RULES_DIR
+from cerberus.schemas import HunterResult
 
 # Pure discovery finding standard guidance
 FINDING_CONTRACT = (
@@ -46,7 +46,7 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
     from deepagents.backends.protocol import SandboxBackendProtocol
     if not isinstance(backend, SandboxBackendProtocol):
         return ""
-    from harness.config import get_config
+    from cerberus.config import get_config
 
     sandbox = get_config()["sandbox"]
     rules = getattr(backend, "rules_dir", DEFAULT_RULES_DIR)
@@ -84,7 +84,7 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
         "Installed: semgrep, opengrep, gitleaks, osv-scanner, checkov, "
         "git, python, pytest. The index is prebuilt by the indexer; for structural "
         "questions (who calls what, entry-to-sink reachability) use the bound "
-        "`harness.codegraph` tools"
+        "`cerberus.codegraph` tools"
         "Offline custom rules "
         f"live at {rules} "
         "(run them per the semgrep skill in the Skills System section; "

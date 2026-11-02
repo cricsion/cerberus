@@ -38,8 +38,8 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from harness.codegraph import _db, _ts, summaries
-from harness.codegraph._common import (
+from cerberus.codegraph import _db, _ts, summaries
+from cerberus.codegraph._common import (
     HARD_MAX_SECTION, Report, _CONF_MAX, _CONF_MIN,
     _HANDLER_KINDS, _ROUTE_EDGE_KINDS, _assign_value, _callee_tail_full,
     _candidate_finding, _cap_chars, _cap_rows, _confidence, _contained_file,

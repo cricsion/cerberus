@@ -32,15 +32,15 @@ def apply_interview(md: str, answers: dict[str, str]) -> str:
 
 
 def _threat_mk(cfg: dict) -> dict:
-    from harness.agents.deep import sanitize_model_kwargs
-    from harness.config import get_model_kwargs
+    from cerberus.agents.deep import sanitize_model_kwargs
+    from cerberus.config import get_model_kwargs
 
     return sanitize_model_kwargs(
         get_model_kwargs(cfg or {}, "hunter", agent="threat"))
 
 
 def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
-    from harness.prompts.threat import (SwarmHistory, SwarmPlan,
+    from cerberus.prompts.threat import (SwarmHistory, SwarmPlan,
                                         SwarmResearch)
     agent_names = {SwarmResearch: "threat:researcher",
                    SwarmHistory: "threat:historian",
@@ -57,9 +57,9 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     if root is None or not root.is_dir():
         raise ValueError("threat-stage repository is not a directory")
 
-    from harness.agents.deep import run_structured
-    from harness.config import effective_config
-    from harness.sandbox import _acquire_backend, close_backend
+    from cerberus.agents.deep import run_structured
+    from cerberus.config import effective_config
+    from cerberus.sandbox import _acquire_backend, close_backend
     from deepagents.backends.protocol import SandboxBackendProtocol
 
     cfg = effective_config(cfg)
@@ -100,7 +100,7 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
         _timeout = int(cfg["timeout"])
         _retries = int(cfg["max_retries"])
         if agent_name == "threat:synthesizer":
-            from harness.agents.deep import run_structured_batch
+            from cerberus.agents.deep import run_structured_batch
             out = run_structured_batch(
                 _mk, model, system, [human],
                 timeout=_timeout, max_retries=_retries,
@@ -121,9 +121,9 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
 
 def _llm_text(cfg: dict, system: str, human: str,
               root_dir: str | None = None) -> str:
-    from harness.agents.deep import run_structured
-    from harness.config import effective_config
-    from harness.sandbox import _acquire_backend, close_backend
+    from cerberus.agents.deep import run_structured
+    from cerberus.config import effective_config
+    from cerberus.sandbox import _acquire_backend, close_backend
 
     cfg = effective_config(cfg)
     _mk = _threat_mk(cfg)
@@ -150,15 +150,15 @@ def _history_text(history: list[tuple[str, str]]) -> str:
 
 def interview_questions(draft_md: str, history: list[tuple[str, str]],
                         cfg: dict, max_questions: int = 5) -> list | None:
-    from harness.agents.deep import run_structured_batch
-    from harness.fallback import runner
-    from harness.prompts.threat import (INTERVIEWER_SYSTEM, QuestionList,
+    from cerberus.agents.deep import run_structured_batch
+    from cerberus.fallback import runner
+    from cerberus.prompts.threat import (INTERVIEWER_SYSTEM, QuestionList,
                                         build_interview_task)
     human = build_interview_task(draft_md, _history_text(history),
                                  max_questions)
 
     def _ask() -> list:
-        from harness.config import effective_config
+        from cerberus.config import effective_config
 
         cfg_full = effective_config(cfg or {})
         _mk = _threat_mk(cfg_full)
@@ -178,7 +178,7 @@ def interview_questions(draft_md: str, history: list[tuple[str, str]],
 
 def finalize_threat(draft_md: str, history: list[tuple[str, str]], cfg: dict,
                     root_dir: str | None = None) -> str:
-    from harness.prompts.threat import FINALIZE_SYSTEM, build_finalize_task
+    from cerberus.prompts.threat import FINALIZE_SYSTEM, build_finalize_task
     text = _llm_text(
         cfg,
         FINALIZE_SYSTEM,
@@ -224,7 +224,7 @@ def conduct_interview(repo: str, files: list[str], candidates: list[dict],
             if not validate_threat_md(finalized):
                 return finalized
         except Exception as e:
-            from harness.fallback import is_fatal_error
+            from cerberus.fallback import is_fatal_error
             if is_fatal_error(e):
                 raise
             _logger.debug("threat finalize failed, keeping draft: %s", e)
@@ -252,8 +252,8 @@ def _model_dump(parsed: Any) -> dict:
 
 def _swarm_research(repo: str, files: list[str], draft: str,
                     cfg: dict) -> tuple[dict, str]:
-    from harness.fallback import runner
-    from harness.prompts.threat import (RESEARCHER_SYSTEM, SwarmResearch,
+    from cerberus.fallback import runner
+    from cerberus.prompts.threat import (RESEARCHER_SYSTEM, SwarmResearch,
                                         build_research_task)
 
     def _build() -> tuple[dict, str]:
@@ -270,8 +270,8 @@ def _swarm_research(repo: str, files: list[str], draft: str,
 
 def _swarm_history(repo: str, draft: str, cfg: dict,
                     vulns: list[dict] | None = None) -> tuple[dict, str]:
-    from harness.fallback import runner
-    from harness.prompts.threat import (HISTORIAN_SYSTEM, SwarmHistory,
+    from cerberus.fallback import runner
+    from cerberus.prompts.threat import (HISTORIAN_SYSTEM, SwarmHistory,
                                         build_historian_task)
 
     def _build() -> tuple[dict, str]:
@@ -311,7 +311,7 @@ def _bound_json(data: Any, max_len: int = 12000) -> str:
 
 
 def _synth_task(repo, draft, research, history, measured_facts, narrow=False):
-    from harness.prompts.threat import build_synth_task
+    from cerberus.prompts.threat import build_synth_task
 
     return build_synth_task(repo, draft or "", research or "", history or "",
                             measured_facts or "", narrow=bool(narrow))
@@ -321,8 +321,8 @@ def _swarm_plan(repo: str, draft: str, research: dict, history: dict,
                 cfg: dict, measured_facts: str = "",
                 narrow: bool = False) -> dict:
     # Planner returns a judgment payload; code renders every deterministic cell — LLM-written markdown never ships (no phrasing slip can corrupt a measured fact).
-    from harness.fallback import runner
-    from harness.prompts.threat import SYNTH_SYSTEM, SwarmPlan
+    from cerberus.fallback import runner
+    from cerberus.prompts.threat import SYNTH_SYSTEM, SwarmPlan
 
     def _build() -> tuple[dict, str]:
         parsed = _llm_structured(cfg or {}, SwarmPlan, SYNTH_SYSTEM,
@@ -406,7 +406,7 @@ def enrich_threat(repo: str, files: list[str], candidates: list[dict],
         meta["coverage_gaps"] = _coverage_gaps(md)
         return md.strip() + "\n", meta
     except Exception as e:
-        from harness.fallback import is_fatal_error
+        from cerberus.fallback import is_fatal_error
 
         if is_fatal_error(e):
             raise
