@@ -21,8 +21,7 @@ covers least.
   compilation needed). Never install or upgrade it: the repo is read-only and
   egress may be denied.
 - Pass **explicit paths** — the unit's `.c`/`.h`/`.cpp` files or the unit
-  directory. Never scan the repo root: there is no whole-repo scanner in this
-  harness, and a bare directory only sees git-tracked files (the target tree
+  directory. Never scan the repo root: there is no whole-repo scanner in Cerberus, and a bare directory only sees git-tracked files (the target tree
   may have no `.git` at all).
 - Output discipline: `--csv` for machine reading or `-Q` for quiet text;
   write large output under `/work` (writable tmpfs) and read back slices

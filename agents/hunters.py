@@ -8,9 +8,9 @@ from harness.agents.deep import extract_structured, is_fatal_error, sanitize_mod
 from harness.config import effective_config
 from harness.fallback import EMPTY_STRUCTURED, runner
 from harness.paths import to_repo_relative
-from harness.schemas import DiscoveryResult, safe_float, safe_int
-from harness.prompts.discovery import (SYSTEM_PASS_SYSTEM,
-                                       build_discovery_task,
+from harness.schemas import HunterResult, safe_float, safe_int
+from harness.prompts.hunter import (SYSTEM_PASS_SYSTEM,
+                                       build_hunter_task,
                                        build_unit_system_prompt,
                                        build_system_pass_task,
                                        sandbox_system_section)
@@ -151,7 +151,7 @@ def _slim_candidates(candidates: list[dict]) -> str:
     return _json.dumps(slim, default=str)
 
 
-def _findings_from_discovery(parsed: object, hunter: str,
+def _findings_from_hunter(parsed: object, hunter: str,
                                files: list[str], repo: str) -> list[dict]:
     try:
         items = getattr(parsed, "findings", None) or []
@@ -196,7 +196,7 @@ def build_unit_hunter_agent(unit_name: str, model_kwargs: dict,
     prompt = build_unit_system_prompt("", backend=backend)
     tools = graph_tools()
     return build_deep_agent(llm, system_prompt=prompt, tools=tools,
-                            response_format=DiscoveryResult,
+                            response_format=HunterResult,
                             name=f"hunter-{unit_name}"[:60],
                             root_dir=repo, backend=backend,
                             scratchpad=True)
@@ -211,7 +211,7 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
     name = str(unit.get("name", "unit"))
     model_kwargs = get_model_kwargs(cfg, "hunter")
     cand_ctx = _cand_ctx(candidates)
-    task = build_discovery_task(name, repo, files or [], cand_ctx, threat_md,
+    task = build_hunter_task(name, repo, files or [], cand_ctx, threat_md,
                                 focus=focus_hint(focus))
     from harness.sandbox import acquired_backend
     # One backend per unit: local = no shell; docker = shared-container shell. Fail-soft.
@@ -231,9 +231,9 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
                                config=invoke_config)
             if _tools_out is not None:
                 _tools_out.extend(_agent_tools_used(res))
-            sr = extract_structured(res, DiscoveryResult)
+            sr = extract_structured(res, HunterResult)
             if sr is not None:
-                norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
+                norm = _findings_from_hunter(sr, f"unit-{name}", files or [], repo)
                 return _sort_by_confidence(norm)
             return [_fallback_finding(f"unit-{name}", repo, files,
                                       "no structured output")]
@@ -291,12 +291,12 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
         parsed, _raw = runner(
             "system pass",
             lambda: run_structured(
-                mk, DiscoveryResult, sys_prompt, msg,
+                mk, HunterResult, sys_prompt, msg,
                 tools=graph_tools(), timeout=_timeout,
                 name="system-pass", backend=backend, root_dir=repo,
                 scratchpad=True),
             default=EMPTY_STRUCTURED, logger=_logger)
-        norm = _findings_from_discovery(parsed, "system", files or [], repo)
+        norm = _findings_from_hunter(parsed, "system", files or [], repo)
     if parsed is None:
         norm = [_fallback_finding("system", repo, files,
                                   "no structured output")]

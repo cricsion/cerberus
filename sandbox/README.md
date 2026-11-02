@@ -9,7 +9,7 @@ the shell (when it exists) is the only extra capability.
 
 | mode | repo file tools | scratch writes | shell | boundary |
 |---|---|---|---|---|
-| `local` (default, resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.harness/scratch/` | none | path containment |
+| `local` (default, resolver fallback) | read-only, in-process | `write_file`/`edit_file` in `/.cerberus/scratch/` | none | path containment |
 | `docker` (opt-in) | read-only, in-process | same | `execute` | one container per run, egress per `sandbox.network` (default `bridge`) |
 
 ## local
@@ -22,7 +22,7 @@ Build the scan-toolchain image (pins live in `versions.env`):
 
 ```bash
 cp docker/versions.env.example docker/versions.env
-./docker/build.sh cyber-sandbox:local
+./docker/build.sh cerberus-sandbox:local
 ```
 
 Requires Docker Desktop running. The repo is bind-mounted **read-only** at
@@ -36,7 +36,7 @@ no host toolchain to provision and no binary the agent cannot reach. The host
 indexer wrappers are thin `subprocess` calls that run only when the host
 happens to have the binary; the agent always uses the image.
 The agent runs them through `execute`; usage is documented in the skills at
-`/opt/harness-skills/<name>/SKILL.md`, served to the agent by the skills
+`/opt/cerberus-skills/<name>/SKILL.md`, served to the agent by the skills
 route on its backend (`harness/agents/deep.py`). Pins and per-arch
 sha256s live in `docker/versions.env` and are verified at build (a mismatch
 fails the build).
@@ -93,7 +93,7 @@ is the sandbox itself.
 A harness that EXITS reaps its sandbox (CLI `finally`, `atexit`, SIGTERM). A
 harness that is **SIGKILL'd** — `kill -9`, a host OOM-kill, power loss — runs
 ```bash
-docker ps --filter label=cyber.agent.sandbox=run
+docker ps --filter label=cerberus.agent.sandbox=run
 docker rm -f <name>
 ```
 
@@ -170,7 +170,7 @@ Consequences to plan for:
   is reaped only at scan end.
 * if the harness CLI is SIGKILLed, atexit does not run and the container
   leaks: sweep stale ones with
-  `docker ps --filter label=cyber.agent.sandbox=run`.
+  `docker ps --filter label=cerberus.agent.sandbox=run`.
 
 ### Phase reset: scratch hygiene
 

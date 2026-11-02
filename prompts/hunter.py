@@ -2,7 +2,7 @@ from harness.prompts.contract import structured_output_contract
 from harness.prompts.engine import block
 from harness.prompts.untrusted import make_nonce, untrusted_block
 from harness.sandbox.run_base import DEFAULT_RULES_DIR
-from harness.schemas import DiscoveryResult
+from harness.schemas import HunterResult
 
 # Pure discovery finding standard guidance
 FINDING_CONTRACT = (
@@ -17,7 +17,7 @@ FINDING_CONTRACT = (
 REPRO_CONTRACT = FINDING_CONTRACT
 
 FINDING_SPEC = structured_output_contract(
-    DiscoveryResult,
+    HunterResult,
     guidance=(
         "- An empty findings array is valid ONLY after inspecting every assigned file, including the enumerated remainder.\n"
         "- Reason through each finding in this order: rationale (WHO controls input, HOW it reaches the sink, WHAT breaks), "
@@ -26,7 +26,7 @@ FINDING_SPEC = structured_output_contract(
 )
 
 # Discovery contract: findings are the only machine-consumed output.
-DISCOVERY_CONTRACT = block("hunter/discovery_contract", finding_spec=FINDING_SPEC)
+HUNTER_CONTRACT = block("hunter/contract", finding_spec=FINDING_SPEC)
 
 PATH_CONTRACT = block("hunter/path_contract")
 
@@ -35,7 +35,7 @@ FINDING_BAR = block("hunter/finding_bar")
 # Repeatable per-entry-point procedure instead of a fixed class list.
 AUDIT_PROCEDURE = block("hunter/audit_procedure")
 
-DISCOVERY_METHOD = block("hunter/discovery_method")
+HUNTER_METHOD = block("hunter/method")
 
 CANDIDATE_GATE = block("hunter/candidate_gate")
 
@@ -132,18 +132,18 @@ def _path_lines(paths: list[str], limit: int = 200,
     return text
 
 
-def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
+def build_hunter_task(unit_name: str, repo: str, starting_paths: list[str],
                          cand_ctx: str = "", threat_md: str = "",
                          focus: str = "") -> str:
     # 1. Static Prefix: identical across all hunter units for KV-cache reuse (~10k tokens)
     parts: list[str] = [
-        "## Method\n" + DISCOVERY_METHOD,
+        "## Method\n" + HUNTER_METHOD,
         "## Procedure\n" + AUDIT_PROCEDURE,
         "## What counts\n" + FINDING_BAR,
         "## Candidate gate\n" + CANDIDATE_GATE,
         "## Finding standard\n" + FINDING_CONTRACT,
         PATH_CONTRACT,
-        DISCOVERY_CONTRACT,
+        HUNTER_CONTRACT,
     ]
 
     # Shared repo-wide threat model (deterministic nonce)
@@ -185,7 +185,7 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
             "You MUST inspect every file in your assigned Starting paths and the "
             "remainder you MUST enumerate when the list is truncated using your file "
             "reading tools (read_file / grep / glob) before concluding your review "
-            "and emitting DiscoveryResult.\n"
+            "and emitting HunterResult.\n"
             "All paths must be repo-relative (e.g. `pages/index.js` or `package.json`, NOT `/Users/...` or `/app/...`).\n"
             + checklist_heading + "\n"
             + _path_lines(paths, bullet="- [ ] ") + "\n\n"
@@ -224,7 +224,7 @@ def build_system_pass_task(repo: str, scope: str, ctx: str,
         "inventory. Return an empty findings list only when no source-grounded "
         "cross-unit, global, secret, or configuration gap survives review.\n"
         + PATH_CONTRACT + "\n"
-        + DISCOVERY_CONTRACT + "\n\n"
+        + HUNTER_CONTRACT + "\n\n"
         + f"Repository (read-only): {repo}\nScope: {scope}\n{ctx}"
         + inventory_section
     )

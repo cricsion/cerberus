@@ -633,7 +633,7 @@ class ScanReporter:
     def _hint_text(self, out_path: Path) -> Any:
         raw = str(out_path)
         return Text(clean_untrusted(
-            f"open {raw}/report.html  ·  harness inspect {raw}"), style="meta")
+            f"open {raw}/report.html  ·  cerberus inspect {raw}"), style="meta")
 
 
 # Module helpers -------------------------------------------------------------

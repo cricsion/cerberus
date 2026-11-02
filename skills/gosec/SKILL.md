@@ -19,8 +19,7 @@ goroutines + shared state). Generic pattern rules miss most of these.
   scan image). Never install or upgrade it: the repo is read-only and egress
   may be denied.
 - Pass **explicit paths** — the unit's `.go` files, or `./...` from the unit
-  directory. Never scan the repo root: there is no whole-repo scanner in this
-  harness, and a bare directory only sees git-tracked files (the target tree
+  directory. Never scan the repo root: there is no whole-repo scanner in Cerberus, and a bare directory only sees git-tracked files (the target tree
   may have no `.git` at all).
 - gosec compiles a Go package, so the unit must be parseable Go; a file with
   syntax errors is reported, not scanned.

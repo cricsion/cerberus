@@ -132,7 +132,7 @@ class RunSandbox(RunSandboxBase):
         super().__init__(repo_path=repo_path, image=image,
                          command_timeout=command_timeout,
                          max_output_bytes=max_output_bytes,
-                         name_prefix="cyber-sandbox-run")
+                         name_prefix="cerberus-sandbox-run")
 
     @property
     def cli_bin(self) -> str:
@@ -156,7 +156,7 @@ class RunSandbox(RunSandboxBase):
             # Re-start after death: a name a corpse may still hold is never
             # reused — create under a fresh one.
             self._fresh_name_needed = False
-            self._name = f"cyber-sandbox-run-{uuid.uuid4().hex[:12]}"
+            self._name = f"cerberus-sandbox-run-{uuid.uuid4().hex[:12]}"
         try:
             name = docker_channel.create_sandbox(
                 name=self._name, image=self.image, repo=str(self.repo_path),

@@ -35,10 +35,10 @@ FS_TOOLS = FS_READ_TOOLS
 # prompt and `read_file` opens the full doc on demand. The scan image bakes
 # the same docs at SKILLS_ROUTE (Dockerfile COPY), so in-container reads via
 # `execute` agree with the routed file tools.
-SKILLS_ROUTE = "/opt/harness-skills/"
+SKILLS_ROUTE = "/opt/cerberus-skills/"
 SKILLS_SOURCES = [(SKILLS_ROUTE, "Scanner")]
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
-SCRATCH_ROUTE = "/.harness/scratch/"
+SCRATCH_ROUTE = "/.cerberus/scratch/"
 
 # Fail-loud operator-config errors (never a needs-review verdict); ContextOverflowError deliberately excluded (oversized unit fails open).
 CONFIG_ERRORS = (ModelAuthenticationError, ModelPermissionDeniedError,
@@ -243,7 +243,7 @@ def _with_skills_route(backend: Any) -> Any:
 def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
                          run_id: str | None = None) -> Path | None:
     """Resolve a persistent host directory for agent scratchpad files (under .harness/<run_id>/scratch/)."""
-    env_dir = os.environ.get("HARNESS_SCRATCH_DIR")
+    env_dir = os.environ.get("SCRATCH_DIR")
     if env_dir:
         base = Path(env_dir)
     else:
@@ -252,7 +252,6 @@ def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
             return None
         rid = (
             run_id
-            or os.environ.get("HARNESS_RUN_ID")
             or os.environ.get("RUN_ID")
             or "latest"
         )

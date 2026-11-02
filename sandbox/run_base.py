@@ -55,7 +55,7 @@ class RunSandboxBase(ABC):
     def __init__(self, *, repo_path: str | Path, image: str = DEFAULT_IMAGE,
                  command_timeout: int = DEFAULT_COMMAND_TIMEOUT,
                  max_output_bytes: int = DEFAULT_MAX_OUTPUT_BYTES,
-                 name_prefix: str = "cyber-sandbox") -> None:
+                 name_prefix: str = "cerberus-sandbox") -> None:
         self.repo_path = Path(repo_path).resolve()
         self.image = validate_image(str(image or DEFAULT_IMAGE))
         self.command_timeout = max(1, int(command_timeout))
@@ -181,7 +181,7 @@ class RunRegistry:
 ORPHAN_IDLE_SECONDS = 6 * 3600
 
 # Deliberately narrow: the sweep must match only sandboxes this harness created.
-RUN_NAME_RE = re.compile(r"^cyber-sandbox-run-[0-9a-f]{12}$")
+RUN_NAME_RE = re.compile(r"^cerberus-sandbox-run-[0-9a-f]{12}$")
 
 
 def orphan_targets(listed: Iterable[str], *,

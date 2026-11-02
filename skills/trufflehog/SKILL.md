@@ -26,7 +26,7 @@ unverified regex match is a lead.
   objects) is slow and duplicates gitleaks' role — only add it when a
   secret's history specifically matters.
 - Pass the unit's directory, or a `/work` scratch dir with its files —
-  never the repo root: there is no whole-repo scanner in this harness, so a
+  never the repo root: there is no whole-repo scanner in Cerberus, so a
   root scan is yours alone and nothing else covers it.
 - Output discipline: JSON lines; select with `jq`, cap with `head`, write
   full output under `/work` (writable tmpfs) and read back slices. Never

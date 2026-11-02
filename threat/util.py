@@ -12,7 +12,7 @@ _logger = _logging.getLogger(__name__)
 
 FILENAME = "THREAT_MODEL.md"
 CACHE_DIRNAME = ".harness"  # machine-managed per-repo cache (see persist_threat)
-CACHE_HEADER = "<!-- machine-managed by vuln-harness: safe to delete, regenerated+updated each scan -->"
+CACHE_HEADER = "<!-- machine-managed by cerberus: safe to delete, regenerated+updated each scan -->"
 
 
 def _now_iso() -> str:

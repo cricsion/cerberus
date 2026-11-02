@@ -22,14 +22,14 @@ effort_by_agent:
   partitioner: ${PARTITIONER_EFFORT:-}
   threat: ${THREAT_EFFORT:-}
   poc: ${POC_EFFORT:-}
-timeout: ${HARNESS_TIMEOUT:-300}
-max_retries: ${HARNESS_MAX_RETRIES:-3}
+timeout: ${TIMEOUT:-300}
+max_retries: ${MAX_RETRIES:-3}
 # Cap on the SDK's retry backoff (seconds), so a throttled backend cannot
 # stall an agent for minutes between attempts.
-retry_sleep_cap: ${HARNESS_RETRY_SLEEP_CAP:-2}
+retry_sleep_cap: ${RETRY_SLEEP_CAP:-2}
 # Connect-leg timeout (seconds) for the LLM HTTP client; the read/write legs
 # use `timeout`. Clamped to >= 1 at config load.
-connect_timeout: ${HARNESS_CONNECT_TIMEOUT:-10}
+connect_timeout: ${CONNECT_TIMEOUT:-10}
 # Model-profile pins (docs: langchain models, "Model profiles"). A model
 # behind a custom base_url carries no profile, so deepagents would fall
 # back to its 170k-token summarization trigger. Pin max_input_tokens here to
@@ -86,7 +86,7 @@ sandbox:
   # writable scratch
   backend: ${SANDBOX_BACKEND:-local}
   # Runner image for docker
-  image: ${SANDBOX_IMAGE:-cyber-sandbox:local}
+  image: ${SANDBOX_IMAGE:-cerberus-sandbox:local}
   docker_bin: ${SANDBOX_DOCKER_BIN:-docker}
   pull_image: ${SANDBOX_PULL_IMAGE:-0}
   # The runner container is started once per scan; commands are exec'd in
@@ -110,7 +110,7 @@ sandbox:
   pids_limit: ${SANDBOX_PIDS_LIMIT:-512}
   # In-image directory holding the custom scanner rules (read via `execute`,
   # since file tools are repo-confined).
-  rules_dir: /opt/scan-rules/harness
+  rules_dir: /opt/scan-rules/cerberus
   # Clear conventional per-agent scratch paths between hunter and verifier
   # phases to reduce accidental carryover. This is hygiene, not isolation:
   # agents share a runtime identity and can write elsewhere. Shared package
@@ -130,7 +130,7 @@ sast:
 threat:
   use_repo_file: true
   write_artifact: true
-  llm_enrich: ${HARNESS_THREAT_LLM:-true}
+  llm_enrich: ${THREAT_LLM:-true}
 verification:
   votes: ${VERIFIER_VOTES:-1}
   cell_size: ${CELL_SIZE:-${VERIFIER_CELL_SIZE:-15}}
@@ -143,8 +143,8 @@ poc:
   regen_role: ${POC_REGEN_ROLE:-validator}
   timeout: ${POC_TIMEOUT:-600}
 triage:
-  batch_size: ${TRIAGE_BATCH:-100}
+  batch_size: ${TRIAGER_BATCH:-100}
 ui:
-  heartbeat_s: ${HARNESS_HEARTBEAT_S:-30}
+  heartbeat_s: ${HEARTBEAT_S:-5}
 observability:
   enabled: ${LANGFUSE_ENABLED:-auto}

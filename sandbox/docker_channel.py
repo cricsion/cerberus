@@ -57,7 +57,7 @@ __all__ = ["ExecResult", "client_for", "create_sandbox", "start_sandbox",
            "get_archive", "last_exec_event_age",
            "DOCKER_LABEL_KEY", "DOCKER_LABEL_VALUE", "RUN_LABEL"]
 
-DOCKER_LABEL_KEY = "cyber.agent.sandbox"
+DOCKER_LABEL_KEY = "cerberus.agent.sandbox"
 DOCKER_LABEL_VALUE = "run"
 RUN_LABEL = f"{DOCKER_LABEL_KEY}={DOCKER_LABEL_VALUE}"
 

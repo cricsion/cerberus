@@ -1,6 +1,6 @@
 """Canonical finding schema plus ordering and coercion helpers.
 
-``Finding`` (wrapped by ``DiscoveryResult``) is the structured-output contract
+``Finding`` (wrapped by ``HunterResult``) is the structured-output contract
 hunters emit. After discovery, findings travel as plain dicts; the validator
 and triage stages add ``status``, ``patch_summary``, ``control_type``,
 ``duplicate_of`` and ``triage`` in place.
@@ -82,7 +82,7 @@ class FindingDict(TypedDict, total=False):
     conditions: list[str]
 
 
-class DiscoveryResultDict(TypedDict, total=False):
+class HunterResultDict(TypedDict, total=False):
     findings: list[FindingDict]
 
 
@@ -115,7 +115,7 @@ class PocReceipt(BaseModel):
     control_status: Literal["passed", "violated", "invalid", "skipped"] = "skipped"
     outputs: list[str] = Field(default_factory=list)
     error: str | None = None
-    stamped_by: str = "harness"
+    stamped_by: str = "cerberus"
 
 
 class PocItem(BaseModel):
@@ -174,7 +174,7 @@ class Finding(BaseModel):
     conditions: list[str] = Field(default_factory=list, description="Prerequisite conditions for exploitability")
 
 
-class DiscoveryResult(BaseModel):
+class HunterResult(BaseModel):
     """Candidate findings returned by a unit hunter or the system pass."""
 
     model_config = ConfigDict(extra="allow")

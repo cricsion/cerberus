@@ -61,7 +61,7 @@ _MISSING_OK = re.compile(r"^[A-Za-z0-9_.+/-]+$")
 
 # Probe-failure marker: echoed to stderr by the probe's exit branch, so a
 # tool that itself exits 91 is distinguishable from a binary that is absent.
-_PROBE_ABSENT = "cyber-sys-absent"
+_PROBE_ABSENT = "cerberus-sys-absent"
 
 
 @dataclass(frozen=True)

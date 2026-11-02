@@ -601,7 +601,7 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     from harness.config import api_key_present, effective_model, as_bool
 
     _cfg_sys = _node_cfg(state)
-    if not as_bool((_cfg_sys.get("discovery") or {}).get("system_pass", True)):
+    if not as_bool((_cfg_sys.get("hunter") or {}).get("system_pass", True)):
         return {}
     if not api_key_present(_cfg_sys):
         return {}

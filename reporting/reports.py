@@ -65,7 +65,7 @@ def write_sarif(findings: list[dict], out: Path) -> None:
 
         results.append(res_item)
     sarif = {"version": "2.1.0", "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
-             "runs": [{"tool": {"driver": {"name": "vuln-harness", "rules": rules}}, "results": results}]}
+             "runs": [{"tool": {"driver": {"name": "cerberus", "rules": rules}}, "results": results}]}
     out.write_text(json.dumps(sarif, indent=2), encoding="utf-8")
 
 
@@ -80,7 +80,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
     if proven_count or attempted_count:
         poc_summary = f" | Dynamic PoCs: {proven_count} proven, {attempted_count} attempted"
 
-    lines = ["# harness Report", "", f"Total findings: {len(rows)}",
+    lines = ["# Cerberus Report", "", f"Total findings: {len(rows)}",
              f"Primaries: {len(primaries)} (+{len(rows) - len(primaries)} duplicates){poc_summary}", ""]
     for f in primaries:
         lines += [f"## {f.get('severity','?').upper()} {_md_safe(f.get('title',''))}",
@@ -102,7 +102,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
             if poc.get("control") and poc.get("command"):
                 lines.append(f"  - Control Command: `{_md_safe(poc['command'])} {poc.get('control')}`")
             if receipt.get("timestamp"):
-                stamper = receipt.get("stamped_by", "Cerberus")
+                stamper = receipt.get("stamped_by", "cerberus")
                 lines.append(f"  - Receipt: Stamped by {stamper} at `{receipt.get('timestamp')}`")
             script = str(poc.get("script") or "").strip()
             if script:
@@ -193,7 +193,7 @@ def write_html(findings: list[dict], out: Path) -> None:
 
     doc = (
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
-        "<title>Vuln Harness Report</title>\n"
+        "<title>Cerberus Report</title>\n"
         "<style>"
         "body{font-family:sans-serif;margin:2em}table{border-collapse:collapse;width:100%}"
         "th,td{border:1px solid #999;padding:4px 8px;text-align:left;vertical-align:top}"
@@ -207,7 +207,7 @@ def write_html(findings: list[dict], out: Path) -> None:
         "pre.diff{background:#1e1e1e;color:#d4d4d4;border:1px solid #333}"
         "code{background:#f1f1f1;padding:1px 4px;border-radius:3px;font-family:monospace}"
         "</style>\n</head>\n<body>\n"
-        "<h1>Vuln Harness Report</h1>\n"
+        "<h1>Cerberus Report</h1>\n"
         f"<p>Total findings: {len(rows)}{poc_summary}</p>\n"
         "<table>\n<thead><tr>"
         "<th>Severity</th><th>Title</th><th>CWE</th><th>Confidence</th>"
@@ -228,7 +228,7 @@ def _md_safe(value: object) -> str:
 def write_junit(findings: list[dict], out: Path) -> None:
     failures = 0
     suite = ET.Element("testsuite", {
-        "name": "vuln-harness",
+        "name": "cerberus",
         "tests": str(len(findings)),
         "errors": "0",
         "skipped": "0",

@@ -22,7 +22,7 @@ hits are not the semgrep engines'.
 - Bearer resolves imports, so it always analyzes a **directory**, not loose
   files. Point it at the unit's directory, or a `/work` scratch dir with the
   unit's files copied in — never at the repo root: there is no whole-repo
-  scanner in this harness, so a root scan is yours alone and nothing else
+  scanner in Cerberus, so a root scan is yours alone and nothing else
   covers it.
 - Output discipline: `--format json`, then select with `jq`, cap with
   `head`, or write full output under `/work` (a writable tmpfs) and read

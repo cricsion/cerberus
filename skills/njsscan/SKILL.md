@@ -25,8 +25,7 @@ counterpart.
   semgrep. (Node in the image is a separate opt-in for running *targets'*
   JS tests, not for this tool.)
 - Pass **explicit paths** — the unit's `.js`/`.ts` files, or the unit
-  directory. Never scan the repo root: there is no whole-repo scanner in this
-  harness, and a bare directory only sees git-tracked files (the target tree
+  directory. Never scan the repo root: there is no whole-repo scanner in Cerberus, and a bare directory only sees git-tracked files (the target tree
   may have no `.git` at all).
 - Output discipline: `-o` to a JSON file under `/work` (writable tmpfs),
   then select with `jq`, cap with `head`, read back slices. Never paste raw

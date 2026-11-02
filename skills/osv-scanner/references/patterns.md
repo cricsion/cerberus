@@ -62,7 +62,7 @@ Pass it explicitly because you cannot write into the target tree:
 osv-scanner --config $HOME/osv-scanner.toml --format json -r <dir>
 ```
 
-1.9.2 treats `ignoreUntil` (and `PackageOverrides.effectiveUntil`) as optional in the file format. **Harness policy makes `ignoreUntil` mandatory**: an ignore without an expiry rots silently, and the scanner will never re-flag the dependency. Always set a date and re-review.
+1.9.2 treats `ignoreUntil` (and `PackageOverrides.effectiveUntil`) as optional in the file format. **Cerberus policy makes `ignoreUntil` mandatory**: an ignore without an expiry rots silently, and the scanner will never re-flag the dependency. Always set a date and re-review.
 
 ### Pattern D — SBOM input
 

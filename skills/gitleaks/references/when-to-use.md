@@ -8,4 +8,4 @@
 
 **Skip** for: code-quality / SAST scans (use `semgrep` / `opengrep`); dependency vulnerabilities (use `osv-scanner`); license checks; secrets that already escaped to runtime logs (rotate first, then audit upstream); a generic `grep` for one specific known string; checking whether a found credential is still live (use `trufflehog`, and note it needs egress).
 
-Scan the **unit's** subtree, not the repo root: the harness gives no whole-repo scanner, so the root scan is yours alone and nothing else covers it.
+Scan the **unit's** subtree, not the repo root: Cerberus gives no whole-repo scanner, so the root scan is yours alone and nothing else covers it.

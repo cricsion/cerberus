@@ -12,7 +12,7 @@ from harness.progress import AgentState
 from harness.fallback import (EMPTY_STRUCTURED, _append_note,
                               needs_review_verdicts, runner)
 from harness.schemas import structured_items
-from harness.prompts.validation import (OMITTED_NOTE, REFUTE_METHOD,
+from harness.prompts.validator import (OMITTED_NOTE, REFUTE_METHOD,
                                         ROUND_FAILED_NOTE, VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
@@ -274,7 +274,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                   for t in tools]
     # One agent build for every vote/chunk of this cell group.
     from harness.agents.deep import build_deep_agent, make_llm, run_structured
-    from harness.prompts.validation import VerdictBatch
+    from harness.prompts.validator import VerdictBatch
     agent = runner(
         f"agent validator-{group_name}",
         lambda: build_deep_agent(
@@ -290,7 +290,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
             _vote = _round + 1
             for chunk in chunks:
                 payload = [_compact_finding(f) for f in chunk]
-                from harness.prompts.validation import build_batch_task
+                from harness.prompts.validator import build_batch_task
                 msg = build_batch_task(group_name, threat_md, payload,
                                        repo=repo, tools=tool_names)
                 _stage_line(f"[validator] unit '{group_name}' cell {cell_no + 1}: "

@@ -8,7 +8,7 @@
 #
 # BUILD VIA build.sh, which fills the pins from versions.env into
 # --build-args and drives a stable BuildKit builder:
-#   ./harness/sandbox/docker/build.sh cyber-sandbox:local
+#   ./harness/sandbox/docker/build.sh cerberus-sandbox:local
 # A bare `docker build` without --build-arg fails closed at the first FROM:
 # the python base is digest-pinned via PYTHON_BASE_IMAGE (versions.env), and
 # an unpinned gray-area version is a failed build, never a soft fallback.
@@ -24,13 +24,13 @@
 # RE/debug apt layer.
 #
 # Verify:
-#   docker run --rm cyber-sandbox:local semgrep --version
-#   docker run --rm cyber-sandbox:local gitleaks version
-#   docker run --rm cyber-sandbox:local osv-scanner --version
-#   docker run --rm cyber-sandbox:local checkov --version
+#   docker run --rm cerberus-sandbox:local semgrep --version
+#   docker run --rm cerberus-sandbox:local gitleaks version
+#   docker run --rm cerberus-sandbox:local osv-scanner --version
+#   docker run --rm cerberus-sandbox:local checkov --version
 #   # an offline rule scan must also work with NO network at run time
-#   docker run --rm --network none cyber-sandbox:local \
-#       semgrep scan --config /opt/scan-rules/harness --metrics off /repo
+#   docker run --rm --network none cerberus-sandbox:local \
+#       semgrep scan --config /opt/scan-rules/cerberus --metrics off /repo
 
 # Global scope: each stage redeclares the args it uses. These single-name
 # lines also mirror build.sh's `for v in ...` build-arg loop (keep the two
@@ -525,14 +525,14 @@ RUN apt-get purge -y curl && apt-get autoremove -y \
 # baked in: registry packs download on first use, which needs the egress
 # that `sandbox.network` may or may not allow at run time
 # at run time. Extend this dir if you need more offline rulesets.
-COPY harness/rules /opt/scan-rules/harness
+COPY harness/rules /opt/scan-rules/cerberus
 # Scanner usage skills: served to the agent through the skills route on its
 # backend (harness/agents/deep.py, SKILLS_ROUTE); copied in at the SAME path
 # so in-container reads (e.g. `cat` via execute) agree with the routed file
 # tools. Content is the build-time snapshot -- rebuild after editing skills.
 # These two COPY layers are the LAST content layers, so a skills/rules edit
 # invalidates seconds of build, not minutes of downloads.
-COPY harness/skills /opt/harness-skills
+COPY harness/skills /opt/cerberus-skills
 
 USER 1000:1000
 ENV HOME=/work TMPDIR=/tmp GIT_PAGER=cat PAGER=cat TERM=dumb

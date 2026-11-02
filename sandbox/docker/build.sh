@@ -2,13 +2,13 @@
 # Build the scan sandbox image with pinned versions + smoke-test the result.
 #
 #   cp versions.env.example versions.env   # fill versions + checksums
-#   ./harness/sandbox/docker/build.sh cyber-sandbox:local
+#   ./harness/sandbox/docker/build.sh cerberus-sandbox:local
 #
 # Build context is the REPO ROOT: the Dockerfile copies harness/rules into
 # the image so in-container semgrep runs the same custom rules as the host.
 set -euo pipefail
 
-IMAGE_TAG="${1:-cyber-sandbox:local}"
+IMAGE_TAG="${1:-cerberus-sandbox:local}"
 ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT_DIR"
 
@@ -77,8 +77,8 @@ echo "[build] ${IMAGE_TAG} (context: repo root)"
 # invocation explicitly (no reliance on buildx-use state); --load exports the
 # result into the daemon's image store so the smoke suite can use the tag.
 # Remote cache (deferred, optDocker 4.6) — uncomment once a registry ref exists:
-#   --cache-from type=registry,ref=<registry>/cyber-sandbox:cache \
-#   --cache-to   type=registry,ref=<registry>/cyber-sandbox:cache,mode=max \
+#   --cache-from type=registry,ref=<registry>/cerberus-sandbox:cache \
+#   --cache-to   type=registry,ref=<registry>/cerberus-sandbox:cache,mode=max \
 docker buildx inspect cyber >/dev/null 2>&1 \
     || docker buildx create --name cyber --driver docker-container >/dev/null
 docker buildx build --builder cyber --load \
@@ -141,13 +141,13 @@ docker run --rm \
     fi
 
     # Skills layout and reference trees
-    test -f /opt/harness-skills/gitleaks/SKILL.md
-    test -f /opt/harness-skills/osv-scanner/SKILL.md
-    test -f /opt/harness-skills/checkov/SKILL.md
-    for t in gitleaks osv-scanner checkov; do test -d "/opt/harness-skills/$t/references" || exit 1; done
-    for t in gdb afl valgrind pwntools binwalk httpx katana gau arjun; do test -s "/opt/harness-skills/$t/SKILL.md" || exit 1; done
-    cmp -s /opt/harness-skills/gitleaks/SKILL.md /tmp/host_gitleaks_skill.md || exit 1
-    grep -qF "'"${SEMGREP_RULES_REV}"'" /opt/scan-rules/harness/vendor/semgrep-rules/NOTICE.md
+    test -f /opt/cerberus-skills/gitleaks/SKILL.md
+    test -f /opt/cerberus-skills/osv-scanner/SKILL.md
+    test -f /opt/cerberus-skills/checkov/SKILL.md
+    for t in gitleaks osv-scanner checkov; do test -d "/opt/cerberus-skills/$t/references" || exit 1; done
+    for t in gdb afl valgrind pwntools binwalk httpx katana gau arjun; do test -s "/opt/cerberus-skills/$t/SKILL.md" || exit 1; done
+    cmp -s /opt/cerberus-skills/gitleaks/SKILL.md /tmp/host_gitleaks_skill.md || exit 1
+    grep -qF "'"${SEMGREP_RULES_REV}"'" /opt/scan-rules/cerberus/vendor/semgrep-rules/NOTICE.md
     echo "toolchain, runbooks, and skills ok"
 '
 
@@ -167,12 +167,12 @@ docker run --rm --network none "$IMAGE_TAG" bash -c '
     # 2. offline rule scan with harness custom rules
     mkdir -p /work/scan-evil
     printf "import os\nos.system(\"echo \" + input())\n" > /work/scan-evil/evil.py
-    timeout 600 semgrep scan --config /opt/scan-rules/harness --metrics off --quiet /work/scan-evil
+    timeout 600 semgrep scan --config /opt/scan-rules/cerberus --metrics off --quiet /work/scan-evil
 
     # 3. offline rule scan with vendored upstream rules (weak crypto)
     mkdir -p /work/scan-crypto
     printf "import cryptography\n_insecure = cryptography.hazmat.primitives.hashes.MD5()\n" > /work/scan-crypto/a.py
-    timeout 600 semgrep scan --config /opt/scan-rules/harness/vendor/semgrep-rules --metrics off /work/scan-crypto | grep -q insecure-hash-algorithm
+    timeout 600 semgrep scan --config /opt/scan-rules/cerberus/vendor/semgrep-rules --metrics off /work/scan-crypto | grep -q insecure-hash-algorithm
 
     # 4. checkov offline IAC parsing
     mkdir -p /work/scan-iac

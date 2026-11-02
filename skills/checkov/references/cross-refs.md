@@ -1,6 +1,6 @@
 ## Cross-refs
 
-Installed sibling skills in this harness:
+Installed sibling skills in Cerberus:
 
 - **Code pattern and taint analysis** — [semgrep](../../semgrep/SKILL.md) and
   [opengrep](../../opengrep/SKILL.md). Use them on application source (and on

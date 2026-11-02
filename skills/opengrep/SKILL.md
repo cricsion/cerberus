@@ -14,7 +14,7 @@ Opengrep is a community-maintained, open-source static analysis tool forked from
 ## In this environment
 
 - Opengrep is **preinstalled in the scan container** (pinned binary, sha256-verified at image build). Never install, upgrade, or fetch another build: the repo is mounted read-only and egress may be denied.
-- The harness's offline custom rules live at the rules directory named in your task prompt (default `/opt/scan-rules/harness`); registry packs (`p/...`) download on first use and only work when egress allows.
+- Cerberus's offline custom rules live at the rules directory named in your task prompt (default `/opt/scan-rules/cerberus`); registry packs (`p/...`) download on first use and only work when egress allows.
 - Pass **explicit file paths** (your unit's assigned files), never a bare directory: directory scans only see git-tracked files, and a target tree may have no `.git` at all.
 - Run BOTH engines on your files, then reason over the union: `semgrep scan --config {rules} --metrics off <files>` and `opengrep scan --config {rules} <files>`. Opengrep accepts the same rule files, but coverage and taint depth differ, so one engine's misses are the other's hits.
 - Output discipline: `--json`, then select with `jq`, cap with `head`, or write the full JSON under `/work` (a writable tmpfs) and read back slices. Never paste raw scan output into your answer — report findings only.

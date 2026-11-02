@@ -153,7 +153,7 @@ def materialize_poc(finding: dict, backend: Any, run_id: str | None = None,
         return None, None
 
     fid = _safe_id(finding.get("id") or "finding")
-    rid = _safe_id(run_id or os.environ.get("HARNESS_RUN_ID") or "latest")
+    rid = _safe_id(run_id or os.environ.get("RUN_ID") or "latest")
     fname = _resolve_filename(poc, script)
 
     # 1. Host persistent path (confined under .harness)
@@ -282,7 +282,7 @@ def stamp_receipts(findings: list[dict], backend: Any, cfg: dict | None = None,
                 "control_status": control_status,
                 "outputs": outputs,
                 "error": None,
-                "stamped_by": "harness",
+                "stamped_by": "cerberus",
             }
 
             if control_status == "violated":

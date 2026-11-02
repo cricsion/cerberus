@@ -57,7 +57,7 @@ checkov -f "$TARGET/plan.json" --framework terraform_plan \
 extension; add `--framework` only to narrow that set or to pin
 `terraform_plan` / `cloudformation` explicitly. Generating a plan
 (`terraform init && terraform plan && terraform show -json`) needs write access
-and usually network, so in this harness scan a plan only if it is already in
+and usually network, so in Cerberus scan a plan only if it is already in
 the mounted tree or was produced under `$HOME`.
 
 ### Pattern C — filter JSON with jq
@@ -193,7 +193,7 @@ review it when the IaC changes, and never use it to hide a new class of finding.
 or chart fetching. Keep those off as well:
 
 ```bash
-# Never do this in the harness:
+# Never do this in Cerberus:
 #   --download-external-modules true
 
 # Helm/Kustomize: block every remote dependency source

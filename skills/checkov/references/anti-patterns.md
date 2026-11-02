@@ -42,7 +42,7 @@
   several frameworks produces a top-level array; a scan with no resources
   produces a summary-only object. Use the object-or-array normalization in
   [patterns.md](patterns.md).
-- **Don't install, upgrade, or pin a different Checkov.** The harness image is
+- **Don't install, upgrade, or pin a different Checkov.** The Cerberus image is
   the only supported runtime, and the target tree is read-only. A host install
   will not match 3.3.26 behavior.
 - **Don't use `--skip-check` to silence noise you have not triaged.** It

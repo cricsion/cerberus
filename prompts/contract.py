@@ -16,7 +16,7 @@ def structured_output_contract(
     """Format an explicit tool invocation contract for a Pydantic schema or tool name.
 
     Args:
-        schema_or_name: Pydantic model class (e.g. DiscoveryResult, VerdictBatch, TriageBatch)
+        schema_or_name: Pydantic model class (e.g. HunterResult, VerdictBatch, TriageBatch)
                         or string tool name.
         guidance: Optional stage-specific guidance (e.g. empty list constraints).
 

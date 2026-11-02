@@ -42,8 +42,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
     except OSError as e:
         print(f"cannot create output dir {out}: {e}", file=sys.stderr)
         return 1
-    run_id = os.environ.get("HARNESS_RUN_ID") or out.name or "latest"
-    os.environ["HARNESS_RUN_ID"] = run_id
+    run_id = os.environ.get("RUN_ID") or out.name or "latest"
+    os.environ["RUN_ID"] = run_id
     confirm = bool(args.confirm_critical)
     # Manifest: record target tree at scan start, compare at teardown.
     from harness.paths import canonical_repo
@@ -416,9 +416,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="past-vulnerabilities file (CVE id list, CSV, JSON "
                              "array, or markdown report) used as EVIDENCE for "
                              "section 4 threat rows")
-    p = argparse.ArgumentParser(prog="harness", description="Agentic vuln harness (OpenAI-compatible)")
+    p = argparse.ArgumentParser(prog="cerberus", description="Agentic vulnerability harness")
     p.add_argument("--no-color", action="store_true",
-                   help="disable ANSI color (also honored via NO_COLOR/TERM=dumb)")
+                   help="disable ANSI color")
     p.add_argument("--debug", action="store_true",
                    help="print a full traceback when a command crashes")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -490,7 +490,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
         out = getattr(args, "out", None) or "<out>"
-        print(f"run 'harness inspect {out}'", file=sys.stderr)
+        print(f"run 'cerberus inspect {out}'", file=sys.stderr)
         if bool(getattr(args, "debug", False)):
             try:
                 from rich.console import Console

@@ -1,6 +1,6 @@
 ---
 role: validator
-module: harness.prompts.validation
+module: harness.prompts.validator
 ---
 ## Criteria — settle EVERY finding against these, in order
 
