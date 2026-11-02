@@ -2,7 +2,7 @@
 
 ``Finding`` (wrapped by ``DiscoveryResult``) is the structured-output contract
 hunters emit. After discovery, findings travel as plain dicts; the validator
-and triage stages add ``status``, ``fix_suggestion``, ``control_type``,
+and triage stages add ``status``, ``patch_summary``, ``control_type``,
 ``duplicate_of`` and ``triage`` in place.
 """
 from __future__ import annotations
@@ -71,7 +71,8 @@ class FindingDict(TypedDict, total=False):
     hunter_evidence: str
     hunter_snippet: str
     control_type: str
-    fix_suggestion: str
+    patch_summary: str
+    patch: str
     duplicate_of: str
     triage: dict
     cvss: float
@@ -162,7 +163,8 @@ class Finding(BaseModel):
     hunter_evidence: str = Field(default="", description="Original hunter evidence preserved before validation")
     hunter_snippet: str = Field(default="", description="Original hunter snippet preserved before validation")
     control_type: str = Field(default="", description="Validator identified control type")
-    fix_suggestion: str = Field(default="", description="Fix suggestion")
+    patch_summary: str = Field(default="", description="Technical summary of the patch and security invariant enforced")
+    patch: str = Field(default="", description="Unified diff or concrete code patch fixing the vulnerability")
     duplicate_of: str = Field(default="", description="ID of primary finding if duplicate")
     triage: dict | None = Field(default=None, description="Triage rubric metadata")
     cvss: float | None = Field(default=None, description="CVSS base score")

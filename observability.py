@@ -36,6 +36,7 @@ _IDENTITY_ROLES = frozenset({
     "threat",
     "partitioner",
     "system-pass",
+    "poc_generator",
     "threat:researcher",
     "threat:historian",
     "threat:synthesizer",

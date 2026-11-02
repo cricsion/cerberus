@@ -535,6 +535,17 @@ class ScanReporter:
         if duplicates:
             table.add_row(Text("duplicates"),
                           Text(f"{duplicates} collapsed"))
+        proven_pocs = sum(1 for f in findings if isinstance(f.get("poc"), dict) and f["poc"].get("status") == "proven")
+        attempted_pocs = sum(1 for f in findings if isinstance(f.get("poc"), dict) and f["poc"].get("status") == "attempted")
+        if proven_pocs or attempted_pocs:
+            poc_txt = Text()
+            if proven_pocs:
+                poc_txt.append(f"{proven_pocs} proven", style="ok")
+            if proven_pocs and attempted_pocs:
+                poc_txt.append(" · ", style="meta")
+            if attempted_pocs:
+                poc_txt.append(f"{attempted_pocs} attempted", style="warn")
+            table.add_row(Text("pocs"), poc_txt)
         quality = state.get("threat_quality")
         if isinstance(quality, dict) and quality.get("score") is not None:
             source = clean_untrusted(state.get("threat_model_source") or "")

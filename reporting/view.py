@@ -100,17 +100,28 @@ def render_findings(console: Any, findings: list[dict], *, limit: int = 200) -> 
     table.add_column("Location", overflow="fold")
     table.add_column("Conf", justify="right", no_wrap=True)
     table.add_column("Status", no_wrap=True)
+    table.add_column("PoC", no_wrap=True)
     table.add_column("Title", overflow="fold")
 
     for f in rows:
         sev = str(f.get("severity", "medium")).lower()
         style = SEVERITY_STYLE.get(sev, "")
+        poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
+        poc_status = str(poc.get("status") or "").lower()
+        if poc_status == "proven":
+            poc_txt = Text("PROVEN", style="ok")
+        elif poc_status == "attempted":
+            poc_txt = Text("ATTEMPT", style="warn")
+        else:
+            poc_txt = Text("-", style="meta")
+
         table.add_row(
             Text(clean_untrusted(sev.upper()), style=style),
             Text(clean_untrusted(f.get("cwe", "?"))),
             Text(clean_untrusted(f"{f.get('path', '?')}:{f.get('start_line', '?')}")),
             f"{float(f.get('confidence', 0) or 0):.2f}",
             Text(clean_untrusted(f.get("status", "?"))),
+            poc_txt,
             Text(clean_untrusted(f.get("title", ""))),
         )
     console.print(table)

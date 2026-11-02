@@ -234,12 +234,6 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
             sr = extract_structured(res, DiscoveryResult)
             if sr is not None:
                 norm = _findings_from_discovery(sr, f"unit-{name}", files or [], repo)
-                if backend is not None:
-                    try:
-                        from harness.agents.poc import stamp_receipts
-                        stamp_receipts(norm, backend, cfg=cfg, run_id=cfg.get("run_id"))
-                    except Exception as e:
-                        _logger.warning("PoC receipt stamping failed for unit %s: %s", name, e)
                 return _sort_by_confidence(norm)
             return [_fallback_finding(f"unit-{name}", repo, files,
                                       "no structured output")]
@@ -303,12 +297,6 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                 scratchpad=True),
             default=EMPTY_STRUCTURED, logger=_logger)
         norm = _findings_from_discovery(parsed, "system", files or [], repo)
-        if backend is not None:
-            try:
-                from harness.agents.poc import stamp_receipts
-                stamp_receipts(norm, backend, cfg=cfg, run_id=cfg.get("run_id"))
-            except Exception as e:
-                _logger.warning("PoC receipt stamping failed for system pass: %s", e)
     if parsed is None:
         norm = [_fallback_finding("system", repo, files,
                                   "no structured output")]

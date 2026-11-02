@@ -283,7 +283,7 @@ def exec_core(name: str, *, command: str, marker: str, timeout: int,
             name,
             ["/bin/bash", "-c",
              f"{EXEC_TAG}={marker}; "
-             f'mkdir -p "$HOME" "$TMPDIR"; {command}'],
+             f'mkdir -p "$HOME" "$TMPDIR"; {command}; :; exit $?'],
             stdout=True, stderr=True, stdin=False,
             environment=[f"{k}={v}" for k, v in (env or ())],
             workdir=workdir)

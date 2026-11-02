@@ -45,7 +45,7 @@ def _merge_verdict(base: dict, data: dict) -> dict:
             merged[dst] = base[src]
     if isinstance(data, dict):
         for k in ("status", "confidence", "severity",
-                  "cwe", "fix_suggestion", "control_type"):
+                  "cwe", "patch_summary", "control_type"):
             if k in data and data[k] not in (None, ""):
                 merged[k] = data[k]
         if "poc_status" in data and data["poc_status"]:
@@ -663,29 +663,4 @@ def run_validation(findings: list[dict], cfg: dict, threat_md: str = "",
         planned, _vw, cfg=cfg, n_votes=n_votes, threat_md=threat_md,
         repo=repo, cell_offset=cell_offset, agent_registry=agent_registry)
     validated = _reassemble_validation(planned, gated, cell_out)
-
-    poc_cfg = cfg.get("poc") if isinstance(cfg.get("poc"), dict) else {}
-    if poc_cfg.get("enabled", True):
-        to_verify = [f for f in validated if f.get("status") != "fp" and (f.get("poc") or {}).get("script")]
-        if to_verify:
-            try:
-                from harness.sandbox import acquired_backend
-                from harness.agents.poc import stamp_receipts
-                with acquired_backend(cfg, repo or ".", label="validator-poc-verify") as backend:
-                    if backend is not None:
-                        stamp_receipts(to_verify, backend, cfg=cfg, run_id=cfg.get("run_id"))
-                        for f in validated:
-                            receipt = (f.get("poc") or {}).get("receipt") or {}
-                            if (receipt.get("successes") == receipt.get("runs")
-                                    and receipt.get("control_status") == "passed"):
-                                f["status"] = "confirmed"
-                                f.setdefault("poc", {})["status"] = "proven"
-                            f.pop("_needs_poc_regen", None)
-            except Exception as exc:
-                _logger.warning("Validator PoC receipt verification failed: %s", exc)
-                for f in validated:
-                    f.pop("_needs_poc_regen", None)
-                _logger.warning("Validator PoC regen loop encountered error: %s", exc)
-                for f in validated:
-                    f.pop("_needs_poc_regen", None)
     return validated

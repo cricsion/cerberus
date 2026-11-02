@@ -83,8 +83,8 @@ class SandboxShellBackend(SandboxBackendProtocol):
         if self._closed:
             return ExecuteResponse(
                 output="refused: this agent's sandbox is closed", exit_code=126)
-        t = (self.command_timeout if timeout is None
-             else max(1, min(int(timeout), self.command_timeout * 4)))
+        t = (min(self.command_timeout, 600) if timeout is None
+             else max(1, min(int(timeout), 600)))
 
         # Start failures are tool errors at this ONE boundary: a missing CLI
         # client and a timed-out create both reach the agent as an actionable

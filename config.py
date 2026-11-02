@@ -214,6 +214,7 @@ _INT_BOUNDS: dict[str, tuple[int, int, int | None, bool]] = {
     "sast.findings": (5000, 0, None, True),
     "verification.votes": (1, 1, 5, False),
     "verification.cell_size": (15, 1, 100, False),
+    "poc.cell_size": (15, 1, 100, False),
     "triage.batch_size": (100, 1, 200, True),
     "poc.timeout": (600, 1, None, False),
     "poc.repro_runs": (3, 1, None, False),

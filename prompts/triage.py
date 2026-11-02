@@ -27,11 +27,10 @@ def build_triage_batch_task(scope: str, slim_json: str) -> str:
         ),
     )
     return (
-        f"{scope_prefix}"
         f"Deduplication rules:\n{DEDUP_RULES}\n\n"
         f"Severity rubric:\n{SEVERITY_GUIDE}\n\n"
         f"{contract}\n\n"
-        # Dynamic tail: candidate findings JSON
+        f"{scope_prefix}"
         f"All triage findings of this batch (JSON):\n"
         f"{slim_json}"
     )

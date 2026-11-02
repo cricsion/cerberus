@@ -6,6 +6,7 @@ validator_model: ${VALIDATOR_MODEL}
 triager_model: ${TRIAGER_MODEL:-}
 partitioner_model: ${PARTITIONER_MODEL:-}
 threat_model: ${THREAT_MODEL:-}
+poc_model: ${POC_MODEL:-}
 # Effort: low | medium | high | xhigh | max (max while testing).
 # Thinking effort for models ONLY: reasoning_effort (low/medium/high/
 # xhigh/max passed through verbatim — backend-verified). No token
@@ -20,6 +21,7 @@ effort_by_agent:
   triager: ${TRIAGER_EFFORT:-}
   partitioner: ${PARTITIONER_EFFORT:-}
   threat: ${THREAT_EFFORT:-}
+  poc: ${POC_EFFORT:-}
 timeout: ${HARNESS_TIMEOUT:-300}
 max_retries: ${HARNESS_MAX_RETRIES:-3}
 # Cap on the SDK's retry backoff (seconds), so a throttled backend cannot
@@ -131,13 +133,13 @@ threat:
   llm_enrich: ${HARNESS_THREAT_LLM:-true}
 verification:
   votes: ${VERIFIER_VOTES:-1}
-  cell_size: ${VERIFIER_CELL_SIZE:-15}
+  cell_size: ${CELL_SIZE:-${VERIFIER_CELL_SIZE:-15}}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
   poc_rounds: ${POC_ROUNDS:-2}
 poc:
   enabled: ${POC_ENABLED:-1}
   repro_runs: ${POC_REPRO_RUNS:-3}
-  regen_batch: ${POC_REGEN_BATCH:-10}
+  cell_size: ${CELL_SIZE:-${VERIFIER_CELL_SIZE:-15}}
   regen_role: ${POC_REGEN_ROLE:-validator}
   timeout: ${POC_TIMEOUT:-600}
 triage:

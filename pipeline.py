@@ -806,6 +806,48 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
         return {}
 
 
+def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
+    """Dedicated post-triage PoC generation stage on canonical non-FP findings."""
+    import time as _time
+    from harness.config import as_bool
+
+    t0 = _time.time()
+    verified = list(state.get("verified", []))
+    if not verified:
+        return {}
+
+    _cfg = _node_cfg(state)
+    poc_cfg = _cfg.get("poc") if isinstance(_cfg.get("poc"), dict) else {}
+    if not as_bool(poc_cfg.get("enabled", True)):
+        return {}
+
+    repo = state.get("repo", ".")
+    try:
+        from harness.sandbox import acquired_backend
+        from harness.agents.poc_generator import run_poc_generation
+
+        with acquired_backend(_cfg, repo, label="poc-generator") as backend:
+            if backend is None:
+                return {}
+            out = run_poc_generation(
+                verified, cfg=_cfg, backend=backend, repo=repo,
+                threat_md=state.get("threat_model_md", "") or "",
+                agent_registry=agent_registry,
+            )
+        proven = sum(1 for f in out if isinstance(f.get("poc"), dict) and f["poc"].get("status") == "proven")
+        total_pocs = sum(1 for f in out if f.get("poc"))
+        elapsed = _time.time() - t0
+        detail_msg = f"{proven}/{total_pocs} proven ({elapsed:.0f}s)" if total_pocs else f"completed in {elapsed:.0f}s"
+        _stage_detail("poc_generator", detail_msg)
+        return {"verified": Overwrite(out)}
+    except Exception as exc:
+        from harness.agents.deep import is_fatal_error
+        if is_fatal_error(exc):
+            raise
+        logger.warning("PoC generation node encountered error (failing open): %s", exc)
+        return {}
+
+
 def threat_update_node(state: ScanState) -> dict:
     # State only; the CLI is the single file writer.
     md = state.get("threat_model_md", "") or ""
@@ -1218,6 +1260,7 @@ def run_scan(repo: str, confirm_critical: bool = False,
         if state.get("confirm_critical"):
             _stage("confirm_critical", lambda: apply_update(state, confirm_critical_step(state, confirm)))
         _stage("triage", lambda: apply_update(state, triage_node(state, agent_registry=_agent_registry)))
+        _stage("poc_generator", lambda: apply_update(state, poc_node(state, agent_registry=_agent_registry)))
         _stage("threat_update", lambda: apply_update(state, threat_update_node(state)))
         _stage("scorer", lambda: apply_update(state, scorer_node(state)))
         try:

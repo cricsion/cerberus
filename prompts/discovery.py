@@ -4,18 +4,17 @@ from harness.prompts.untrusted import make_nonce, untrusted_block
 from harness.sandbox.run_base import DEFAULT_RULES_DIR
 from harness.schemas import DiscoveryResult
 
-# Reproduction test and finding standard guidance
-REPRO_CONTRACT = (
-    "REPRODUCTION TEST CONTRACT (poc field):\n"
-    "- Interactively author and prove an in-process reproduction test using your `write_file` and `execute` tools.\n"
-    "- Write the test script under `/work/_shared/poc/<finding_id>/<filename>` (e.g., test_repro.py, test_repro.js, test_repro.go, test_repro.sh).\n"
-    "- Run the script in the container using `execute`. If execution fails due to missing mocks or syntax, edit and re-run until it passes.\n"
-    "- Exploit verification: assert the security invariant is violated and exit with code 0.\n"
-    "- Control verification: when invoked with '--control', assert benign baseline input passes and exit with code 0.\n"
-    "- Record the verified script in `poc.script`, filename in `poc.filename`, and test command in `poc.command`.\n"
+# Pure discovery finding standard guidance
+FINDING_CONTRACT = (
+    "FINDING STANDARD CONTRACT:\n"
     "- Report ONE finding per distinct vulnerable function or endpoint with exact start_line, end_line, and 1-4 line snippet containing the sink.\n"
-    "- Weak or uncertain candidates are welcome: give low confidence and explain in rationale what is unproven — never silently drop a suspicion."
+    "- Provide complete taint dataflow tracing: entry point source parameter -> sanitizers/transforms -> vulnerable sink call.\n"
+    "- Enumerate preconditions: required authentication, user role, environment flags, or configuration.\n"
+    "- Reason thoroughly through rationale: WHO controls input, HOW it reaches the sink, and WHAT security invariant breaks.\n"
+    "- Weak or uncertain candidates are welcome: give low confidence and explain in rationale what is unproven — never silently drop a suspicion.\n"
+    "- Do NOT author or execute reproduction test scripts during discovery; dynamic proof and PoC execution are handled by downstream stages."
 )
+REPRO_CONTRACT = FINDING_CONTRACT
 
 FINDING_SPEC = structured_output_contract(
     DiscoveryResult,
@@ -63,8 +62,7 @@ def sandbox_system_section(backend=None, repo: str = ".") -> str:
     return (
         "\nSHELL SANDBOX: you have an `execute` tool — bash inside a "
         "container, working directory set to the unit's repo. Use it for "
-        "preinstalled static scanners, read-only source inspection, and "
-        "executing in-process reproduction tests under /work/_shared/poc/. You "
+        "preinstalled static scanners and read-only source inspection. You "
         "may run a bounded project test or fuzzer only when network egress is "
         "disabled, after inspecting the exact command and any setup script; "
         "required dependencies must already be present. Use dummy inputs, "
@@ -143,7 +141,7 @@ def build_discovery_task(unit_name: str, repo: str, starting_paths: list[str],
         "## Procedure\n" + AUDIT_PROCEDURE,
         "## What counts\n" + FINDING_BAR,
         "## Candidate gate\n" + CANDIDATE_GATE,
-        "## Reproduction test & findings standard\n" + REPRO_CONTRACT,
+        "## Finding standard\n" + FINDING_CONTRACT,
         PATH_CONTRACT,
         DISCOVERY_CONTRACT,
     ]
@@ -217,9 +215,7 @@ def build_system_pass_task(repo: str, scope: str, ctx: str,
     else:
         inventory_section = "\nNo indexed file inventory was provided; use repo tools to identify relevant source paths."
     return (
-        f"Repository (read-only): {repo}\nScope: {scope}\n{ctx}"
-        + inventory_section + "\n"
-        + SYSTEM_PASS_FOCUS + "\n"
+        SYSTEM_PASS_FOCUS + "\n"
         "Use the inventory and repo tools to perform a source-led cross-unit, "
         "global-invariant, secrets, and configuration review even when the unit "
         "findings list is empty. Identify the relevant application units and shared "
@@ -228,5 +224,7 @@ def build_system_pass_task(repo: str, scope: str, ctx: str,
         "inventory. Return an empty findings list only when no source-grounded "
         "cross-unit, global, secret, or configuration gap survives review.\n"
         + PATH_CONTRACT + "\n"
-        + DISCOVERY_CONTRACT
+        + DISCOVERY_CONTRACT + "\n\n"
+        + f"Repository (read-only): {repo}\nScope: {scope}\n{ctx}"
+        + inventory_section
     )
