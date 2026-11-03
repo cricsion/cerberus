@@ -1,0 +1,10 @@
+"""Reflected XSS sample for eval."""
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route("/hello")
+def hello():
+    # CWE-79: unescaped HTML interpolation of user input
+    name = request.args.get("name", "")
+    return "<h1>Hello " + name + "</h1>"

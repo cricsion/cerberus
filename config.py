@@ -178,7 +178,7 @@ def _norm_concurrency(value: Any, default: int = 8) -> int:
         return default
     if number <= 0:
         return default
-    return min(32, max(1, number))
+    return max(1, number)
 
 
 def _norm_heartbeat(value: Any, default: int = 30) -> int:
@@ -206,6 +206,7 @@ _INT_BOUNDS: dict[str, tuple[int, int, int | None, bool]] = {
     "partition.max_units": (20, 0, None, True),
     "partition.min_files": (10, 0, None, False),
     "partition.single_unit_max_files": (1000, 0, None, False),
+    "hunter.reruns": (0, 0, None, False),
     "codegraph.chars": (20000, 0, None, False),
     "codegraph.candidates": (200, 0, None, False),
     "sandbox.command_timeout": (120, 1, None, False),

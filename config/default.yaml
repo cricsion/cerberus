@@ -65,6 +65,14 @@ partition:
   single_unit_max_files: ${PARTITION_SINGLE_UNIT_MAX_FILES:-1000}
   misc_code_merge: ${PARTITION_MISC_CODE_MERGE:-1}
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
+hunter:
+  # Discovery reruns, shared by unit hunts AND the system pass. 0 = one
+  # pass each (current behavior). N = N additional reruns, each a FRESH
+  # agent session seeded with everything already reported and asked for
+  # additional findings only. Early-stops after two consecutive empty
+  # passes; validation bundles
+  # stream while unit reruns continue.
+  reruns: ${RERUNS:-0}
 # codegraph is the index provider.
 codegraph:
   # Tool output caps (env-overridable). 0 = unlimited where supported.

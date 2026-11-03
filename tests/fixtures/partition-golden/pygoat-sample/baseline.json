@@ -1,0 +1,35 @@
+{
+  "files": [
+    "app.py",
+    "auth.py",
+    "xss.py"
+  ],
+  "generator": "frozen §6.3 golden",
+  "repo": "pygoat-sample",
+  "repo_path": "/Users/critical/llms/cyber/tests/fixtures/pygoat-sample",
+  "schema_version": 1,
+  "snapshot_sha256": "9d9a7ace3731294c3f301c34112178fec11f70a182576b6044e7c6d9ec19471b",
+  "target": 400000,
+  "units": [
+    {
+      "files": [
+        "app.py",
+        "auth.py",
+        "xss.py"
+      ],
+      "name": "app",
+      "reason": "small-repo-single-unit"
+    }
+  ],
+  "verify": {
+    "files": 3,
+    "max_unit_bytes": 1120,
+    "units": 1
+  },
+  "wall_seconds": 0.975,
+  "weights": {
+    "app.py": 546,
+    "auth.py": 308,
+    "xss.py": 266
+  }
+}

@@ -512,12 +512,16 @@ def hunter_worker(state: dict) -> dict:
     cfg = dict(state.get("cfg", {}) or {})
     threat_md = state.get("threat_model_md", "") or ""
     focus = state.get("focus", []) or []
+    prior = state.get("prior_findings")
     _tools: list = []
     t0 = _time.time()
     label = state.get("unit") or "unit"
     try:
         out = _run_unit({"name": label}, repo, files, candidates, cfg,
-                        threat_md=threat_md, focus=focus, _tools_out=_tools)
+                        threat_md=threat_md, focus=focus,
+                        prior_findings=(prior
+                                        if isinstance(prior, list) else None),
+                        _tools_out=_tools)
         # Stamp the partition so validation runs one validator per unit.
         for f in out:
             if isinstance(f, dict) and not f.get("unit"):
@@ -935,6 +939,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         return busy
     shared = {k: state.get(k) for k in ("repo", "threat_model_md", "focus",
                                         "votes_override")}
+    from cerberus.agents.hunters import _EMPTY_PASS_STREAK
 
     seen_units: dict[str, int] = {}
     for seq, p in enumerate(payloads):
@@ -954,7 +959,6 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                   state=AgentState.queued)
 
     def _hunt_one_unit(p: dict) -> dict:
-        str(p.get("unit", "unit"))
         aid = "hunter:" + p["_ukey"]
         cfg = p.get("cfg") or state.get("cfg") or {}
         model = effective_model(cfg, "hunter")
@@ -962,22 +966,46 @@ def _fan_out_hunters(state: dict, max_workers: int,
             agent_registry.transition(aid, AgentState.running,
                                       parent_stage="hunters", model=model,
                                       message="unit started")
+        all_findings: list = []
+        tools_all: set = set()
         try:
             merged = dict(p)
             for k, v in shared.items():
                 merged.setdefault(k, v)
-            res = hunter_worker(merged)
+            reruns = max(0, int(
+                effective_config(cfg)["hunter"].get("reruns", 0)))
+            passes = 1 + reruns
+            empty_streak = 0
+            for attempt in range(passes):
+                if attempt:
+                    merged_pass = dict(merged)
+                    merged_pass["prior_findings"] = [
+                        f for f in all_findings
+                        if isinstance(f, dict)
+                        and not str(f.get("id", "")).endswith("-fallback")]
+                else:
+                    merged_pass = merged
+                res = hunter_worker(merged_pass)
+                res = res if isinstance(res, dict) else {}
+                tools_all.update(res.get("tools_used") or [])
+                pass_findings = list(res.get("findings") or [])
+                all_findings.extend(pass_findings)
+                _submit_bundles(p, pass_findings, final=False)
+                if pass_findings:
+                    empty_streak = 0
+                else:
+                    empty_streak += 1
+                    if empty_streak >= _EMPTY_PASS_STREAK:
+                        break
+            _submit_bundles(p, [], final=True)
             if agent_registry is not None:
-                try:
-                    produced = len((res or {}).get("findings") or [])
-                except Exception:
-                    produced = 0
                 agent_registry.transition(aid, AgentState.succeeded,
-                                         parent_stage="hunters",
-                                         message="completed",
-                                         model=model,
-                                         findings_produced=produced)
-            return res
+                                          parent_stage="hunters",
+                                          message="completed",
+                                          model=model,
+                                          findings_produced=len(all_findings))
+            return {"findings": all_findings,
+                    "tools_used": sorted(tools_all)}
         except Exception as e:  # pragma: no cover - hunter_worker is fail-open
             from cerberus.agents.deep import is_fatal_error
 
@@ -996,7 +1024,12 @@ def _fan_out_hunters(state: dict, max_workers: int,
                 agent_registry.transition(aid, AgentState.failed,
                                           parent_stage="hunters",
                                           model=model, error=str(e))
-            return {"findings": [fb]}
+            try:
+                _submit_bundles(p, [], final=True)
+            except Exception:
+                pass
+            return {"findings": all_findings + [fb],
+                    "tools_used": sorted(tools_all)}
 
     def _ctx(p: dict) -> dict:
         merged = dict(p)
@@ -1021,12 +1054,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                       parent_stage="validation",
                                       if_changed=True)
 
-    def _submit_bundles(p: dict, findings: list) -> None:
-        unit = str(p.get("unit", "unit"))
-        merged = _ctx(p)
-        cfg = merged.get("cfg") or state.get("cfg") or {}
-        size = int(effective_config(cfg)["verification"]["cell_size"])
-
+    def _route_findings(findings: list, cfg: dict) -> tuple[list, list]:
         try:
             gated = _evidence_gate_findings(list(findings))
             if len(gated) != len(findings):
@@ -1037,41 +1065,70 @@ def _fan_out_hunters(state: dict, max_workers: int,
                            if _route_finding(g)[0] != "llm"]
         except Exception:
             llm_items, passthrough = list(findings), []
-        couple = bool(effective_config(cfg)["verification"]["couple_remainders"])
+        return llm_items, passthrough
 
-        if couple:
-            n_full = len(llm_items) // size
-            full_limit = n_full * size
-            chunks = [llm_items[i:i + size]
-                      for i in range(0, full_limit, size)]
-            if not chunks:
-                return
-        else:
-            chunks = [llm_items[i:i + size]
-                      for i in range(0, len(llm_items), size)]
-            if not chunks:
-                if not passthrough:
-                    return
-                chunks = [passthrough]
-            elif passthrough:
-                chunks[0] = chunks[0] + passthrough
+    _bundle_lock = threading.Lock()
+    bundles_buf: dict = {}
+    chunk_offsets: dict = {}
+    validators_created: set = set()
+
+    def _submit_chunk(p: dict, chunk: list, cell_offset: int,
+                      merged: dict, cfg: dict) -> None:
         ukey = p["_ukey"]
+        unit = str(p.get("unit", "unit"))
         aid = "validator:" + ukey
-        if agent_registry is not None:
-            agent_registry.create(aid, "validator", unit=unit,
-                                  parent_stage="validation",
-                                  model=effective_model(cfg, "validator"),
-                                  state=AgentState.queued)
-        remaining_bundles[ukey] = len(chunks)
         threat_md = merged.get("threat_model_md") or ""
         votes = merged.get("votes_override")
         repo = merged.get("repo") or state.get("repo", ".")
-        for k, chunk in enumerate(chunks):
-            fut = executor.submit(_timed, _validate_inline, chunk, cfg,
-                                  threat_md, votes, unit, repo=repo,
-                                  cell_offset=k, agent_registry=agent_registry,
-                                  _on_start=lambda _u=ukey: _flip_unit_running(_u))
-            pending[fut] = ("validation", p, k)
+        with _bundle_lock:
+            if agent_registry is not None and ukey not in validators_created:
+                agent_registry.create(aid, "validator", unit=unit,
+                                      parent_stage="validation",
+                                      model=effective_model(cfg, "validator"),
+                                      state=AgentState.queued)
+                validators_created.add(ukey)
+            remaining_bundles[ukey] = remaining_bundles.get(ukey, 0) + 1
+        fut = executor.submit(_timed, _validate_inline, chunk, cfg,
+                              threat_md, votes, unit, repo=repo,
+                              cell_offset=cell_offset,
+                              agent_registry=agent_registry,
+                              _on_start=lambda _u=ukey: _flip_unit_running(_u))
+        with _bundle_lock:
+            pending[fut] = ("validation", p, cell_offset)
+
+    def _submit_bundles(p: dict, findings: list, *, final: bool = False) -> None:
+        """Buffer this pass's findings and submit every full cell_size chunk
+        now; ``final`` also flushes the remainder.
+
+        One call per unit with all its findings (reruns = 0) reproduces the
+        pre-rerun chunking exactly; with reruns the full cells stream to
+        validation while the unit's later passes keep hunting."""
+        merged = _ctx(p)
+        cfg = merged.get("cfg") or state.get("cfg") or {}
+        efcfg = effective_config(cfg)
+        size = int(efcfg["verification"]["cell_size"])
+        couple = bool(efcfg["verification"]["couple_remainders"])
+        llm_items, passthrough = _route_findings(findings, cfg)
+        buf = bundles_buf.setdefault(p["_ukey"], {"llm": [], "pt": []})
+        buf["llm"].extend(llm_items)
+        buf["pt"].extend(passthrough)
+        offset = chunk_offsets.get(p["_ukey"], 0)
+        while len(buf["llm"]) >= size:
+            chunk = buf["llm"][:size]
+            del buf["llm"][:size]
+            if buf["pt"] and not couple:
+                chunk = chunk + list(buf["pt"])
+                buf["pt"].clear()
+            _submit_chunk(p, chunk, offset, merged, cfg)
+            offset += 1
+        if final:
+            tail = list(buf["llm"]) + list(buf["pt"])
+            buf["llm"].clear()
+            buf["pt"].clear()
+            if tail and not couple:
+                _submit_chunk(p, tail, offset, merged, cfg)
+                offset += 1
+        chunk_offsets[p["_ukey"]] = offset
 
     executor = ThreadPoolExecutor(max_workers=max(1, int(max_workers)))
     pending: dict = {}
@@ -1087,12 +1144,16 @@ def _fan_out_hunters(state: dict, max_workers: int,
 
     try:
         for p in payloads:
-            pending[executor.submit(_timed, _hunt_one_unit, p)] = (
-                "hunt", p, None)
+            fut = executor.submit(_timed, _hunt_one_unit, p)
+            with _bundle_lock:
+                pending[fut] = ("hunt", p, None)
         while pending:
-            done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
+            with _bundle_lock:
+                snapshot = set(pending)
+            done, _ = wait(snapshot, return_when=FIRST_COMPLETED)
             for fut in done:
-                kind, p, _k = pending.pop(fut)
+                with _bundle_lock:
+                    kind, p, _k = pending.pop(fut)
                 try:
                     res, elapsed = fut.result()
                 except BaseException as e:
@@ -1111,22 +1172,26 @@ def _fan_out_hunters(state: dict, max_workers: int,
                     res = res if isinstance(res, dict) else {}
                     hunt_buf[p["_seq"]] = res
                     _flush_hunts()
-                    _submit_bundles(p, list(res.get("findings") or []))
                     if hunt_next == len(payloads):
                         sfut = executor.submit(
                             _timed, system_pass_node, state,
                             agent_registry=agent_registry)
-                        pending[sfut] = ("system_pass", p, None)
+                        with _bundle_lock:
+                            pending[sfut] = ("system_pass", p, None)
                 elif kind == "validation":
                     apply_update(state, {"verified": res or []})
                     ukey = p["_ukey"]
-                    remaining_bundles[ukey] -= 1
-                    if remaining_bundles[ukey] <= 0:
-                        del remaining_bundles[ukey]
-                        if agent_registry is not None:
-                            agent_registry.transition(
-                                "validator:" + ukey, AgentState.succeeded,
-                                parent_stage="validation", message="completed")
+                    with _bundle_lock:
+                        done = False
+                        if ukey in remaining_bundles:
+                            remaining_bundles[ukey] -= 1
+                            done = remaining_bundles[ukey] <= 0
+                            if done:
+                                del remaining_bundles[ukey]
+                    if done and agent_registry is not None:
+                        agent_registry.transition(
+                            "validator:" + ukey, AgentState.succeeded,
+                            parent_stage="validation", message="completed")
                 else:
                     apply_update(state, res)
     finally:

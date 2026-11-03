@@ -55,7 +55,11 @@ cp .env.example .env
   overrides (`TRIAGER_MODEL`, `PARTITIONER_MODEL`, `THREAT_MODEL`, `POC_MODEL`).
 - Thinking `EFFORT` (`low|max`), per-agent overrides in `.env` (`*_EFFORT`).
 - Budgets: `TIMEOUT`, `MAX_RETRIES`, `RETRY_SLEEP_CAP`, `MODEL_CALL_LIMIT`.
-- Fan-out: `CONCURRENCY` (1–32).
+- Fan-out: `CONCURRENCY` (any positive int).
+- Discovery reruns: `RERUNS` — extra fresh hunter passes per unit and for
+  the system pass, each seeded with everything already reported and asked
+  for additional findings only; early-stops after two consecutive empty
+  passes. 0 = one pass per unit hunter + one system pass.
 
 `.env` is loaded missing-only from the repo root and never committed; every
 value also has a default interpolated from the same env names in

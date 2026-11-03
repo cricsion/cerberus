@@ -1,0 +1,32 @@
+[
+  {
+    "path": "app.py",
+    "cwe": "CWE-89",
+    "vulnerable": true
+  },
+  {
+    "path": "app.py",
+    "cwe": "CWE-78",
+    "vulnerable": true
+  },
+  {
+    "path": "app.py",
+    "cwe": "CWE-798",
+    "vulnerable": true
+  },
+  {
+    "path": "app.py",
+    "cwe": "CWE-79",
+    "vulnerable": true
+  },
+  {
+    "path": "xss.py",
+    "cwe": "CWE-79",
+    "vulnerable": true
+  },
+  {
+    "path": "auth.py",
+    "cwe": "CWE-89",
+    "vulnerable": false
+  }
+]
