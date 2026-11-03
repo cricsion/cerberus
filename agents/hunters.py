@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+from typing import Any
 
 from cerberus.agents.deep import extract_structured, is_fatal_error, sanitize_model_kwargs
 from cerberus.config import effective_config
@@ -277,12 +278,14 @@ def _system_signals(findings: list[dict]) -> list[dict]:
 def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                      threat_md: str, cfg: dict,
                      focus: list[str] | str | None = None,
-                     _tools_out: list | None = None) -> list[dict]:
+                     _tools_out: list | None = None,
+                     stats_out: dict | None = None,
+                     agent_registry: Any = None) -> list[dict]:
+    import json as _json
+
     from cerberus.agents.toolsets import graph_tools
     from cerberus.config import get_model_kwargs
     from cerberus.sandbox import acquired_backend
-
-    import json as _json
 
     findings = [f for f in (findings or []) if isinstance(f, dict)]
     model_kwargs = get_model_kwargs(cfg, "hunter")
@@ -297,15 +300,29 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
              safe_int(f.get("start_line", 0))) for f in findings}
     fresh_all: list[dict] = []
     empty_streak = 0
+    passes_run = 0
+    stopped_early = False
     scope = focus_hint(focus) or "ALL vulnerability classes in scope"
     with acquired_backend(cfg, repo, label="system-pass") as backend:
         if backend is None:
             print("[system-pass] no sandbox backend; "
                   "falling back to the builder default")
         sys_prompt = SYSTEM_PASS_SYSTEM + sandbox_system_section(backend)
-        from cerberus.prompts.untrusted import make_nonce, untrusted_block
         from cerberus.agents.deep import run_structured
+        from cerberus.prompts.untrusted import make_nonce, untrusted_block
         for attempt in range(passes):
+            passes_run = attempt + 1
+            if agent_registry is not None:
+                try:
+                    from cerberus.progress import AgentState as _AS
+
+                    agent_registry.transition(
+                        "system-pass", _AS.running,
+                        parent_stage="system_pass",
+                        message=f"pass {attempt + 1}/{passes}"
+                                + (" · rerun" if attempt else ""))
+                except Exception:
+                    pass
             slim = _json.dumps(unit_signals, default=str)
             if (threat_md or "").strip():
                 _tm_nonce = make_nonce(seed=threat_md.strip())
@@ -346,7 +363,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
             parsed, _raw = runner(
                 "system pass",
                 lambda: run_structured(
-                    mk, HunterResult, sys_prompt, msg,
+                    mk, HunterResult, sys_prompt, msg,  # noqa: B023
                     tools=graph_tools(), timeout=_timeout,
                     name="system-pass", backend=backend, root_dir=repo,
                     scratchpad=True),
@@ -372,5 +389,10 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
             else:
                 empty_streak += 1
                 if empty_streak >= _EMPTY_PASS_STREAK:
+                    stopped_early = True
                     break
+    if stats_out is not None:
+        stats_out.update({"passes": max(1, passes_run),
+                          "early_stop": stopped_early,
+                          "findings": len(fresh_all)})
     return _sort_by_confidence(fresh_all)

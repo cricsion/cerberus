@@ -58,7 +58,8 @@ def test_hunter_task_marks_prior_findings_as_already_reported():
     task = h.build_hunter_task("u", "/repo", ["a.py"], "", "",
                                prior_findings=prior)
     assert "## Previously reported findings" in task
-    assert "Do NOT report any of them again" in task
+    assert ("Do NOT duplicate the exact same finding at the exact same "
+            "line number") in task
     # The findings reach the prompt as data only (nonce-fenced untrusted
     # block) and carry their identifiers.
     assert "u-0" in task and "u-1" in task
@@ -110,7 +111,8 @@ def test_prior_findings_rides_at_the_prompt_tail():
 # --- unit hunt reruns driven through _fan_out_hunters -----------------------
 
 
-def _run_fanout(monkeypatch, passes_results, *, cell_size=15, reruns=0):
+def _run_fanout(monkeypatch, passes_results, *, cell_size=15, reruns=0,
+                stats_out=None, agent_registry=None):
     """Drive _fan_out_hunters with a scripted hunter_worker.
 
     ``passes_results``: per-pass finding lists, consumed in order for the
@@ -138,7 +140,8 @@ def _run_fanout(monkeypatch, passes_results, *, cell_size=15, reruns=0):
            "hunter": {"reruns": reruns}}
     state = {"repo": ".", "fanout_payloads": [
         {"unit": "u", "files": ["a.py"], "cfg": cfg}]}
-    g._fan_out_hunters(state, max_workers=1)
+    g._fan_out_hunters(state, max_workers=1, stats_out=stats_out,
+                       agent_registry=agent_registry)
     return state, calls, chunks
 
 
@@ -333,7 +336,8 @@ def _sys_finding(fid):
             "snippet": "s", "evidence": "e", "status": "needs-review"}
 
 
-def _drive_system_pass(monkeypatch, results, reruns):
+def _drive_system_pass(monkeypatch, results, reruns, stats_out=None,
+                       agent_registry=None):
     """Run _run_system_pass with a scripted run_structured returning
     ``results[i]`` finding dicts on pass i. Returns (out, humans)."""
     from cerberus.schemas import Finding, HunterResult
@@ -355,7 +359,8 @@ def _drive_system_pass(monkeypatch, results, reruns):
     monkeypatch.setattr("cerberus.agents.deep.run_structured",
                         fake_run_structured)
     out = h._run_system_pass(
-        "repo", ["b.py"], [], "", {"hunter": {"reruns": reruns}})
+        "repo", ["b.py"], [], "", {"hunter": {"reruns": reruns}},
+        stats_out=stats_out, agent_registry=agent_registry)
     return out, humans
 
 
@@ -426,3 +431,131 @@ def test_system_pass_prior_block_caps_at_500(monkeypatch):
     assert "(+ 5 more already reported" in prior
     assert '"title": "s-504"' not in prior   # beyond the cap, dropped
     assert '"title": "s-499"' in prior       # first 500 kept
+
+
+# --- pass-stat reporting (CLI/UI) --------------------------------------------
+
+
+def test_fanout_reports_per_unit_pass_stats(monkeypatch):
+    """The hunters stage gets per-unit pass counts and early-stop flags
+    so the detail line can report how the reruns went."""
+    results = [[_window_finding("u-0")], [], [], []]
+    stats = {}
+    _state, calls, _ = _run_fanout(monkeypatch, results, reruns=3,
+                                   stats_out=stats)
+    assert len(calls) == 3
+    # Pass 1 finds, 2 and 3 dry -> early-stopped after 3 passes; ukey "u".
+    assert stats["u"] == {"passes": 3, "early_stop": True, "findings": 1}
+
+
+def test_fanout_stats_without_reruns(monkeypatch):
+    stats = {}
+    _run_fanout(monkeypatch, [[_window_finding("u-0")]], reruns=0,
+                stats_out=stats)
+    assert stats["u"] == {"passes": 1, "early_stop": False, "findings": 1}
+
+
+def test_fanout_stats_report_failed_unit(monkeypatch):
+    """A unit that dies mid-rerun still lands in the stats dict (registry
+    shows failed, but the stage detail keeps the pass counts truthful)."""
+
+    def hunt(state):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(g, "hunter_worker", hunt)
+    monkeypatch.setattr(g, "_validate_inline", lambda f, *a, **k: [])
+    monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
+    stats = {}
+    cfg = {"hunter": {"reruns": 1}}
+    state = {"repo": ".", "fanout_payloads": [
+        {"unit": "u", "files": ["a.py"], "cfg": cfg}]}
+    g._fan_out_hunters(state, max_workers=1, stats_out=stats)
+    assert stats["u"] == {"passes": 1, "early_stop": False, "findings": 1}
+
+
+def test_system_pass_reports_pass_stats(monkeypatch):
+    results = [[_sys_finding("s-1")], [], [], []]
+    stats = {}
+    _out, humans = _drive_system_pass(monkeypatch, results, 3, stats_out=stats)
+    # Pass 1 finds, passes 2 and 3 dry -> early-stop after 3 passes.
+    assert len(humans) == 3
+    assert stats == {"passes": 3, "early_stop": True, "findings": 1}
+
+
+# --- per-pass agent lines ("hunter:unit  pass 1/3") ---------------------------
+
+
+def test_hunter_per_pass_messages_in_registry(monkeypatch):
+    """Every pass gets its own running transition so the CLI can show
+    live "hunter:<unit>  pass 1/3" lines while the reruns run."""
+    results = [[_window_finding("u-0")], [], []]
+    from cerberus.progress import AgentRegistry, AgentState
+
+    reg = AgentRegistry(run_id="r")
+    msgs = []
+    orig = reg.transition
+
+    def spy(agent_id, state, *, message="", **kw):
+        if agent_id == "hunter:u" and state is AgentState.running:
+            msgs.append(message)
+        return orig(agent_id, state, message=message, **kw)
+
+    monkeypatch.setattr(reg, "transition", spy)
+    _run_fanout(monkeypatch, results, reruns=3, agent_registry=reg)
+    # Pass 1 (unit started) + one line per pass; the dry passes stop the
+    # loop early after the streak fills, so 3 passes of 4 configured.
+    assert msgs[0] == "unit started"
+    assert msgs[1:] == ["pass 1/4", "pass 2/4 · rerun", "pass 3/4 · rerun"]
+
+
+def test_hunter_per_pass_messages_run_to_cap(monkeypatch):
+    """No early stop (every pass finds) -> a message per configured pass."""
+    from cerberus.progress import AgentRegistry, AgentState
+
+    reg = AgentRegistry(run_id="r")
+    msgs = []
+    orig = reg.transition
+
+    def spy(agent_id, state, *, message="", **kw):
+        if agent_id == "hunter:u" and state is AgentState.running:
+            msgs.append(message)
+        return orig(agent_id, state, message=message, **kw)
+
+    monkeypatch.setattr(reg, "transition", spy)
+    _run_fanout(monkeypatch, [[_window_finding("u-0")], [_window_finding("u-1")]],
+                reruns=2, agent_registry=reg)
+    assert msgs == ["unit started", "pass 1/3", "pass 2/3 · rerun",
+                    "pass 3/3 · rerun"]
+
+
+def test_system_pass_per_pass_messages_in_registry(monkeypatch):
+    from cerberus.progress import AgentRegistry
+
+    reg = AgentRegistry(run_id="r")
+    msgs = []
+    orig = reg.transition
+
+    def spy(agent_id, state, *, message="", **kw):
+        msgs.append((agent_id, str(state), message))
+        return orig(agent_id, state, message=message, **kw)
+
+    monkeypatch.setattr(reg, "transition", spy)
+
+    _out, _humans = _drive_system_pass(
+        monkeypatch, [[_sys_finding("s-1")], []], 1, agent_registry=reg)
+    assert [m for a, s, m in msgs
+            if a == "system-pass" and s == "running"] == (
+        ["pass 1/2", "pass 2/2 · rerun"])
+
+
+def test_registry_transition_failure_never_breaks_system_pass(monkeypatch):
+    """The registry is a UI nicety: a raising transition (import or event
+    sink) must not abort the system pass."""
+    class _Bad:
+        def transition(self, *a, **kw):
+            raise RuntimeError("ui exploded")
+
+    out, humans = _drive_system_pass(
+        monkeypatch, [[_sys_finding("s-1")], []], 1, agent_registry=_Bad())
+    assert len(humans) == 2
+    assert len(out) == 1

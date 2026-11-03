@@ -68,7 +68,29 @@ def test_write_markdown(tmp_path):
     write_markdown(SAMPLE, out)
     text = out.read_text()
     assert "# Cerberus Report" in text
-    assert "Total findings: 3" in text
+    assert "3 actionable" in text
+
+
+def test_write_markdown_order_and_exclusion(tmp_path):
+    """F1 ordering: confirmed tier leads, then needs-review; duplicates and
+    FPs never appear; the header explains what was omitted."""
+    sample = [
+        dict(SAMPLE[0]),                                        # confirmed critical
+        dict(SAMPLE[1], id="4", status="confirmed"),            # confirmed medium
+        dict(SAMPLE[1], id="5"),                                # needs-review medium
+        dict(SAMPLE[1], id="6", duplicate_of="1"),              # duplicate -> omitted
+        dict(SAMPLE[1], id="7", status="fp"),                   # FP -> omitted
+    ]
+    out = tmp_path / "report.md"
+    write_markdown(sample, out)
+    text = out.read_text()
+    assert "3 actionable" in text
+    assert "- Omitted: 1 false positive and 1 duplicate" in text
+    idx_crit = text.index("SQL injection")
+    idx_medium = text.index("XSS", idx_crit)
+    assert idx_crit < idx_medium                      # confirmed before needs-review
+    assert "(duplicate of" not in text                # duplicate row dropped
+    assert "## Confirmed (2)" in text and "## Needs review (1)" in text
 
 
 def test_write_html(tmp_path):
@@ -76,7 +98,9 @@ def test_write_html(tmp_path):
     write_html(SAMPLE, out)
     text = out.read_text(encoding="utf-8")
     assert "<html" in text.lower()
-    assert "<table" in text.lower()
+    # Expandable cards, not a table.
+    assert "<table" not in text.lower()
+    assert '<details class="finding"' in text
     # Severity-sorted: critical before medium before info.
     assert text.index("critical") < text.index("medium") < text.index("info")
     # Escaping: raw "<b>" must not appear, escaped "&lt;b&gt;" must.
@@ -106,16 +130,62 @@ def test_write_junit(tmp_path):
 
 
 def test_write_html_marks_duplicate_rows(tmp_path):
-    """F1(a): a `duplicate_of` row is marked in its Status cell; the primary
-    keeps its "(+N duplicate(s))" title suffix."""
+    """Duplicates are excluded from the HTML table; the collapsed duplicate
+    count still shows as a suffix on the primary's title."""
     sample = [dict(SAMPLE[0]),                            # id "1" (primary)
               dict(SAMPLE[1], id="4", duplicate_of="1")]  # duplicate of "1"
     out = tmp_path / "report.html"
     write_html(sample, out)
     text = out.read_text(encoding="utf-8")
-    assert "(duplicate of 1)" in text
-    assert "+1 duplicate" in text                         # primary suffix intact
-    assert "(duplicate of 4)" not in text                 # primary unmarked
+    assert "+1 duplicate" in text              # primary suffix intact
+    assert "Duplicates collapsed here" in text
+    assert "duplicate of" not in text          # duplicate row itself is gone
+
+
+def test_write_html_suppressed_fp_and_header(tmp_path):
+    """SARIF keeps FPs as accepted suppressions; HTML/markdown/JUnit drop them
+    and say how many were omitted."""
+    sample = [dict(SAMPLE[0]), dict(SAMPLE[1], id="5", status="fp")]
+    md_out = tmp_path / "report.md"
+    write_markdown(sample, md_out)
+    md_text = md_out.read_text()
+    assert "1 actionable" in md_text
+    assert "1 false positive" in md_text
+
+    html_out = tmp_path / "report.html"
+    write_html(sample, html_out)
+    html_text = html_out.read_text(encoding="utf-8")
+    assert "SQL injection" in html_text and "XSS" not in html_text
+
+    sarif_out = tmp_path / "results.sarif"
+    write_sarif(sample, sarif_out)
+    sarif_data = json.loads(sarif_out.read_text())
+    results = sarif_data["runs"][0]["results"]
+    assert len(results) == 2                      # FP kept, not dropped
+    suppressed = [r for r in results if r.get("suppressions")]
+    assert len(suppressed) == 1
+    assert suppressed[0]["suppressions"][0]["status"] == "accepted"
+    assert suppressed[0]["suppressions"][0]["kind"] == "external"
+
+
+def test_write_html_placeholder_guards(tmp_path):
+    """C: placeholder PoC scripts and one-word patches never render."""
+    sample = [dict(SAMPLE[0], id="9", patch="fix", patch_summary="fix summary",
+                   poc={"status": "attempted", "command": "python3 x.py",
+                        "script": "print(1)", "filename": "test_repro.py"},
+                   _needs_poc_regen=True)]
+    md_out = tmp_path / "report.md"
+    write_markdown(sample, md_out)
+    md_text = md_out.read_text()
+    assert "print(1)" not in md_text
+    assert "proof regeneration pending" in md_text
+    assert "Summary**: fix" not in md_text
+
+    html_out = tmp_path / "report.html"
+    write_html(sample, html_out)
+    html_text = html_out.read_text(encoding="utf-8")
+    assert "badge-pending" in html_text
+    assert "fix summary" not in html_text
 
 
 def test_write_markdown_neutralizes_injected_structure(tmp_path):
@@ -219,9 +289,34 @@ def test_write_reports_with_poc(tmp_path):
     html_text = html_file.read_text()
     assert "badge-proven" in html_text
     assert "badge-attempted" in html_text
+    # Card structure: PoC command + full script live in expandable sections.
     assert "python3 /work/_shared/poc/find-1/test_repro.py" in html_text
+    assert "Full script — test_repro.py" in html_text
     assert "def test_vuln():" in html_text
-    assert "1 proven, 1 attempted" in html_text
     assert "<summary>Diff</summary>" in html_text
-    assert "<th>Patch</th>" in html_text
+    assert "<h3>Proposed patch</h3>" in html_text
     assert "cursor.execute" in html_text
+
+
+def test_reports_render_blocked_poc_and_script_file(tmp_path):
+    sample = [dict(SAMPLE[0], id="10",
+                   poc={"status": "blocked", "blocker": "PoC agent result omitted this finding"})]
+    md_out = tmp_path / "report.md"
+    write_markdown(sample, md_out)
+    md_text = md_out.read_text()
+    assert "**BLOCKED** (PoC agent result omitted this finding)" in md_text
+
+    html_out = tmp_path / "report.html"
+    write_html(sample, html_out)
+    html_text = html_out.read_text(encoding="utf-8")
+    assert "badge-blocked" in html_text
+
+    ok = [dict(SAMPLE[0], id="11",
+               poc={"status": "attempted", "command": "python3 /work/_shared/poc/f/test_repro.py",
+                    "host_path": ".cerberus/run/scratch/poc/f/test_repro.py",
+                    "receipt": {"runs": 1, "successes": 0, "control_status": "invalid",
+                                "outputs": ["STDOUT:\nTraceback..."], "stamped_by": "cerberus"}})]
+    write_markdown(ok, md_out)
+    md2 = md_out.read_text()
+    assert "- Script file: `.cerberus/run/scratch/poc/f/test_repro.py`" in md2
+    assert "Observed output (stamped receipt):" in md2

@@ -8,7 +8,18 @@
 6. Validator dataflow preservation (_compact_finding).
 """
 
+import base64 as _b64
+import re as _re
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 from cerberus.agents.poc import materialize_poc, stamp_receipts
+from cerberus.agents.poc_generator import (
+    PocResultItem,
+    _apply_poc_results,
+    _close_poc_batch,
+    _read_container_script,
+)
 from cerberus.agents.triage import _elect_primary
 from cerberus.agents.validator import _compact_finding, _merge_verdict
 from cerberus.pipeline import _merge_dup
@@ -577,3 +588,83 @@ def test_poc_node_in_pipeline(monkeypatch):
     assert res["verified"].value[0]["poc"]["status"] == "proven"
 
 
+
+
+# --- path-based PoC transport (script by reference, not by inlining) ----------
+
+
+class _B64Backend:
+    """Executes only `base64 -w0 -- '<path>'`; serves canned container files."""
+
+    def __init__(self, files=None, fail_paths=()):
+        self.files = dict(files or {})
+        self.fail_paths = set(fail_paths)
+        self.commands = []
+
+    def execute(self, cmd: str, timeout: int = 30):
+        self.commands.append(cmd)
+        # cmd tail is the quoted-or-bare path (shlex.quote omits quotes when safe)
+        path = cmd.strip().rsplit(" ", 1)[-1].strip("'")
+        if path is None or path in self.fail_paths or path not in self.files:
+            return SimpleNamespace(stdout="", stderr="", exit_code=1)
+        b64 = _b64.b64encode(self.files[path].encode("utf-8")).decode("ascii")
+        return SimpleNamespace(stdout=b64, stderr="", exit_code=0)
+
+
+def test_read_container_script_fetches_saved_file():
+    backend = _B64Backend({"/work/_shared/poc/f1/test_repro.py": "print('[POC_PROVEN]')\n"})
+    assert _read_container_script(backend, "/work/_shared/poc/f1/test_repro.py") == \
+        "print('[POC_PROVEN]')\n"
+
+
+def test_read_container_script_rejects_escape_and_failure():
+    backend = _B64Backend()
+    assert _read_container_script(backend, "/etc/passwd") == ""
+    assert _read_container_script(backend, "/work/_shared/poc/a/../../x.py") == ""
+    assert _read_container_script(None, "/work/_shared/poc/a/x.py") == ""
+    missing = _B64Backend({"/work/_shared/poc/a/x.py": "print(1)"}, fail_paths={"/work/_shared/poc/a/x.py"})
+    assert _read_container_script(missing, "/work/_shared/poc/a/x.py") == ""
+
+
+def test_apply_poc_results_path_based_and_omissions():
+    backend = _B64Backend({"/work/_shared/poc/f1/test_repro.py": "print(1)\nprint(2)\n"})
+    findings = [
+        {"id": "f1"},
+        {"id": "f2"},   # result returned, but no script anywhere
+        {"id": "f3"},   # not covered by the result at all
+    ]
+    results = {
+        "f1": PocResultItem(finding_id="f1", script_path="/work/_shared/poc/f1/test_repro.py"),
+        "f2": PocResultItem(finding_id="f2", notes="could not build repro"),
+    }
+    missing = _apply_poc_results(findings, results, backend)
+    poc1 = findings[0]["poc"]
+    assert poc1["script"] == "print(1)\nprint(2)\n"
+    assert poc1["script_path"] == "/work/_shared/poc/f1/test_repro.py"
+    assert poc1["status"] == "attempted"
+    assert missing == {"f2": "result returned without a repro script",
+                       "f3": "PoC agent result omitted this finding"}
+
+    _close_poc_batch(findings, missing)
+    assert findings[1]["poc"]["status"] == "blocked"
+    assert "without a repro script" in findings[1]["poc"]["blocker"]
+    assert findings[2]["poc"]["status"] == "blocked"
+    assert "omitted this finding" in findings[2]["poc"]["blocker"]
+
+
+def test_close_leaves_stamped_statuses_untouched():
+    findings = [{"id": "a", "poc": {"status": "proven", "receipt": {}}},
+                {"id": "b", "poc": {"status": "attempted", "receipt": {}}}]
+    _close_poc_batch(findings, {"a": "x"})
+    assert findings[0]["poc"]["status"] == "proven"
+    assert findings[1]["poc"]["status"] == "attempted"
+
+
+def test_materialize_poc_records_host_path(tmp_path):
+    finding = {"id": "f-1", "poc": {"script": "print('[POC_PROVEN]')\n", "filename": "test_repro.py"}}
+    backend = MagicMock()
+    backend.execute.return_value = SimpleNamespace(output="", exit_code=0)
+    materialize_poc(finding, backend, run_id="run1", repo_path=tmp_path)
+    host_path = finding["poc"]["host_path"]
+    assert host_path.replace("\\", "/").startswith(".cerberus/run1/scratch/poc/f-1/")
+    assert (tmp_path / host_path).exists()

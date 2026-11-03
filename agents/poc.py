@@ -160,6 +160,10 @@ def materialize_poc(finding: dict, backend: Any, run_id: str | None = None,
     try:
         host_poc_dir.mkdir(parents=True, exist_ok=True)
         host_file.write_text(script, encoding="utf-8")
+        try:
+            poc["host_path"] = str(host_file.relative_to(host_repo))
+        except ValueError:
+            poc["host_path"] = str(host_file)
     except Exception as exc:
         _logger.warning("Failed to persist PoC script to host %s: %s", host_file, exc)
 

@@ -15,6 +15,8 @@ SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
 UNKNOWN_SEVERITY_RANK = 5
 
+REPORT_STATUS_ORDER = {"confirmed": 0, "needs-review": 1, "fp": 2}
+
 
 class TaintDict(TypedDict, total=False):
     source: str
@@ -41,6 +43,9 @@ class PocItemDict(TypedDict, total=False):
     approach: str
     command: str
     script: str
+    script_path: str
+    host_path: str
+    observed_output: str
     filename: str
     language: str
     expected: str
@@ -49,6 +54,7 @@ class PocItemDict(TypedDict, total=False):
     successes: int
     flaky: bool
     status: Literal["proven", "attempted", "blocked", "planned"]
+    blocker: str
     receipt: PocReceiptDict
 
 
@@ -132,6 +138,10 @@ class PocItem(BaseModel):
     successes: int = 0
     flaky: bool = False
     status: Literal["proven", "attempted", "blocked", "planned"] = "planned"
+    script_path: str = Field(default="", description="Container path of the saved repro script when not inlined")
+    host_path: str = Field(default="", description="Repo-relative host path of the materialized repro script")
+    observed_output: str = Field(default="", description="Agent-reported minimum observed stdout; receipts are ground truth")
+    blocker: str = Field(default="", description="Why no repro exists yet (status=blocked)")
     receipt: PocReceipt | None = None
 
 
@@ -203,16 +213,34 @@ def structured_items(parsed: object, field: str = "verdicts") -> list[dict]:
 
 
 def sort_findings(findings) -> list[dict]:
-    """The one findings ordering: severity rank asc, confidence desc.
+    """The one findings ordering: status tier, severity rank, confidence desc,
+    then a deterministic file/line/id tiebreak.
 
     Every artifact writer and the CLI renderer sort through here so the
-    artifacts can never disagree on which finding ranks first
+    artifacts can never disagree on which finding ranks first. Confirmed
+    findings lead, needs-review follows, FPs trail, and the tiebreak keeps reruns byte-stable.
     """
     def _key(f: dict):
         sev = str(f.get("severity", "medium")).lower()
-        return (SEVERITY_ORDER.get(sev, UNKNOWN_SEVERITY_RANK),
-                -safe_float(f.get("confidence", 0)))
+        status = str(f.get("status", "")).lower()
+        return (REPORT_STATUS_ORDER.get(status, REPORT_STATUS_ORDER["needs-review"]),
+                SEVERITY_ORDER.get(sev, UNKNOWN_SEVERITY_RANK),
+                -safe_float(f.get("confidence", 0)),
+                str(f.get("path", "")), safe_int(f.get("start_line", 0), 0),
+                str(f.get("id", "")))
     return sorted((f for f in (findings or []) if isinstance(f, dict)), key=_key)
+
+
+def reportable_findings(findings) -> list[dict]:
+    """The findings any report should show: primaries that are not false
+    positives, in canonical ``sort_findings`` order.
+
+    ``findings.json`` is the raw triage record and keeps everything; the
+    human/artifact reports collapse to this set.
+    """
+    rows = [f for f in (findings or []) if isinstance(f, dict)]
+    return sort_findings([f for f in rows
+                          if not f.get("duplicate_of") and f.get("status") != "fp"])
 
 
 def group_duplicates(rows: list[dict]) -> dict[str, list[dict]]:

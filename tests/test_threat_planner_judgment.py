@@ -24,16 +24,14 @@ from test_threat import _history_payload, _research_payload
 
 
 def _candidates():
-    """A manifest candidate so ``_measured_blocks`` builds a real surface
-    skeleton (rather than the 'unclassified entry points' fallback)."""
+    """A routes signal so ``_measured_blocks`` builds a real surface
+    skeleton (rather than the 'unclassified entry points' fallback).
+    Signals.py shape: body as ``text``."""
     return [
-        {"id": "prefilter", "title": "p", "cwe": "", "severity": "info",
-         "path": "r", "start_line": 0, "end_line": 0,
-         "snippet": "## sqli-cursor\nfoo", "evidence": "e",
-         "status": "needs-review"},
-        {"id": "manifest", "title": "m", "cwe": "", "severity": "info",
-         "path": "r", "start_line": 0, "end_line": 0, "snippet": "flask app",
-         "evidence": "e", "status": "needs-review"},
+        {"id": "prefilter", "path": ".cerberus/latest/signals/prefilter.txt",
+         "count": 1, "summary": "sqli", "text": "## sqli-cursor\nfoo"},
+        {"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+         "count": 2, "summary": "GET /login", "text": "GET /login\nPOST /x"},
     ]
 
 

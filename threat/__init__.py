@@ -66,6 +66,7 @@ from .util import (
                     _attack_surfaces,
                     _detector_signals,
                     _repo_root,
+                    attach_signal_paths,
                     find_repo_file,
 )
 from .vulns import VULNS_BYTES_CAP, parse_vulns_file

@@ -394,7 +394,11 @@ class ScanReporter:
         line.append(name)
 
         if state == "running":
-            line.append("running")
+            if message:
+                budget = max(8, width - AGENT_WIDTH - TIMESTAMP_WIDTH - 24)
+                line.append(_clip(message, budget), style="meta")
+            else:
+                line.append("running")
             if model:
                 line.append("  " + _clip(model, max(8, width - 44)), style="meta")
             if tally:
@@ -406,6 +410,9 @@ class ScanReporter:
         if state == "succeeded":
             if kind == "hunter":
                 label = f"{findings} findings"
+                if message:
+                    label += " · " + message.replace("completed · ", "", 1)
+                label = _clip(label, max(0, width - AGENT_WIDTH - TIMESTAMP_WIDTH - 20))
                 line.append(label, style="meta" if findings == 0 else "")
             else:
                 detail = _clip(message or "completed",

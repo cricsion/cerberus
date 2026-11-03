@@ -16,13 +16,13 @@ import cerberus.threat as th
 
 
 def _cands(**snippets):
-    return [{"id": k, "snippet": v} for k, v in snippets.items()]
+    """Signal-shaped entries: bodies ride as `text` (signals.py layout)."""
+    return [{"id": k, "text": v} for k, v in snippets.items()]
 
 
 def test_threat_rows_have_no_detector_rule_names():
     cands = _cands(prefilter="## sqli-cursor\n## shell-true\nplain prose line",
-                   routes="GET /login\nPOST /submit",
-                   manifest="pyproject.toml")
+                   routes="GET /login\nPOST /submit")
     # Only the prefilter's `## ` headings are signal; prose lines are not.
     assert th._detector_signals(cands) == ["sqli-cursor", "shell-true"]
     md = th.bootstrap_threat(".", ["a.py", ".github/ci.yml"], cands, "s")
@@ -34,13 +34,17 @@ def test_threat_rows_have_no_detector_rule_names():
 
 def test_entry_points_derived_from_this_repo_surfaces():
     cands = _cands(routes="GET /a\nGET /b\nGET /c")
-    files = ["app/routes.py", "Dockerfile", "tpl/page.html.j2", "conf/settings.yaml"]
+    files = ["app/routes.py", "Dockerfile", "tpl/page.html.j2",
+             "conf/settings.yaml", "Cargo.toml", "Gemfile.lock"]
     surfaces = th._attack_surfaces(cands, files)
     joined = " ".join(surfaces).lower()
     assert "http request handlers (3 routes" in joined
     assert "container build" in joined
     assert "template rendering" in joined
     assert "configuration" in joined
+    # Manifest names are filesystem-canonical (Cargo.toml, Gemfile.lock); the
+    # surface must fire regardless of case on a case-sensitive filesystem.
+    assert "dependencies" in joined
     # Surfaces, never bug types.
     for bug in ("sqli", "xss", "injection", "redos", "ssrf"):
         assert bug not in joined

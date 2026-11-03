@@ -86,7 +86,8 @@ def secrets_scan(target: str = ".", max_chars: int | None = None) -> str:
         max_chars: Max output chars. 0 = unlimited.
     """
     return _scan_json(
-        lambda resolved: ["gitleaks", "detect", "--source", resolved[0], "--no-git", "-v"],
+        lambda resolved: ["gitleaks", "detect", "--source", resolved[0], "--no-git",
+                          "-v", "--redact"],
         target, max_chars)
 
 

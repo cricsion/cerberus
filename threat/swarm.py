@@ -197,12 +197,12 @@ def finalize_threat(draft_md: str, history: list[tuple[str, str]], cfg: dict,
     return text.strip() + "\n"
 
 
-def conduct_interview(repo: str, files: list[str], candidates: list[dict],
+def conduct_interview(repo: str, files: list[str], signals: list[dict],
                       summary: str, cfg: dict, ask, say,
                       max_rounds: int = 3, max_questions: int = 5) -> str:
     # bootstrap_threat is deterministic floor code; a failure here is a harness
     # defect and propagates (the interactive callers own any fallback).
-    draft = bootstrap_threat(repo, files, candidates, summary)
+    draft = bootstrap_threat(repo, files, signals, summary)
     history: list[tuple[str, str]] = []
     for _ in range(max(1, max_rounds)):
         qs = interview_questions(draft, history, cfg or {}, max_questions)
@@ -344,7 +344,7 @@ def _swarm_plan(repo: str, draft: str, research: dict, history: dict,
                   default=({}, "failed (error)"), logger=_logger)[0]
 
 
-def enrich_threat(repo: str, files: list[str], candidates: list[dict],
+def enrich_threat(repo: str, files: list[str], signals: list[dict],
                   summary: str, draft: str, cfg: dict,
                   vulns: list[dict] | None = None,
                   vulns_path: str = "",
@@ -376,7 +376,7 @@ def enrich_threat(repo: str, files: list[str], candidates: list[dict],
             if not reachable:
                 meta["error"] = "swarm unreachable"
                 return "", meta
-        blocks = _measured_blocks(repo, files, candidates, summary or "",
+        blocks = _measured_blocks(repo, files, signals, summary or "",
                                   vulns)
         plan = _swarm_plan(repo, draft or "", research, history, cfg or {},
                            measured_facts or blocks.get("context_facts", ""))

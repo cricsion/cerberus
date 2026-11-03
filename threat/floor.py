@@ -13,6 +13,7 @@ from .util import (
     _detector_signals,
     _now_iso,
     _repo_root,
+    _signal_text,
     find_repo_file,
 )
 
@@ -270,17 +271,14 @@ def _format_detected_routes(route_lines: list[str | dict] | str, max_display: in
     return f"{header}\n\n- *(route definitions detected across repository)*"
 
 
-def _measured_blocks(repo: str, files: list[str], candidates: list[dict],
+def _measured_blocks(repo: str, files: list[str], signals: list[dict],
                      summary: str, vulns: list[dict] | None = None) -> dict[str, str]:
-    routes = next((c.get("snippet", "") for c in candidates
-                   if c.get("id") == "routes"), "")
-    route_lines = [ln.strip() for ln in str(routes).splitlines() if ln.strip()]
+    signals = list(signals or [])
+    routes_text = _signal_text(signals, "routes")
+    route_lines = [ln.strip() for ln in routes_text.splitlines() if ln.strip()]
     n_routes = len(route_lines)
-    man = next((c.get("snippet", "") for c in candidates
-                if c.get("id") == "manifest"), "")
-    stack = (str(man).splitlines() or ["unknown stack"])[0][:200]
-    signals = _detector_signals(candidates)
-    surfaces = _attack_surfaces(candidates, files)
+    signals_classes = _detector_signals(signals)
+    surfaces = _attack_surfaces(signals, files)
     shapes = _bug_shapes(repo)
     docs = collect_docs(repo)
     arch_doc = next(((p, t) for p, t in docs
@@ -305,15 +303,13 @@ def _measured_blocks(repo: str, files: list[str], candidates: list[dict],
     areas = ", ".join(f"{k} ({v} files)" for k, v in sorted(top_dirs.items())[:15]) or "unknown"
 
     facts = f"Repo: {repo}. {summary}".strip() + arch_note
-    if stack and stack not in summary:
-        facts += f" Stack hint: {stack}."
     facts += f" {policy_note}"
     if shapes:
         facts += f"\n\n{shapes}"
-    if signals:
+    if signals_classes:
         facts += ("\n\nDetector coverage (regex prefilter rules that fired; "
                   "this is what our tooling can match, not what is in scope): "
-                  + ", ".join(signals) + ".")
+                  + ", ".join(signals_classes) + ".")
     if docs and not arch_note:
         names = ", ".join(p for p, _ in docs[:10])
         facts += f"\n\nDay-one docs read: {names}."
@@ -352,9 +348,9 @@ def _measured_blocks(repo: str, files: list[str], candidates: list[dict],
                                 "| data assets | _unknown — owner to confirm_ | high |")}
 
 
-def measured_facts(repo: str, files: list[str], candidates: list[dict],
+def measured_facts(repo: str, files: list[str], signals: list[dict],
                    summary: str = "", vulns: list[dict] | None = None) -> str:
-    return _measured_blocks(repo, files, candidates, summary, vulns).get(
+    return _measured_blocks(repo, files, signals, summary, vulns).get(
         "context_facts", "")
 
 
@@ -369,7 +365,7 @@ def _vulns_note(vulns: list[dict] | None, path: str = "") -> str:
 
 def _provenance(repo: str, enrichment: str, vulns_note: str = "") -> str:
     stamp = _now_iso()
-    inputs = ("indexer signals (manifest/routes/prefilter) + day-one docs + "
+    inputs = ("indexer signals (routes/prefilter) + day-one docs + "
               "git fix history")
     if vulns_note:
         inputs += f" + {vulns_note}"
@@ -387,14 +383,14 @@ def _empty_threats_table() -> str:
 
 
 def bootstrap_threat(repo: str, files: list[str],
-                     candidates: list[dict], summary: str = "",
+                     signals: list[dict], summary: str = "",
                      vulns: list[dict] | None = None,
                      vulns_path: str = "") -> str:
     files = [f for f in (files or []) if f]
-    candidates = list(candidates or [])
-    if not files and not candidates and not summary:
+    signals = list(signals or [])
+    if not files and not signals and not summary:
         raise ValueError("nothing to bootstrap from")
-    blocks = _measured_blocks(repo, files, candidates, summary, vulns)
+    blocks = _measured_blocks(repo, files, signals, summary, vulns)
     sections = {
         "1. System context": blocks["context_facts"],
         "2. Assets": blocks["assets_skeleton"],

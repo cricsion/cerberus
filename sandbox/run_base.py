@@ -109,7 +109,7 @@ class RunSandboxBase(ABC):
         with self._lock:
             self._started = False
 
-    def _on_death(self) -> None:
+    def _on_death(self) -> None:  # noqa: B027
         ...
 
     def close(self) -> None:

@@ -57,8 +57,9 @@ def test_indexer_needs_no_whole_repo_semgrep():
 
     The whole-repo wrappers are gone, so the regression is pinned
     structurally instead of by spy: SAST wrapper candidates are keyed
-    ``check_id@path:line``, while the indexer's fast/context
-    signals are all static ids ("prefilter", "routes", "secrets", ...).
+    ``check_id@path:line``, while the indexer's fast/context signals all have
+    static ids ("prefilter", "routes", "secrets", ...) and live in
+    ``state["signals"]``, never as finding candidates.
     A key of the first shape means someone re-added a whole-repo SAST call.
     """
     import re
@@ -67,11 +68,17 @@ def test_indexer_needs_no_whole_repo_semgrep():
 
     state = g.indexer_node({"repo": "tests/fixtures/pygoat-sample"})
     assert len(state["files"]) == 3
-    ids = [c["id"] for c in state["candidates"]]
-    assert "prefilter" in ids
-    for cid in ids:
-        assert not re.search(r"@.+:\d+$", cid), (
-            f"whole-repo SAST candidate reappeared: {cid}")
+    sig_ids = {s.get("id") for s in state["signals"]}
+    assert "prefilter" in sig_ids
+    static_ids = {"prefilter", "routes", "secrets", "sca", "iac",
+                  "codegraph-index", "threat-model", "manifest"}
+    cands = [c for c in state["candidates"] if isinstance(c, dict)]
+    cid = [c.get("id", "") for c in cands]
+    assert not (set(cid) & static_ids), (
+        f"scan signal reappeared as a finding candidate: {cid}")
+    for one in cid:
+        assert not re.search(r"@.+:\d+$", one), (
+            f"whole-repo SAST candidate reappeared: {one}")
 
 
 def test_api_key_gate_uses_the_single_key_env(monkeypatch):

@@ -81,6 +81,7 @@ class ScanState(TypedDict, total=False):
     confirm_critical: bool
     fanout_payloads: list[dict]
     candidates: list[dict]
+    signals: list[dict]
     findings: list[dict]
     # Two writers (hunter workers, then validator_node); append-only — aggregator joins against it so nothing validates twice.
     verified: list[dict]
@@ -112,18 +113,6 @@ def _call_tool(tool_fn, **kwargs) -> str:
     except Exception as e:
         logger.debug("tool %s unavailable via direct call: %s", tool_fn, e)
         return f"(unavailable: {e})"
-
-
-def _info_candidate(cid: str, title: str, path: str, body: str) -> dict:
-    # Aggregate signals are repo-level, not file findings: keep their path
-    # repo-relative even though run_scan now hands nodes the canonical
-    # absolute root.
-    if Path(path).is_absolute():
-        path = "."
-    return {"id": cid, "title": title, "cwe": "", "severity": "info",
-            "confidence": 0.0, "path": path, "start_line": 0, "end_line": 0,
-            "snippet": body[:4000], "taint": {"source": "", "sink": "", "path": []},
-            "evidence": body[:4000], "status": "needs-review"}
 
 
 _INVENTORY_EXTS = {".py", ".js", ".ts", ".tsx", ".jsx", ".java", ".go", ".rb", ".php",
@@ -203,10 +192,22 @@ def indexer_node(state: ScanState) -> dict:
     # No file-count cap; per-agent work is bounded by the partition budget.
     base = Path(repo)
     files = _inventory_files(base)
-    cands = [_info_candidate(
-        "prefilter", "deterministic prefilter hits", repo,
-        _call_tool(regex_prefilter, target=repo))]
+    cands: list[dict] = []
+    signals_out: list[dict] = []
+
+    def _add_signal(cid: str, body: str, keep_text: bool = False) -> None:
+        from cerberus.signals import signal_stats, write_signal
+
+        count, summary = signal_stats(body)
+        entry: dict = {"id": cid, "path": write_signal(repo, cid, body),
+                       "count": count, "summary": summary}
+        if keep_text:
+            entry["text"] = body
+        signals_out.append(entry)
+
     _tools_used = ["regex_prefilter"]
+    _add_signal("prefilter",
+                _call_tool(regex_prefilter, target=repo), keep_text=True)
 
     def _template_stage() -> list[dict]:
         from cerberus.tools.sast import template_reflect_candidates
@@ -223,32 +224,31 @@ def indexer_node(state: ScanState) -> dict:
         cands.extend(_tpl)
 
     # No whole-repo Semgrep/OpenGrep: hunters scan their own unit files; the indexer keeps fast signals only.
-    for cid, title, raw in (
-            ("secrets", "secrets scan raw", _call_tool(secrets_scan, target=repo)),
-            ("sca", "SCA scan raw", _call_tool(sca_scan, target=repo)),
-            ("iac", "IaC scan raw", _call_tool(iac_check, target=repo))):
+    for cid, scanner in (("secrets", secrets_scan), ("sca", sca_scan),
+                         ("iac", iac_check)):
+        raw = _call_tool(scanner, target=repo)
         compact = raw.replace(" ", "")
         if "binarynotfound" not in compact.lower() and '"skipped":true' not in compact:
-            cands.append(_info_candidate(cid, title, repo, raw))
+            _add_signal(cid, raw)
             _tools_used.append({"secrets": "secrets_scan", "sca": "sca_scan",
                                 "iac": "iac_check"}[cid])
 
-    def _codegraph_stage() -> tuple[list[dict], list[str]]:
+    def _codegraph_stage() -> tuple[list[tuple[str, str, bool]], list[str]]:
         from cerberus.codegraph._index import index_build, index_summary
         from cerberus.tools.codegraph import framework_routes, get_routing_manifest
 
-        extra: list[dict] = []
+        extra: list[tuple[str, str, bool]] = []
         used: list[str] = []
         db_path = index_build(repo)
         if db_path:
-            extra.append(_info_candidate("codegraph", "codegraph index summary", repo, index_summary(repo)))
+            extra.append(("codegraph-index", index_summary(repo), False))
             used.append("codegraph_index")
         routes = _call_tool(framework_routes, root=repo)
         # "(no …" covers "(no matches)" and the no-index guidance string the
         # gate returns now that the grep fallback is gone; real route output
         # always starts with a "file:line: [route]" line.
         if routes and not routes.startswith("(no ") and "(unavailable" not in routes:
-            extra.append(_info_candidate("routes", "framework routes", repo, routes))
+            extra.append(("routes", routes, True))
             used.append("framework_routes")
         else:
             n_routes = _call_tool(get_routing_manifest)
@@ -256,46 +256,54 @@ def indexer_node(state: ScanState) -> dict:
                     and "(no framework routes declared)" not in n_routes
                     and "None" not in n_routes
                     and "(unavailable" not in n_routes):
-                extra.append(_info_candidate("routes", "framework routes", repo, n_routes))
+                extra.append(("routes", n_routes, True))
                 used.append("get_routing_manifest")
         return extra, used
 
     _extra, _used = runner("codegraph_signals", _codegraph_stage,
                            default=([], []), logger=logger)
-    cands.extend(_extra)
+    for cid, body, keep in _extra:
+        _add_signal(cid, body, keep_text=keep)
     _tools_used.extend(_used)
 
-    return {"files": files, "candidates": cands, "tools_used": sorted(set(_tools_used))}
+    return {"files": files, "candidates": cands, "signals": signals_out,
+            "tools_used": sorted(set(_tools_used))}
 
 
-def threat_summary(repo: str, cands: list[dict]) -> str:
-    """One-line STRIDE summary from indexer candidates. Shared by the scan's
+def threat_summary(repo: str, signals: list[dict] | None) -> str:
+    """One-line STRIDE summary from indexer signals. Shared by the scan's
     threat_model_node and `cerberus threat-model` so the CLI bootstrap sees the
     same stack/route context the scan path does."""
-    cands = [c for c in (cands or []) if isinstance(c, dict)]
-    pre = next((c.get("snippet", "") for c in cands if c.get("id") == "prefilter"), "")
-    classes = [line[3:] for line in str(pre).splitlines() if line.startswith("## ")]
-    routes = next((c.get("snippet", "") for c in cands if c.get("id") == "routes"), "")
-    n_routes = len([ln for ln in str(routes).splitlines() if ln.strip()]) if routes else 0
-    man = next((c.get("snippet", "") for c in cands if c.get("id") == "manifest"), "")
-    stack = (str(man).splitlines() or ["unknown stack"])[0][:200]
+    signals = [s for s in (signals or []) if isinstance(s, dict)]
+    pre = _signal_text(signals, "prefilter")
+    classes = [line[3:] for line in pre.splitlines() if line.startswith("## ")]
+    routes = _signal_text(signals, "routes")
+    n_routes = len([ln for ln in routes.splitlines() if ln.strip()]) if routes else 0
     return (
-        f"Threat model for {repo} | stack: {stack} | entry points: ~{n_routes} routes | "
+        f"Threat model for {repo} | stack: unknown stack | entry points: ~{n_routes} routes | "
         f"prefilter signal classes: {', '.join(classes) or 'none'} | "
         "STRIDE focus: spoofing (auth), tampering (injection), repudiation (logging), "
         "info-disclosure (secrets/XSS), DoS (eval/exec), elevation (authz/IDOR)."
     )
 
 
+def _signal_text(signals: list[dict] | None, cid: str) -> str:
+    """The full text of one signal entry ('text' only rides state for signals
+    whose consumers read it mid-scan: prefilter/routes)."""
+    for s in (signals or []):
+        if isinstance(s, dict) and s.get("id") == cid:
+            return str(s.get("text") or "")
+    return ""
+
+
 def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     from cerberus.config import effective_model
 
     repo = state.get("repo", ".") or "."
-    cands = [c for c in (state.get("candidates") or []) if isinstance(c, dict)]
+    signals = [s for s in (state.get("signals") or []) if isinstance(s, dict)]
     files = [f for f in (state.get("files") or []) if f]
-    summary = threat_summary(repo, cands)
-    out: dict = {"threat_model": summary,
-                 "candidates": [_info_candidate("threat-model", "STRIDE-lite threat model", repo, summary)]}
+    summary = threat_summary(repo, signals)
+    out: dict = {"threat_model": summary}
     if agent_registry is not None:
         _model = effective_model(state.get("cfg") or {}, "hunter", "threat")
         for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
@@ -323,7 +331,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
             source = "repo-cache-stale"
         if not md.strip() or source == "repo-cache-stale":
             try:
-                md = _th.bootstrap_threat(repo, files, cands, summary,
+                md = _th.bootstrap_threat(repo, files, signals, summary,
                                           vulns=vulns, vulns_path=vulns_path)
                 source = "bootstrap" if md.strip() else "summary"
             except Exception:
@@ -341,30 +349,32 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
         elif _enrich_wanted:
             try:
                 enriched, enrich_meta = _th.enrich_threat(
-                    repo, files, cands, summary, md, _cfg2,
+                    repo, files, signals, summary, md, _cfg2,
                     vulns=vulns, vulns_path=vulns_path,
                     measured_facts=_th.measured_facts(
-                        repo, files, cands, summary, vulns))
+                        repo, files, signals, summary, vulns))
                 if enriched.strip():
                     md = enriched
             except Exception as e:
                 enrich_meta = {"error": f"{type(e).__name__}: {e}"}
         stage_out: dict = {"threat_model_source": source}
         if md.strip():
+            if source not in ("override", "repo-file"):
+                md = _th.attach_signal_paths(md, signals)
             stage_out["threat_model_md"] = md
             if enrich_meta:
                 stage_out["threat_enrich"] = enrich_meta
             from cerberus.agents.deep import is_fatal_error
 
             try:
-                stage_out["threat_quality"] = _th.threat_quality(md, files, cands)
+                stage_out["threat_quality"] = _th.threat_quality(md, files, signals)
             except Exception as e:
                 # Absence of a score is a valid degrade; a harness bug must not hide.
                 if is_fatal_error(e):
                     raise
                 logger.warning("threat quality check failed: %s", e)
             try:
-                stage_out["threat_verified"] = _th.verify_threat(repo, md, files, cands)
+                stage_out["threat_verified"] = _th.verify_threat(repo, md, files, signals)
             except Exception as e:
                 if is_fatal_error(e):
                     raise
@@ -407,16 +417,9 @@ def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
 
     cfg = _node_cfg(state)
     if not api_key_present(cfg):
-        out = []
-        for i, f in enumerate(state.get("files", [])):
-            out.append({"id": f"review-{i}", "title": f"manual review: {f}",
-                        "cwe": "", "path": f,
-                        "start_line": 0, "end_line": 0,
-                        "snippet": "LLM hunters skipped (no API_KEY).",
-                        "taint": {"source": "", "sink": "", "path": []},
-                        "status": "needs-review", "severity": "info",
-                        "confidence": 0.0, "evidence": "phase-1 scaffold without API key"})
-        return {"findings": out, "fanout_payloads": []}
+        _stage_detail("hunters",
+                      "[hunters] skipped: no API_KEY — files need manual review")
+        return {"findings": [], "fanout_payloads": []}
     payload_files = list(state.get("files", []))
     payload_cands = list(state.get("candidates", []))
     threat_md = state.get("threat_model_md", "") or ""
@@ -618,6 +621,7 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     t0 = _time.time()
 
     _sysfail: dict = {}
+    _sysstats: dict = {}
 
     def _system_pass_probe() -> tuple[list[dict], list[str]]:
         try:
@@ -629,10 +633,15 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
                                    list(state.get("files", [])),
                                    findings,
                                    state.get("threat_model_md", "") or "",
-                                   _cfg_sys, focus, _tools)
-            _stage_detail("system_pass",
-                          f"[system-pass] +{len(out)} cross-unit findings in "
-                          f"{_time.time()-t0:.0f}s")
+                                   _cfg_sys, focus, _tools,
+                                   stats_out=_sysstats,
+                                   agent_registry=agent_registry)
+            detail = (f"[system-pass] +{len(out)} cross-unit findings in "
+                      f"{_time.time()-t0:.0f}s · "
+                      f"{int(_sysstats.get('passes', 1))} pass(es)")
+            if _sysstats.get("early_stop"):
+                detail += " · early-stop"
+            _stage_detail("system_pass", detail)
             return out, sorted({str(t) for t in _tools})
         except Exception as e:
             _stage_detail("system_pass",
@@ -658,8 +667,11 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
                                       error="system pass failed open")
         return {}
     if agent_registry is not None:
+        msg = f"{int(_sysstats.get('passes', 1))} pass(es)"
+        if _sysstats.get("early_stop"):
+            msg += " · early-stop"
         agent_registry.transition("system-pass", AgentState.succeeded,
-                                  parent_stage="system_pass")
+                                  parent_stage="system_pass", message=msg)
     ret: dict = {"findings": out or []}
     if _sys_tools:
         ret["tools_used"] = _sys_tools
@@ -927,7 +939,8 @@ def _sweep_orphan_sandboxes() -> None:
 
 
 def _fan_out_hunters(state: dict, max_workers: int,
-                     agent_registry: Any = None) -> dict[str, float]:
+                     agent_registry: Any = None,
+                     stats_out: dict | None = None) -> dict[str, float]:
     import time as _time
 
     from cerberus.agents.validator import _evidence_gate_findings, _route_finding
@@ -968,6 +981,8 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                       message="unit started")
         all_findings: list = []
         tools_all: set = set()
+        passes_run = 0
+        stopped_early = False
         try:
             merged = dict(p)
             for k, v in shared.items():
@@ -977,6 +992,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
             passes = 1 + reruns
             empty_streak = 0
             for attempt in range(passes):
+                passes_run = attempt + 1
                 if attempt:
                     merged_pass = dict(merged)
                     merged_pass["prior_findings"] = [
@@ -985,6 +1001,12 @@ def _fan_out_hunters(state: dict, max_workers: int,
                         and not str(f.get("id", "")).endswith("-fallback")]
                 else:
                     merged_pass = merged
+                if agent_registry is not None:
+                    agent_registry.transition(
+                        aid, AgentState.running, parent_stage="hunters",
+                        model=model,
+                        message=f"pass {attempt + 1}/{passes}"
+                                + (" · rerun" if attempt else ""))
                 res = hunter_worker(merged_pass)
                 res = res if isinstance(res, dict) else {}
                 tools_all.update(res.get("tools_used") or [])
@@ -996,14 +1018,22 @@ def _fan_out_hunters(state: dict, max_workers: int,
                 else:
                     empty_streak += 1
                     if empty_streak >= _EMPTY_PASS_STREAK:
+                        stopped_early = True
                         break
             _submit_bundles(p, [], final=True)
             if agent_registry is not None:
+                msg = f"completed · {passes_run} pass(es)"
+                if stopped_early:
+                    msg += " · early-stop"
                 agent_registry.transition(aid, AgentState.succeeded,
                                           parent_stage="hunters",
-                                          message="completed",
+                                          message=msg,
                                           model=model,
                                           findings_produced=len(all_findings))
+            if stats_out is not None:
+                stats_out[p["_ukey"]] = {"passes": passes_run,
+                                         "early_stop": stopped_early,
+                                         "findings": len(all_findings)}
             return {"findings": all_findings,
                     "tools_used": sorted(tools_all)}
         except Exception as e:  # pragma: no cover - hunter_worker is fail-open
@@ -1028,6 +1058,10 @@ def _fan_out_hunters(state: dict, max_workers: int,
                 _submit_bundles(p, [], final=True)
             except Exception:
                 pass
+            if stats_out is not None:
+                stats_out[p["_ukey"]] = {"passes": max(1, passes_run),
+                                         "early_stop": False,
+                                         "findings": len(all_findings) + 1}
             return {"findings": all_findings + [fb],
                     "tools_used": sorted(tools_all)}
 
@@ -1294,16 +1328,34 @@ def run_scan(repo: str, confirm_critical: bool = False,
         def _hunters_stage():
             from cerberus.config import effective_config
 
+            hunt_stats: dict = {}
             result = _fan_out_hunters(
                 state, int(effective_config(_node_cfg(state))["concurrency"]),
-                agent_registry=_agent_registry)
+                agent_registry=_agent_registry, stats_out=hunt_stats)
             prog = _get_progress()
             if prog is not None:
                 try:
                     units = len(state.get("fanout_payloads") or [])
                     produced = len(state.get("findings") or [])
-                    _stage_detail(
-                        "hunters", f"{units} units · {produced} findings")
+                    detail = f"{units} units · {produced} findings"
+                    if hunt_stats:
+                        total_passes = sum(
+                            int(s.get("passes", 1)) for s in hunt_stats.values())
+                        extra = total_passes - len(hunt_stats)
+                        early = sum(1 for s in hunt_stats.values()
+                                    if s.get("early_stop"))
+                        if extra > 0:
+                            detail += f" · {total_passes} pass(es) (incl. " \
+                                      f"{extra} rerun" \
+                                      f"{'s' if extra != 1 else ''}"
+                            if early:
+                                detail += (f", {early} early-stop"
+                                           f"{'s' if early != 1 else ''}")
+                            detail += ")"
+                        elif early:
+                            detail += (f" · {early} early-stop"
+                                       f"{'s' if early != 1 else ''}")
+                    _stage_detail("hunters", detail)
                 except Exception:
                     pass
             return result

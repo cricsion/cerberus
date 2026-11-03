@@ -279,4 +279,4 @@ def test_schema_and_reports(tmp_path):
     assert "+1 duplicate(s)" in text
     html_path = tmp_path / "t4-report.html"
     write_html(rows, html_path)
-    assert "(+1 duplicate)" in html_path.read_text()
+    assert "+1 duplicate" in html_path.read_text()

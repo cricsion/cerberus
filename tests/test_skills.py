@@ -28,7 +28,6 @@ SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
 CORE_SKILLS = ("atheris", "bandit", "bearer", "flawfinder", "gosec",
                "codegraph", "njsscan", "opengrep", "semgrep",
                "trufflehog")
-EXPECTED_SKILLS = CORE_SKILLS  # legacy alias for the pinned ensemble
 
 
 def _top_level_dirs() -> list[Path]:
@@ -77,7 +76,7 @@ def test_no_repo_or_ci_junk_under_skills():
     assert junk == [], junk
 
 
-@pytest.mark.parametrize("name", EXPECTED_SKILLS)
+@pytest.mark.parametrize("name", CORE_SKILLS)
 def test_skill_parses_under_deepagents_metadata(name):
     """deepagents' own parser must accept it: name == dir name, frontmatter
     present, description within the documented length cap."""
@@ -480,5 +479,5 @@ def test_agent_receives_skill_index_in_system_prompt(tmp_path, monkeypatch):
 
     system = str(seen[0][0].content)
     assert "TEST-SYSTEM" in system
-    for skill in EXPECTED_SKILLS:
+    for skill in CORE_SKILLS:
         assert f"{SKILLS_ROUTE.rstrip('/')}/{skill}/SKILL.md" in system, skill

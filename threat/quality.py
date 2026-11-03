@@ -19,7 +19,7 @@ from .render import (
     _row_enum_gaps,
     _section,
 )
-from .util import _detector_signals, _repo_root
+from .util import _detector_signals, _repo_root, _signal_text
 
 IMPACT_RANK = {v: i for i, v in enumerate(
     ("existential", "critical", "high", "medium", "low"))}
@@ -169,7 +169,7 @@ def _rank_threats(rows: list[dict]) -> tuple[str, dict[int, str], list[str]]:
 
 
 def threat_quality(md: str, files: list[str] | None = None,
-                    candidates: list[dict] | None = None) -> dict:
+                   signals: list[dict] | None = None) -> dict:
     gaps: list[str] = []
     passed = 0
     total = 0
@@ -199,15 +199,15 @@ def threat_quality(md: str, files: list[str] | None = None,
             "Deprioritized does not say a threat model prioritizes and "
             "never excludes; hunters read a parked list as a scope filter")
     # Detector rule names must never become scope: a rule ID in §3/§4 reads as an in-scope list; coverage is code-owned.
-    signals = [s for s in _detector_signals(candidates) if len(s) >= 4]
-    if signals:
+    detector_rules = [s for s in _detector_signals(signals) if len(s) >= 4]
+    if detector_rules:
         total += 1
         eps = _parse_entry_points(text)
         threats = _parse_threats(text)
         table_cells = ([str(e.get("entry_point", "")).lower() for e in eps] +
                        [str(t.get("threat", "")).lower() for t in threats] +
                        [str(t.get("surface", "")).lower() for t in threats])
-        leaked = [s for s in signals if any(
+        leaked = [s for s in detector_rules if any(
             _re.search(r"\b" + _re.escape(s.lower()) + r"\b", cell) for cell in table_cells)]
         if leaked:
             gaps.append("detector rule names used as scope (§3/§4): "
@@ -243,9 +243,8 @@ def threat_quality(md: str, files: list[str] | None = None,
             gaps.extend(cov[:5])
         else:
             passed += 1
-    routes = next((c.get("snippet", "") for c in (candidates or [])
-                   if c.get("id") == "routes"), "")
-    n_routes = len([ln for ln in str(routes).splitlines() if ln.strip()])
+    routes_text = _signal_text(signals, "routes")
+    n_routes = len([ln for ln in str(routes_text).splitlines() if ln.strip()])
     if n_routes > 0:
         total += 1
         entry = _section(text, "3. Entry points & trust boundaries")
@@ -262,7 +261,7 @@ def threat_quality(md: str, files: list[str] | None = None,
 
 
 def verify_threat(repo: str, md: str, files: list[str] | None = None,
-                  candidates: list[dict] | None = None) -> dict:
+                  signals: list[dict] | None = None) -> dict:
     import re as _re
 
     failures: list[str] = []
@@ -297,9 +296,8 @@ def verify_threat(repo: str, md: str, files: list[str] | None = None,
                             + ", ".join(missing[:10]))
         else:
             passed += 1
-    routes = next((c.get("snippet", "") for c in (candidates or [])
-                   if c.get("id") == "routes"), "")
-    n_routes = len([ln for ln in str(routes).splitlines() if ln.strip()])
+    routes_text = _signal_text(signals, "routes")
+    n_routes = len([ln for ln in str(routes_text).splitlines() if ln.strip()])
     if n_routes > 0:
         total += 1
         m = _re.search(r"~(\d+)\s+framework routes",

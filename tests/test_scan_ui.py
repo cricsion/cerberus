@@ -113,6 +113,27 @@ def test_agent_line_plain_has_no_escapes():
     assert "44s" in output
 
 
+def test_agent_line_running_shows_pass_message():
+    """Per-pass rerun liveness: "pass 2/3 · rerun" replaces the bare
+    "running" word on the agent line."""
+    reporter = _reporter()
+    reporter.on_event(_event("hunter:u", "hunter", "running",
+                             model="m", message="pass 2/3 · rerun"))
+    output = reporter._err.file.getvalue()
+    assert "pass 2/3 · rerun" in output
+    assert "\x1b[" in output
+
+
+def test_agent_line_hunter_succeeded_folds_in_pass_counts():
+    reporter = _reporter()
+    reporter.on_event(_event("hunter:u", "hunter", "succeeded",
+                             progress={"findings_produced": 2},
+                             message="completed · 3 pass(es) · early-stop",
+                             elapsed_s=12))
+    output = reporter._err.file.getvalue()
+    assert "2 findings · 3 pass(es) · early-stop" in output
+
+
 def test_validator_units_collapse_to_failures_only():
     reporter = _reporter()
     for index in range(1, 10):

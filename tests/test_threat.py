@@ -22,6 +22,17 @@ def _cands():
     ]
 
 
+def _signals():
+    """Scan-signal entries (signals.py shape): bodies live on disk via
+    `path`; the full `text` rides state only for the mid-scan-read signals."""
+    return [
+        {"id": "prefilter", "path": ".cerberus/latest/signals/prefilter.txt",
+         "count": 1, "summary": "sqli", "text": "## sqli-cursor\nfoo"},
+        {"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+         "count": 2, "summary": "GET /login", "text": "GET /login\nPOST /x"},
+    ]
+
+
 def _rich_md():
     """A schema-valid enriched document (as the synthesizer should emit)."""
     return (
@@ -65,17 +76,18 @@ def test_load_override_missing_file_falls_back(tmp_path):
 
 def test_node_uses_repo_file(tmp_path):
     (tmp_path / "THREAT_MODEL.md").write_text("FULL-TRUST-MODEL " + "x" * 20000)
-    st = {"repo": str(tmp_path), "files": ["a.py"], "candidates": _cands()}
+    st = {"repo": str(tmp_path), "files": ["a.py"], "signals": _signals()}
     out = threat_model_node(st)
     assert out["threat_model_source"] == "repo-file"
     assert len(out["threat_model_md"]) > 20000  # no truncation
-    assert any(c["id"] == "threat-model" for c in out["candidates"])
+    # Owner-authored models are never mutated, not even for provenance.
+    assert out["threat_model_md"].startswith("FULL-TRUST-MODEL")
 
 
 def test_node_falls_back_to_summary_on_bootstrap_failure(monkeypatch, tmp_path):
     monkeypatch.setenv("THREAT_LLM", "0")
     monkeypatch.setattr(th, "bootstrap_threat", lambda *a, **k: (_ for _ in ()).throw(ValueError("boom")))
-    st = {"repo": str(tmp_path), "files": ["a.py"], "candidates": _cands()}
+    st = {"repo": str(tmp_path), "files": ["a.py"], "signals": _signals()}
     out = threat_model_node(st)
     assert out["threat_model_source"] == "summary"
     assert "threat_model_md" not in out
@@ -83,7 +95,7 @@ def test_node_falls_back_to_summary_on_bootstrap_failure(monkeypatch, tmp_path):
 
 
 def test_bootstrap_deterministic_offline(tmp_path):
-    md = th.bootstrap_threat(str(tmp_path), ["a.py", "b/c.py"], _cands(), "summ")
+    md = th.bootstrap_threat(str(tmp_path), ["a.py", "b/c.py"], _signals(), "summ")
     for section in th.SECTIONS:
         assert f"## {section}" in md
     assert "sqli-cursor" in md  # prefilter classes flow through as coverage
@@ -188,7 +200,7 @@ def test_coverage_gaps_flag_uncovered_entry_points():
 
 
 def test_quality_scores_rich_model_high():
-    q = th.threat_quality(_rich_md(), ["a.py"], [{"id": "routes", "snippet": "GET /login\nPOST /x"}])
+    q = th.threat_quality(_rich_md(), ["a.py"], [{"id": "routes", "text": "GET /login\nPOST /x"}])
     assert q["sections_filled"] == "8/8"   # fixture: every section filled
     assert q["threat_rows"] == 2           # fixture: exactly 2 threat rows
     assert q["gaps"] == []
@@ -196,7 +208,7 @@ def test_quality_scores_rich_model_high():
 
 def test_quality_flags_floor_and_bad_rows():
     rich = th.threat_quality(_rich_md(), ["a.py"],
-                             [{"id": "routes", "snippet": "GET /login\nPOST /x"}])
+                             [{"id": "routes", "text": "GET /login\nPOST /x"}])
     floor = th.bootstrap_threat(".", ["a.py"], [], "s")
     q = th.threat_quality(floor, ["a.py"], [])
     assert q["threat_rows"] == 0
@@ -222,7 +234,8 @@ def test_node_carries_quality(monkeypatch):
     monkeypatch.setenv("THREAT_LLM", "0")
     st = {"repo": "tests/fixtures/pygoat-sample",
            "files": ["a.py"],
-           "candidates": [{"id": "prefilter", "snippet": "## sqli-cursor\nx"}]}
+           "signals": [{"id": "prefilter", "path": ".cerberus/latest/signals/prefilter.txt",
+                        "count": 1, "summary": "sqli", "text": "## sqli-cursor\nx"}]}
     out = threat_model_node(st)
     assert out["threat_quality"]["score"] >= 50
     assert out["threat_quality"]["threat_rows"] == 0  # floor, honestly flagged
@@ -408,10 +421,11 @@ def test_enrich_merges_plan_into_deterministic_skeleton(monkeypatch, tmp_path):
     (tmp_path / "app.py").write_text("x=1")
     calls = _fake_run_structured(monkeypatch, research=_research_payload(),
                                  history=_history_payload(), plan=_plan_payload())
-    st = {"repo": str(tmp_path), "files": ["app.py"],
-          "candidates": [{"id": "manifest", "snippet": "pyproject.toml"}]}
-    floor = th.bootstrap_threat(st["repo"], st["files"], st["candidates"], "summ")
-    md, meta = th.enrich_threat(st["repo"], st["files"], st["candidates"],
+    st = {"repo": str(tmp_path), "files": ["app.py", "pyproject.toml"],
+          "signals": [{"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+                       "count": 2, "summary": "GET /login", "text": "GET /login\nPOST /x"}]}
+    floor = th.bootstrap_threat(st["repo"], st["files"], st["signals"], "summ")
+    md, meta = th.enrich_threat(st["repo"], st["files"], st["signals"],
                                 "summ", floor, {})
     for section in th.SECTIONS:
         assert f"## {section}" in md
@@ -439,17 +453,18 @@ def test_enrich_merges_plan_into_deterministic_skeleton(monkeypatch, tmp_path):
 
 def test_enrich_ids_are_pure_function_of_content(monkeypatch, tmp_path):
     (tmp_path / "app.py").write_text("x=1")
-    cands = [{"id": "manifest", "snippet": "pyproject.toml"}]
-    floor = th.bootstrap_threat(str(tmp_path), ["app.py"], cands, "s")
+    signals = [{"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+                "count": 1, "summary": "GET /a", "text": "GET /a"}]
+    floor = th.bootstrap_threat(str(tmp_path), ["app.py"], signals, "s")
     _fake_run_structured(monkeypatch, research=_research_payload(),
                          history=_history_payload(), plan=_plan_payload())
-    md_a, _ = th.enrich_threat(str(tmp_path), ["app.py"], cands, "s", floor, {})
+    md_a, _ = th.enrich_threat(str(tmp_path), ["app.py"], signals, "s", floor, {})
     # Same payload, reversed threat order -> identical rendered ids.
     p = _plan_payload()
     p.threats = list(reversed(p.threats))
     _fake_run_structured(monkeypatch, research=_research_payload(),
                          history=_history_payload(), plan=p)
-    md_b, _ = th.enrich_threat(str(tmp_path), ["app.py"], cands, "s", floor, {})
+    md_b, _ = th.enrich_threat(str(tmp_path), ["app.py"], signals, "s", floor, {})
     rows_a = [r["threat"] for r in th._parse_threats(md_a)]
     rows_b = [r["threat"] for r in th._parse_threats(md_b)]
     assert rows_a == rows_b
@@ -458,8 +473,9 @@ def test_enrich_ids_are_pure_function_of_content(monkeypatch, tmp_path):
 def test_enrich_drops_invalid_rows_keeps_valid_ones(monkeypatch, tmp_path):
     from cerberus.prompts.threat import SwarmThreat
     (tmp_path / "app.py").write_text("x=1")
-    cands = [{"id": "manifest", "snippet": "pyproject.toml"}]
-    floor = th.bootstrap_threat(str(tmp_path), ["app.py"], cands, "s")
+    signals = [{"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+                "count": 1, "summary": "GET /a", "text": "GET /a"}]
+    floor = th.bootstrap_threat(str(tmp_path), ["app.py"], signals, "s")
     bad = SwarmThreat(threat="Apocalyptic RCE", actor="remote_unauth",
                       surface="HTTP route GET /login", asset="customer PII",
                       impact="apocalyptic", likelihood="likely",
@@ -472,7 +488,7 @@ def test_enrich_drops_invalid_rows_keeps_valid_ones(monkeypatch, tmp_path):
     _fake_run_structured(monkeypatch, research=_research_payload(),
                          history=_history_payload(),
                          plan=_plan_payload(threats=[bad, prose]))
-    md, meta = th.enrich_threat(str(tmp_path), ["app.py"], cands, "s", floor, {})
+    md, meta = th.enrich_threat(str(tmp_path), ["app.py"], signals, "s", floor, {})
     rows = th._parse_threats(md)
     # Out-of-enum cells are classified into the closed set, never dropped:
     # the row carries the model's judgment; only the cell is ours to own.
@@ -485,14 +501,16 @@ def test_enrich_drops_invalid_rows_keeps_valid_ones(monkeypatch, tmp_path):
 def test_enrich_never_loses_a_code_detected_surface(monkeypatch, tmp_path):
     (tmp_path / "Dockerfile").write_text("FROM x")
     (tmp_path / "app.py").write_text("x=1")
-    files = ["app.py", "Dockerfile"]
-    cands = [{"id": "manifest", "snippet": "pyproject.toml"}]
-    floor = th.bootstrap_threat(str(tmp_path), files, cands, "s")
-    skeleton = th._attack_surfaces(cands, files)
+    (tmp_path / "pyproject.toml").write_text("")
+    files = ["app.py", "Dockerfile", "pyproject.toml"]
+    signals = [{"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+                "count": 1, "summary": "GET /a", "text": "GET /a"}]
+    floor = th.bootstrap_threat(str(tmp_path), files, signals, "s")
+    skeleton = th._attack_surfaces(signals, files)
     assert len(skeleton) > 1
     _fake_run_structured(monkeypatch, research=_research_payload(),
                          history=_history_payload(), plan=_plan_payload())
-    md, _ = th.enrich_threat(str(tmp_path), files, cands, "s", floor, {})
+    md, _ = th.enrich_threat(str(tmp_path), files, signals, "s", floor, {})
     ep_text = th._section(md, "3. Entry points & trust boundaries")
     for s in skeleton:
         assert s[:24] in ep_text, s   # plan cannot drop a measured surface
@@ -572,7 +590,7 @@ def test_node_enriches_by_default_every_scan(monkeypatch, tmp_path):
     monkeypatch.setenv("THREAT_LLM", "1")
     _fake_run_structured(monkeypatch, research=_research_payload(),
                          history=_history_payload(), plan=_plan_payload())
-    st = {"repo": str(tmp_path), "files": ["app.py"], "candidates": _cands()}
+    st = {"repo": str(tmp_path), "files": ["app.py"], "signals": _signals()}
     out = threat_model_node(st)
     assert "SQL injection" in out["threat_model_md"]
     assert out["threat_enrich"]["threat_rows"] == 2
@@ -584,7 +602,7 @@ def test_node_never_enriches_owner_file(monkeypatch, tmp_path):
     calls = _fake_run_structured(monkeypatch, research=_research_payload(),
                                  history=_history_payload(), plan=_plan_payload())
     out = threat_model_node({"repo": str(tmp_path), "files": ["app.py"],
-                             "candidates": _cands()})
+                             "signals": _signals()})
     assert out["threat_model_md"] == "OWNER-AUTHORED-MODEL"
     assert "threat_enrich" not in out
     assert calls == []
@@ -595,7 +613,7 @@ def test_node_llm_enrich_config_off(monkeypatch, tmp_path):
     calls = _fake_run_structured(monkeypatch, research=_research_payload(),
                                  history=_history_payload(), plan=_plan_payload())
     out = threat_model_node({"repo": str(tmp_path), "files": ["app.py"],
-                             "candidates": _cands()})
+                             "signals": _signals()})
     assert calls == []
     assert out["threat_model_source"] == "bootstrap"
     assert "threat_enrich" not in out
@@ -750,10 +768,10 @@ def test_known_fps_recorded_with_reasons():
 
 def test_verify_passes_on_bootstrap(tmp_path):
     (tmp_path / "app.py").write_text("x=1")
-    md = th.bootstrap_threat(str(tmp_path), ["app.py"],
-                             [{"id": "prefilter", "snippet": "## sqli-cursor\nx"}], "s")
-    fv = th.verify_threat(str(tmp_path), md, ["app.py"],
-                          [{"id": "prefilter", "snippet": "## sqli-cursor\nx"}])
+    signals = [{"id": "prefilter", "path": ".cerberus/latest/signals/prefilter.txt",
+                "count": 1, "summary": "sqli", "text": "## sqli-cursor\nx"}]
+    md = th.bootstrap_threat(str(tmp_path), ["app.py"], signals, "s")
+    fv = th.verify_threat(str(tmp_path), md, ["app.py"], signals)
     assert fv == {"score": 100, "failures": []}
 
 
@@ -765,7 +783,7 @@ def test_verify_catches_ghost_files_and_stale_routes(tmp_path):
           "|---|---|---|---|\n"
           "| ghost input | `ghost/missing.py` parses | untrusted → app | X |\n")
     fv = th.verify_threat(str(tmp_path), md, ["app.py"],
-                          [{"id": "routes", "snippet": "GET /a"}])
+                          [{"id": "routes", "text": "GET /a"}])
     assert any("ghost/missing.py" in f for f in fv["failures"])
     assert any("stale entry points" in f for f in fv["failures"])
     assert fv["score"] < 100
@@ -778,7 +796,7 @@ def test_verify_skips_unparseable_counts_and_urls(tmp_path):
           "| entry_point | description | trust_boundary | reachable_assets |\n"
           "|---|---|---|---|\n"
           "| webhook | `https://example.com/hook` inbound | untrusted → app | X |\n")
-    fv = th.verify_threat(str(tmp_path), md, [], [{"id": "routes", "snippet": "GET /a"}])
+    fv = th.verify_threat(str(tmp_path), md, [], [{"id": "routes", "text": "GET /a"}])
     assert fv == {"score": 100, "failures": []}
 
 
@@ -851,22 +869,22 @@ def test_vulns_invalidate_machine_cache(monkeypatch, tmp_path):
     vulns_file.write_text("id,title,component,description\n"
                           "CVE-2026-1,sqli,login,interpolated\n")
     out = threat_model_node({"repo": str(tmp_path), "files": ["app.py"],
-                             "candidates": _cands(),
+                             "signals": _signals(),
                              "vulns_file": str(vulns_file)})
     assert "CACHED-MODEL" not in out["threat_model_md"]
     assert "supplied via --vulns (1 rows" in out["threat_model_md"]
     assert out["threat_model_source"] == "bootstrap"
     # A SCHEMA-VALID cache is authoritative again without --vulns.
     (tmp_path / ".cerberus" / "THREAT_MODEL.md").write_text(
-        th.bootstrap_threat(str(tmp_path), ["app.py"], _cands(), "s"))
+        th.bootstrap_threat(str(tmp_path), ["app.py"], _signals(), "s"))
     out2 = threat_model_node({"repo": str(tmp_path), "files": ["app.py"],
-                              "candidates": _cands()})
+                              "signals": _signals()})
     assert out2["threat_model_source"] == "repo-cache"
     # ...but an old-schema cache is rebuilt, never fed to consumers.
     (tmp_path / ".cerberus" / "THREAT_MODEL.md").write_text(
         "# old\n\n## In-scope classes\n\nsqli-cursor, shell-true\n")
     out3 = threat_model_node({"repo": str(tmp_path), "files": ["app.py"],
-                              "candidates": _cands()})
+                              "signals": _signals()})
     assert out3["threat_model_source"] == "bootstrap"
     assert "In-scope classes" not in out3["threat_model_md"]
 
@@ -1445,12 +1463,12 @@ def test_huge_threat_number_does_not_kill_the_document():
 
 
 def test_node_survives_non_list_state(monkeypatch, tmp_path):
-    """A state whose files/candidates arrive as something other than a list
+    """A state whose files/signals arrive as something other than a list
     must degrade to the deterministic floor: the node's fail-open contract is
     that it never raises and always returns a usable document."""
     monkeypatch.setenv("THREAT_LLM", "0")
     out = threat_model_node({"repo": str(tmp_path), "files": None,
-                             "candidates": None})
+                             "signals": None})
     assert out["threat_model_source"] == "bootstrap"
     assert "## 4. Threats" in out["threat_model_md"]  # a usable document
     assert out["threat_quality"]["threat_rows"] == 0  # honestly flagged floor
@@ -1498,13 +1516,14 @@ def test_update_threat_maps_findings_to_section4_and_adds_novel_rows():
 
 def test_section3_formatting_and_route_presentation(tmp_path):
     (tmp_path / "app.py").write_text("x = 1")
-    candidates = [
-        {"id": "routes", "snippet": "routes/users.py:10: [route] POST /api/users -> create_user\n"
-                                    "routes/users.py:20: [route] GET /api/users -> list_users\n"
-                                    "routes/users.py:10: [route] POST /api/users -> create_user\n"},  # duplicate
-        {"id": "manifest", "snippet": "requirements.txt: flask==2.0.1"},
+    signals = [
+        {"id": "routes", "path": ".cerberus/latest/signals/routes.txt",
+         "count": 3, "summary": "POST /api/users",
+         "text": "routes/users.py:10: [route] POST /api/users -> create_user\n"
+                 "routes/users.py:20: [route] GET /api/users -> list_users\n"
+                 "routes/users.py:10: [route] POST /api/users -> create_user\n"},  # duplicate
     ]
-    md = th.bootstrap_threat(str(tmp_path), ["app.py", "requirements.txt", "Dockerfile"], candidates)
+    md = th.bootstrap_threat(str(tmp_path), ["app.py", "requirements.txt", "Dockerfile"], signals)
 
     sec3 = th._section(md, "3. Entry points & trust boundaries")
     assert "### Key Detected Endpoints" in sec3
@@ -1525,7 +1544,7 @@ def test_section3_formatting_and_route_presentation(tmp_path):
     assert "application data, session state, process integrity" in http_ep["reachable_assets"]
 
     # Quality check
-    q = th.threat_quality(md, ["app.py", "requirements.txt", "Dockerfile"], candidates)
+    q = th.threat_quality(md, ["app.py", "requirements.txt", "Dockerfile"], signals)
     assert not any("entry points" in g for g in q["gaps"])
-    fv = th.verify_threat(str(tmp_path), md, ["app.py", "requirements.txt", "Dockerfile"], candidates)
+    fv = th.verify_threat(str(tmp_path), md, ["app.py", "requirements.txt", "Dockerfile"], signals)
     assert not any("stale entry points" in f for f in fv["failures"])

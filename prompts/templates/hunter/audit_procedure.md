@@ -2,9 +2,9 @@
 role: hunter
 module: cerberus.prompts.hunter
 ---
-AT EACH ENTRY POINT, work through these four questions before moving on:
-1. REACH — what can the lower-trust caller fully control here: field values, headers, paths, identifiers, timing, size, or the mere fact of the call?
-2. BOUNDARY — what is supposed to stop that (validation, encoding, an authorization decision, a session or cookie attribute, a rate or quota limit, a transport guarantee)? Identify the control by what it protects, not by its name.
-3. TRACE — what does the request touch on the way through: stored data, another user's data, the network, the filesystem, the browser, logs, queues, caches, or a privileged operation?
-4. GAP — is that control missing, bypassable, ordered after the thing it guards, weaker on one path than a sibling, or different from what every other caller of the same resource does?
-A control the code never establishes is a finding, not a style note: say which control is expected and where the code is silent.
+AT EACH ENTRY POINT AND INTERFACE:
+1. REACH & BOUNDARY: What can the lower-trust caller control (parameters, headers, body, cookies, paths, timing, ordering)? What security control is expected to validate, authorize, isolate, or limit it? A control the code never establishes is a finding, not a style note.
+2. SIBLING DISAGREEMENTS: Compare sibling handlers, endpoints, and callers. If sibling routes enforce authorization, rate-limiting, CSRF tokens, or input sanitization but one route is unprotected or missing an invariant, that discrepancy is a concrete finding.
+3. TEST SAD PATHS: Check absent, empty, zero, negative, maximum, over-limit, duplicate, mixed encoding, stale, revoked, reordered, concurrent, partially migrated, and rollback states where the interface accepts them.
+4. ERROR & EXCEPTION PATHS: Inspect all failure branches, catch blocks, and exception handlers. Returning raw error objects, internal exception messages, stack traces, or unhandled exception details directly in response bodies leaks internal state and breaks security invariants.
+5. DATA EXPOSURE: Check return values and response serialization for excessive data exposure (e.g., returning full database records, password hashes, internal tokens, or sensitive user fields).

@@ -215,13 +215,13 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
                 print("no threat model found for repo", file=sys.stderr)
                 return 1
         st = indexer_node({"repo": repo})
-        files, cands = list(st.get("files", [])), list(st.get("candidates", []))
-        q = _th.threat_quality(md, files, cands)
+        files, signals = list(st.get("files", [])), list(st.get("signals", []))
+        q = _th.threat_quality(md, files, signals)
         print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections, "
               f"{q.get('threat_rows', 0)} threat rows)")
         for gap in q["gaps"][:10]:
             print(f"  gap: {gap}")
-        fv = _th.verify_threat(repo, md, files, cands)
+        fv = _th.verify_threat(repo, md, files, signals)
         print(f"factual check: {fv['score']}/100")
         for fail in fv["failures"][:10]:
             print(f"  FAILURE: {fail}")
@@ -246,11 +246,11 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
     try:
         st = indexer_node({"repo": repo})
         files = list(st.get("files", []))
-        cands = list(st.get("candidates", []))
+        signals = list(st.get("signals", []))
     except Exception as e:
         print(f"indexer failed: {e}", file=sys.stderr)
-        files, cands = [], []
-    summary = threat_summary(repo, cands)
+        files, signals = [], []
+    summary = threat_summary(repo, signals)
     _vulns_path = getattr(args, "vulns", None) or ""
     vulns = _th.parse_vulns_file(_vulns_path) if _vulns_path else []
     if _vulns_path and not vulns:
@@ -272,7 +272,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
                 except EOFError:
                     answers[key] = ""
             try:
-                md = _th.bootstrap_threat(repo, files, cands, summary,
+                md = _th.bootstrap_threat(repo, files, signals, summary,
                                           vulns=vulns, vulns_path=_vulns_path)
             except Exception as e:
                 print(f"bootstrap failed: {e}", file=sys.stderr)
@@ -288,11 +288,11 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             def _say(t: str) -> None:
                 print(t)
 
-            md = _th.conduct_interview(repo, files, cands, summary, _cfg_tm,
+            md = _th.conduct_interview(repo, files, signals, summary, _cfg_tm,
                                        _ask, _say)
     else:
         try:
-            md = _th.bootstrap_threat(repo, files, cands, summary,
+            md = _th.bootstrap_threat(repo, files, signals, summary,
                                       vulns=vulns, vulns_path=_vulns_path)
         except Exception as e:
             print(f"bootstrap failed: {e}", file=sys.stderr)
@@ -305,10 +305,10 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
                       "deterministic threat model.")
             elif effective_config(_cfg_enrich)["threat"]["llm_enrich"]:
                 enriched, meta = _th.enrich_threat(
-                    repo, files, cands, summary, md, _cfg_enrich,
+                    repo, files, signals, summary, md, _cfg_enrich,
                     vulns=vulns, vulns_path=_vulns_path,
                     measured_facts=_th.measured_facts(
-                        repo, files, cands, summary, vulns))
+                        repo, files, signals, summary, vulns))
                 if enriched.strip():
                     md = enriched
                     dropped = meta.get("dropped") or []
@@ -330,7 +330,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
         print(f"cannot write {dest}: {e}", file=sys.stderr)
         return 1
     print(f"wrote {dest}")
-    q = _th.threat_quality(md, files, cands)
+    q = _th.threat_quality(md, files, signals)
     print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections)")
     for gap in q["gaps"][:10]:
         print(f"  gap: {gap}")
@@ -437,7 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--focus", default=None,
                    help="comma-separated focus hints, e.g. injection or CWE-89,CWE-78 (narrows hunter scope text only, never drops coverage)")
     s.add_argument("--votes", type=int, default=None,
-                   help="verifier votes per finding 1-5 (default 1; majority-or-tie is final, no judge)")
+                   help="verifier votes per finding 1-5 (default 1; majority-or-tie is final)")
     s.add_argument("--agent-log", default="normal", choices=["normal", "quiet"],
                    help="per-agent progress lines (quiet suppresses them; stages/receipt still render)")
     s.set_defaults(func=cmd_scan)

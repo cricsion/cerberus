@@ -62,8 +62,10 @@ def test_system_pass_adds_without_loss(monkeypatch):
     extra = [{"id": "sys-1", "title": "x", "cwe": "CWE-306", "severity": "high",
               "confidence": 0.8, "path": "b.py", "start_line": 3, "end_line": 3,
               "snippet": "s", "evidence": "e", "status": "needs-review"}]
-    monkeypatch.setattr(h, "_run_system_pass",
-                        lambda repo, files, findings, md, cfg, focus=None, tools=None: extra)
+    monkeypatch.setattr(
+        h, "_run_system_pass",
+        lambda repo, files, findings, md, cfg, focus=None, tools=None,
+        stats_out=None, agent_registry=None: extra)
     mine = [{"id": "u-1", "path": "a.py", "cwe": "CWE-89", "start_line": 1}]
     out = system_pass_node({"repo": "r", "files": ["a.py"], "findings": mine,
                             "threat_model_md": "tm"})
