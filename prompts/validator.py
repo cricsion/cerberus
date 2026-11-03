@@ -17,17 +17,7 @@ REFUTE_METHOD = block("validator/refute_method")
 
 EXCLUSION_RULES = block("validator/exclusion_rules")
 
-POC_REFUTE_METHOD = (
-    "## Verification Method (Static Falsification & Reachability)\n"
-    "1. Static Code Analysis: If the source code neutralizes the issue "
-    "(sanitizer, auth gate, dead code, unreachable path, type constraint), mark status='fp'. "
-    "Explain the neutralizing mechanism in your rationale.\n"
-    "2. Reachability & Preconditions: If the claim is verified as a real vulnerability in code:\n"
-    "   - Confirm the taint path from entry point to sink.\n"
-    "   - Enumerate reaching conditions and required preconditions.\n"
-    "   - Set status='confirmed' (or 'needs-review' if reachability is ambiguous).\n"
-    "   - Note: Dynamic PoC reproduction is handled post-triage by a dedicated PoC agent.\n"
-)
+POC_REFUTE_METHOD = ""
 
 
 # so nothing can close the block early.
@@ -121,8 +111,6 @@ class VerdictItem(VerdictUpdate):
         default=None, description="Repaired in-process reproduction script if the validator repaired a flawed PoC")
     poc_command: str | None = Field(
         default=None, description="Repaired test execution command if repaired by the validator")
-    needs_poc_regen: bool = Field(
-        default=False, description="True if vulnerability survived static check but PoC needs regeneration")
 
 
 class VerdictBatch(BaseModel):

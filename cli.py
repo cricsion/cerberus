@@ -214,7 +214,8 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             if not md.strip():
                 print("no threat model found for repo", file=sys.stderr)
                 return 1
-        st = indexer_node({"repo": repo})
+        st = indexer_node({"repo": repo,
+                           "record_signals": bool(getattr(args, "record_signals", False))})
         files, signals = list(st.get("files", [])), list(st.get("signals", []))
         q = _th.threat_quality(md, files, signals)
         print(f"threat quality: {q['score']}/100 ({q['sections_filled']} sections, "
@@ -321,6 +322,10 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
                           f"{meta.get('error', 'unknown')}")
         except Exception as e:
             print(f"swarm enrichment error, kept deterministic floor: {e}")
+    try:
+        md = _th.attach_signal_paths(md, signals)
+    except Exception as e:
+        print(f"signal path attach failed (kept doc): {e}", file=sys.stderr)
     dest = getattr(args, "out", None)
     if not dest:
         dest = str(Path(repo) / _th.FILENAME) if Path(repo).is_dir() else _th.FILENAME
@@ -390,6 +395,7 @@ def cmd_cancel(args: argparse.Namespace) -> int:
 
 def cmd_findings(args: argparse.Namespace) -> int:
     from cerberus.reporting.view import make_console, render_findings
+    from cerberus.schemas import coerce_findings
 
     console = make_console()
     run_dir = Path(args.run)
@@ -399,10 +405,7 @@ def cmd_findings(args: argparse.Namespace) -> int:
     except (OSError, ValueError) as e:
         print(f"cannot read findings: {e}", file=sys.stderr)
         return 1
-    if not isinstance(data, list):
-        print("findings file is not a JSON array", file=sys.stderr)
-        return 1
-    findings = data
+    findings = coerce_findings(data)
     if args.severity:
         findings = [f for f in findings if str(f.get("severity", "")).lower() == args.severity.lower()]
     if args.cwe:
@@ -447,6 +450,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ask Shostack's four questions on stdin and append answers")
     t.add_argument("--verify", action="store_true",
                    help="read-only: report quality score and factual failures, write nothing")
+    t.add_argument("--record-signals", action="store_true",
+                   help="with --verify: persist indexer signal outputs under "
+                        ".cerberus/<run_id>/signals/ in the target repo")
     t.add_argument("--update-from", default=None, metavar="FINDINGS_JSON",
                    help="fold validator-released findings into the machine cache "
                         "(.cerberus/THREAT_MODEL.md); owner files are never touched")

@@ -168,24 +168,23 @@ def test_write_html_suppressed_fp_and_header(tmp_path):
     assert suppressed[0]["suppressions"][0]["kind"] == "external"
 
 
-def test_write_html_placeholder_guards(tmp_path):
-    """C: placeholder PoC scripts and one-word patches never render."""
+def test_poc_payload_renders_after_poc_hidden_removal(tmp_path):
+    """Inverted 2026-11-04: the ≤1-line/no-sentinel withholding heuristic was
+    deleted (it suppressed genuine one-line exploits); payload policy belongs
+    to the validator, the report layer renders receipts. A one-liner PoC now
+    renders in MD and HTML; the one-word patch summary still renders too."""
     sample = [dict(SAMPLE[0], id="9", patch="fix", patch_summary="fix summary",
                    poc={"status": "attempted", "command": "python3 x.py",
-                        "script": "print(1)", "filename": "test_repro.py"},
-                   _needs_poc_regen=True)]
+                        "script": "print(1)", "filename": "test_repro.py"})]
     md_out = tmp_path / "report.md"
     write_markdown(sample, md_out)
     md_text = md_out.read_text()
-    assert "print(1)" not in md_text
-    assert "proof regeneration pending" in md_text
-    assert "Summary**: fix" not in md_text
+    assert "print(1)" in md_text
 
     html_out = tmp_path / "report.html"
     write_html(sample, html_out)
     html_text = html_out.read_text(encoding="utf-8")
-    assert "badge-pending" in html_text
-    assert "fix summary" not in html_text
+    assert "print(1)" in html_text
 
 
 def test_write_markdown_neutralizes_injected_structure(tmp_path):

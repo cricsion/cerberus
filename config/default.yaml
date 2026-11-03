@@ -67,12 +67,12 @@ partition:
   framework_edges: ${PARTITION_FRAMEWORK_EDGES:-1}
 hunter:
   # Discovery reruns, shared by unit hunts AND the system pass. 0 = one
-  # pass each (current behavior). N = N additional reruns, each a FRESH
+  # pass each. N = N additional reruns, each a FRESH
   # agent session seeded with everything already reported and asked for
   # additional findings only. Early-stops after two consecutive empty
   # passes; validation bundles
   # stream while unit reruns continue.
-  reruns: ${RERUNS:-0}
+  reruns: ${RERUNS:-2}
 # codegraph is the index provider.
 codegraph:
   # Tool output caps (env-overridable). 0 = unlimited where supported.
@@ -143,12 +143,10 @@ verification:
   votes: ${VERIFIER_VOTES:-1}
   cell_size: ${CELL_SIZE:-15}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
-  poc_rounds: ${POC_ROUNDS:-2}
 poc:
   enabled: ${POC_ENABLED:-1}
   repro_runs: ${POC_REPRO_RUNS:-3}
   cell_size: ${CELL_SIZE:-15}
-  regen_role: ${POC_REGEN_ROLE:-validator}
   timeout: ${POC_TIMEOUT:-600}
 triage:
   batch_size: ${TRIAGER_BATCH:-100}

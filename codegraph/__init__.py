@@ -3,9 +3,7 @@
 This package is the bridge between the local CodeGraph index
 (``.codegraph/codegraph.db`` — nodes, edges, files, unresolved references, FTS5)
 and the hunter/validator/verifier agents. It is deliberately read-only against
-the target repo: the index is opened ``mode=ro`` everywhere, and the only
-writable artifact is a small sidecar next to it (``.codegraph/sast_summaries.db``)
-holding the agents' own memory — per-node sanitizer/guard verdicts.
+the target repo: the index is opened ``mode=ro`` everywhere.
 
 Design law: never give a security agent open-ended filesystem tools. Every
 ``@tool`` here accepts structured graph/AST coordinates (node ids, route ids,
@@ -26,7 +24,6 @@ Foundation:
                      taxonomy (``codegraph/src/ui-server/api/effects.ts``), so
                      "what does this call leave the process for?" is one call
                      away.
-    ``summaries``  — the sidecar memory store described above.
 
 Tool modules (the micro-agent partition from the SAST tool suite design):
     ``navigation`` — Taint & Injection agent's context tools:

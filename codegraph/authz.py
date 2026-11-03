@@ -38,7 +38,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from cerberus.codegraph import _db, _ts, summaries
+from cerberus.codegraph import _db, _ts
 from cerberus.codegraph._common import (
     _CONF_MIN,
     _HANDLER_KINDS,
@@ -278,9 +278,6 @@ def compare_sibling_route_security(route_node_id: str, root: str = ".",
         f"handler: {_node_label(handler) if handler else '(no handler resolvable)'}",
         "decorators: " + (", ".join(target["decorators"]) or "(none)"),
         "guard_calls: " + (_guard_summary(target["guard_calls"], guard_cap) or "(none)")])
-    hint = summaries.cache_hint(conn, route_node_id)
-    if hint:
-        report.add("cached summary: " + hint)
 
     if handler is None:
         report.blank().add(
@@ -356,7 +353,7 @@ def _route_security(conn, handler: dict | None, route: dict | None = None) -> di
 
 
 def _guard_calls(conn, handler_id: str) -> list[dict]:
-    """Depth-1 guard-name calls, with cached ``AUTH_GUARD`` summary fallback."""
+    """Depth-1 guard-name calls from the index."""
     if conn is None or not handler_id:
         return []
     out: list[dict] = []
@@ -369,17 +366,11 @@ def _guard_calls(conn, handler_id: str) -> list[dict]:
             if not target_id or target_id in seen:
                 continue
             name = str(target.get("name") or "")
-            named = bool(_GUARD_NAME_RE.match(name))
-            hint = ""
-            if not named:
-                hint = summaries.cache_hint(conn, target_id)
-                if "AUTH_GUARD" not in hint:
-                    continue
+            if not _GUARD_NAME_RE.match(name):
+                continue
             seen.add(target_id)
             out.append({"name": name, "node_id": target_id,
-                        "reason": "guard-shaped name" if named
-                        else "cached AUTH_GUARD summary",
-                        "hint": hint,
+                        "reason": "guard-shaped name",
                         "site": _site(target.get("file_path"), target.get("start_line")),
                         "edge_line": edge.get("line")})
     out.sort(key=lambda g: (g["edge_line"] or 0, g["name"]))
@@ -557,9 +548,6 @@ def find_shared_state_readers_writers(state_symbol_or_table: str, root: str = ".
         parent = _db.node_parent(conn, str(carrier.get("id") or ""))
         if parent:
             report.add(f"   owner: {_node_label(parent)}")
-        hint = summaries.cache_hint(conn, str(carrier.get("id") or ""))
-        if hint:
-            report.add("   cached summary: " + hint)
         readers = [s for s in sites if s["access"] == "reader"]
         writers = [s for s in sites if s["access"] == "writer"]
         unclassified = [s for s in sites if s["access"] not in ("reader", "writer")]

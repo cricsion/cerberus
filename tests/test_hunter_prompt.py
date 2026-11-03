@@ -127,7 +127,8 @@ def test_run_system_pass_success_path_fences_threat_model(monkeypatch):
 
     monkeypatch.setattr("cerberus.agents.deep.run_structured", fake_run_structured)
 
-    out = h._run_system_pass("repo", ["b.py"], [], "SECRET-TM-MARKER", {})
+    out = h._run_system_pass("repo", ["b.py"], [], "SECRET-TM-MARKER",
+                             {"hunter": {"reruns": 0}})
     assert [f["id"] for f in out] == ["sys-1"]         # (a) normalized findings
 
     human = captured["human"]                          # (b) D1 fence holds

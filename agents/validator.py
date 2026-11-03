@@ -14,7 +14,7 @@ from cerberus.prompts.validator import (
     ROUND_FAILED_NOTE,
     VALIDATOR_SYSTEM,
 )
-from cerberus.schemas import structured_items
+from cerberus.schemas import MAJORITY_WINNER_ORDER, structured_items
 
 _logger = logging.getLogger(__name__)
 
@@ -65,8 +65,6 @@ def _merge_verdict(base: dict, data: dict) -> dict:
             if not isinstance(merged.get("poc"), dict):
                 merged["poc"] = {}
             merged["poc"]["command"] = data["poc_command"]
-        if "needs_poc_regen" in data:
-            merged["_needs_poc_regen"] = bool(data["needs_poc_regen"])
         vsnip = data.get("snippet")
         if vsnip not in (None, ""):
             merged["snippet"] = vsnip
@@ -125,7 +123,7 @@ def _majority_verdict(base: dict, votes: list[dict]) -> dict:
             s = "needs-review"
         counts[s] += 1
         by_status.setdefault(s, v if isinstance(v, dict) else dict(base))
-    for winner in ("confirmed", "fp"):
+    for winner in MAJORITY_WINNER_ORDER:
         if counts[winner] > n / 2:
             g = dict(by_status[winner])
             g["status"] = winner
@@ -198,7 +196,7 @@ def _group_by_unit(findings: list[dict],
         return "global"
 
     for oi, f in enumerate(findings):
-        k = _key(f) if isinstance(f, dict) else "global"
+        k = _key(f)
         if k not in groups:
             groups[k] = []
             origins[k] = []
@@ -214,28 +212,23 @@ def _compact_finding(f: dict) -> dict:
     ``rationale`` is deliberately absent — the validator must re-derive the
     claim without the hunter's reasoning (see ``REFUTE_METHOD``).
     """
-    try:
-        d = dict(f)
-        taint = d.get("taint")
-        if isinstance(taint, dict):
-            path = taint.get("path")
-            if path is None:
-                path = []
-            elif not isinstance(path, list):
-                path = [path]
-            d["taint"] = {
-                "source": str(taint.get("source", "")),
-                "sink": str(taint.get("sink", "")),
-                "path": [str(p) for p in path],
-            }
-        return {k: d.get(k) for k in (
-            "id", "title", "cwe", "severity", "confidence", "path",
-            "start_line", "end_line", "snippet", "taint", "refs",
-            "evidence", "poc", "conditions")}
-    except (TypeError, AttributeError):
-        if isinstance(f, dict):
-            return {"id": f.get("id", ""), "title": f.get("title", "")}
-        return {"id": "", "title": ""}
+    d = dict(f)
+    taint = d.get("taint")
+    if isinstance(taint, dict):
+        path = taint.get("path")
+        if path is None:
+            path = []
+        elif not isinstance(path, list):
+            path = [path]
+        d["taint"] = {
+            "source": str(taint.get("source", "")),
+            "sink": str(taint.get("sink", "")),
+            "path": [str(p) for p in path],
+        }
+    return {k: d.get(k) for k in (
+        "id", "title", "cwe", "severity", "confidence", "path",
+        "start_line", "end_line", "snippet", "taint", "refs",
+        "evidence", "poc", "conditions")}
 
 
 def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
@@ -258,8 +251,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
     _timeout = int(cfg["timeout"])
     _max_retries = int(cfg["max_retries"])
 
-    ballots: dict[str, list[dict]] = {str(f.get("id")): [] for f in items
-                                       if isinstance(f, dict)}
+    ballots: dict[str, list[dict]] = {str(f.get("id")): [] for f in items}
     n_votes = max(1, min(5, int(n_votes or 1)))
     # Cells are split upstream at cell_size; there is no further chunking:
     # each cell is exactly one LLM call.
@@ -382,7 +374,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
 
 
 def _degraded_finding(f: dict, note: str) -> dict:
-    fb = dict(f) if isinstance(f, dict) else {}
+    fb = dict(f)
     fb["status"] = "needs-review"
     prev = str(fb.get("evidence") or "")
     fb["evidence"] = _append_note(prev, note)

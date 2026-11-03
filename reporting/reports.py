@@ -9,6 +9,7 @@ from pathlib import Path
 
 from cerberus.schemas import (
     SEVERITY_ORDER,
+    STATUS_TITLES,
     group_duplicates,
     reportable_findings,
     safe_float,
@@ -108,21 +109,6 @@ def _evidence_parts(evidence: object) -> tuple[str, dict[str, list[str]]]:
     return " | ".join(base), tags
 
 
-def _poc_hidden(f: dict) -> bool:
-    """True when the PoC payload is known-bad and must not render as evidence:
-    flagged pending regeneration, or a trivial one-liner with no PoC sentinel."""
-    if f.get("_needs_poc_regen"):
-        return True
-    poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
-    script = str(poc.get("script") or "").strip()
-    if not script:
-        return False
-    if "[POC_" in script:
-        return False
-    lines = [ln for ln in script.splitlines() if ln.strip() and not ln.strip().startswith("#")]
-    return len(lines) <= 1
-
-
 def _real_diff(f: dict) -> str:
     """A patch is only a diff when it spans lines; single-word LLM junk like
     ``fix`` is not rendered."""
@@ -150,7 +136,7 @@ def _lang_for(path: str) -> str:
 
 
 def _poc_counts(findings) -> tuple[int, int]:
-    rows = [f for f in (findings or []) if isinstance(f, dict)]
+    rows = list(findings or [])
     proven = sum(1 for f in rows
                  if isinstance(f.get("poc"), dict) and f["poc"].get("status") == "proven")
     attempted = sum(1 for f in rows
@@ -160,12 +146,12 @@ def _poc_counts(findings) -> tuple[int, int]:
 
 def _counts(findings) -> dict:
     """Header numbers, computed off the full triage record."""
-    rows = [f for f in (findings or []) if isinstance(f, dict)]
+    rows = list(findings or [])
     primaries = [f for f in rows if not f.get("duplicate_of")]
     fps = [f for f in primaries if f.get("status") == "fp"]
     reportable = reportable_findings(rows)
     by_sev: dict[str, int] = {}
-    tier: dict[str, int] = {"confirmed": 0, "needs-review": 0}
+    tier: dict[str, int] = {s: 0 for s, _ in STATUS_TITLES}
     for f in reportable:
         sev = str(f.get("severity", "info")).lower()
         by_sev[sev] = by_sev.get(sev, 0) + 1
@@ -196,15 +182,16 @@ def _poc_brief(proven: int, attempted: int) -> str:
 
 def write_markdown(findings: list[dict], out: Path) -> None:
     """Human report: confirmed tier first, then needs-review, by severity and
-    confidence. FPs and duplicates are dropped; proven PoCs render in full,
-    known-bad PoC/patch payloads are suppressed rather than shown."""
+    confidence. FPs and duplicates are dropped; proven PoC payloads and
+    receipts render in full."""
     rows = reportable_findings(findings)
-    dupes = group_duplicates([f for f in (findings or []) if isinstance(f, dict)])
+    dupes = group_duplicates(list(findings or []))
     c = _counts(findings)
 
     lines = ["# Cerberus Report", "",
              f"**Findings:** {c['total']} actionable — {_sev_brief(c['by_sev'])}",
-             "- Order: confirmed → needs-review, then severity, then confidence"]
+             "- Order: " + " → ".join(s for s, _ in STATUS_TITLES)
+             + ", then severity, then confidence"]
     omitted = []
     if c["fps"]:
         omitted.append(f"{c['fps']} false positive{'s' if c['fps'] != 1 else ''}")
@@ -217,7 +204,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
         lines.append(f"- {poc_brief}")
     lines.append("")
 
-    for tier, tier_title in (("confirmed", "Confirmed"), ("needs-review", "Needs review")):
+    for tier, tier_title in STATUS_TITLES:
         tier_rows = ([f for f in rows if str(f.get("status", "")).lower() == "confirmed"]
                      if tier == "confirmed" else
                      [f for f in rows if str(f.get("status", "")).lower() != "confirmed"])
@@ -249,10 +236,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
             poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
             poc_status = str(poc.get("status") or "").lower()
             receipt = poc.get("receipt") if isinstance(poc.get("receipt"), dict) else {}
-            if f.get("_needs_poc_regen"):
-                lines.append("- Dynamic PoC: *(proof regeneration pending; payload withheld "
-                             "as unverified — raw data in `findings.json`)*")
-            elif poc_status == "blocked":
+            if poc_status == "blocked":
                 blocker = str(poc.get("blocker") or "PoC generation did not produce a repro")
                 lines.append(f"- Dynamic PoC: **BLOCKED** ({_md_safe(blocker)})")
             elif poc_status:
@@ -264,28 +248,27 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                 else:
                     lines.append("- Dynamic PoC: **ATTEMPTED** (in-container execution "
                                  "did not fully confirm)")
-                if not _poc_hidden(f):
-                    if poc.get("command"):
-                        lines.append(f"  - Repro Command: `{_md_safe(poc['command'])}`")
-                    path_ref = str(poc.get("host_path") or poc.get("script_path") or "").strip()
-                    if path_ref:
-                        lines.append(f"  - Script file: `{_md_safe(path_ref)}`")
-                    if poc.get("control") and poc.get("command"):
-                        lines.append(f"  - Control Command: `{_md_safe(poc['command'])} "
-                                     f"{poc.get('control')}`")
-                    receipt_outputs = receipt.get("outputs") or []
-                    if receipt_outputs:
-                        lines += ["  - Observed output (stamped receipt):",
-                                  "    ```", _code_safe(str(receipt_outputs[0])[:1200]), "    ```"]
-                    if receipt.get("timestamp"):
-                        stamper = receipt.get("stamped_by", "cerberus")
-                        lines.append(f"  - Receipt: Stamped by {stamper} at `{receipt.get('timestamp')}`")
-                    script = str(poc.get("script") or "").strip()
-                    if script:
-                        fn = poc.get("filename", "test_repro.py")
-                        ext = fn.split(".")[-1] if "." in fn else "python"
-                        lines += [f"  - Repro Script (`{fn}`):",
-                                  f"```{ext}", _code_safe(script), "```"]
+                if poc.get("command"):
+                    lines.append(f"  - Repro Command: `{_md_safe(poc['command'])}`")
+                path_ref = str(poc.get("host_path") or poc.get("script_path") or "").strip()
+                if path_ref:
+                    lines.append(f"  - Script file: `{_md_safe(path_ref)}`")
+                if poc.get("control") and poc.get("command"):
+                    lines.append(f"  - Control Command: `{_md_safe(poc['command'])} "
+                                 f"{poc.get('control')}`")
+                receipt_outputs = receipt.get("outputs") or []
+                if receipt_outputs:
+                    lines += ["  - Observed output (stamped receipt):",
+                              "    ```", _code_safe(str(receipt_outputs[0])[:1200]), "    ```"]
+                if receipt.get("timestamp"):
+                    stamper = receipt.get("stamped_by", "cerberus")
+                    lines.append(f"  - Receipt: Stamped by {stamper} at `{receipt.get('timestamp')}`")
+                script = str(poc.get("script") or "").strip()
+                if script:
+                    fn = poc.get("filename", "test_repro.py")
+                    ext = fn.split(".")[-1] if "." in fn else "python"
+                    lines += [f"  - Repro Script (`{fn}`):",
+                              f"```{ext}", _code_safe(script), "```"]
 
             summary = _summary(f)
             diff = _real_diff(f)
@@ -323,7 +306,6 @@ _BADGE_CSS = (
     ".badge-proven{background:#dcfce7;color:#166534}"
     ".badge-attempted{background:#fef9c3;color:#854d0e}"
     ".badge-blocked{background:#f8d7da;color:#721c24}"
-    ".badge-pending{background:#e2e3e5;color:#6c757d}"
     ".badge-none{background:#e2e3e5;color:#383d41}"
 )
 
@@ -381,8 +363,7 @@ def write_html(findings: list[dict], out: Path) -> None:
     output, commands) and the patch inside nested collapsibles.
     """
     rows = reportable_findings(findings)
-    dupes: dict[str, list[dict]] = group_duplicates(
-        [f for f in (findings or []) if isinstance(f, dict)])
+    dupes: dict[str, list[dict]] = group_duplicates(list(findings or []))
 
     _SEV_CLASS = {"critical": "sev-critical", "high": "sev-high", "medium": "sev-medium",
                   "low": "sev-low", "info": "sev-info"}
@@ -407,9 +388,7 @@ def write_html(findings: list[dict], out: Path) -> None:
         poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
         poc_status = str(poc.get("status") or "").lower()
         receipt = poc.get("receipt") if isinstance(poc.get("receipt"), dict) else {}
-        if f.get("_needs_poc_regen") and poc_status in ("proven", "attempted"):
-            poc_badge = '<span class="badge badge-pending">Pending</span>'
-        elif poc_status == "proven":
+        if poc_status == "proven":
             poc_badge = '<span class="badge badge-proven">Proven</span>'
         elif poc_status == "attempted":
             poc_badge = '<span class="badge badge-attempted">Attempted</span>'
@@ -420,14 +399,11 @@ def write_html(findings: list[dict], out: Path) -> None:
 
         poc_parts = []
         poc_head = ""
-        if f.get("_needs_poc_regen"):
-            poc_head = ("<p class=\"meta-line\"><strong>Proof regeneration pending; "
-                        "withheld as unverified.</strong></p>")
-        elif poc_status == "blocked":
+        if poc_status == "blocked":
             blocker = html.escape(str(poc.get("blocker")
                                       or "PoC generation did not produce a repro"), quote=True)
             poc_head = f"<p class=\"meta-line\"><strong>Dynamic PoC blocked.</strong> {blocker}</p>"
-        elif poc_status and not _poc_hidden(f):
+        elif poc_status:
             runs = receipt.get("runs", 3)
             succ = receipt.get("successes", runs)
             head = (f"Dynamic PoC — {succ}/{runs} exploit runs succeeded, control passed"

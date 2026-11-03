@@ -287,7 +287,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
     from cerberus.config import get_model_kwargs
     from cerberus.sandbox import acquired_backend
 
-    findings = [f for f in (findings or []) if isinstance(f, dict)]
+    findings = list(findings or [])
     model_kwargs = get_model_kwargs(cfg, "hunter")
     mk = sanitize_model_kwargs(model_kwargs)
     _timeout = int(effective_config(cfg)["timeout"])
@@ -334,8 +334,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
             prior_block = ""
             if attempt:
                 prior = [f for f in fresh_all
-                         if isinstance(f, dict)
-                         and not str(f.get("id", "")).endswith("-fallback")]
+                         if not str(f.get("id", "")).endswith("-fallback")]
                 shown = prior[:_PRIOR_FINDINGS_LIMIT]
                 pf_text = _json.dumps(_system_signals(shown), default=str)
                 if len(prior) > len(shown):
@@ -373,8 +372,7 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                 norm = [_fallback_finding("system", repo, files,
                                           "no structured output")]
             for f in norm:
-                if isinstance(f, dict):
-                    f.setdefault("unit", "system")
+                f.setdefault("unit", "system")
             if attempt == 0:
                 pass_fresh = [f for f in norm
                               if (str(f.get("path", "")).lower(),

@@ -13,8 +13,8 @@ from .util import (
     _detector_signals,
     _now_iso,
     _repo_root,
-    _signal_text,
     find_repo_file,
+    signal_text,
 )
 
 _logger = _logging.getLogger(__name__)
@@ -274,7 +274,7 @@ def _format_detected_routes(route_lines: list[str | dict] | str, max_display: in
 def _measured_blocks(repo: str, files: list[str], signals: list[dict],
                      summary: str, vulns: list[dict] | None = None) -> dict[str, str]:
     signals = list(signals or [])
-    routes_text = _signal_text(signals, "routes")
+    routes_text = signal_text(signals, "routes")
     route_lines = [ln.strip() for ln in routes_text.splitlines() if ln.strip()]
     n_routes = len(route_lines)
     signals_classes = _detector_signals(signals)

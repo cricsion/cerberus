@@ -18,7 +18,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from cerberus.codegraph import _db, _ts, sinks, summaries
+from cerberus.codegraph import _db, _ts, sinks
 from codegraph_support import close_cached
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -312,7 +312,6 @@ def test_missing_db_degrades_everywhere(tmp_path, monkeypatch):
     assert _db.node_children(None, "app.py:app.py") == []
     assert _db.node_parent(None, "app.py:login") is None
     assert _db.incoming_edges(None, "app.py:login") == []
-    assert _db.outgoing_edges(None, "app.py:login") == []
     assert _db.unresolved_refs(None, node_id="app.py:login") == []
     assert _db.routing_manifest(None) == []
     assert _db.is_generated_file(None, "app.py") is False
@@ -387,8 +386,8 @@ def test_seeded_rows(mini):
 
     incoming = _db.incoming_edges(conn, "db.py:run_query", kinds=["calls"])
     assert [e["source"] for e in incoming] == ["app.py:unsafe_query"]
-    assert _db.outgoing_edges(conn, "app.py:unsafe_query", kinds=["calls"])[0][
-        "target"] == "db.py:run_query"
+    outgoing = _db.get_edges(conn, source="app.py:unsafe_query", kind="calls")
+    assert outgoing[0]["target"] == "db.py:run_query"
     # a kind filter is a filter, not a hardcoded list
     assert _db.incoming_edges(conn, "db.py:run_query", kinds=["imports"]) == []
 
@@ -753,78 +752,6 @@ def test_sinks_matches_the_typescript_suite():
     assert not failures, "\n".join(failures)
 
 
-# ---------------------------------------------------------------------------
-# 6. summaries
-# ---------------------------------------------------------------------------
-
-def test_summary_roundtrip(mini):
-    root, _db_path = mini
-    node_id = "app.py:login"
-    assert summaries.get_summaries(str(root), node_id) == []
-    assert summaries.cache_hint(str(root), node_id) == ""
-
-    ok = summaries.record_summary(str(root), node_id, "SANITIZER", "79",
-                                  "escapes with markupsafe")
-    assert ok.startswith("recorded SANITIZER summary")
-    # ... and the node really is in the seeded index, so no warning is appended.
-    assert "[warning" not in ok
-    # upsert: same node id, one row, last write wins
-    summaries.record_summary(str(root), node_id, "VALIDATOR", ["79", "CWE-89"],
-                             "rejects bad input")
-    rows = summaries.get_summaries(str(root), node_id)
-    assert len(rows) == 1
-    assert rows[0]["role"] == "VALIDATOR"
-    assert rows[0]["cwe_scope"] == ["CWE-79", "CWE-89"]
-    assert rows[0]["notes"] == "rejects bad input"
-    assert rows[0]["node_id"] == node_id
-    assert isinstance(rows[0]["updated_at"], int)
-    hint = summaries.cache_hint(str(root), node_id)
-    assert hint == "[CACHED SUMMARY: VALIDATOR for CWE-79, CWE-89] rejects bad input"
-
-    # unknown role is a refusal, not a write
-    assert summaries.record_summary(str(root), node_id, "WIZARD", "79", "x").startswith(
-        "ERROR: unknown role")
-    assert summaries.get_summaries(str(root), node_id)[0]["role"] == "VALIDATOR"
-
-    # a node id outside the index is allowed, with a warning
-    warned = summaries.record_summary(str(root), "ghost.py:nope", "TAINT_PASSTHROUGH",
-                                      [], "unknown symbol")
-    assert warned.startswith("recorded TAINT_PASSTHROUGH summary")
-    assert "[warning: node_id not found in the nodes table]" in warned
-
-    # the default location is beside the index, and it is the only new file
-    assert summaries.store_path(str(root)) == root / ".codegraph" / "sast_summaries.db"
-    assert summaries.store_path(str(root)).is_file()
-
-    # get_summaries also takes the CodeGraph connection (dual-shape contract)
-    conn = _db.connect(str(root))
-    assert summaries.get_summaries(conn, node_id)[0]["role"] == "VALIDATOR"
-    assert summaries.cache_hint(conn, node_id) == hint
-    # and the root form escapes nothing
-    assert summaries.get_summaries(str(root), "ghost.py:nope")[0]["role"] == \
-        "TAINT_PASSTHROUGH"
-    # the borrowed read-only connection is still open and usable afterwards
-    assert _db.get_node(conn, node_id)["name"] == "login"
-
-
-def test_summaries_env_override_and_readonly_fs(tmp_path, monkeypatch):
-    monkeypatch.setenv('TARGET_REPO', str(tmp_path))
-    elsewhere = tmp_path / 'elsewhere' / 'mem.db'
-    monkeypatch.setenv('SAST_SUMMARIES_DB', str(elsewhere))
-    assert summaries.store_path(str(tmp_path)) == elsewhere
-    assert summaries.record_summary(str(tmp_path), 'n1', 'AUTH_GUARD', '287', 'checks jwt')
-    assert elsewhere.is_file()
-    blocker = tmp_path / 'blocker'
-    blocker.write_text('not a directory')
-    monkeypatch.setenv('SAST_SUMMARIES_DB', str(blocker / 'sast_summaries.db'))
-    bad = summaries.record_summary(str(tmp_path), 'n1', 'SANITIZER', '79', 'x')
-    assert bad.startswith('ERROR: sidecar not writable')
-    assert 'Errno' in bad
-    assert summaries.get_summaries(str(tmp_path), 'n1') == []
-    assert summaries.cache_hint(str(tmp_path), 'n1') == ''
-    monkeypatch.delenv('SAST_SUMMARIES_DB', raising=False)
-
-
 
 # ---------------------------------------------------------------------------
 # 7. hostile input degrades — the audit regressions
@@ -902,7 +829,6 @@ def test_lone_surrogates_bind_safely(mini):
                  _db.node_children(conn, "app.py:app.py", kinds=[SURROGATE]),
                  _db.incoming_edges(conn, SURROGATE),
                  _db.incoming_edges(conn, "db.py:run_query", kinds=[SURROGATE]),
-                 _db.outgoing_edges(conn, SURROGATE),
                  _db.unresolved_refs(conn, node_id=SURROGATE),
                  _db.unresolved_refs(conn, file_path=SURROGATE),
                  _db.unresolved_refs(conn, status=SURROGATE)):
@@ -918,31 +844,6 @@ def test_lone_surrogates_bind_safely(mini):
         conn.execute("INSERT INTO nodes (id, kind) VALUES ('x', 'function')")
     assert (_db.get_node(conn, "app.py:login") or {}).get("name") == "login"
 
-
-def test_summaries_refuse_hostile_text(tmp_path, monkeypatch):
-    """Writes refuse what SQLite could never store; reads simply find nothing."""
-    monkeypatch.setenv('TARGET_REPO', str(tmp_path))
-    monkeypatch.delenv('SAST_SUMMARIES_DB', raising=False)
-    root = str(tmp_path)
-    close_cached()
-    for out in (summaries.record_summary(root, SURROGATE, 'SANITIZER', '79', 'x'), summaries.record_summary(root, 'n1', 'SANITIZER', '79', 'note \ud800')):
-        assert out.startswith('ERROR:'), out
-    assert summaries.get_summaries(root, SURROGATE) == []
-    assert summaries.cache_hint(root, SURROGATE) == ''
-    conn = _db.connect(str(tmp_path))
-    assert summaries.cache_hint(conn, SURROGATE) == ''
-    assert summaries.get_summaries(conn, SURROGATE) == []
-
-def test_summaries_degrade_on_a_hostile_root(tmp_path, monkeypatch):
-    """The same OS-level refusal, through every sidecar entry point."""
-    root = str(tmp_path / LONG_COMPONENT)
-    monkeypatch.setenv('TARGET_REPO', root)
-    monkeypatch.delenv('SAST_SUMMARIES_DB', raising=False)
-    close_cached()
-    out = summaries.record_summary(root, 'n1', 'SANITIZER', '79', 'x')
-    assert out.startswith('ERROR:'), out
-    assert summaries.get_summaries(root, 'n1') == []
-    assert summaries.cache_hint(root, 'n1') == ''
 
 def test_resolve_db_path_reports_containment_and_os_failures_alike(
         tmp_path, monkeypatch):

@@ -1,17 +1,15 @@
-"""Fail-open Langfuse observability for scans (plan-langfuse.md §2/§3).
+"""Fail-open Langfuse observability for scans.
 
 Langfuse tracing is enabled iff ``LANGFUSE_PUBLIC_KEY``, ``LANGFUSE_SECRET_KEY``
 and ``LANGFUSE_BASE_URL`` are all present; ``observability.enabled`` in the
-harness config can override that gate with ``true``/``false`` (plan §2 D2).
-Everything here fails open (plan §2 D3): a missing or unusable SDK is a no-op,
+harness config can override that gate with ``true``/``false``.
+Everything here fails open: a missing or unusable SDK is a no-op,
 and a failed init/auth/export logs one ``[observability]`` stderr line instead
 of sinking a scan.
 
-The frozen interface is plan-langfuse.md §3. The ``langfuse`` package is
+The ``langfuse`` package is
 imported lazily inside functions only, never at module import time.
-``finish_scan()`` flushes but never calls ``shutdown()`` (plan §2 D10:
-per-scan shutdown breaks the SDK singleton for later scans in the same
-process). No content masking (plan §2 D7).
+``finish_scan()`` flushes but never calls ``shutdown()``
 """
 from __future__ import annotations
 
@@ -29,7 +27,7 @@ _ENV_KEYS = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL")
 _FALSE_VALUES = frozenset({"false", "0", "no", "off"})
 _TRUE_VALUES = frozenset({"true", "1", "yes", "on"})
 
-# Stable role vocabulary (plan §2 D6). Trace names are a stable API:
+# Stable role vocabulary. Trace names are a stable API:
 # dynamic values (unit, group, batch) go to tags/metadata, never into names.
 _IDENTITY_ROLES = frozenset({
     "triage",
@@ -71,12 +69,12 @@ def _load_env_files() -> None:
 
 
 def _keys_present() -> bool:
-    """True iff all three Langfuse env keys are non-empty (plan §2 D2)."""
+    """True iff all three Langfuse env keys are non-empty."""
     return all(bool(os.environ.get(key)) for key in _ENV_KEYS)
 
 
 def enabled(cfg: dict | None = None) -> bool:
-    """Enable gate (plan §2 D2, §3). Never raises — fail-open to ``False``."""
+    """Enable gate. Never raises — fail-open to ``False``."""
     try:
         _load_env_files()
         from cerberus.config import get_config

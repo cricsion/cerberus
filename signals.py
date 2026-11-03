@@ -19,11 +19,16 @@ DEFAULT_RUN_ID = "latest"
 _SIGNALS_DIRNAME = "signals"
 
 
+def sanitize_run_id(rid: str) -> str:
+    safe = _re.sub(r"[^A-Za-z0-9._-]", "_", str(rid or "").strip())[:80]
+    safe = _re.sub(r"\.{2,}", "_", safe)
+    safe = safe.lstrip(".").lstrip("-")
+    return safe
+
+
 def resolve_run_id() -> str:
     """The run identifier used for signal storage, mirroring the scratchpad."""
-    rid = str(os.environ.get(RUN_ID_ENV) or "").strip()
-    safe = _re.sub(r"[^A-Za-z0-9._-]", "_", rid)[:80] if rid else ""
-    return safe or DEFAULT_RUN_ID
+    return sanitize_run_id(os.environ.get(RUN_ID_ENV) or "") or DEFAULT_RUN_ID
 
 
 def signals_dir(repo: str) -> Path:

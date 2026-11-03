@@ -81,20 +81,6 @@ and line, with the same test/generated hygiene filter the UI applies. Start a
 cross-file hunt from a route, not from a grep for `@app.get`. Route ids are
 what route authorization tools take (`compare_sibling_route_security`).
 
-## The sidecar: agent memory, not the graph
-
-Writes never touch the index. The one writable artifact is
-`<repo>/.codegraph/sast_summaries.db` (redirectable via `SAST_SUMMARIES_DB`) —
-the **sidecar** for reusable security-role summaries: per-node
-**sanitizer/guard** verdicts (`SANITIZER | VALIDATOR | AUTH_GUARD |
-TAINT_PASSTHROUGH | SAFE_WRAPPER`). It is triage memory across agents; recorded
-rows are prepended to later tool calls as a `[CACHED SUMMARY: …]` hint, so do
-not re-derive what is already decided. The tool surface only reads it — the
-index and the sidecar stay read-only for agents.
-
-A summary is a claim, not a finding: it is an analyst's verdict you can act on
-and, when wrong, overwrite.
-
 ## Choosing the tool by the shape of the question
 
 | You want to know | Tool |

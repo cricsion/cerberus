@@ -11,7 +11,7 @@ from typing import Any, TypedDict
 
 from cerberus.paths import canonical_repo
 from cerberus.progress import AgentRegistry, AgentState
-from cerberus.schemas import SEVERITY_ORDER, safe_float, safe_int
+from cerberus.schemas import MERGE_PRIO, SEVERITY_ORDER, coerce_findings, safe_float, safe_int
 
 try:
     from cerberus import observability as _obs
@@ -66,7 +66,7 @@ def _verified_reducer(left: list[dict] | None,
 class ScanState(TypedDict, total=False):
     repo: str
     files: list[str]
-    threat_model: str
+    record_signals: bool
     threat_model_md: str
     threat_model_source: str
     threat_model_override: str
@@ -189,6 +189,7 @@ def indexer_node(state: ScanState) -> dict:
     from cerberus.fallback import runner
     from cerberus.tools.sast import iac_check, regex_prefilter, sca_scan, secrets_scan
     repo = state.get("repo", ".")
+    record_signals = state.get("record_signals", True)
     # No file-count cap; per-agent work is bounded by the partition budget.
     base = Path(repo)
     files = _inventory_files(base)
@@ -199,8 +200,9 @@ def indexer_node(state: ScanState) -> dict:
         from cerberus.signals import signal_stats, write_signal
 
         count, summary = signal_stats(body)
-        entry: dict = {"id": cid, "path": write_signal(repo, cid, body),
-                       "count": count, "summary": summary}
+        entry: dict = {"id": cid, "count": count, "summary": summary}
+        if record_signals:
+            entry["path"] = write_signal(repo, cid, body)
         if keep_text:
             entry["text"] = body
         signals_out.append(entry)
@@ -274,10 +276,11 @@ def threat_summary(repo: str, signals: list[dict] | None) -> str:
     """One-line STRIDE summary from indexer signals. Shared by the scan's
     threat_model_node and `cerberus threat-model` so the CLI bootstrap sees the
     same stack/route context the scan path does."""
+    from cerberus.threat.util import signal_text
     signals = [s for s in (signals or []) if isinstance(s, dict)]
-    pre = _signal_text(signals, "prefilter")
+    pre = signal_text(signals, "prefilter")
     classes = [line[3:] for line in pre.splitlines() if line.startswith("## ")]
-    routes = _signal_text(signals, "routes")
+    routes = signal_text(signals, "routes")
     n_routes = len([ln for ln in routes.splitlines() if ln.strip()]) if routes else 0
     return (
         f"Threat model for {repo} | stack: unknown stack | entry points: ~{n_routes} routes | "
@@ -287,15 +290,6 @@ def threat_summary(repo: str, signals: list[dict] | None) -> str:
     )
 
 
-def _signal_text(signals: list[dict] | None, cid: str) -> str:
-    """The full text of one signal entry ('text' only rides state for signals
-    whose consumers read it mid-scan: prefilter/routes)."""
-    for s in (signals or []):
-        if isinstance(s, dict) and s.get("id") == cid:
-            return str(s.get("text") or "")
-    return ""
-
-
 def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     from cerberus.config import effective_model
 
@@ -303,7 +297,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
     signals = [s for s in (state.get("signals") or []) if isinstance(s, dict)]
     files = [f for f in (state.get("files") or []) if f]
     summary = threat_summary(repo, signals)
-    out: dict = {"threat_model": summary}
+    out: dict = {}
     if agent_registry is not None:
         _model = effective_model(state.get("cfg") or {}, "hunter", "threat")
         for _r in ("threat:researcher", "threat:historian", "threat:synthesizer"):
@@ -500,8 +494,7 @@ def _validate_inline(findings: list[dict], cfg: dict, threat_md: str,
         # Fail-open for infra noise; a config-class failure must sink the scan.
         if is_fatal_error(e):
             raise
-        return [{"status": "needs-review", **(f if isinstance(f, dict) else {"title": str(f)})}
-                for f in (findings or [])]
+        return [{"status": "needs-review", **f} for f in (findings or [])]
 
 
 def hunter_worker(state: dict) -> dict:
@@ -527,7 +520,7 @@ def hunter_worker(state: dict) -> dict:
                         _tools_out=_tools)
         # Stamp the partition so validation runs one validator per unit.
         for f in out:
-            if isinstance(f, dict) and not f.get("unit"):
+            if not f.get("unit"):
                 f["unit"] = str(label)
         _stage_detail("hunters",
                       f"[hunters] {label}: {len(out)} findings in "
@@ -550,26 +543,22 @@ def hunter_worker(state: dict) -> dict:
 
 
 def _norm_key(f: dict) -> str:
-    try:
-        fid = str(f.get("id", "") or "").strip()
-        if fid:
-            return f"id:{fid}"
-        path = (str(f.get("path", "")).strip().lower()
-                .replace("\\", "/").lstrip("./"))
-        return (f"{path}|{safe_int(f.get('start_line'))}"
-                f"|{safe_int(f.get('end_line'))}")
-    except (AttributeError, TypeError, ValueError):
-        # Non-dict payloads: the fallback must hold the same never-raises
-        # contract as the body above it.
-        if hasattr(f, "get"):
-            return f"{f.get('path')}|{f.get('title')}"
-        return str(f)
+    fid = str(f.get("id", "") or "").strip()
+    if fid:
+        return f"id:{fid}"
+    path = (str(f.get("path", "")).strip().lower()
+            .replace("\\", "/").lstrip("./"))
+    return (f"{path}|{safe_int(f.get('start_line'))}"
+            f"|{safe_int(f.get('end_line'))}")
 
 
 def _merge_dup(a: dict, b: dict) -> dict:
-    prio = {"confirmed": 2, "needs-review": 1, "fp": 0}
-    a_stat = prio.get(a.get("status"), 1)
-    b_stat = prio.get(b.get("status"), 1)
+    prio = MERGE_PRIO
+    # Unknown/missing status ranks as needs-review (-1): a graded "confirmed"
+    # verdict must never lose an unmergeable-title to an ungraded row. This
+    # arm is load-bearing — status is not guaranteed on every producer path.
+    a_stat = prio.get(a.get("status"), -1)
+    b_stat = prio.get(b.get("status"), -1)
     if a_stat > b_stat:
         keep, drop = a, b
     elif b_stat > a_stat:
@@ -603,7 +592,7 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 
 def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
-    findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
+    findings = list(state.get("findings", []))
     from cerberus.config import api_key_present, as_bool, effective_model
 
     _cfg_sys = _node_cfg(state)
@@ -679,8 +668,10 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
 
 
 def aggregator_node(state: ScanState) -> dict:
+    rows = (coerce_findings(list(state.get("candidates", [])))
+            + coerce_findings(list(state.get("findings", []))))
     seen: dict[str, dict] = {}
-    for f in list(state.get("candidates", [])) + list(state.get("findings", [])):
+    for f in rows:
         key = _norm_key(f)
         seen[key] = _merge_dup(seen[key], f) if key in seen else f
     out: list[dict] = list(seen.values())
@@ -753,7 +744,7 @@ def _is_hot(f: dict) -> bool:
 def confirm_critical_step(state: ScanState,
                           confirm: Callable[[dict], bool] | None) -> dict:
     verified = list(state.get("verified", []) or [])
-    hot = [f for f in verified if isinstance(f, dict) and _is_hot(f)]
+    hot = [f for f in verified if _is_hot(f)]
     if not hot:
         return {}
     payload = {
@@ -997,8 +988,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                     merged_pass = dict(merged)
                     merged_pass["prior_findings"] = [
                         f for f in all_findings
-                        if isinstance(f, dict)
-                        and not str(f.get("id", "")).endswith("-fallback")]
+                        if not str(f.get("id", "")).endswith("-fallback")]
                 else:
                     merged_pass = merged
                 if agent_registry is not None:

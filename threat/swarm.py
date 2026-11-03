@@ -232,7 +232,7 @@ def conduct_interview(repo: str, files: list[str], signals: list[dict],
             if not validate_threat_md(finalized):
                 return finalized
         except Exception as e:
-            from cerberus.fallback import is_fatal_error
+            from cerberus.agents.deep import is_fatal_error
             if is_fatal_error(e):
                 raise
             _logger.debug("threat finalize failed, keeping draft: %s", e)
@@ -412,7 +412,7 @@ def enrich_threat(repo: str, files: list[str], signals: list[dict],
         meta["coverage_gaps"] = _coverage_gaps(md)
         return md.strip() + "\n", meta
     except Exception as e:
-        from cerberus.fallback import is_fatal_error
+        from cerberus.agents.deep import is_fatal_error
 
         if is_fatal_error(e):
             raise
@@ -632,7 +632,9 @@ def _update_threat_table_with_claims(md: str, claims: list[dict]) -> str:
 
 
 def update_threat_with_findings(md: str, findings: list[dict], repo: str = "") -> str:
-    items = [f for f in (findings or []) if isinstance(f, dict)]
+    from cerberus.schemas import coerce_findings
+
+    items = coerce_findings(findings)
     claims = [f for f in items
               if not f.get("duplicate_of")
               and f.get("status") == "confirmed"

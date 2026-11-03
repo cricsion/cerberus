@@ -301,21 +301,3 @@ def stamp_receipts(findings: list[dict], backend: Any, cfg: dict | None = None,
             f["poc"] = poc
 
     return findings
-
-
-def run_poc_regen(refuted_findings: list[dict], backend: Any, cfg: dict,
-                  threat_md: str = "", run_id: str | None = None,
-                  round_num: int = 1) -> list[dict]:
-    """Lightweight PoC verification pass for findings that survived static checks.
-
-    Since Hunters author and verify reproduction tests interactively in
-    the container, this pass ensures scripts are materialized and stamps mechanical receipts.
-    """
-    if not refuted_findings or backend is None:
-        return refuted_findings
-
-    stamp_receipts(refuted_findings, backend, cfg=cfg, run_id=run_id)
-    for f in refuted_findings:
-        if isinstance(f, dict):
-            f["_needs_poc_regen"] = False
-    return refuted_findings

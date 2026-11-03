@@ -17,6 +17,12 @@ UNKNOWN_SEVERITY_RANK = 5
 
 REPORT_STATUS_ORDER = {"confirmed": 0, "needs-review": 1, "fp": 2}
 
+MERGE_PRIO = {status: -rank for status, rank in REPORT_STATUS_ORDER.items()}
+
+STATUS_TITLES = (("confirmed", "Confirmed"), ("needs-review", "Needs review"))
+
+MAJORITY_WINNER_ORDER = ("confirmed", "fp")
+
 
 class TaintDict(TypedDict, total=False):
     source: str
@@ -210,6 +216,14 @@ def structured_items(parsed: object, field: str = "verdicts") -> list[dict]:
     except Exception:
         return []
     return out
+
+
+def coerce_findings(data: object) -> list[dict]:
+    """Dict rows only, from anywhere findings JSON arrives — the disk boundary.
+    """
+    if not isinstance(data, list):
+        return []
+    return [f for f in data if isinstance(f, dict)]
 
 
 def sort_findings(findings) -> list[dict]:

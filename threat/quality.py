@@ -19,7 +19,7 @@ from .render import (
     _row_enum_gaps,
     _section,
 )
-from .util import _detector_signals, _repo_root, _signal_text
+from .util import _detector_signals, _repo_root, signal_text
 
 IMPACT_RANK = {v: i for i, v in enumerate(
     ("existential", "critical", "high", "medium", "low"))}
@@ -243,7 +243,7 @@ def threat_quality(md: str, files: list[str] | None = None,
             gaps.extend(cov[:5])
         else:
             passed += 1
-    routes_text = _signal_text(signals, "routes")
+    routes_text = signal_text(signals, "routes")
     n_routes = len([ln for ln in str(routes_text).splitlines() if ln.strip()])
     if n_routes > 0:
         total += 1
@@ -296,7 +296,7 @@ def verify_threat(repo: str, md: str, files: list[str] | None = None,
                             + ", ".join(missing[:10]))
         else:
             passed += 1
-    routes_text = _signal_text(signals, "routes")
+    routes_text = signal_text(signals, "routes")
     n_routes = len([ln for ln in str(routes_text).splitlines() if ln.strip()])
     if n_routes > 0:
         total += 1

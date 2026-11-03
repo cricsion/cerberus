@@ -74,3 +74,58 @@ def test_status_panel_escapes_agent_ids(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "hunter[/red]" in out
     assert "\x1b" not in out
+
+
+def test_cmd_findings_tolerates_hostile_json_rows(tmp_path, capsys):
+    """Audit regression: a findings.json containing a bare string row used to
+    crash the --status pre-filter with AttributeError before sort_findings'
+    dict check could save it. Boundary coercion (schemas.coerce_findings)
+    makes the crash unreachable; scalar rows are dropped, dict rows render."""
+    findings_path = tmp_path / "findings.json"
+    findings_path.write_text(json.dumps([
+        "evil string entry",
+        {"severity": "high", "cwe": "CWE-89", "path": "a.py", "start_line": 1,
+         "confidence": 0.9, "status": "confirmed", "title": "sqli"},
+    ]), encoding="utf-8")
+
+    p = build_parser()
+    for argv in (
+        ["findings", str(findings_path)],
+        ["findings", str(findings_path), "--status", "confirmed"],
+        ["findings", str(findings_path), "--severity", "high"],
+        ["findings", str(findings_path), "--cwe", "CWE-89"],
+    ):
+        ns = p.parse_args(argv)
+        ns.func(ns)          # must not raise
+    out = capsys.readouterr().out
+    assert "CWE-89" in out and "sqli" in out
+
+
+def test_threat_model_record_signals_flag_parse():
+    """W12 opt-in: --record-signals must parse gate cleanly (store_true,
+    default False) so the read-only default of --verify is preserved."""
+    p = build_parser()
+    on = p.parse_args(["threat-model", "r", "--verify", "--record-signals"])
+    assert getattr(on, "record_signals", False) is True
+    off = p.parse_args(["threat-model", "r", "--verify"])
+    assert getattr(off, "record_signals", False) is False
+
+
+def test_cmd_threat_model_attaches_signal_paths(tmp_path, monkeypatch, capsys):
+    """Audit E2 parity: `cerberus threat-model` (generated doc) now carries the
+    same §7 signal-path block the scan-path persists — same attach helper, so
+    the standalone artifact is the same shape."""
+    import os
+    monkeypatch.setenv("THREAT_LLM", "0")
+    monkeypatch.delenv("API_KEY", raising=False)
+    repo = "tests/fixtures/pygoat-sample"
+    out = tmp_path / "TM.md"
+    p = build_parser()
+    ns = p.parse_args(["threat-model", repo, "--out", str(out)])
+    rc = ns.func(ns)
+    assert rc == 0
+    md = out.read_text()
+    assert "stored scan signals:" in md
+    assert ".cerberus/" in md and "signals/" in md
+    # the doc it reads is unchanged (attachment is idempotent by marker)
+    assert md.count("stored scan signals:") == 1

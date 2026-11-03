@@ -1,9 +1,8 @@
 # CodeGraph package
 
 This package provides the 9 CodeGraph tools used by the harness. It reads a
-repository's CodeGraph index, renders bounded source and relationship evidence,
-and surfaces cached security summaries from the sidecar database. The tool names
-and their order are a pinned interface.
+repository's CodeGraph index and renders bounded source and relationship
+evidence. The tool names and their order are a pinned interface.
 
 ## Tool surface
 
@@ -32,9 +31,6 @@ different path rules.
 - The index lives at `.codegraph/codegraph.db` under the indexed repository.
   It contains the node and edge data used by index-first tools. Index access is
   root-pinned; an index for a different repository is not reused.
-- Security summaries and related memory live in the sidecar selected by
-  `SAST_SUMMARIES_DB`. Its `summaries` rows are keyed by node and role and store
-  CWE scope, notes, and update time.
 - `_db.py` owns bounded database reads; `_index.py` checks index readiness and
   containment; `_ts.py` owns parser and source-text helpers. `_common.py`
   contains shared formatting, parsing, containment, and gate helpers.

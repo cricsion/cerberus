@@ -206,7 +206,7 @@ _INT_BOUNDS: dict[str, tuple[int, int, int | None, bool]] = {
     "partition.max_units": (20, 0, None, True),
     "partition.min_files": (10, 0, None, False),
     "partition.single_unit_max_files": (1000, 0, None, False),
-    "hunter.reruns": (0, 0, None, False),
+    "hunter.reruns": (2, 0, None, False),
     "codegraph.chars": (20000, 0, None, False),
     "codegraph.candidates": (200, 0, None, False),
     "sandbox.command_timeout": (120, 1, None, False),
@@ -405,17 +405,6 @@ def get_model_kwargs(cfg: dict, role: str, agent: str | None = None) -> dict:
                 or "")
     api_key = (os.environ.get(f"{role_key}_API_KEY", "")
                or resolve_api_key(cfg))
-
-    # Auto-route provider base_url and api_key based on model name if not explicitly set
-    if not os.environ.get(f"{role_key}_BASE_URL"):
-        if "nemotron" in model_name.lower() or model_name.startswith("nvidia/"):
-            base_url = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-            if not os.environ.get(f"{role_key}_API_KEY"):
-                api_key = os.environ.get("NVIDIA_API_KEY") or api_key
-        elif "muse" in model_name.lower() or "spark" in model_name.lower():
-            base_url = os.environ.get("META_BASE_URL", "https://api.meta.ai/v1")
-            if not os.environ.get(f"{role_key}_API_KEY"):
-                api_key = os.environ.get("META_API_KEY") or api_key
 
     profile = (caller_profile if isinstance(caller_profile, dict)
                else get_config().get("model_profile"))

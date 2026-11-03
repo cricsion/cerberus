@@ -59,7 +59,7 @@ def find_repo_file(repo: str) -> Path | None:
 _GIT_SAFE_OPTS = ("-c", "core.hooksPath=/dev/null", "-c", "diff.external=", "-c", "commit.gpgsign=false")
 
 
-def _signal_text(signals: list[dict] | None, cid: str) -> str:
+def signal_text(signals: list[dict] | None, cid: str) -> str:
     """The full text of one signal entry. State only carries ``text`` for the
     signals whose consumers read it mid-scan (``prefilter``, ``routes``)."""
     for s in (signals or []):
@@ -74,7 +74,7 @@ def _detector_signals(signals: list[dict]) -> list[str]:
     attacker can do to this repository.
     """
     try:
-        return [ln[3:] for ln in _signal_text(signals, "prefilter").splitlines()
+        return [ln[3:] for ln in signal_text(signals, "prefilter").splitlines()
                 if ln.startswith("## ")]
     except AttributeError:
         return []
@@ -86,7 +86,7 @@ def _attack_surfaces(signals: list[dict], files: list[str]) -> list[str]:
     type.
     """
     surfaces: list[str] = []
-    routes = [ln for ln in _signal_text(signals, "routes").splitlines()
+    routes = [ln for ln in signal_text(signals, "routes").splitlines()
               if ln.strip()]
     if routes:
         surfaces.append(f"HTTP request handlers ({len(routes)} routes detected)")

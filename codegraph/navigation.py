@@ -17,8 +17,6 @@ Laws (each an invariant of this module):
   implementer counts, ``## n.`` blocks capped with totals).
 - LAW-5 — containment and never-raise: hostile input is capped and echoes
   nothing private; every failure is an ``ERROR:``/guidance string.
-- LAW-6 — cached summaries are read-only here: ``[CACHED SUMMARY: …]`` is
-  injected when the sidecar has one, and the sidecar is never written.
 
 Format laws are byte-frozen: ``# file:start-end (kind name)``, ``n: text``
 bodies, ``--- def header`` / ``--- title (k of n)`` sections, the ``sliced:``
@@ -29,7 +27,7 @@ from __future__ import annotations
 import json
 import re
 
-from cerberus.codegraph import _common, _db, _ts, summaries
+from cerberus.codegraph import _common, _db, _ts
 from cerberus.codegraph._common import (
     HARD_MAX_SECTION,
     Report,
@@ -247,7 +245,7 @@ def get_ast_slice(node_id: str, focus_line: int | None = None,
     Returns:
         A bounded, numbered source view, or an ``ERROR:``/guidance string.
     """
-    conn, node, error = _common.tool_gate(root, node_id=node_id)
+    _conn, node, error = _common.tool_gate(root, node_id=node_id)
     if error:
         return error
     chosen = str(mode or "").strip().lower() or "full_or_window"
@@ -272,9 +270,6 @@ def get_ast_slice(node_id: str, focus_line: int | None = None,
         start, end = end, start
     span_lines = (end - start + 1) if end >= start else 0
     meta: list[str] = [f"# {file_path}:{start}-{end} ({kind} {name})"]
-    hint = summaries.cache_hint(conn, node_id)
-    if hint:
-        meta.append(hint)
     decorators = node.get("decorators") or []
     signature = str(node.get("signature") or "")
     if decorators:

@@ -260,7 +260,8 @@ def _resolve_scratch_dir(root_dir: Any = None, agent_name: str | None = None,
             or os.environ.get("RUN_ID")
             or "latest"
         )
-        safe_rid = "".join(c if c.isalnum() or c in ("-", "_", ".") else "_" for c in str(rid).strip()) or "latest"
+        from cerberus.signals import sanitize_run_id
+        safe_rid = sanitize_run_id(rid) or "latest"
         base = Path(repo_root) / ".cerberus" / safe_rid / "scratch"
 
     safe_agent = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in str(agent_name or "").strip())

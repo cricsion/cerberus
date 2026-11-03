@@ -18,11 +18,6 @@ _MAX_MANIFESTS = 128
 _HASH_CHUNK = 1 << 20
 
 
-def clear_manifests() -> None:
-    """Clear all recorded scan manifests from memory."""
-    _MANIFESTS.clear()
-
-
 def _digest_repo(repo: str | Path) -> dict[str, Any]:
     """Fast stat-based manifest: hashes relative path, size, and mtime without
     reading file contents into memory, avoiding multi-megabyte host I/O."""

@@ -462,11 +462,6 @@ def incoming_edges(conn, node_id: str, kinds=None, limit=100) -> list[dict]:
     return _edges_by_endpoint(conn, "target", node_id, kinds, limit)
 
 
-def outgoing_edges(conn, node_id: str, kinds=None, limit=100) -> list[dict]:
-    """Edges leaving this node, optionally filtered by kind."""
-    return _edges_by_endpoint(conn, "source", node_id, kinds, limit)
-
-
 def unresolved_refs(conn, *, node_id=None, file_path=None, status=None,
                     limit=100) -> list[dict]:
     """References the resolver saw and failed on — an edge may be missing here.

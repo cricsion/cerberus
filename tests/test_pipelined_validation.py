@@ -204,7 +204,8 @@ def test_fan_out_is_bounded_and_ordered(monkeypatch):
     monkeypatch.setattr(g, "hunter_worker", worker)
     monkeypatch.setattr(g, "_validate_inline", lambda f, *a, **k: f)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
-    state = {"fanout_payloads": [{"unit": f"u{i}"} for i in range(6)]}
+    state = {"cfg": {"hunter": {"reruns": 0}},
+             "fanout_payloads": [{"unit": f"u{i}"} for i in range(6)]}
     g._fan_out_hunters(state, max_workers=2)
     assert peak[0] <= 2
     # Completion order is free; the append-only channel keeps every unit.
@@ -250,6 +251,7 @@ def test_run_scan_stage_order_and_confirm_between_validation_and_triage(monkeypa
     monkeypatch.setattr(g, "scorer_node", stage("scorer"))
     asked = []
     out = g.run_scan("repo", confirm_critical=True,
+                     cfg={"hunter": {"reruns": 0}},
                      confirm=lambda p: (order.append("confirm") or asked.append(p) or False))
     assert order == ["indexer", "threat_model", "hunters", "worker", "system_pass",
                      "aggregator", "validator", "confirm", "triage",

@@ -37,7 +37,7 @@ def _acquire_backend(cfg: dict | None, root: str | Path, *, label: str,
                      agent_id: str | None = None) -> Any:
     """Resolve a backend with the harness's one fail-open ladder.
     """
-    from cerberus.fallback import is_fatal_error
+    from cerberus.agents.deep import is_fatal_error
 
     try:
         return resolve_backend(

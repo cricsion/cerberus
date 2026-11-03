@@ -23,7 +23,7 @@ import json
 import re
 from pathlib import Path
 
-from cerberus.codegraph import _common, _db, _ts, summaries
+from cerberus.codegraph import _common, _db, _ts
 from cerberus.codegraph._common import (
     _as_int,
     _cap_chars,
@@ -451,9 +451,6 @@ def inspect_type_contract(symbol_name_or_node_id: str, root: str = ".",
         + (f"-{end}" if end and end != start else "")
         + f" ({kind} {name})",
         f"node_id: {node_id}  (resolved by {basis})"])
-    hint = summaries.cache_hint(conn, node_id)
-    if hint:
-        out.add(hint)
     if others:
         shown = others[:5]
         rest = len(others) - len(shown)

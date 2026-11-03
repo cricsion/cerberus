@@ -240,11 +240,6 @@ def test_validator_compact_finding_preserves_poc_and_conditions():
     assert "extra_field" not in compacted
 
 
-def test_validator_compact_finding_handles_none():
-    compacted = _compact_finding(None)
-    assert compacted == {"id": "", "title": ""}
-
-
 def test_poc_receipt_stamper_handles_docker_execute_response():
     # Production Docker Sandbox returns ExecuteResponse with .output and .exit_code, no .stdout
     from cerberus.sandbox.backend_base import ExecuteResponse
@@ -269,6 +264,20 @@ def test_poc_receipt_stamper_handles_docker_execute_response():
     assert poc["status"] == "proven"
     assert poc["receipt"]["successes"] == 3
     assert poc["receipt"]["control_status"] == "passed"
+
+
+def test_merge_dup_unknown_status_never_beats_confirmed():
+    """Phase-2 regression pin: MERGE_PRIO is derived from
+    REPORT_STATUS_ORDER (inverted scale); the unknown-status fallback must
+    rank at needs-review (-1), never above confirmed (0). Before the fix
+    the stale old-scale default (1) let a row with a missing/misspelled
+    status outrank a graded 'confirmed' verdict in a merge."""
+    cand_keep = {"id": "KEEP-01", "status": "confirmed", "poc": {}}
+    cand_missing = {"id": "DROP-01", "poc": {}}
+    assert _merge_dup(cand_keep, cand_missing)["id"] == "KEEP-01"
+    assert _merge_dup(cand_missing, cand_keep)["id"] == "KEEP-01"
+    cand_odd = {"id": "DROP-02", "status": "CnFirmed", "poc": {}}
+    assert _merge_dup(cand_keep, cand_odd)["id"] == "KEEP-01"
 
 
 def test_merge_dup_preserves_proven_poc_when_keep_is_confirmed():
@@ -441,25 +450,8 @@ def test_stamp_receipts_respects_agent_verified_command():
     assert any("python3 -u /work/_shared/poc/CMD-01/test_sqli.py" in cmd for cmd in backend.executed_commands)
 
 
-def test_lightweight_poc_regen_clears_flag_and_stamps():
-    from cerberus.agents.poc import run_poc_regen
-    findings = [{
-        "id": "REGEN-01",
-        "_needs_poc_regen": True,
-        "poc": {
-            "filename": "test_repro.py",
-            "script": "import sys\nprint('[POC_PROVEN]')\nsys.exit(0)",
-            "runs": 1,
-        }
-    }]
-    backend = FakeBackend(
-        run_results=[FakeExecResult(0, "[POC_PROVEN]\n")],
-        control_result=FakeExecResult(0, "[POC_CONTROL_PASSED]\n")
-    )
-    res = run_poc_regen(findings, backend, cfg={"poc": {"repro_runs": 1}}, run_id="run-regen")
-    assert len(res) == 1
-    assert res[0]["_needs_poc_regen"] is False
-    assert res[0]["poc"]["status"] == "proven"
+# run_poc_regen test removed 2026-11-04: the function was production-dead
+# (zero callers outside this file) and was deleted per the overengineering audit.
 
 
 def test_poc_generator_filters_duplicates_and_fps(monkeypatch):

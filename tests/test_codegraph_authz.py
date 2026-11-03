@@ -27,7 +27,7 @@ import sqlite3
 
 import pytest
 from _graphseed import GraphSeed
-from cerberus.codegraph import _db, _ts, authz, summaries, supply
+from cerberus.codegraph import _db, _ts, authz, supply
 from cerberus.codegraph._common import _contained_file
 from codegraph_support import (
     _assert_finding_schema,
@@ -393,14 +393,6 @@ def _seed_rows(root, db_path) -> None:
 def mini(tmp_path, monkeypatch):
     """The foundation's mini index, extended with the authz fixture rows."""
     with mini_index(tmp_path, monkeypatch, _seed_rows) as index:
-        # One guard callee is only recognisable through the analyst's own
-        # memory: `tenant_gate` matches no name pattern, so it joins the
-        # consensus solely through a cached AUTH_GUARD summary (the summaries
-        # module's read path).
-        assert summaries.record_summary(
-            str(tmp_path), "helpers.py:tenant_gate", "AUTH_GUARD", "284",
-            "row-level tenant ownership check").startswith("recorded AUTH_GUARD")
-        close_cached()
         yield index
 
 
@@ -457,8 +449,7 @@ def test_consensus_catches_missing_decorator_and_guard(mini):
     assert "missing_on_target: decorators @RequireTenantRole; guard_calls " \
            "assert_tenant_owner" in out
 
-    # the sibling that carries a guard only a cached summary knows about
-    assert "tenant_gate (cached AUTH_GUARD summary)" in out
+    # the sibling guard names that match the name pattern
     assert "check_permission (guard-shaped name)" in out
 
     # the candidate finding, with the severity/confidence heuristic applied
@@ -981,11 +972,12 @@ def test_raw_sql_update_is_a_writer_and_the_toctou_finding_fires(tmp_path, monke
 def test_guarded_target_is_not_reported_as_omitting_the_check(mini):
     """FIX 3 (S-1): a differently-named guard is not a proven omission.
 
-    delete_user carries check_permission (guard-shaped name) and tenant_gate
-    (cached AUTH_GUARD); its siblings carry assert_tenant_owner. The old
-    set-difference emitted "missing function-level access control … enforce
-    the check this handler omits" at severity high — on a target that does
-    check access. The honest shape is a note, not a verdict.
+    delete_user carries check_permission (guard-shaped name); its siblings
+    carry assert_tenant_owner — plus tenant_gate, which matches no name
+    pattern and is therefore not claimed as coverage by name-based matching.
+    The old set-difference emitted "missing function-level access control …
+    enforce the check this handler omits" at severity high — on a target that
+    does check access. The honest shape is a note, not a verdict.
     """
     root, _db_path = mini
     out = authz.compare_sibling_route_security.func(
@@ -1004,11 +996,12 @@ def test_guarded_target_is_not_reported_as_omitting_the_check(mini):
     assert finding["severity"] == "info"
     assert finding["confidence"] <= 0.3            # never escalates off guard_hint
     assert "name-based matching cannot prove equivalence" in finding["note"]
-    assert "target enforces check_permission, tenant_gate" in finding["note"]
+    assert "target enforces check_permission" in finding["note"]
+    assert "tenant_gate" not in finding["note"]    # name-blind: not claimed coverage
     assert "assert_tenant_owner not matched by name" in finding["note"]
     assert "consensus check not matched by name" in finding["title"]
     # and the honest wording is in the report body, not only the JSON block
-    assert "note: target enforces check_permission, tenant_gate" in out
+    assert "note: target enforces check_permission" in out
     assert "severity info" in out
 
 

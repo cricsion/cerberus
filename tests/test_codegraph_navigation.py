@@ -18,7 +18,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from cerberus.codegraph import _db, summaries
+from cerberus.codegraph import _db
 from cerberus.codegraph import navigation as nav
 from codegraph_support import close_cached, mini_index
 from test_codegraph_foundation import NODE_COLUMNS, _node
@@ -584,17 +584,15 @@ def test_unknown_node_ids_are_named_in_the_error(repo):
 # 1. get_ast_slice — the verbatim path
 # ---------------------------------------------------------------------------
 
-def test_full_span_injects_the_cached_summary(repo):
+def test_full_span_header_layout(repo):
+    """Full-span mode starts with the format law header line."""
     root, _db_path = repo
     assert "[CACHED SUMMARY" not in nav.get_ast_slice.func("app.py:login", root=str(root))
 
-    assert summaries.record_summary(str(root), "app.py:login", "SANITIZER", "89",
-                                    "parameterises the query").startswith("recorded")
     out = nav.get_ast_slice.func("app.py:login", root=str(root))
 
     lines = out.splitlines()
     assert lines[0] == "# app.py:6-10 (function login)"
-    assert "[CACHED SUMMARY: SANITIZER for CWE-89] parameterises the query" in lines
     assert 'decorators: @app.route("/login", methods=["POST"])' in lines
     assert "signature: def login(username, password):" in lines
     assert "6: def login(username, password):" in lines

@@ -6,6 +6,8 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from cerberus.agents.deep import is_fatal_error
+
 _logger = logging.getLogger(__name__)
 
 EMPTY_STRUCTURED: tuple[None, str] = (None, "")
@@ -33,14 +35,6 @@ def needs_review_verdicts(items: list[dict], note: str) -> list[dict]:
             "fallback_note": note,
         })
     return out
-
-
-def is_fatal_error(exc: BaseException) -> bool:
-    """Config error or harness bug: re-raise. Model, parse, and transport
-    failures are the fail-open cases."""
-    from cerberus.agents.deep import is_fatal_error as _is_fatal_error
-
-    return _is_fatal_error(exc)
 
 
 def runner(action: str, fn: Callable[[], Any], *,

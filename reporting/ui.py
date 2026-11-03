@@ -165,8 +165,6 @@ def _agent_kind(agent_id: str, role: str) -> str:
 def _severity_counts(findings: Any) -> dict[str, int]:
     counts = dict.fromkeys(_SEVERITIES, 0)
     for finding in findings or []:
-        if not isinstance(finding, dict):
-            continue
         sev = str(finding.get("severity") or "info").strip().lower()
         counts[sev] = counts.get(sev, 0) + 1
     return counts
@@ -519,8 +517,8 @@ class ScanReporter:
              min_confidence: float = 0.6, gated: Any = None,
              elapsed: Any = 0, state: dict | None = None) -> None:
         """The end receipt: dim label column, values, PASS/FAIL verdict."""
-        findings = [f for f in (findings or []) if isinstance(f, dict)]
-        gated = [f for f in (gated or []) if isinstance(f, dict)]
+        findings = list(findings or [])
+        gated = list(gated or [])
         state = state if isinstance(state, dict) else {}
         out_path = Path(str(out))
 
@@ -682,7 +680,7 @@ def build_reporter(no_color: bool = False,
 def render_confirmation(console: Any, payload: dict, *, limit: int = 20) -> None:
     """Compact findings table for the human-review prompt."""
     findings = payload.get("findings") if isinstance(payload, dict) else None
-    findings = [f for f in (findings or []) if isinstance(f, dict)][:limit]
+    findings = list(findings or [])[:limit]
     console.print(Text("HUMAN REVIEW REQUIRED (confirmed critical/high)",
                        style="warn"))
     if not findings:

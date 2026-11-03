@@ -37,7 +37,8 @@ def test_fan_out_window_validates_and_runs_system_pass(monkeypatch):
     monkeypatch.setattr("cerberus.agents.hunters._run_unit", run_unit)
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", syspass)
-    state = {"repo": ".", "fanout_payloads": [{"unit": u} for u in sizes]}
+    state = {"repo": ".", "fanout_payloads": [{"unit": u} for u in sizes],
+             "cfg": {"hunter": {"reruns": 0}}}
     g._fan_out_hunters(state, max_workers=2)
 
     ids = {f["id"] for f in state["findings"]}
@@ -94,7 +95,7 @@ def test_fan_out_window_bundle_size_follows_cell_size(monkeypatch):
     monkeypatch.setattr(g, "hunter_worker", hunt)
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
-    cfg = {"verification": {"cell_size": 6}}
+    cfg = {"verification": {"cell_size": 6}, "hunter": {"reruns": 0}}
     state = {"repo": ".", "fanout_payloads": [{"unit": "u", "cfg": cfg}]}
     # max_workers=1 keeps bundle execution FIFO, so chunk order is stable.
     g._fan_out_hunters(state, max_workers=1)
@@ -138,7 +139,8 @@ def test_fan_out_window_flips_validator_running_at_task_start(monkeypatch):
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
     monkeypatch.setattr("concurrent.futures.ThreadPoolExecutor.submit", submit)
-    state = {"repo": ".", "fanout_payloads": [{"unit": "u1"}, {"unit": "u2"}]}
+    state = {"repo": ".", "fanout_payloads": [{"unit": "u1"}, {"unit": "u2"}],
+             "cfg": {"hunter": {"reruns": 0}}}
     g._fan_out_hunters(state, max_workers=2, agent_registry=reg)
     assert len(state["verified"]) == 2
     for u in ("u1", "u2"):
@@ -167,7 +169,7 @@ def test_fan_out_window_packs_llm_stream_and_rides_passthrough(monkeypatch):
     monkeypatch.setattr(g, "hunter_worker", hunt)
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
-    cfg = {"verification": {"cell_size": 6}}
+    cfg = {"verification": {"cell_size": 6}, "hunter": {"reruns": 0}}
     state = {"repo": ".", "fanout_payloads": [{"unit": "u", "cfg": cfg}]}
     g._fan_out_hunters(state, max_workers=1)
     ids = [[f.get("id") for f in chunk] for chunk in sizes]
@@ -200,7 +202,7 @@ def test_fan_out_window_survives_hunter_garbage(monkeypatch):
     monkeypatch.setattr(g, "hunter_worker", hunt)
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
-    cfg = {"verification": {"cell_size": 1}}
+    cfg = {"verification": {"cell_size": 1}, "hunter": {"reruns": 0}}
     state = {"repo": ".", "fanout_payloads": [{"unit": "u", "cfg": cfg}]}
     g._fan_out_hunters(state, max_workers=1)
     # Raw fallback: the list re-chunks at cell_size (2 tasks of 1 item here),
@@ -232,7 +234,7 @@ def test_fan_out_window_duplicate_unit_names_no_crash(monkeypatch):
     monkeypatch.setattr(g, "hunter_worker", hunt)
     monkeypatch.setattr(g, "_validate_inline", validate)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
-    cfg = {"verification": {"cell_size": 6}}
+    cfg = {"verification": {"cell_size": 6}, "hunter": {"reruns": 0}}
     state = {"repo": ".", "fanout_payloads": [
         {"unit": "dup", "files": ["a1", "a2"], "cfg": cfg},
         {"unit": "dup", "files": ["b1"], "cfg": cfg}]}
@@ -266,7 +268,8 @@ def test_fan_out_window_applies_results_in_payload_order(monkeypatch):
     monkeypatch.setattr(g, "_validate_inline", lambda f, *a, **k: f)
     monkeypatch.setattr(g, "system_pass_node", lambda s, **_k: {})
     state = {"repo": ".", "fanout_payloads": [
-        {"unit": "slow"}, {"unit": "fast1"}, {"unit": "fast2"}]}
+        {"unit": "slow"}, {"unit": "fast1"}, {"unit": "fast2"}],
+        "cfg": {"hunter": {"reruns": 0}}}
     g._fan_out_hunters(state, max_workers=3)
     assert [f["id"] for f in state["findings"]] == ["slow", "fast1", "fast2"]
 
@@ -289,19 +292,22 @@ def test_indexer_prefilter_and_files():
 
 
 def test_threat_model_node():
-    from cerberus.pipeline import indexer_node, threat_model_node
+    from cerberus.pipeline import indexer_node, threat_model_node, threat_summary
     st = indexer_node({"repo": "tests/fixtures/pygoat-sample"})
     state = {**st, "repo": "tests/fixtures/pygoat-sample"}
     out = threat_model_node(state)
-    assert "STRIDE" in out["threat_model"]
-    # The STRIDE summary is a state one-liner, never an envelope finding.
+    # The scan-time one-liner never entered state (zero readers — audit F2);
+    # the summary lives where bootstrap/enrich consume it.
+    assert "threat_model" not in out
+    # The STRIDE summary is a one-liner, never an envelope finding.
     assert "candidates" not in out
+    assert "STRIDE" in threat_summary(state["repo"], state.get("signals"))
 
 
 def test_threat_summary_shared_by_cli():
-    # `harness threat-model` builds the summary from indexer signals (the
-    # scan-time summary only ever exists in state["threat_model"]); with no
-    # signals it degrades to "unknown stack", never "".
+    # `harness threat-model` rebuilds the one-liner from indexer signals
+    # (threat_model_node keeps `summary` local; the state key never grew a
+    # reader); with no signals it degrades to "unknown stack", never "".
     from cerberus.pipeline import threat_summary
     assert "unknown stack" in threat_summary("r", [])
     st = indexer_node({"repo": "tests/fixtures/pygoat-sample"})
@@ -483,3 +489,23 @@ def test_inventory_files_golden():
     assert _inventory_files((fixtures / "polyglot").resolve()) == [
         "Dockerfile", "Program.cs", "Vuln.java", "lib.rs", "main.go",
         "main.tf", "vuln.c", "vuln.js", "vuln.php", "vuln.rb", "xss.html"]
+
+
+def test_indexer_query_only_writes_no_signal_storage(tmp_path):
+    """Audit W12/D3: `threat-model --verify` is a read/verify operation — with
+    record_signals off the indexer builds signal entries (bootstrap consumes
+    their text) but never mkdirs/writes .cerberus/<run_id>/signals/ in the
+    target repo, and the returned entries carry no repo-relative paths."""
+    from cerberus.pipeline import indexer_node
+
+    repo = str(tmp_path)
+    st = indexer_node({"repo": repo, "record_signals": False})
+    assert not (tmp_path / ".cerberus").exists()
+    assert st["signals"] and all(s.get("path") is None for s in st["signals"])
+    # mid-scan readers still get their text
+    assert any(s["id"] == "prefilter" and s.get("text") for s in st["signals"])
+
+    # default scan path still records (paths land under .cerberus/)
+    st2 = indexer_node({"repo": repo})
+    assert (tmp_path / ".cerberus").is_dir()
+    assert all(s.get("path", "").startswith(".cerberus/") for s in st2["signals"])

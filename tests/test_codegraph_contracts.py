@@ -137,8 +137,7 @@ def _seed_rows(root, db_path) -> None:
 @pytest.fixture
 def repo(tmp_path, monkeypatch):
     """The mini index, extended, with TARGET_REPO pointed at it."""
-    with mini_index(tmp_path, monkeypatch, _seed_rows,
-                    unset_env=("SAST_SUMMARIES_DB",)) as index:
+    with mini_index(tmp_path, monkeypatch, _seed_rows) as index:
         yield index
 
 

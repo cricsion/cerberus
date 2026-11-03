@@ -17,7 +17,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 
-from cerberus.schemas import sort_findings
+from cerberus.schemas import coerce_findings, sort_findings
 
 THEME = Theme({
     "meta": "dim",         # metadata weight: stamps, labels, durations, hints
@@ -133,9 +133,7 @@ def view_run(run_dir: Path, *, console: Any = None, agent: Any = None,
     meta_path = run_dir / "scan_meta.json"
     findings_path = run_dir / "findings.json"
     meta = _read_json(meta_path) if meta_path.is_file() else None
-    findings = _read_json(findings_path) if findings_path.is_file() else None
-    if not isinstance(findings, list):
-        findings = []
+    findings = coerce_findings(_read_json(findings_path)) if findings_path.is_file() else []
 
     events_path = run_dir / "agents.jsonl"
     agent_events = []

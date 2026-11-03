@@ -35,6 +35,7 @@ LAZY_harness_IMPORTS: dict[str, frozenset[str]] = {
         "cerberus.fallback",
         "cerberus.prompts.threat",
         "cerberus.sandbox",
+        "cerberus.schemas",
     }),
 }
 

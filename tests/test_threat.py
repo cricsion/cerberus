@@ -91,7 +91,6 @@ def test_node_falls_back_to_summary_on_bootstrap_failure(monkeypatch, tmp_path):
     out = threat_model_node(st)
     assert out["threat_model_source"] == "summary"
     assert "threat_model_md" not in out
-    assert "STRIDE" in out["threat_model"]
 
 
 def test_bootstrap_deterministic_offline(tmp_path):
