@@ -1,19 +1,20 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import logging
 import sys
-import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from cerberus.agents.deep import is_fatal_error, sanitize_model_kwargs
 from cerberus.config import effective_config
+from cerberus.fallback import EMPTY_STRUCTURED, _append_note, needs_review_verdicts, runner
 from cerberus.progress import AgentState
-from cerberus.fallback import (EMPTY_STRUCTURED, _append_note,
-                              needs_review_verdicts, runner)
+from cerberus.prompts.validator import (
+    OMITTED_NOTE,
+    ROUND_FAILED_NOTE,
+    VALIDATOR_SYSTEM,
+)
 from cerberus.schemas import structured_items
-from cerberus.prompts.validator import (OMITTED_NOTE, REFUTE_METHOD,
-                                        ROUND_FAILED_NOTE, VALIDATOR_SYSTEM)
 
 _logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def _merge_verdict(base: dict, data: dict) -> dict:
                   "cwe", "patch_summary", "control_type"):
             if k in data and data[k] not in (None, ""):
                 merged[k] = data[k]
-        if "poc_status" in data and data["poc_status"]:
+        if data.get("poc_status"):
             poc_dict = merged.get("poc") if isinstance(merged.get("poc"), dict) else {}
             receipt = poc_dict.get("receipt") if isinstance(poc_dict.get("receipt"), dict) else {}
             is_proven = (poc_dict.get("status") == "proven" and receipt.get("control_status") == "passed")
@@ -56,11 +57,11 @@ def _merge_verdict(base: dict, data: dict) -> dict:
                 if not isinstance(merged.get("poc"), dict):
                     merged["poc"] = {}
                 merged["poc"]["status"] = data["poc_status"]
-        if "poc_script" in data and data["poc_script"]:
+        if data.get("poc_script"):
             if not isinstance(merged.get("poc"), dict):
                 merged["poc"] = {}
             merged["poc"]["script"] = data["poc_script"]
-        if "poc_command" in data and data["poc_command"]:
+        if data.get("poc_command"):
             if not isinstance(merged.get("poc"), dict):
                 merged["poc"] = {}
             merged["poc"]["command"] = data["poc_command"]
@@ -356,10 +357,7 @@ def _validate_unit_batch(group_name: str, items: list[dict], cfg: dict,
                 # An omitted id is a partial reply, never an implicit confirmed/fp.
                 # No structured response at all is a failed round, not an empty
                 # verdict set.
-                if verdicts or parsed is not None:
-                    note = OMITTED_NOTE
-                else:
-                    note = ROUND_FAILED_NOTE
+                note = OMITTED_NOTE if verdicts or parsed is not None else ROUND_FAILED_NOTE
                 missing = [f for f in chunk
                            if str(f.get("id", "")) not in covered]
                 for ballot in needs_review_verdicts(missing, note):
@@ -499,8 +497,8 @@ def _plan_validation_cells(
         for s in range(0, len(pooled_remainders), cell_size):
             chunk = pooled_remainders[s : s + cell_size]
             chunk_units = {u for _, _, u in chunk}
-            if len(chunk_units) == 1 and list(chunk_units)[0] not in used_names:
-                rem_name = list(chunk_units)[0]
+            if len(chunk_units) == 1 and next(iter(chunk_units)) not in used_names:
+                rem_name = next(iter(chunk_units))
                 used_names.add(rem_name)
             else:
                 rem_name = "cross-unit-remainder"

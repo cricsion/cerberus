@@ -3,14 +3,18 @@ from __future__ import annotations
 import subprocess
 import threading
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from deepagents.backends.protocol import ExecuteResponse, SandboxBackendProtocol
 
 from .cli_utils import safe_slug
-from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_MAX_OUTPUT_BYTES,
-                       DEFAULT_RULES_DIR, RunSandboxBase)
+from .run_base import (
+    DEFAULT_COMMAND_TIMEOUT,
+    DEFAULT_MAX_OUTPUT_BYTES,
+    DEFAULT_RULES_DIR,
+    RunSandboxBase,
+)
 
 # The hang response's note, shared by every lane that reports a hung client.
 HANG_NOTE = "exec client hang"

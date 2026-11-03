@@ -34,7 +34,13 @@ def prompt_confirm(payload: dict) -> bool:
 
 def cmd_scan(args: argparse.Namespace) -> int:
     from cerberus.pipeline import SEVERITY_ORDER, run_scan
-    from cerberus.reporting.reports import write_html, write_json, write_junit, write_markdown, write_sarif
+    from cerberus.reporting.reports import (
+        write_html,
+        write_json,
+        write_junit,
+        write_markdown,
+        write_sarif,
+    )
 
     out = Path(args.out)
     try:
@@ -53,9 +59,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
     scan_record: dict = {}
     agent_log = getattr(args, "agent_log", "normal")
     no_color = bool(getattr(args, "no_color", False))
-    from cerberus.reporting.ui import build_reporter
-
     from cerberus.config import get_config, set_config
+    from cerberus.reporting.ui import build_reporter
     try:
         _cfg = get_config()
     except Exception:
@@ -166,7 +171,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         "votes": args.votes,
         "n_duplicates": sum(1 for f in findings if f.get("duplicate_of")),
         "triage_log": "triage.log" if (out / "triage.log").is_file() else "",
-        "tools_used": sorted(set(str(t) for t in state.get("tools_used", []))),
+        "tools_used": sorted({str(t) for t in state.get("tools_used", [])}),
         "manifest": scan_record,
         "scan_id": state.get("scan_id", ""),
         "stage_timings": state.get("stage_timings") or {},
@@ -293,8 +298,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
             print(f"bootstrap failed: {e}", file=sys.stderr)
             return 1
         try:
-            from cerberus.config import (api_key_present, effective_config,
-                                        get_config)
+            from cerberus.config import api_key_present, effective_config, get_config
             _cfg_enrich = get_config()
             if not api_key_present(_cfg_enrich):
                 print("API_KEY not set: skipping swarm enrichment; kept "
@@ -334,7 +338,7 @@ def cmd_threat_model(args: argparse.Namespace) -> int:
 
 
 def cmd_runs(args: argparse.Namespace) -> int:
-    from cerberus.reporting.view import make_console, list_runs
+    from cerberus.reporting.view import list_runs, make_console
 
     console = make_console()
     return int(list_runs(args.runs_dir, limit=args.limit, console=console) or 0)

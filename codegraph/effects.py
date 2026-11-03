@@ -27,9 +27,13 @@ import json
 import re
 
 from cerberus.codegraph import _common, _ts, sinks
-from cerberus.codegraph.supply import (_callee_text, _egress_span,
-                                      _one_hop_assignment,
-                                      _strip_keyword_prefix, _url_skeleton)
+from cerberus.codegraph.supply import (
+    _callee_text,
+    _egress_span,
+    _one_hop_assignment,
+    _strip_keyword_prefix,
+    _url_skeleton,
+)
 from cerberus.tools._compat import tool
 
 # ---------------------------------------------------------------------------
@@ -102,7 +106,7 @@ def trace_effect_category(function_node_id: str, category: str,
             "trace_egress_and_ssrf_targets renders specifically — call "
             "that tool instead")
 
-    conn, node, error = _common.tool_gate(root, node_id=function_node_id)
+    _conn, node, error = _common.tool_gate(root, node_id=function_node_id)
     if error:
         return error
     file_path = str(node.get("file_path") or "")

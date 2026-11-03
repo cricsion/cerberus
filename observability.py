@@ -278,11 +278,11 @@ def finish_scan() -> None:
 
 __all__ = [
     "enabled",
-    "run_config",
-    "start_scan",
-    "get_handler",
-    "stable_role",
-    "scope_path",
-    "scan_metadata",
     "finish_scan",
+    "get_handler",
+    "run_config",
+    "scan_metadata",
+    "scope_path",
+    "stable_role",
+    "start_scan",
 ]

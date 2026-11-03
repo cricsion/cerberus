@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import logging as _logging
-from typing import Any as _Any
+from typing import Any
 
 from .assemble import _merge_plan
 from .floor import _bug_shapes, _measured_blocks, bootstrap_threat
-from .render import (FPS_HEADING, OBSERVED_HEADING, PROPOSALS_HEADING,
-                     THREAT_COLUMNS, _cell, _coverage_gaps, _parse_threats,
-                     _replace_section, _section, validate_threat_md)
-from .util import (CACHE_DIRNAME, CACHE_HEADER, FILENAME, _now_iso, _repo_root)
+from .render import (
+    FPS_HEADING,
+    OBSERVED_HEADING,
+    PROPOSALS_HEADING,
+    THREAT_COLUMNS,
+    _cell,
+    _coverage_gaps,
+    _parse_threats,
+    _replace_section,
+    _section,
+    validate_threat_md,
+)
+from .util import CACHE_DIRNAME, CACHE_HEADER, FILENAME, _now_iso, _repo_root
 
 _logger = _logging.getLogger(__name__)
 
@@ -40,8 +49,7 @@ def _threat_mk(cfg: dict) -> dict:
 
 
 def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
-    from cerberus.prompts.threat import (SwarmHistory, SwarmPlan,
-                                        SwarmResearch)
+    from cerberus.prompts.threat import SwarmHistory, SwarmPlan, SwarmResearch
     agent_names = {SwarmResearch: "threat:researcher",
                    SwarmHistory: "threat:historian",
                    SwarmPlan: "threat:synthesizer"}
@@ -57,10 +65,11 @@ def _llm_structured(cfg: dict, model: Any, system: str, human: str) -> Any:
     if root is None or not root.is_dir():
         raise ValueError("threat-stage repository is not a directory")
 
+    from deepagents.backends.protocol import SandboxBackendProtocol
+
     from cerberus.agents.deep import run_structured
     from cerberus.config import effective_config
     from cerberus.sandbox import _acquire_backend, close_backend
-    from deepagents.backends.protocol import SandboxBackendProtocol
 
     cfg = effective_config(cfg)
     backend = None
@@ -152,8 +161,7 @@ def interview_questions(draft_md: str, history: list[tuple[str, str]],
                         cfg: dict, max_questions: int = 5) -> list | None:
     from cerberus.agents.deep import run_structured_batch
     from cerberus.fallback import runner
-    from cerberus.prompts.threat import (INTERVIEWER_SYSTEM, QuestionList,
-                                        build_interview_task)
+    from cerberus.prompts.threat import INTERVIEWER_SYSTEM, QuestionList, build_interview_task
     human = build_interview_task(draft_md, _history_text(history),
                                  max_questions)
 
@@ -253,8 +261,7 @@ def _model_dump(parsed: Any) -> dict:
 def _swarm_research(repo: str, files: list[str], draft: str,
                     cfg: dict) -> tuple[dict, str]:
     from cerberus.fallback import runner
-    from cerberus.prompts.threat import (RESEARCHER_SYSTEM, SwarmResearch,
-                                        build_research_task)
+    from cerberus.prompts.threat import RESEARCHER_SYSTEM, SwarmResearch, build_research_task
 
     def _build() -> tuple[dict, str]:
         parsed = _llm_structured(cfg or {}, SwarmResearch, RESEARCHER_SYSTEM,
@@ -271,8 +278,7 @@ def _swarm_research(repo: str, files: list[str], draft: str,
 def _swarm_history(repo: str, draft: str, cfg: dict,
                     vulns: list[dict] | None = None) -> tuple[dict, str]:
     from cerberus.fallback import runner
-    from cerberus.prompts.threat import (HISTORIAN_SYSTEM, SwarmHistory,
-                                        build_historian_task)
+    from cerberus.prompts.threat import HISTORIAN_SYSTEM, SwarmHistory, build_historian_task
 
     def _build() -> tuple[dict, str]:
         parsed = _llm_structured(cfg or {}, SwarmHistory, HISTORIAN_SYSTEM,
@@ -343,7 +349,7 @@ def enrich_threat(repo: str, files: list[str], candidates: list[dict],
                   vulns: list[dict] | None = None,
                   vulns_path: str = "",
                   measured_facts: str = "") -> tuple[str, dict]:
-    meta: dict[str, _Any] = {"agents": {}}
+    meta: dict[str, Any] = {"agents": {}}
     try:
         research: dict = {}
         history: dict = {}

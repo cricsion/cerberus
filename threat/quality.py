@@ -2,13 +2,24 @@ from __future__ import annotations
 
 import re as _re
 
-from .render import (ACTORS, IMPACTS, LIKELIHOODS, OBSERVED_HEADING, SECTIONS,
-                     STATUSES, THREAT_COLUMNS, _SCOPE_SEMANTICS_RE,
-                     _backticked_paths, _cell, _coverage_gaps,
-                     _parse_entry_points, _parse_threats, _row_enum_gaps,
-                     _section)
+from .render import (
+    _SCOPE_SEMANTICS_RE,
+    ACTORS,
+    IMPACTS,
+    LIKELIHOODS,
+    OBSERVED_HEADING,
+    SECTIONS,
+    STATUSES,
+    THREAT_COLUMNS,
+    _backticked_paths,
+    _cell,
+    _coverage_gaps,
+    _parse_entry_points,
+    _parse_threats,
+    _row_enum_gaps,
+    _section,
+)
 from .util import _detector_signals, _repo_root
-
 
 IMPACT_RANK = {v: i for i, v in enumerate(
     ("existential", "critical", "high", "medium", "low"))}

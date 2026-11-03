@@ -6,7 +6,7 @@ import logging
 import threading
 import time
 from dataclasses import asdict, dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Optional
 
@@ -30,7 +30,7 @@ def _bookkeep_method(fn):
     return wrapper
 
 
-class AgentState(str, Enum):
+class AgentState(StrEnum):
     pending = "pending"
     queued = "queued"
     running = "running"
@@ -255,7 +255,7 @@ class AgentRegistry:
             if handle is None:
                 handle = AgentHandle(agent_id=aid,
                                      role=str(kw.get("role", "agent")),
-                                     unit=kw.get("unit", None),
+                                     unit=kw.get("unit"),
                                      run_id=self.run_id,
                                      parent_stage=kw.get("parent_stage", ""),
                                      model=kw.get("model", model))
@@ -401,7 +401,7 @@ class AgentRegistry:
             pass
 
     def _dispatch(self, evt):
-        d = evt.to_dict() if hasattr(evt, "to_dict") else evt
+        evt.to_dict() if hasattr(evt, "to_dict") else evt
         try:
             if self.sink is not None and hasattr(self.sink, "on_event"):
                 self.sink.on_event(evt)
@@ -446,5 +446,10 @@ def _stats_progress(handle):
         return asdict(st)
     return dict(st)
 
-__all__ = ["AgentState", "AgentStats", "AgentHandle", "AgentEvent",
-           "AgentRegistry"]
+__all__ = [
+    "AgentEvent",
+    "AgentHandle",
+    "AgentRegistry",
+    "AgentState",
+    "AgentStats",
+]

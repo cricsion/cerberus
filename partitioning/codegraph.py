@@ -76,7 +76,8 @@ def _fuse_coupled_modules(units: list[dict], edges: dict | None,
     if not weights or target <= 0 or len(units) <= 1:
         return units
     from pathlib import PurePosixPath
-    from cerberus.partitioning.units import _edge_index, _cross_weight, _dominant_top_dir
+
+    from cerberus.partitioning.units import _cross_weight, _dominant_top_dir, _edge_index
 
     idx = _edge_index(edges) if edges else {}
     current = [dict(u, files=list(u.get("files") or [])) for u in units]
@@ -98,8 +99,8 @@ def _fuse_coupled_modules(units: list[dict], edges: dict | None,
         score = gw * 1000.0
         max_lca = max((lca_depth(a, b) for a in f1[:6] for b in f2[:6]), default=0)
         score += max_lca * 25.0
-        ext1 = set(PurePosixPath(f).suffix for f in f1 if PurePosixPath(f).suffix)
-        ext2 = set(PurePosixPath(f).suffix for f in f2 if PurePosixPath(f).suffix)
+        ext1 = {PurePosixPath(f).suffix for f in f1 if PurePosixPath(f).suffix}
+        ext2 = {PurePosixPath(f).suffix for f in f2 if PurePosixPath(f).suffix}
         shared_ext = len(ext1 & ext2)
         score += shared_ext * 2.0
         n1, n2 = str(u1.get("name", "")), str(u2.get("name", ""))
@@ -196,5 +197,7 @@ def partition_codegraph_native(files: list[str], max_unit_files: int = 100,
 
 
 __all__ = [
-    "index_available", "pass_through_dirs", "partition_codegraph_native",
+    "index_available",
+    "partition_codegraph_native",
+    "pass_through_dirs",
 ]

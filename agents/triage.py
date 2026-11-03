@@ -4,14 +4,14 @@ Stage A is deterministic (normalized path + CWE family); Stage B+C is batched
 LLM. Nothing is dropped."""
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 import logging as _logging
-
-_logger = _logging.getLogger(__name__)
+from concurrent.futures import ThreadPoolExecutor
 
 from cerberus.agents.deep import is_fatal_error
 from cerberus.config import effective_config
 from cerberus.schemas import safe_int, structured_items
+
+_logger = _logging.getLogger(__name__)
 
 
 def _norm_path(path: str) -> str:
@@ -299,10 +299,11 @@ def run_triage(findings: list[dict], cfg: dict, threat_md: str = "",
     for s in staged:
         by_id.setdefault(str(s.get("id")), s)  # first match, like the old lookup
 
+    from contextlib import nullcontext
+    from pathlib import Path
+
     from cerberus.agents.toolsets import graph_tools
     from cerberus.sandbox import acquired_backend
-    from pathlib import Path
-    from contextlib import nullcontext
 
     tools = graph_tools()
     root = Path(repo).resolve() if repo else None

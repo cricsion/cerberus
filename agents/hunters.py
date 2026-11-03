@@ -8,12 +8,14 @@ from cerberus.agents.deep import extract_structured, is_fatal_error, sanitize_mo
 from cerberus.config import effective_config
 from cerberus.fallback import EMPTY_STRUCTURED, runner
 from cerberus.paths import to_repo_relative
+from cerberus.prompts.hunter import (
+    SYSTEM_PASS_SYSTEM,
+    build_hunter_task,
+    build_system_pass_task,
+    build_unit_system_prompt,
+    sandbox_system_section,
+)
 from cerberus.schemas import HunterResult, safe_float, safe_int
-from cerberus.prompts.hunter import (SYSTEM_PASS_SYSTEM,
-                                       build_hunter_task,
-                                       build_unit_system_prompt,
-                                       build_system_pass_task,
-                                       sandbox_system_section)
 
 _logger = logging.getLogger(__name__)
 
@@ -250,8 +252,8 @@ def _run_system_pass(repo: str, files: list[str], findings: list[dict],
                      threat_md: str, cfg: dict,
                      focus: list[str] | str | None = None,
                      _tools_out: list | None = None) -> list[dict]:
-    from cerberus.config import get_model_kwargs
     from cerberus.agents.toolsets import graph_tools
+    from cerberus.config import get_model_kwargs
     from cerberus.sandbox import acquired_backend
 
     findings = [f for f in (findings or []) if isinstance(f, dict)]

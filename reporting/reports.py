@@ -6,8 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from cerberus.schemas import (SEVERITY_ORDER, group_duplicates, safe_float,
-                             safe_int, sort_findings)
+from cerberus.schemas import SEVERITY_ORDER, group_duplicates, safe_float, safe_int, sort_findings
 
 SEV_TO_SARIF = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}
 
@@ -96,7 +95,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                 succ = receipt.get("successes", runs)
                 lines.append(f"- Dynamic PoC: **PROVEN** ({succ}/{runs} exploit runs succeeded, control passed)")
             else:
-                lines.append(f"- Dynamic PoC: **ATTEMPTED** (in-container execution did not fully confirm)")
+                lines.append("- Dynamic PoC: **ATTEMPTED** (in-container execution did not fully confirm)")
             if poc.get("command"):
                 lines.append(f"  - Repro Command: `{_md_safe(poc['command'])}`")
             if poc.get("control") and poc.get("command"):
@@ -178,12 +177,9 @@ def write_html(findings: list[dict], out: Path) -> None:
             poc_cell = f"{poc_cell}<div class=\"poc-detail\">{''.join(details)}</div>"
 
         trs.append(
-            "<tr><td>{sev}</td><td>{title}</td><td>{cwe}</td>"
-            "<td>{conf:.2f}</td><td>{loc}</td><td>{status}</td><td>{poc}</td>"
-            "<td>{evidence}</td><td>{patch}</td></tr>".format(
-                sev=sev, title=title, cwe=cwe, conf=conf,
-                loc=loc, status=status, poc=poc_cell, evidence=evidence, patch=patch_cell,
-            )
+            f"<tr><td>{sev}</td><td>{title}</td><td>{cwe}</td>"
+            f"<td>{conf:.2f}</td><td>{loc}</td><td>{status}</td><td>{poc_cell}</td>"
+            f"<td>{evidence}</td><td>{patch_cell}</td></tr>"
         )
     body = "\n".join(trs)
 

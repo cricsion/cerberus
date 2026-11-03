@@ -46,7 +46,7 @@ except ImportError:  # pragma: no cover - langchain absent
 class _ContractReport(_common.Report):
     """Keep the old fluent ``add(*lines)`` shape over the shared report API."""
 
-    def add(self, *lines: str) -> "_ContractReport":
+    def add(self, *lines: str) -> _ContractReport:
         """Append one or more already-rendered lines and keep the chain fluent."""
         self.lines.extend(lines)
         return self
@@ -459,7 +459,7 @@ def inspect_type_contract(symbol_name_or_node_id: str, root: str = ".",
         rest = len(others) - len(shown)
         out.add(f"note: {len(matches)} symbols match this name — showing the "
                 f"best; others: " + "; ".join(
-                    f"{str(o.get('id'))} ({o.get('file_path')}:"
+                    f"{o.get('id')!s} ({o.get('file_path')}:"
                     f"{_as_int(o.get('start_line'), 0)} {o.get('kind')})"
                     for o in shown)
                 + (f", … +{rest} more" if rest > 0 else ""))

@@ -5,9 +5,19 @@ from typing import Any as _Any
 
 from .floor import _provenance, _vulns_note
 from .quality import _map_enum_text, _norm_enums, _rank_threats
-from .render import (CELL_CAP, MACHINE_SECTIONS, NON_EXCLUSION_NOTE, ROW_CAPS,
-                     _cell, _clean_llm_text, _parse_threats, _replace_section,
-                     _section, _table_rows, render_md)
+from .render import (
+    CELL_CAP,
+    MACHINE_SECTIONS,
+    NON_EXCLUSION_NOTE,
+    ROW_CAPS,
+    _cell,
+    _clean_llm_text,
+    _parse_threats,
+    _replace_section,
+    _section,
+    _table_rows,
+    render_md,
+)
 
 
 def _merge_plan(repo: str, blocks: dict[str, str], plan: dict,

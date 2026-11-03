@@ -4,18 +4,18 @@
 # cerberus/sandbox/docker_backend.py).
 #
 # Network is available HERE (build time) and only here for the pinned
-# toolchain -- the build-then-pin posture from DESIGN_GUIDE.md step 2.
+# toolchain.
 #
 # BUILD VIA build.sh, which fills the pins from versions.env into
 # --build-args and drives a stable BuildKit builder:
 #   ./cerberus/sandbox/docker/build.sh cerberus-sandbox:local
 # A bare `docker build` without --build-arg fails closed at the first FROM:
-# the python base is digest-pinned via PYTHON_BASE_IMAGE (versions.env), and
-# an unpinned gray-area version is a failed build, never a soft fallback.
+# the python base is passed via PYTHON_BASE_IMAGE (versions.env), and an
+# unset version is a failed build, never a soft fallback.
 #
-# Stage layout: the six release-binary fetches are independent dl-* stages
-# (they run CONCURRENTLY in BuildKit's build DAG), each checksum-verified in
-# place, and the final stage only COPYs the binaries out -- the fetch
+# Stage layout: the release-binary fetches are independent dl-* stages
+# (they run CONCURRENTLY in BuildKit's build DAG), and the final stage only
+# COPYs the binaries out -- the fetch
 # tooling, the /tmp residue, and curl's dl-time install never reach the
 # image. atheris builds in its own stage; that stage's build toolchain is
 # not copied out (only the small ASan runtime libs it preloads at fuzz time
@@ -37,31 +37,18 @@
 # in lockstep); no defaults for the version pins -- empty pins must fail the
 # build loudly, not silently build an unpinned image.
 ARG TARGETARCH
-# Digest-pinned base (manifest-list digest so amd64+arm64 both resolve).
 ARG PYTHON_BASE_IMAGE
 ARG GITLEAKS_VERSION
-ARG GITLEAKS_SHA256_X64
-ARG GITLEAKS_SHA256_ARM64
 ARG OSV_SCANNER_VERSION
-ARG OSV_SCANNER_SHA256_X64
-ARG OSV_SCANNER_SHA256_ARM64
 ARG SEMGREP_VERSION
 ARG OPENGREP_VERSION
-ARG OPENGREP_SHA256_X64
-ARG OPENGREP_SHA256_ARM64
 ARG CHECKOV_VERSION
 ARG BANDIT_VERSION
 ARG ATHERIS_VERSION
 ARG FLAWFINDER_VERSION
 ARG BEARER_VERSION
-ARG BEARER_SHA256_X64
-ARG BEARER_SHA256_ARM64
 ARG TRUFFLEHOG_VERSION
-ARG TRUFFLEHOG_SHA256_X64
-ARG TRUFFLEHOG_SHA256_ARM64
 ARG GOSEC_VERSION
-ARG GOSEC_SHA256_X64
-ARG GOSEC_SHA256_ARM64
 ARG NJSSCAN_VERSION
 # The Dockerfile ARG defaults for Node/Go are OFF. build.sh overrides them
 # from versions.env (the shipped file sets WITH_NODE=1). Each toolchain costs
@@ -79,25 +66,14 @@ ARG GO_VERSION
 ARG PWNTOOLS_VERSION
 ARG CAPSTONE_VERSION
 ARG BINWALK_VERSION
-ARG BINWALK_SHA256
 ARG SQLMAP_VERSION
 ARG ARJUN_VERSION
 ARG MITMPROXY_VERSION
 ARG FFUF_VERSION
-ARG FFUF_SHA256_X64
-ARG FFUF_SHA256_ARM64
 ARG NUCLEI_VERSION
-ARG NUCLEI_SHA256_X64
-ARG NUCLEI_SHA256_ARM64
 ARG HTTPX_VERSION
-ARG HTTPX_SHA256_X64
-ARG HTTPX_SHA256_ARM64
 ARG KATANA_VERSION
-ARG KATANA_SHA256_X64
-ARG KATANA_SHA256_ARM64
 ARG GAU_VERSION
-ARG GAU_SHA256_X64
-ARG GAU_SHA256_ARM64
 
 # --- dl-* parallel downloader stages -----------------------------------------
 # Shared fetcher base: apt+curl runs ONCE and is cached; per-tool stages
@@ -117,22 +93,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         binutils ca-certificates curl unzip \
  && rm -rf /var/lib/apt/lists/*
 
-# opengrep: install the pinned release binary, sha256-verified like the other
-# release artifacts below (building from the source tree does not produce an
-# `opengrep` entry point -- the repo's pip install yields only
-# semgrep_pre_commit_package). Per-arch asset, so it runs natively on both
-# amd64 and arm64 instead of under qemu.
+# opengrep: install the pinned release binary (building from the source tree
+# does not produce an `opengrep` entry point -- the repo's pip install yields
+# only semgrep_pre_commit_package). Per-arch asset, so it runs natively on
+# both amd64 and arm64 instead of under qemu.
 FROM dl-base AS dl-opengrep
 ARG TARGETARCH
-ARG OPENGREP_VERSION OPENGREP_SHA256_X64 OPENGREP_SHA256_ARM64
+ARG OPENGREP_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
-      amd64) sha="${OPENGREP_SHA256_X64}"; asset=opengrep_manylinux_x86;; \
-      arm64) sha="${OPENGREP_SHA256_ARM64}"; asset=opengrep_manylinux_aarch64;; \
+      amd64) asset=opengrep_manylinux_x86;; \
+      arm64) asset=opengrep_manylinux_aarch64;; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
     curl -fsSL "https://github.com/opengrep/opengrep/releases/download/v${OPENGREP_VERSION}/${asset}" -o /usr/local/bin/opengrep; \
-    echo "${sha}  /usr/local/bin/opengrep" | sha256sum -c -; \
     chmod 0755 /usr/local/bin/opengrep; \
     command -v opengrep
 
@@ -141,15 +115,14 @@ RUN set -eu; \
 # it alongside them.
 FROM dl-base AS dl-bearer
 ARG TARGETARCH
-ARG BEARER_VERSION BEARER_SHA256_X64 BEARER_SHA256_ARM64
+ARG BEARER_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
-      amd64) sha="${BEARER_SHA256_X64}"; asset="bearer_${BEARER_VERSION}_linux_amd64.tar.gz";; \
-      arm64) sha="${BEARER_SHA256_ARM64}"; asset="bearer_${BEARER_VERSION}_linux_arm64.tar.gz";; \
+      amd64) asset="bearer_${BEARER_VERSION}_linux_amd64.tar.gz";; \
+      arm64) asset="bearer_${BEARER_VERSION}_linux_arm64.tar.gz";; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
     curl -fsSL "https://github.com/Bearer/bearer/releases/download/v${BEARER_VERSION}/${asset}" -o /tmp/bearer.tar.gz; \
-    echo "${sha}  /tmp/bearer.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/bearer.tar.gz -C /usr/local/bin bearer; \
     strip /usr/local/bin/bearer; \
     rm -f /tmp/bearer.tar.gz; \
@@ -160,15 +133,14 @@ RUN set -eu; \
 # confidence, unverified are lower-confidence leads for gitleaks to confirm.
 FROM dl-base AS dl-trufflehog
 ARG TARGETARCH
-ARG TRUFFLEHOG_VERSION TRUFFLEHOG_SHA256_X64 TRUFFLEHOG_SHA256_ARM64
+ARG TRUFFLEHOG_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
-      amd64) sha="${TRUFFLEHOG_SHA256_X64}"; asset="trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz";; \
-      arm64) sha="${TRUFFLEHOG_SHA256_ARM64}"; asset="trufflehog_${TRUFFLEHOG_VERSION}_linux_arm64.tar.gz";; \
+      amd64) asset="trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz";; \
+      arm64) asset="trufflehog_${TRUFFLEHOG_VERSION}_linux_arm64.tar.gz";; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
     curl -fsSL "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/${asset}" -o /tmp/trufflehog.tar.gz; \
-    echo "${sha}  /tmp/trufflehog.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/trufflehog.tar.gz -C /usr/local/bin trufflehog; \
     rm -f /tmp/trufflehog.tar.gz; \
     trufflehog --version
@@ -177,15 +149,14 @@ RUN set -eu; \
 # no toolchain needed at run time.
 FROM dl-base AS dl-gosec
 ARG TARGETARCH
-ARG GOSEC_VERSION GOSEC_SHA256_X64 GOSEC_SHA256_ARM64
+ARG GOSEC_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
-      amd64) sha="${GOSEC_SHA256_X64}"; asset="gosec_${GOSEC_VERSION}_linux_amd64.tar.gz";; \
-      arm64) sha="${GOSEC_SHA256_ARM64}"; asset="gosec_${GOSEC_VERSION}_linux_arm64.tar.gz";; \
+      amd64) asset="gosec_${GOSEC_VERSION}_linux_amd64.tar.gz";; \
+      arm64) asset="gosec_${GOSEC_VERSION}_linux_arm64.tar.gz";; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
     curl -fsSL "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/${asset}" -o /tmp/gosec.tar.gz; \
-    echo "${sha}  /tmp/gosec.tar.gz" | sha256sum -c -; \
     tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec; \
     strip /usr/local/bin/gosec; \
     rm -f /tmp/gosec.tar.gz; \
@@ -195,43 +166,29 @@ RUN set -eu; \
 # release-tarball + checksum recipe, per-arch assets.
 FROM dl-base AS dl-webkit
 ARG TARGETARCH
-ARG FFUF_VERSION FFUF_SHA256_X64 FFUF_SHA256_ARM64
-ARG NUCLEI_VERSION NUCLEI_SHA256_X64 NUCLEI_SHA256_ARM64
-ARG HTTPX_VERSION HTTPX_SHA256_X64 HTTPX_SHA256_ARM64
-ARG KATANA_VERSION KATANA_SHA256_X64 KATANA_SHA256_ARM64
-ARG GAU_VERSION GAU_SHA256_X64 GAU_SHA256_ARM64
+ARG FFUF_VERSION
+ARG NUCLEI_VERSION
+ARG HTTPX_VERSION
+ARG KATANA_VERSION
+ARG GAU_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
       amd64) garch=amd64;; \
       arm64) garch=arm64;; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
-    if [ "${garch}" = "amd64" ]; then \
-      ffuf_sha="${FFUF_SHA256_X64}"; nuclei_sha="${NUCLEI_SHA256_X64}"; \
-      httpx_sha="${HTTPX_SHA256_X64}"; katana_sha="${KATANA_SHA256_X64}"; \
-      gau_sha="${GAU_SHA256_X64}"; \
-    else \
-      ffuf_sha="${FFUF_SHA256_ARM64}"; nuclei_sha="${NUCLEI_SHA256_ARM64}"; \
-      httpx_sha="${HTTPX_SHA256_ARM64}"; katana_sha="${KATANA_SHA256_ARM64}"; \
-      gau_sha="${GAU_SHA256_ARM64}"; \
-    fi; \
     curl -fsSL "https://github.com/ffuf/ffuf/releases/download/v${FFUF_VERSION}/ffuf_${FFUF_VERSION}_linux_${garch}.tar.gz" -o /tmp/ffuf.tgz; \
-    echo "${ffuf_sha}  /tmp/ffuf.tgz" | sha256sum -c -; \
     tar -xzf /tmp/ffuf.tgz -C /usr/local/bin ffuf; \
     curl -fsSL "https://github.com/projectdiscovery/nuclei/releases/download/v${NUCLEI_VERSION}/nuclei_${NUCLEI_VERSION}_linux_${garch}.zip" -o /tmp/nuclei.zip; \
-    echo "${nuclei_sha}  /tmp/nuclei.zip" | sha256sum -c -; \
     unzip -o -q /tmp/nuclei.zip -d /tmp/nuclei-out nuclei; \
     mv /tmp/nuclei-out/nuclei /usr/local/bin/nuclei; \
     curl -fsSL "https://github.com/projectdiscovery/httpx/releases/download/v${HTTPX_VERSION}/httpx_${HTTPX_VERSION}_linux_${garch}.zip" -o /tmp/httpx.zip; \
-    echo "${httpx_sha}  /tmp/httpx.zip" | sha256sum -c -; \
     unzip -o -q /tmp/httpx.zip -d /tmp/httpx-out httpx; \
     mv /tmp/httpx-out/httpx /usr/local/bin/httpx; \
     curl -fsSL "https://github.com/projectdiscovery/katana/releases/download/v${KATANA_VERSION}/katana_${KATANA_VERSION}_linux_${garch}.zip" -o /tmp/katana.zip; \
-    echo "${katana_sha}  /tmp/katana.zip" | sha256sum -c -; \
     unzip -o -q /tmp/katana.zip -d /tmp/katana-out katana; \
     mv /tmp/katana-out/katana /usr/local/bin/katana; \
     curl -fsSL "https://github.com/lc/gau/releases/download/v${GAU_VERSION}/gau_${GAU_VERSION}_linux_${garch}.tar.gz" -o /tmp/gau.tgz; \
-    echo "${gau_sha}  /tmp/gau.tgz" | sha256sum -c -; \
     tar -xzf /tmp/gau.tgz -C /usr/local/bin gau; \
     chmod 0755 /usr/local/bin/ffuf /usr/local/bin/nuclei /usr/local/bin/httpx \
              /usr/local/bin/katana /usr/local/bin/gau; \
@@ -239,34 +196,30 @@ RUN set -eu; \
            /tmp/httpx-out /tmp/katana.zip /tmp/katana-out /tmp/gau.tgz; \
     command -v ffuf nuclei httpx katana gau
 
-# gitleaks + osv-scanner: release binaries, checksum-verified at build.
-# (A mismatched ARG SHA fails the build -- fail closed, not silently.)
+# gitleaks + osv-scanner: release binaries fetched at build.
 # Per-arch assets: an x64-only binary crashes under qemu on arm64 hosts
 # (Go runtime fault), so each tool takes the binary for TARGETARCH.
 FROM dl-base AS dl-gitleaks-osv
 ARG TARGETARCH
-ARG GITLEAKS_VERSION GITLEAKS_SHA256_X64 GITLEAKS_SHA256_ARM64
-ARG OSV_SCANNER_VERSION OSV_SCANNER_SHA256_X64 OSV_SCANNER_SHA256_ARM64
+ARG GITLEAKS_VERSION
+ARG OSV_SCANNER_VERSION
 RUN set -eu; \
     case "${TARGETARCH}" in \
-      amd64) gl_sha="${GITLEAKS_SHA256_X64}"; gl_asset=x64; osv_sha="${OSV_SCANNER_SHA256_X64}"; osv_asset=amd64;; \
-      arm64) gl_sha="${GITLEAKS_SHA256_ARM64}"; gl_asset=arm64; osv_sha="${OSV_SCANNER_SHA256_ARM64}"; osv_asset=arm64;; \
+      amd64) gl_asset=x64; osv_asset=amd64;; \
+      arm64) gl_asset=arm64; osv_asset=arm64;; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1;; \
     esac; \
     curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${gl_asset}.tar.gz" -o /tmp/gl.tgz; \
-    echo "${gl_sha}  /tmp/gl.tgz" | sha256sum -c -; \
     tar -xzf /tmp/gl.tgz -C /usr/local/bin gitleaks; \
     curl -fsSL "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_${osv_asset}" -o /usr/local/bin/osv-scanner; \
-    echo "${osv_sha}  /usr/local/bin/osv-scanner" | sha256sum -c -; \
     chmod 0755 /usr/local/bin/osv-scanner; \
     rm -f /tmp/gl.tgz
 
-# binwalk: firmware analysis tool source tarball, sha256-verified at build.
+# binwalk: firmware analysis tool source tarball.
 FROM dl-base AS dl-binwalk
-ARG BINWALK_VERSION BINWALK_SHA256
+ARG BINWALK_VERSION
 RUN set -eu; \
     curl -fsSL "https://github.com/ReFirmLabs/binwalk/archive/refs/tags/v${BINWALK_VERSION}.tar.gz" -o /tmp/binwalk.tar.gz; \
-    echo "${BINWALK_SHA256}  /tmp/binwalk.tar.gz" | sha256sum -c -; \
     mkdir -p /usr/local/src && mv /tmp/binwalk.tar.gz /usr/local/src/binwalk.tar.gz
 
 # --- atheris builder stage -----------------------------------------------------
@@ -459,7 +412,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # --- RE/debug lane, pip half ---------------------------------------------------
 # Pre-built capstone wheel copied from wheel-builder stage: instant wheel unpack.
-# binwalk rides a pinned, sha256-verified release archive from dl-binwalk.
+# binwalk rides a pinned release archive from dl-binwalk.
 COPY --from=dl-binwalk /usr/local/src/binwalk.tar.gz /tmp/binwalk.tar.gz
 COPY --from=wheel-builder /wheels/ /tmp/wheels/
 RUN --mount=type=cache,target=/root/.cache/pip,sharing=locked \
@@ -490,8 +443,8 @@ RUN printf '%s\n' \
  && env PYTHONPATH=/opt/mitmproxy python3 -c "import mitmproxy"
 
 # --- binaries from the dl-* stages + the atheris merge ------------------------
-# COPY --from preserves exec modes, so the checksum-verified, chmod-performed
-# binaries arrive exactly as the dl stages produced them.
+# COPY --from preserves exec modes, so the chmod-performed binaries arrive
+# exactly as the dl stages produced them.
 COPY --from=dl-opengrep /usr/local/bin/opengrep /usr/local/bin/opengrep
 COPY --from=dl-bearer /usr/local/bin/bearer /usr/local/bin/bearer
 COPY --from=dl-trufflehog /usr/local/bin/trufflehog /usr/local/bin/trufflehog

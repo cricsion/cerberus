@@ -4,7 +4,6 @@ import re as _re
 
 from .util import _SURFACE_FAMILY
 
-
 # Headings are a machine contract: quality gates, verify, and the findings loop parse them by name.
 SECTIONS = (
     "1. System context",
@@ -115,9 +114,9 @@ def _coverage_gaps(md: str) -> list[str]:
             if key and key in row_text:
                 return True
         for prefix, words in _SURFACE_FAMILY.items():
-            if (name or "").startswith(prefix):
-                if any(w in row_text for row_text in per_row for w in words):
-                    return True
+            if ((name or "").startswith(prefix)
+                    and any(w in row_text for row_text in per_row for w in words)):
+                return True
         return False
 
     return [f"entry point '{ep.get('entry_point', '?')}' has no threat row"
@@ -175,11 +174,7 @@ def _backticked_paths(text: str) -> list[str]:
             continue
         cand_lower = cand.lower()
         base_name = cand_lower.split("/")[-1]
-        if any(base_name.endswith(ext) for ext in code_exts) or base_name in known_filenames:
-            out.append(cand)
-        elif "/" in cand and "." in base_name:
-            out.append(cand)
-        elif "/" in cand and (cand.endswith("/") or not ("." in cand)):
+        if any(base_name.endswith(ext) for ext in code_exts) or base_name in known_filenames or ("/" in cand and "." in base_name) or ("/" in cand and (cand.endswith("/") or "." not in cand)):
             out.append(cand)
     return out
 

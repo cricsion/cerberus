@@ -6,8 +6,9 @@ import os
 import shutil
 import subprocess
 
+from langchain_core.tools import tool as tool
+
 from cerberus.config import get_config
-from langchain_core.tools import tool
 
 
 def env_int(name: str, default: int) -> int:

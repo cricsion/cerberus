@@ -37,9 +37,8 @@ indexer wrappers are thin `subprocess` calls that run only when the host
 happens to have the binary; the agent always uses the image.
 The agent runs them through `execute`; usage is documented in the skills at
 `/opt/cerberus-skills/<name>/SKILL.md`, served to the agent by the skills
-route on its backend (`cerberus/agents/deep.py`). Pins and per-arch
-sha256s live in `docker/versions.env` and are verified at build (a mismatch
-fails the build).
+route on its backend (`cerberus/agents/deep.py`). Pins live in
+`docker/versions.env`.
 
 | tool | role | engine lineage |
 |---|---|---|
@@ -61,11 +60,11 @@ each under `cerberus/skills/`); the indexer path additionally calls the
 `gitleaks`/`osv-scanner`/`checkov` wrappers in the harness process on the
 host, degrading gracefully when a binary is absent.
 `bandit`/`njsscan`/`atheris`/`flawfinder` ride the pip line with
-`semgrep`/`checkov`; `gosec`/`bearer`/`trufflehog` are release binaries with
-per-arch sha256 verification.
+`semgrep`/`checkov`; `gosec`/`bearer`/`trufflehog` are release binaries
+fetched at build.
 
 Considered and deliberately **not** shipped: `weggli` and KICS (no release
-binaries/assets to sha256-verify — a Rust toolchain or a Docker-only
+binaries/assets — a Rust toolchain or a Docker-only
 distribution would be required), and the language tools that would need
 their runtime added to the image (brakeman/Ruby, psalm/PHP,
 spotbugs/JVM, security-code-scan/.NET). Re-add is one ARG block + one

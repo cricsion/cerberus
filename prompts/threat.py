@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 from cerberus.prompts.contract import structured_output_contract
 from cerberus.prompts.engine import block
 
-
 # Output contract for both swarm stages and the synthesizer; mirrors the threat-model skill's schema contract.
 SCHEMA_CONTRACT = block("threat/schema_contract")
 

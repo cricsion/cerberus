@@ -3,10 +3,20 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any, TypedDict
+
+from cerberus.paths import canonical_repo
+from cerberus.progress import AgentRegistry, AgentState
+from cerberus.schemas import SEVERITY_ORDER, safe_float, safe_int
+
+try:
+    from cerberus import observability as _obs
+except Exception:
+    _obs = None
 
 
 class Overwrite:
@@ -19,14 +29,6 @@ class Overwrite:
     def __repr__(self) -> str:
         return f"Overwrite({self.value!r})"
 
-from cerberus.schemas import SEVERITY_ORDER, safe_float, safe_int
-from cerberus.paths import canonical_repo
-from cerberus.progress import AgentRegistry, AgentState
-
-try:
-    from cerberus import observability as _obs
-except Exception:  # observability module unavailable → tracing disabled (fail-open)
-    _obs = None
 
 CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.0}
 
@@ -34,8 +36,6 @@ CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.
 _ADD_KEYS = ("candidates", "findings", "tools_used")
 
 logger = logging.getLogger(__name__)
-
-import threading
 
 _THREAD_LOCAL = threading.local()
 _PROGRESS: Any = None
@@ -198,8 +198,7 @@ def _node_cfg(state: dict) -> dict:
 
 def indexer_node(state: ScanState) -> dict:
     from cerberus.fallback import runner
-    from cerberus.tools.sast import (iac_check, sca_scan, secrets_scan,
-                                    regex_prefilter)
+    from cerberus.tools.sast import iac_check, regex_prefilter, sca_scan, secrets_scan
     repo = state.get("repo", ".")
     # No file-count cap; per-agent work is bounded by the partition budget.
     base = Path(repo)
@@ -277,7 +276,7 @@ def threat_summary(repo: str, cands: list[dict]) -> str:
     pre = next((c.get("snippet", "") for c in cands if c.get("id") == "prefilter"), "")
     classes = [line[3:] for line in str(pre).splitlines() if line.startswith("## ")]
     routes = next((c.get("snippet", "") for c in cands if c.get("id") == "routes"), "")
-    n_routes = len([l for l in str(routes).splitlines() if l.strip()]) if routes else 0
+    n_routes = len([ln for ln in str(routes).splitlines() if ln.strip()]) if routes else 0
     man = next((c.get("snippet", "") for c in cands if c.get("id") == "manifest"), "")
     stack = (str(man).splitlines() or ["unknown stack"])[0][:200]
     return (
@@ -404,7 +403,7 @@ def threat_model_node(state: ScanState, agent_registry: Any = None) -> dict:
 
 
 def hunters_router(state: ScanState, agent_registry: Any = None) -> dict:
-    from cerberus.config import api_key_present, effective_model, effective_config
+    from cerberus.config import api_key_present, effective_config, effective_model
 
     cfg = _node_cfg(state)
     if not api_key_present(cfg):
@@ -527,7 +526,7 @@ def hunter_worker(state: dict) -> dict:
                       f"[hunters] {label}: {len(out)} findings in "
                       f"{_time.time()-t0:.0f}s")
         ret = {"findings": out,
-               "tools_used": sorted(set(str(t) for t in _tools))}
+               "tools_used": sorted({str(t) for t in _tools})}
         return ret
     except Exception as e:
         # A config error must sink the scan, not become a unit fallback finding.
@@ -598,7 +597,7 @@ def _merge_dup(a: dict, b: dict) -> dict:
 
 def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
     findings = [f for f in list(state.get("findings", [])) if isinstance(f, dict)]
-    from cerberus.config import api_key_present, effective_model, as_bool
+    from cerberus.config import api_key_present, as_bool, effective_model
 
     _cfg_sys = _node_cfg(state)
     if not as_bool((_cfg_sys.get("hunter") or {}).get("system_pass", True)):
@@ -630,7 +629,7 @@ def system_pass_node(state: ScanState, agent_registry: Any = None) -> dict:
             _stage_detail("system_pass",
                           f"[system-pass] +{len(out)} cross-unit findings in "
                           f"{_time.time()-t0:.0f}s")
-            return out, sorted(set(str(t) for t in _tools))
+            return out, sorted({str(t) for t in _tools})
         except Exception as e:
             _stage_detail("system_pass",
                           f"[system-pass] ERROR {type(e).__name__} after "
@@ -759,6 +758,7 @@ def confirm_critical_step(state: ScanState,
 
 def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
     import time as _time
+
     from cerberus.config import effective_model
 
     t0 = _time.time()
@@ -809,6 +809,7 @@ def triage_node(state: ScanState, agent_registry: Any = None) -> dict:
 def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
     """Dedicated post-triage PoC generation stage on canonical non-FP findings."""
     import time as _time
+
     from cerberus.config import as_bool
 
     t0 = _time.time()
@@ -823,8 +824,8 @@ def poc_node(state: ScanState, agent_registry: Any = None) -> dict:
 
     repo = state.get("repo", ".")
     try:
-        from cerberus.sandbox import acquired_backend
         from cerberus.agents.poc_generator import run_poc_generation
+        from cerberus.sandbox import acquired_backend
 
         with acquired_backend(_cfg, repo, label="poc-generator") as backend:
             if backend is None:
@@ -953,7 +954,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
                                   state=AgentState.queued)
 
     def _hunt_one_unit(p: dict) -> dict:
-        unit = str(p.get("unit", "unit"))
+        str(p.get("unit", "unit"))
         aid = "hunter:" + p["_ukey"]
         cfg = p.get("cfg") or state.get("cfg") or {}
         model = effective_model(cfg, "hunter")
@@ -1091,7 +1092,7 @@ def _fan_out_hunters(state: dict, max_workers: int,
         while pending:
             done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
             for fut in done:
-                kind, p, k = pending.pop(fut)
+                kind, p, _k = pending.pop(fut)
                 try:
                     res, elapsed = fut.result()
                 except BaseException as e:

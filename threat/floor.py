@@ -4,11 +4,17 @@ import logging as _logging
 import subprocess as _sp
 from pathlib import Path
 
-from .render import (NON_EXCLUSION_NOTE, THREAT_COLUMNS, render_md,
-                     validate_threat_md)
-from .util import (CACHE_DIRNAME, CACHE_HEADER, _GIT_SAFE_OPTS,
-                   _attack_surfaces, _detector_signals, _now_iso, _repo_root,
-                   find_repo_file)
+from .render import NON_EXCLUSION_NOTE, THREAT_COLUMNS, render_md, validate_threat_md
+from .util import (
+    _GIT_SAFE_OPTS,
+    CACHE_DIRNAME,
+    CACHE_HEADER,
+    _attack_surfaces,
+    _detector_signals,
+    _now_iso,
+    _repo_root,
+    find_repo_file,
+)
 
 _logger = _logging.getLogger(__name__)
 
@@ -79,8 +85,8 @@ def _bug_shapes(repo: str, limit: int = 20) -> str:
                     ["git", *_GIT_SAFE_OPTS, "-C", root, "show", sha, "--format=",
                      "--name-only", "--no-ext-diff"],
                     capture_output=True, text=True, timeout=5)
-                touched = [l.strip() for l in stat.stdout.splitlines()
-                           if l.strip()][:6] if stat.returncode == 0 else []
+                touched = [ln.strip() for ln in stat.stdout.splitlines()
+                           if ln.strip()][:6] if stat.returncode == 0 else []
             except Exception:
                 touched = []
             for t in touched:

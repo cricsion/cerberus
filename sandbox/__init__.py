@@ -4,19 +4,20 @@ import importlib
 import logging
 import sys
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from cerberus.sandbox.local_backend import RepoLocalBackend
 
 __all__ = [
     "RepoLocalBackend",
-    "resolve_backend",
     "acquired_backend",
     "close_backend",
-    "shutdown_run_sandbox",
     "reset_agent_scratch",
+    "resolve_backend",
+    "shutdown_run_sandbox",
     "sweep_orphans",
 ]
 

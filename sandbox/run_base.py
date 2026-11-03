@@ -7,16 +7,24 @@ import sys
 import threading
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
-from .settings_defaults import (COMMAND_TIMEOUT, IMAGE, MAX_OUTPUT_BYTES,
-                                MEMORY, RULES_DIR)
+from .settings_defaults import COMMAND_TIMEOUT, IMAGE, MAX_OUTPUT_BYTES, MEMORY, RULES_DIR
 from .validation import validate_image
 
-__all__ = ["RunSandboxBase", "RunRegistry", "install_crash_hooks",
-           "AGENT_SCRATCH_PREFIX", "RESET_COMMAND", "DEFAULT_IMAGE",
-           "agent_env", "orphan_targets", "sweep_orphans_via"]
+__all__ = [
+    "AGENT_SCRATCH_PREFIX",
+    "DEFAULT_IMAGE",
+    "RESET_COMMAND",
+    "RunRegistry",
+    "RunSandboxBase",
+    "agent_env",
+    "install_crash_hooks",
+    "orphan_targets",
+    "sweep_orphans_via",
+]
 
 DEFAULT_IMAGE = IMAGE
 

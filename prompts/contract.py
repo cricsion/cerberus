@@ -28,7 +28,7 @@ def structured_output_contract(
     elif isinstance(schema_or_name, str):
         tool_name = schema_or_name
     elif hasattr(schema_or_name, "name"):
-        tool_name = getattr(schema_or_name, "name")
+        tool_name = schema_or_name.name
     else:
         tool_name = str(schema_or_name)
 

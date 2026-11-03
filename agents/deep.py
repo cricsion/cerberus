@@ -8,7 +8,12 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from langchain_core.exceptions import (ModelAuthenticationError, ModelInvalidRequestError, ModelNotFoundError, ModelPermissionDeniedError)
+from langchain_core.exceptions import (
+    ModelAuthenticationError,
+    ModelInvalidRequestError,
+    ModelNotFoundError,
+    ModelPermissionDeniedError,
+)
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from cerberus.config import as_bool, get_config
@@ -103,13 +108,13 @@ def make_llm(mk: dict | None, *, timeout: int | None = None,
         call_retries = mk.get("max_retries")
     if call_retries is None:
         call_retries = cfg["max_retries"]
-    kwargs: dict[str, Any] = dict(
-        model=mk.get("model", ""),
-        api_key=mk.get("api_key", "dummy"),
-        base_url=base_url,
-        timeout=int(call_timeout),
-        max_retries=int(call_retries),
-    )
+    kwargs: dict[str, Any] = {
+        "model": mk.get("model", ""),
+        "api_key": mk.get("api_key", "dummy"),
+        "base_url": base_url,
+        "timeout": int(call_timeout),
+        "max_retries": int(call_retries),
+    }
     if mk.get("reasoning_effort"):
         kwargs["reasoning_effort"] = str(mk["reasoning_effort"]).strip()
     t = kwargs.get("timeout")
@@ -292,8 +297,11 @@ def _register_profile(llm: Any) -> None:
     if provider in _registered:
         return
     with _reg_lock:
-        from deepagents import (GeneralPurposeSubagentProfile, HarnessProfile,
-                                register_harness_profile)
+        from deepagents import (
+            GeneralPurposeSubagentProfile,
+            HarnessProfile,
+            register_harness_profile,
+        )
         try:
             register_harness_profile(
                 provider,
@@ -324,9 +332,11 @@ def _tool_error_message(exc: Exception, request: Any) -> str | None:
 
 def _scan_middleware(backend: Any, *, scratchpad: bool = False) -> list:
     from deepagents.middleware import FilesystemMiddleware
-    from langchain.agents.middleware import (ModelCallLimitMiddleware,
-                                             ToolErrorMiddleware,
-                                             ToolRetryMiddleware)
+    from langchain.agents.middleware import (
+        ModelCallLimitMiddleware,
+        ToolErrorMiddleware,
+        ToolRetryMiddleware,
+    )
 
     permissions = (_sandbox_permissions(backend, scratchpad=scratchpad)
                    if _supports_shell(backend)
@@ -396,6 +406,7 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
                      backend: Any = None, root_dir: Any = None,
                      scratchpad: bool = False):
     from deepagents import create_deep_agent
+
     from cerberus.prompts import UNTRUSTED_CONTEXT_NOTE
 
     system_prompt = f"{UNTRUSTED_CONTEXT_NOTE}\n\n{system_prompt}"
@@ -471,12 +482,12 @@ def build_deep_agent(llm: Any, *, system_prompt: str, tools: list | None = None,
             contract_suffix = structured_output_contract(target_name)
             system_prompt = f"{system_prompt.strip()}\n\n{contract_suffix}" if system_prompt else contract_suffix
 
-    sorted_tools = sorted(list(tools or []),
+    sorted_tools = sorted(tools or [],
                           key=lambda t: str(getattr(t, "name", None) or getattr(t, "__name__", "") or t))
-    kwargs: dict[str, Any] = dict(
-        model=llm, tools=sorted_tools, system_prompt=system_prompt,
-        middleware=_scan_middleware(backend, scratchpad=scratchpad),
-    )
+    kwargs: dict[str, Any] = {
+        "model": llm, "tools": sorted_tools, "system_prompt": system_prompt,
+        "middleware": _scan_middleware(backend, scratchpad=scratchpad),
+    }
     kwargs["backend"] = backend
     if skills:
         kwargs["skills"] = skills

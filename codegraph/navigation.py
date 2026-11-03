@@ -31,12 +31,18 @@ import re
 
 from cerberus.codegraph import _common, _db, _ts, summaries
 from cerberus.codegraph._common import (
-    HARD_MAX_SECTION, Report, _as_int, _cap_chars, _cap_rows, _contained_file,
-    _end_line_of, _line_of, _walk,
+    HARD_MAX_SECTION,
+    Report,
+    _as_int,
+    _cap_chars,
+    _cap_rows,
+    _contained_file,
+    _end_line_of,
+    _line_of,
+    _walk,
 )
 from cerberus.config import get_config
 from cerberus.tools._compat import tool
-
 
 _args_node = _common._args_node
 _call_args = _common._call_arg_texts
@@ -314,7 +320,7 @@ def _slice_span(meta, src, text_lines, tree, signature, start, end, span_lines,
     def_node = _def_node(tree, start, end)
     header_text = _def_header(def_node, src) or signature
     if header_text:
-        meta.extend([f"--- def header", header_text])
+        meta.extend(["--- def header", header_text])
     meta.append(f"note: span is {span_lines} lines — sliced (mode={chosen}); "
                 f"pass mode='body' for the exact span")
     decls = _declaration_rows(def_node, src, start, end)

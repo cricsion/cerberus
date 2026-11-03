@@ -50,12 +50,25 @@ from dataclasses import dataclass
 
 from .cli_utils import BYTE_CAP_FACTOR, EXEC_TAG
 
-__all__ = ["ExecResult", "client_for", "create_sandbox", "start_sandbox",
-           "daemon_unreachable_reason", "pull_missing_image",
-           "exec_core", "kill_exec_marker", "remove_container",
-           "list_sandbox_names", "container_alive", "put_archive",
-           "get_archive", "last_exec_event_age",
-           "DOCKER_LABEL_KEY", "DOCKER_LABEL_VALUE", "RUN_LABEL"]
+__all__ = [
+    "DOCKER_LABEL_KEY",
+    "DOCKER_LABEL_VALUE",
+    "RUN_LABEL",
+    "ExecResult",
+    "client_for",
+    "container_alive",
+    "create_sandbox",
+    "daemon_unreachable_reason",
+    "exec_core",
+    "get_archive",
+    "kill_exec_marker",
+    "last_exec_event_age",
+    "list_sandbox_names",
+    "pull_missing_image",
+    "put_archive",
+    "remove_container",
+    "start_sandbox",
+]
 
 DOCKER_LABEL_KEY = "cerberus.agent.sandbox"
 DOCKER_LABEL_VALUE = "run"
@@ -130,7 +143,7 @@ def create_sandbox(*, name: str, image: str, repo: str, network: str,
     from docker.types import Mount
 
     try:
-        nano = int(round(float(str(cpus)) * 1_000_000_000))
+        nano = round(float(str(cpus)) * 1_000_000_000)
     except ValueError:
         nano = 1_000_000_000
 

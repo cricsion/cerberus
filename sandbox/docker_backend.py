@@ -5,36 +5,56 @@ import posixpath
 import shlex
 import tarfile
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
-from deepagents.backends.protocol import (DeleteResult, EditResult,
-                                          FileDownloadResponse,
-                                          FileUploadResponse, GlobResult,
-                                          GrepResult, LsResult, ReadResult,
-                                          WriteResult)
+from deepagents.backends.protocol import (
+    DeleteResult,
+    EditResult,
+    FileDownloadResponse,
+    FileUploadResponse,
+    GlobResult,
+    GrepResult,
+    LsResult,
+    ReadResult,
+    WriteResult,
+)
 from deepagents.backends.sandbox import BaseSandbox
-
-from . import docker_channel
-from .backend_base import HANG_NOTE, SandboxShellBackend
-from .docker_channel import ExecResult
-from .run_base import (DEFAULT_COMMAND_TIMEOUT, DEFAULT_IMAGE,
-                       DEFAULT_MAX_OUTPUT_BYTES, DEFAULT_MEMORY,
-                       DEFAULT_RULES_DIR, ORPHAN_IDLE_SECONDS, RunRegistry,
-                       RunSandboxBase, RESET_COMMAND, agent_env,
-                       install_crash_hooks, sweep_orphans_via)
-from .settings_defaults import (CPUS as DEFAULT_CPUS,
-                                DOCKER_BIN as DEFAULT_DOCKER_BIN,
-                                PIDS_LIMIT as DEFAULT_PIDS_LIMIT)
-from .validation import (DEFAULT_NETWORK, validate_image, validate_network)
 
 from cerberus.config import get_config
 from cerberus.paths import resolve_tool_path
 
+from . import docker_channel
+from .backend_base import HANG_NOTE, SandboxShellBackend
+from .docker_channel import ExecResult
+from .run_base import (
+    DEFAULT_COMMAND_TIMEOUT,
+    DEFAULT_IMAGE,
+    DEFAULT_MAX_OUTPUT_BYTES,
+    DEFAULT_MEMORY,
+    DEFAULT_RULES_DIR,
+    ORPHAN_IDLE_SECONDS,
+    RESET_COMMAND,
+    RunRegistry,
+    RunSandboxBase,
+    agent_env,
+    install_crash_hooks,
+    sweep_orphans_via,
+)
+from .settings_defaults import CPUS as DEFAULT_CPUS
+from .settings_defaults import DOCKER_BIN as DEFAULT_DOCKER_BIN
+from .settings_defaults import PIDS_LIMIT as DEFAULT_PIDS_LIMIT
+from .validation import DEFAULT_NETWORK, validate_image, validate_network
 
-__all__ = ["DockerSandboxBackend", "RunSandbox", "DEFAULT_IMAGE",
-           "get_run_sandbox", "shutdown_run_sandbox", "reap_orphans",
-           "sweep_orphans"]
+__all__ = [
+    "DEFAULT_IMAGE",
+    "DockerSandboxBackend",
+    "RunSandbox",
+    "get_run_sandbox",
+    "reap_orphans",
+    "shutdown_run_sandbox",
+    "sweep_orphans",
+]
 
 
 # Image user (uid/gid) of the run container: tar-stream members carry it so an

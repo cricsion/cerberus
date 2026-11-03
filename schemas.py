@@ -7,7 +7,7 @@ and triage stages add ``status``, ``patch_summary``, ``control_type``,
 """
 from __future__ import annotations
 
-from typing import Annotated, Literal, TypedDict
+from typing import Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 

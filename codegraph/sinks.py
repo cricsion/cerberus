@@ -337,10 +337,11 @@ def _model_of(segments: list[str], args: str | None, receiver_type: str | None) 
     second_last = no_this[-2] if len(no_this) >= 3 else ""
     if (len(no_this) >= 3 and re.fullmatch(r"[A-Za-z_$][\w$]*", second_last)
             and not re.fullmatch(r"(?:objects|query|session|db|\$|from|table|collection|opsForValue|Items)", second_last)
-            and not MODEL_SUFFIX.search(second_last) and second_last != "$transaction"):
-        if re.fullmatch(r"(?:prisma|db|database|orm|em|drizzle|sql|_context|context|dbContext|_db|ctx|this)", first, re.IGNORECASE) \
-                or re.search(r"(?:Context|Client|Prisma|Db|DB)$", first):
-            return second_last
+            and not MODEL_SUFFIX.search(second_last) and second_last != "$transaction"
+            and (re.fullmatch(r"(?:prisma|db|database|orm|em|drizzle|sql|_context|context|dbContext|_db|ctx|this)",
+                              first, re.IGNORECASE)
+                 or re.search(r"(?:Context|Client|Prisma|Db|DB)$", first))):
+        return second_last
     receiver = no_this[0] if len(no_this) >= 2 else ""
     if receiver and MODEL_SUFFIX.search(receiver) and receiver not in ("this", "self"):
         stem = re.sub(r"^_+", "", receiver)

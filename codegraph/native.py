@@ -14,9 +14,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
+from pathlib import Path
 
 _logger = logging.getLogger(__name__)
 
@@ -210,14 +210,14 @@ def file_dependency_pairs(repo: str | None = None, timeout: int = 30) -> list[di
 
 
 __all__ = [
+    "build_context",
+    "callees_json",
+    "callers_json",
+    "circular_and_dead_code",
     "explore",
+    "file_dependency_pairs",
     "find_path",
     "impact",
     "routing_manifest",
-    "circular_and_dead_code",
-    "build_context",
     "type_hierarchy",
-    "callers_json",
-    "callees_json",
-    "file_dependency_pairs",
 ]

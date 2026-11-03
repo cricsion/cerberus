@@ -24,19 +24,18 @@ import time
 from pathlib import Path
 from typing import Any
 
-from cerberus.reporting.view import (
-    SEVERITY_STYLE,
-    THEME,
-    clean_untrusted,
-)
-from cerberus.config import get_config
-
 from rich.cells import cell_len
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
+from cerberus.config import get_config
+from cerberus.reporting.view import (
+    SEVERITY_STYLE,
+    THEME,
+    clean_untrusted,
+)
 
 # Visual constants -----------------------------------------------------------
 
@@ -164,7 +163,7 @@ def _agent_kind(agent_id: str, role: str) -> str:
 
 
 def _severity_counts(findings: Any) -> dict[str, int]:
-    counts = {sev: 0 for sev in _SEVERITIES}
+    counts = dict.fromkeys(_SEVERITIES, 0)
     for finding in findings or []:
         if not isinstance(finding, dict):
             continue
@@ -706,5 +705,12 @@ def render_confirmation(console: Any, payload: dict, *, limit: int = 20) -> None
     console.print(table)
 
 
-__all__ = ["ScanReporter", "build_reporter", "duration_s", "short_path",
-           "render_confirmation", "STAGE_WIDTH", "AGENT_WIDTH"]
+__all__ = [
+    "AGENT_WIDTH",
+    "STAGE_WIDTH",
+    "ScanReporter",
+    "build_reporter",
+    "duration_s",
+    "render_confirmation",
+    "short_path",
+]

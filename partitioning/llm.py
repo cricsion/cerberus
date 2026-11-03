@@ -6,8 +6,9 @@ import json
 import logging
 import os
 from pathlib import PurePosixPath
+from typing import Any
 
-from cerberus.config import effective_config, get_model_kwargs
+from cerberus.config import effective_config
 from cerberus.fallback import runner
 from cerberus.partitioning import partition_units as _det_partition_units
 from cerberus.partitioning.units import (
@@ -89,7 +90,7 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
                 core_idx = i
                 break
         for u in app_units:
-            parents = set(str(PurePosixPath(str(f).replace("\\", "/")).parent) for f in u.get("files") or [])
+            parents = {str(PurePosixPath(str(f).replace("\\", "/")).parent) for f in u.get("files") or []}
             unit_parents.append(parents)
 
         max_ceiling = int(pt * 1.25) if pt > 0 else 0
@@ -134,7 +135,7 @@ def _enforce_coverage(units, files, repo=None, cfg: dict | None = None) -> list[
     out = _normalize_units(app_units, weights or None, pt, edges=edges, cfg=cfg)
 
     if vendor_files and part["vendor_unit"]:
-        out = list(out) + [_vendor_unit(vendor_files, set(u.get("name", "") for u in out))]
+        out = list(out) + [_vendor_unit(vendor_files, {u.get("name", "") for u in out})]
 
     return out
 
@@ -167,7 +168,7 @@ def _deterministic_baseline(repo: str, files: list[str],
 
     if cache_path and os.path.isfile(cache_path):
         try:
-            with open(cache_path, "r", encoding="utf-8") as f:
+            with open(cache_path, encoding="utf-8") as f:
                 cached = json.load(f)
             if isinstance(cached, dict) and cached.get("files_sig") == sig:
                 cached_units = cached.get("units")
@@ -224,8 +225,8 @@ def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
     an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
     from cerberus.agents.deep import run_structured
     from cerberus.agents.toolsets import graph_tools
-    from cerberus.schemas import structured_items
     from cerberus.partitioning.prompts import PARTITIONER_SYSTEM, UnitList
+    from cerberus.schemas import structured_items
 
     def _partition_llm() -> list[dict]:
         parsed, _ = run_structured(
@@ -263,8 +264,6 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
                 out.append(_vendor_unit(vendor_files, {single["name"]}))
             return out
 
-    # Local import: the model-kwargs lookup stays resolvable at call time
-    # for embedders without an import cycle.
     from cerberus.config import get_model_kwargs
 
     model_kwargs = get_model_kwargs(cfg, "hunter", agent="partitioner")
@@ -278,8 +277,9 @@ def run_partitioner_agent(repo: str, files: list[str], candidates: list[dict],
     baseline = _deterministic_baseline(repo, files, candidates, cfg)
     msg = _build_partition_message(ctx, baseline, cfg)
 
-    from cerberus.sandbox import acquired_backend
     from pathlib import Path
+
+    from cerberus.sandbox import acquired_backend
 
     root = Path(repo).resolve() if repo else Path(".").resolve()
     with acquired_backend(cfg, root, label="partitioner") as backend:

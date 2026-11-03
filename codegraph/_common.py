@@ -401,18 +401,18 @@ class Report:
         """Copy initial report lines so callers can safely reuse their list."""
         self.lines: list[str] = list(lines or [])
 
-    def blank(self) -> "Report":
+    def blank(self) -> Report:
         """Append the block separator drivers use between sections."""
         self.lines.append("")
         return self
 
-    def numbered(self, position: int, title: str) -> "Report":
+    def numbered(self, position: int, title: str) -> Report:
         """``## n. title`` (navigation reference blocks)."""
         self.lines.append(f"## {position}. {title}")
         return self
 
     def section(self, title: str, shown: int, total: int | None = None,
-                detail: str = "") -> "Report":
+                detail: str = "") -> Report:
         """``--- title (shown of total[detail])``, or ``(shown)`` without a total."""
         if total is None:
             self.lines.append(f"--- {title} ({shown})")
@@ -420,7 +420,7 @@ class Report:
             self.lines.append(f"--- {title} ({shown} of {total}{detail})")
         return self
 
-    def more(self, rest: int, label: str, total: int | None = None) -> "Report":
+    def more(self, rest: int, label: str, total: int | None = None) -> Report:
         """``… +rest more label`` with ``(total N)`` only when known."""
         line = f"… +{rest} more {label}"
         self.lines.append(line + (f" (total {total})" if total is not None else ""))

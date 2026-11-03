@@ -10,7 +10,7 @@ from pathlib import Path
 
 from cerberus.paths import canonical_repo, resolve_tool_path
 
-from ._compat import env_int, tool
+from ._compat import env_int
 
 
 def _resolve_limit(explicit: int | None, env_key: str, default: int) -> int:
@@ -198,16 +198,13 @@ def grep_files(regex: str, include: str = "*.py", root: str = ".", limit: int | 
                 continue
             if is_skipped_relpath(base, rel):
                 continue
-            if not fnmatch.fnmatch(f.name, include) and include != "*":
-                # Also match rel path for patterns like *.html vs subdirs
-                if not fnmatch.fnmatch(str(rel), include):
-                    continue
+            # Match the bare name and the rel path (patterns like *.html vs subdirs)
+            if include != "*" and not fnmatch.fnmatch(f.name, include) \
+                    and not fnmatch.fnmatch(str(rel), include):
+                continue
             _search_file(f)
     total = len(hits)
-    if lim <= 0:
-        page = hits[off:]
-    else:
-        page = hits[off: off + lim]
+    page = hits[off:] if lim <= 0 else hits[off:off + lim]
     if not page and total == 0:
         extra = f" ({skipped_large} large files skipped)" if skipped_large else ""
         return f"(no matches){extra}"

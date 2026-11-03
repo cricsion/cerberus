@@ -10,12 +10,12 @@ from cerberus.reporting.view import clean_untrusted, make_console, render_findin
 
 __all__ = [
     "ScanReporter",
-    "render_findings",
     "clean_untrusted",
     "make_console",
-    "write_json",
-    "write_sarif",
-    "write_markdown",
+    "render_findings",
     "write_html",
+    "write_json",
+    "write_markdown",
+    "write_sarif",
 ]
 

@@ -11,14 +11,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from cerberus.schemas import sort_findings
-
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 from rich.theme import Theme
 
+from cerberus.schemas import sort_findings
 
 THEME = Theme({
     "meta": "dim",         # metadata weight: stamps, labels, durations, hints
@@ -48,7 +47,7 @@ SEVERITY_STYLE = {
 _HYGIENE = {"markup": False, "emoji": False, "highlight": False, "theme": THEME}
 
 
-def make_console(**kwargs) -> "Console":
+def make_console(**kwargs) -> Console:
     """A themed Rich console
     Extra kwargs pass through (e.g. ``width``, ``force_terminal``, ``file``)."""
     base = dict(_HYGIENE)

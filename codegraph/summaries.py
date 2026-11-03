@@ -33,6 +33,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
+
 from cerberus.codegraph._db import _safe_param
 
 DEFAULT_DB_NAME = "sast_summaries.db"
@@ -360,5 +361,3 @@ def cache_hint(conn_or_root, node_id: str) -> str:
         parts.append(f"[CACHED SUMMARY: {row['role']} for {scope}]"
                      + (f" {body}" if body else ""))
     return "; ".join(parts)[:600]
-
-

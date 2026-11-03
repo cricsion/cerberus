@@ -18,7 +18,7 @@ CACHE_HEADER = "<!-- machine-managed by cerberus: safe to delete, regenerated+up
 def _now_iso() -> str:
     """Today's UTC date (ISO) for provenance stamps; every threat-stage stamp
     shares this helper so no site wraps its own datetime.now guard."""
-    return _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+    return _dt.datetime.now(_dt.UTC).date().isoformat()
 
 
 def _repo_root(repo: str) -> Path | None:

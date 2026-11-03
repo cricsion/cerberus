@@ -118,7 +118,7 @@ def is_test_file(file_path: str) -> bool:
 
 
 def _is_low_value_file(file_path: str, generated: frozenset[str] | set[str]) -> bool:
-    """Port of ``isLowValueFile``: indexed flag ∪ path test/generated signals."""
+    """Port of ``isLowValueFile``: indexed flag plus path test/generated signals."""
     return (file_path in generated or is_test_file(file_path)
             or _is_generated_path(file_path))
 
@@ -414,7 +414,7 @@ def node_children(conn, node_id: str, kinds=None, limit=50) -> list[dict]:
     if conn is None:
         return []
     kinds = _normalise_kinds(kinds)
-    clause = "AND h.kind IN (%s)" % ",".join("?" * len(kinds)) if kinds else ""
+    clause = "AND h.kind IN ({})".format(",".join("?" * len(kinds))) if kinds else ""
     rows = _fetch(conn,
                   f"SELECT h.* FROM edges e JOIN nodes h ON h.id = e.target "
                   f"WHERE e.source = ? AND e.kind = 'contains' {clause} "
@@ -449,7 +449,7 @@ def _edges_by_endpoint(conn, column: str, node_id, kinds, limit: int) -> list[di
     if conn is None:
         return []
     ks = _normalise_kinds(kinds)
-    where_kinds = " AND e.kind IN (%s)" % ",".join("?" * len(ks)) if ks else ""
+    where_kinds = " AND e.kind IN ({})".format(",".join("?" * len(ks))) if ks else ""
     rows = _fetch(conn,
                   f"SELECT e.* FROM edges e WHERE e.{column} = ?{where_kinds} "
                   f"ORDER BY e.line, e.col, e.id LIMIT ?",

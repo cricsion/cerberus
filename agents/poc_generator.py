@@ -1,7 +1,9 @@
 """Dedicated Post-Triage Dynamic PoC Generation Agent.
 
 Empowers post-triage proof of canonical findings (duplicate_of is None / empty):
-- Groups canonical non-FP findings into batches of up to 10 findings per agent.
+- Groups canonical non-FP findings into batches of up to ``poc.cell_size``
+  findings per agent (falls back to ``verification.cell_size``, then the
+  module default).
 - Agent uses container sandbox tools (read_file, write_file, edit_file, execute)
   to author, mock, and test reproduction scripts under /work/_shared/poc/<id>/test_repro.<ext>.
 - Verifies both exploit invariant (exit 0) and benign baseline control (--control, exit 0).
@@ -13,6 +15,7 @@ from __future__ import annotations
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 from cerberus.agents.deep import (

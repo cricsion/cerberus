@@ -7,7 +7,6 @@ tracebacks from masquerading as verified, and stamps immutable mechanical receip
 from __future__ import annotations
 
 import base64
-import copy
 import logging
 import os
 import re
@@ -16,8 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from cerberus.config import as_bool
-from cerberus.paths import to_repo_relative
-from cerberus.schemas import PocItem, PocReceipt
 
 _logger = logging.getLogger(__name__)
 
@@ -213,7 +210,7 @@ def stamp_receipts(findings: list[dict], backend: Any, cfg: dict | None = None,
             if not isinstance(poc, dict) or not (poc.get("script") or poc.get("code")):
                 continue
 
-            host_path, container_path = materialize_poc(f, backend, run_id=run_id)
+            _host_path, container_path = materialize_poc(f, backend, run_id=run_id)
             if not container_path:
                 continue
 

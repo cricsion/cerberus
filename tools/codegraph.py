@@ -29,6 +29,7 @@ import re
 from pathlib import Path
 
 from cerberus.codegraph import (
+    _db,
     compare_sibling_route_security,
     find_shared_state_readers_writers,
     get_ast_slice,
@@ -39,7 +40,6 @@ from cerberus.codegraph import (
     trace_interprocedural_hop,
     trace_state_machine_transitions,
 )
-from cerberus.codegraph import _db
 
 from ._compat import tool
 from .code import _resolve_limit
@@ -185,7 +185,7 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
         limit: Max routes per page. 0 = unlimited.
         offset: Route index to start from, for paging.
     """
-    conn, ok = _index_gate(root)
+    _conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
     try:
@@ -238,7 +238,7 @@ def callers(func_name: str, root: str = ".", file: str | None = None,
     name = _sanitize_func_name(func_name)
     if not name:
         return "(no matches)"
-    conn, ok = _index_gate(root)
+    _conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
     try:
@@ -293,7 +293,7 @@ def callees(func_name: str, root: str = ".", file: str | None = None,
     name = _sanitize_func_name(func_name)
     if not name:
         return "(no matches)"
-    conn, ok = _index_gate(root)
+    _conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
     try:
@@ -337,7 +337,7 @@ def affected(node: str, root: str = ".", file: str | None = None,
     name = _sanitize_func_name(node) or str(node or "").strip()[:200]
     if not name:
         return "(no matches)"
-    conn, ok = _index_gate(root)
+    _conn, ok = _index_gate(root)
     if not ok:
         return _db.guidance_no_db(root)
     try:
@@ -416,7 +416,7 @@ def find_path(from_symbol: str, to_symbol: str) -> str:
     if not path:
         return f"No call path found from {from_symbol} to {to_symbol}."
     lines = [f"Call path from {from_symbol} to {to_symbol} ({len(path)} steps):"]
-    for i, step in enumerate(path):
+    for _i, step in enumerate(path):
         node = step.get("node", {})
         edge = step.get("edge")
         node_desc = f"[{node.get('kind', 'symbol')}] {node.get('name')} ({node.get('filePath')}:{node.get('startLine')})"
@@ -548,6 +548,7 @@ def detect_circular_and_dead_code() -> str:
 def get_routing_manifest() -> str:
     """Retrieve the native framework routing manifest and detected web frameworks (Next.js, Express, Django, FastAPI, Rails, etc.)."""
     import json
+
     from cerberus.codegraph import native
     res = native.routing_manifest()
     if res.get("error"):

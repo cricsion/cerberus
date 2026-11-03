@@ -8,10 +8,14 @@ from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
 from cerberus.config import effective_config
-from cerberus.partitioning.config import (NON_CODE_EXTS, NON_CODE_NAMES,
-                                         PARTITION_MODES, VENDOR_DIR_SEGMENTS,
-                                         VENDOR_FILE_SUFFIXES,
-                                         VENDOR_UNIT_NAME)
+from cerberus.partitioning.config import (
+    NON_CODE_EXTS,
+    NON_CODE_NAMES,
+    PARTITION_MODES,
+    VENDOR_DIR_SEGMENTS,
+    VENDOR_FILE_SUFFIXES,
+    VENDOR_UNIT_NAME,
+)
 from cerberus.partitioning.graph import support_file_kind
 
 _logger = logging.getLogger(__name__)
@@ -538,7 +542,7 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
             for p in parts:
                 pw = sum(weight_of.get(f, 0) for f in p)
                 best_idx = -1
-                for fi, (fp, fpw) in enumerate(zip(final_parts, final_weights)):
+                for fi, (_fp, fpw) in enumerate(zip(final_parts, final_weights)):
                     if fpw + pw <= target:
                         best_idx = fi
                         break
@@ -562,7 +566,7 @@ def _split_over_budget(files: list[str], weight_of: dict[str, int],
                                      kv[0]))
     parts: list[list[str]] = []
     weights: list[int] = []
-    for gname, gfiles in ordered:
+    for _gname, gfiles in ordered:
         gfiles = sorted(gfiles)
         gw = sum(weight_of.get(f, 0) for f in gfiles)
         if gw > target:
@@ -878,7 +882,6 @@ def partition_units(repo: str, files: list[str],
     single = small_repo_unit(app_files, weight_of, target, cfg=cfg)
     if single is not None:
         return _finish([single])
-    from cerberus.partitioning.config import PARTITION_MODES
     from cerberus.partitioning import codegraph as _cg
     mode = str(effective_config(cfg)["codegraph"]["partition"]["mode"]).strip().lower()
     if mode not in PARTITION_MODES:

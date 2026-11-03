@@ -133,13 +133,13 @@ threat:
   llm_enrich: ${THREAT_LLM:-true}
 verification:
   votes: ${VERIFIER_VOTES:-1}
-  cell_size: ${CELL_SIZE:-${VERIFIER_CELL_SIZE:-15}}
+  cell_size: ${CELL_SIZE:-15}
   couple_remainders: ${VERIFIER_COUPLE_REMAINDERS:-0}
   poc_rounds: ${POC_ROUNDS:-2}
 poc:
   enabled: ${POC_ENABLED:-1}
   repro_runs: ${POC_REPRO_RUNS:-3}
-  cell_size: ${CELL_SIZE:-${VERIFIER_CELL_SIZE:-15}}
+  cell_size: ${CELL_SIZE:-15}
   regen_role: ${POC_REGEN_ROLE:-validator}
   timeout: ${POC_TIMEOUT:-600}
 triage:
