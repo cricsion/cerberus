@@ -8,17 +8,36 @@ reach reports.
 
 ## Pipeline
 
-```
-target repo
-  → codegraph index + deterministic regex prefilter (cerberus/rules)
-  → threat model
-  → partitioner splits the repo into hunter units
-  → hunter agents propose candidates
-  → aggregator (deterministic dedup)
-  → validator pool votes findings down
-  → triage (LLM batch severity, rubric-scored)
-  → PoC generation agents prove canonical findings in the sandbox
-  → reports: markdown, HTML, SARIF, JUnit; findings.json; scan_meta.json
+```mermaid
+flowchart LR
+    subgraph scan["Cerberus scan"]
+        direction LR
+        repo[Target repository] --> context[CodeGraph index<br/>+ deterministic regex prefilter]
+        context --> threat
+
+        subgraph sandbox[Sandbox]
+            direction LR
+            threat[Threat model] --> partition[Partitioner<br/>hunter work units]
+            partition --> hunters[Hunter agents<br/>propose candidates]
+            hunters --> aggregate[Aggregator<br/>deterministic dedup]
+            aggregate --> validate[Validator pool<br/>receipt-backed votes]
+            validate --> triage[Triage<br/>rubric-scored severity]
+            triage --> poc[PoC agents<br/>prove canonical findings]
+        end
+        poc --> reports[Reports<br/>Markdown · HTML · SARIF · JUnit<br/>findings.json · scan_meta.json]
+
+        subgraph visibility[Run visibility]
+            tui[Rich TUI]
+            langfuse[Langfuse tracing<br/>optional]
+        end
+        context -. stage and agent updates .-> tui
+        validate -. traces .-> langfuse
+    end
+
+    classDef core fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
+    classDef output fill:#ecfdf5,stroke:#10b981,color:#064e3b
+    class threat,partition,hunters,aggregate,validate,triage,poc core
+    class reports output
 ```
 
 Every stage is observable (rich TUI + optional Langfuse tracing) and every
