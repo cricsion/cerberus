@@ -154,10 +154,10 @@ def test_image_bakes_skills_next_to_rules():
     rules_dir = _settings()["rules_dir"].rstrip("/")
     dockerfile = Path(__file__).resolve().parents[1] / "sandbox/docker/Dockerfile"
     text = dockerfile.read_text()
-    assert re.search(rf"^COPY cerberus/rules {re.escape(rules_dir)}$",
+    assert re.search(rf"^COPY rules {re.escape(rules_dir)}$",
                      text, re.M)
     assert re.search(
-        rf"^COPY cerberus/skills {re.escape(SKILLS_ROUTE.rstrip('/'))}$",
+        rf"^COPY skills {re.escape(SKILLS_ROUTE.rstrip('/'))}$",
         text, re.M)
 
 

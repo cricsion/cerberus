@@ -23,6 +23,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from rich.cells import cell_len
 from rich.console import Console
@@ -610,7 +611,7 @@ class ScanReporter:
                     text.append(" · ", style="meta")
                 first = False
                 abs_file = (out_path / name).resolve()
-                text.append(label, style=Style(dim=True, link=f"file://{abs_file}"))
+                text.append(label, style=Style(dim=True, link=_file_url(abs_file)))
         return text
 
     def _gate_text(self, fail_on: str, min_confidence: float,
@@ -643,15 +644,19 @@ class ScanReporter:
         return lines
 
     def _hint_text(self, out_path: Path) -> Any:
-        raw = str(out_path)
+        raw = clean_untrusted(str(out_path))
         abs_html = (out_path / "report.html").resolve()
         text = Text("open ", style="meta")
-        text.append(f"{raw}/report.html", style=Style(dim=True, link=f"file://{abs_html}"))
+        text.append(f"{raw}/report.html", style=Style(dim=True, link=_file_url(abs_html)))
         text.append(f"  ·  cerberus inspect {raw}", style="meta")
         return text
 
 
 # Module helpers -------------------------------------------------------------
+
+
+def _file_url(path: Path) -> str:
+    return "file://" + quote(str(path.resolve()), safe="/:")
 
 
 def _fmt_conf(value: Any) -> str:

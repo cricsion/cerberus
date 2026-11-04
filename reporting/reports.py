@@ -5,7 +5,7 @@ import html
 import json
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from cerberus.schemas import (
@@ -58,47 +58,85 @@ def _parse_step_loc(
     return default_path, default_line, step
 
 
-def _parse_diff_to_replacements(
-    diff_text: str, default_path: str, default_start: int, default_end: int
-) -> list[dict]:
-    """Parse a unified diff into SARIF replacement entries."""
-    hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
-    hunks = list(hunk_re.finditer(diff_text))
-    if not hunks:
-        return [
-            {
-                "deletedRegion": {
-                    "startLine": max(1, default_start),
-                    "endLine": max(1, default_end),
-                },
-                "insertedContent": {"text": diff_text},
-            }
-        ]
-    replacements = []
+_HUNK_RE = re.compile(
+    r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@[^\n]*\n?", re.MULTILINE
+)
+
+
+def _parse_diff_to_replacements(diff_text: str) -> list[dict]:
+    """Parse a unified diff into SARIF replacement entries.
+
+    ``deletedRegion`` covers exactly the ``-`` (deleted) lines; context lines
+    are NOT deleted (SARIF 2.1.0 §3.57.3). Consecutive ``-`` lines form one
+    deletion run; queued ``+`` lines attach to the run they follow, so the
+    common ``-a / +b`` hunk is one deletion-plus-insertion replacement. A
+    segment with only ``+`` lines becomes a zero-length region — an insertion
+    point at the line it precedes, encoded per §3.30.2 as
+    ``{"startLine": N, "startColumn": 1, "endColumn": 1}``. All regions use
+    pre-change (original file) coordinates and are disjoint.
+
+    Diffs without any ``@@`` hunk header cannot be placed, so NO replacement
+    is emitted; the raw patch text is still stored separately in the result's
+    ``properties.patch``.
+    """
+    hunks = list(_HUNK_RE.finditer(diff_text))
+    replacements: list[dict] = []
     for i, match in enumerate(hunks):
-        start_del = int(match.group(1))
-        count_del = int(match.group(2)) if match.group(2) is not None else 1
-        end_del = start_del + max(0, count_del - 1)
+        old_start = int(match.group(1))
+        old_count = int(match.group(2)) if match.group(2) is not None else 1
+        body_end = hunks[i + 1].start() if i + 1 < len(hunks) else len(diff_text)
+        body = diff_text[match.end():body_end]
 
-        start_pos = match.end()
-        end_pos = hunks[i + 1].start() if i + 1 < len(hunks) else len(diff_text)
-        hunk_body = diff_text[start_pos:end_pos]
+        old_next = max(1, old_start if old_count > 0 else old_start + 1)
 
-        added_lines = []
-        for line in hunk_body.splitlines():
-            if line.startswith("+") and not line.startswith("+++"):
-                added_lines.append(line[1:])
-        inserted = "\n".join(added_lines)
-        if inserted or count_del > 0:
-            replacements.append(
-                {
-                    "deletedRegion": {
-                        "startLine": max(1, start_del),
-                        "endLine": max(1, end_del),
-                    },
-                    "insertedContent": {"text": inserted},
-                }
-            )
+        del_start: int | None = None
+        del_end = 0
+        pending: list[str] = []
+
+        for raw_line in body.splitlines():
+            line = raw_line.rstrip("\r")
+            if line.startswith("\\"):
+                continue
+            if line.startswith(("--- ", "+++ ")):
+                continue
+            if line.startswith("+"):
+                pending.append(line[1:])
+                continue
+            if pending:
+                if del_start is None:
+                    replacements.append({
+                        "deletedRegion": {
+                            "startLine": old_next, "startColumn": 1, "endColumn": 1,
+                        },
+                        "insertedContent": {"text": "\n".join(pending)},
+                    })
+                else:
+                    replacements.append({
+                        "deletedRegion": {"startLine": del_start, "endLine": del_end},
+                        "insertedContent": {"text": "\n".join(pending)},
+                    })
+                    del_start = None
+                pending = []
+            if line.startswith("-"):
+                if del_start is None:
+                    del_start = old_next
+                del_end = old_next
+                old_next += 1
+            else:
+                old_next += 1
+
+        if del_start is not None:
+            repl: dict = {"deletedRegion": {"startLine": del_start, "endLine": del_end}}
+            if pending:
+                repl["insertedContent"] = {"text": "\n".join(pending)}
+            replacements.append(repl)
+        elif pending:
+            replacements.append({
+                "deletedRegion": {
+                    "startLine": old_next, "startColumn": 1, "endColumn": 1,
+                },
+                "insertedContent": {"text": "\n".join(pending)},
+            })
     return replacements
 
 
@@ -146,7 +184,7 @@ def write_sarif(findings: list[dict], out: Path) -> None:
             rules.append(seen[rule_id])
 
         poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
-        poc_status = str(poc.get("status") or "").lower()
+        poc_status = _poc_status(f)
         msg_prefix = "[POC PROVEN] " if poc_status == "proven" else ""
         msg_text = f"{msg_prefix}{f.get('title')} (conf {f.get('confidence', 0)})"
 
@@ -193,12 +231,12 @@ def write_sarif(findings: list[dict], out: Path) -> None:
             f_start = max(1, safe_int(f.get("start_line", 1), 1))
             f_end = max(1, safe_int(f.get("end_line", 1), 1))
 
-            def _make_tfl(u: str, l: int, msg: str) -> dict:
+            def _make_tfl(u: str, line_no: int, msg: str) -> dict:
                 return {
                     "location": {
                         "physicalLocation": {
                             "artifactLocation": {"uri": u},
-                            "region": {"startLine": max(1, l)},
+                            "region": {"startLine": max(1, line_no)},
                         },
                         "message": {"text": msg},
                     }
@@ -225,12 +263,7 @@ def write_sarif(findings: list[dict], out: Path) -> None:
         # Native SARIF fixes
         patch_val = _real_diff(f)
         if patch_val:
-            replacements = _parse_diff_to_replacements(
-                patch_val,
-                str(f.get("path") or ""),
-                max(1, safe_int(f.get("start_line", 1), 1)),
-                max(1, safe_int(f.get("end_line", 1), 1)),
-            )
+            replacements = _parse_diff_to_replacements(patch_val)
             if replacements:
                 res_item["fixes"] = [
                     {
@@ -317,8 +350,25 @@ def _code_safe(text: str) -> str:
 
 
 def _lang_for(path: str) -> str:
-    ext = str(path or "").rsplit(".", 1)[-1].lower()
+    ext = str(path or "").rsplit(".", 1)[-1].lower().split()
+    ext = ext[0] if ext else ""
     return _LANG_BY_EXT.get(ext, ext[:10])
+
+
+_POC_STATUSES = frozenset({"proven", "attempted", "blocked", "planned"})
+
+
+def _poc_status(f: dict) -> str:
+    """Whitelisted PoC status from a finding's poc dict.
+
+    ``Finding.poc`` is a ``PocItem | dict`` union, so hunter-supplied dicts
+    bypass the ``PocItem.status`` Literal validation upstream; collapsing
+    anything outside ``_POC_STATUSES`` to "" keeps both the rendered badge
+    and the HTML ``data-poc`` attribute injection-free.
+    """
+    poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
+    status = str(poc.get("status") or "").strip().lower()
+    return status if status in _POC_STATUSES else ""
 
 
 def _poc_counts(findings) -> tuple[int, int]:
@@ -429,9 +479,9 @@ def write_markdown(findings: list[dict], out: Path) -> None:
         tot_proven += proven_cnt
         patch_cnt = sum(1 for f in sev_findings if _real_diff(f) or _summary(f))
         tot_patched += patch_cnt
-        pct = f" ({int(round(proven_cnt / count * 100))}%)" if count > 0 else ""
+        pct = f" ({round(proven_cnt / count * 100)}%)" if count > 0 else ""
         matrix_rows.append(f"| {sev.upper()} | {count} | {proven_cnt} / {count}{pct} | {patch_cnt} |")
-    tot_pct = f" ({int(round(tot_proven / tot_count * 100))}%)" if tot_count > 0 else ""
+    tot_pct = f" ({round(tot_proven / tot_count * 100)}%)" if tot_count > 0 else ""
     matrix_rows.append(f"| **TOTAL** | **{tot_count}** | **{tot_proven} / {tot_count}{tot_pct}** | **{tot_patched}** |")
     lines += matrix_rows
     lines.append("")
@@ -452,7 +502,8 @@ def write_markdown(findings: list[dict], out: Path) -> None:
             f_title = _md_safe(f.get("title", ""))
             f_sev = str(f.get("severity", "?")).upper()
             f_loc = f"{_md_safe(f.get('path', ''))}:{safe_int(f.get('start_line', 0), 0)}"
-            lines.append(f"  - [{f_sev}: {f_title} (`{f_loc}`)](#finding-{f_num})")
+            link_text = _md_link_text(f"{f_sev}: {f_title} (`{f_loc}`)")
+            lines.append(f"  - [{link_text}](#finding-{f_num})")
     lines.append("")
 
     f_num = 0
@@ -462,14 +513,19 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                      [f for f in rows if str(f.get("status", "")).lower() != "confirmed"])
         if not tier_rows:
             continue
-        lines += [f"## {tier_title} ({len(tier_rows)})", ""]
+        tier_anchor = tier_title.lower().replace(" ", "-")
+        lines += [
+            f"<a id=\"{tier_anchor}\"></a>",
+            f"## {tier_title} ({len(tier_rows)})",
+            "",
+        ]
         for f in tier_rows:
             f_num += 1
             score, cvss_vec = _cvss_score_and_vector(f)
             lines += [
                 f"<a id=\"finding-{f_num}\"></a>",
                 f"### {str(f.get('severity', '?')).upper()} {_md_safe(f.get('title', ''))}",
-                f"- CVSS: **{score:.1f}** (`{cvss_vec}`) | CWE: {f.get('cwe', '')} | confidence: {f.get('confidence', 0)}",
+                f"- CVSS: **{score:.1f}** (`{_md_safe(cvss_vec)}`) | CWE: {_md_safe(f.get('cwe', ''))} | confidence: {f.get('confidence', 0)}",
                 f"- Location: `{_md_safe(f.get('path', ''))}:{safe_int(f.get('start_line', 0), 0)}-"
                 f"{safe_int(f.get('end_line', 0), 0)}`"
             ]
@@ -510,7 +566,7 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                 lines.append(f"  - Audit Trail: {_md_safe(' | '.join(audit))}")
 
             poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
-            poc_status = str(poc.get("status") or "").lower()
+            poc_status = _poc_status(f)
             receipt = poc.get("receipt") if isinstance(poc.get("receipt"), dict) else {}
             if poc_status == "blocked":
                 blocker = str(poc.get("blocker") or "PoC generation did not produce a repro")
@@ -531,20 +587,20 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                     lines.append(f"  - Script file: `{_md_safe(path_ref)}`")
                 if poc.get("control") and poc.get("command"):
                     lines.append(f"  - Control Command: `{_md_safe(poc['command'])} "
-                                 f"{poc.get('control')}`")
+                                 f"{_md_safe(poc.get('control'))}`")
                 receipt_outputs = receipt.get("outputs") or []
                 if receipt_outputs:
                     lines += ["  - Observed output (stamped receipt):",
                               "    ```", _code_safe(str(receipt_outputs[0])[:1200]), "    ```"]
                 if receipt.get("timestamp"):
-                    stamper = receipt.get("stamped_by", "cerberus")
-                    lines.append(f"  - Receipt: Stamped by {stamper} at `{receipt.get('timestamp')}`")
+                    stamper = _md_safe(receipt.get("stamped_by", "cerberus"))
+                    lines.append(f"  - Receipt: Stamped by {stamper} "
+                                 f"at `{_md_safe(receipt.get('timestamp'))}`")
                 script = str(poc.get("script") or "").strip()
                 if script:
-                    fn = poc.get("filename", "test_repro.py")
-                    ext = fn.split(".")[-1] if "." in fn else "python"
-                    lines += [f"  - Repro Script (`{fn}`):",
-                              f"```{ext}", _code_safe(script), "```"]
+                    fn = str(poc.get("filename") or "test_repro.py")
+                    lines += [f"  - Repro Script (`{_md_safe(fn)}`):",
+                              f"```{_lang_for(fn)}", _code_safe(script), "```"]
 
             summary = _summary(f)
             diff = _real_diff(f)
@@ -690,14 +746,14 @@ def write_html(findings: list[dict], out: Path) -> None:
         loc = html.escape(f"{f.get('path', '')}:{safe_int(f.get('start_line', 0), 0)}"
                           f"-{safe_int(f.get('end_line', 0), 0)}", quote=True)
         status = html.escape(str(f.get("status", "")), quote=True)
-        score, cvss_vec = _cvss_score_and_vector(f)
+        score, _ = _cvss_score_and_vector(f)
         if n_dupe:
             title = (f"{title} <span class='rtag'>+{n_dupe} "
                      f"duplicate{'s' if n_dupe != 1 else ''}</span>")
 
         # -- PoC block ----------------------------------------------------------
         poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
-        poc_status = str(poc.get("status") or "").lower()
+        poc_status = _poc_status(f)
         receipt = poc.get("receipt") if isinstance(poc.get("receipt"), dict) else {}
         if poc_status == "proven":
             poc_badge = '<span class="badge badge-proven">Proven</span>'
@@ -839,8 +895,8 @@ def write_html(findings: list[dict], out: Path) -> None:
     total_act = c["total"]
     crit_cnt = c["by_sev"].get("critical", 0)
     high_cnt = c["by_sev"].get("high", 0)
-    proven_cnt = c["proven"]
-    poc_pct = f"{int(round(proven_cnt / total_act * 100))}%" if total_act > 0 else "0%"
+    proven_cnt = _poc_counts(rows)[0]
+    poc_pct = f"{round(proven_cnt / total_act * 100)}%" if total_act > 0 else "0%"
     patched_cnt = sum(1 for f in rows if _real_diff(f) or _summary(f))
 
     kpi_grid = (
@@ -882,10 +938,22 @@ def _md_safe(value: object) -> str:
     return " ".join(p.lstrip("#>|").lstrip() for p in parts)
 
 
+def _md_link_text(value: object) -> str:
+    """Escape a string for safe use inside a markdown ``[link text]`` slot.
+
+    ``_md_safe`` alone does not touch brackets, so a title like
+    ``evil](https://attacker.example) [x`` would render as a live external
+    link inside the TOC; escaping brackets (and backslashes) keeps the text
+    inert.
+    """
+    return (str(value if value is not None else "")
+            .replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]"))
+
+
 def write_junit(findings: list[dict], out: Path) -> None:
     rows = reportable_findings(findings)
     failures = 0
-    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     suite = ET.Element("testsuite", {
         "name": "cerberus",
         "tests": str(len(rows)),
@@ -906,8 +974,7 @@ def write_junit(findings: list[dict], out: Path) -> None:
             "name": name,
         })
         props = ET.SubElement(case, "properties")
-        poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
-        poc_status = str(poc.get("status") or "none").lower()
+        poc_status = _poc_status(f) or "none"
         score, _ = _cvss_score_and_vector(f)
         conf = safe_float(f.get("confidence", 0) or 0)
         has_patch = "true" if (_real_diff(f) or _summary(f)) else "false"

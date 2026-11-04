@@ -2,19 +2,20 @@
 # Build the scan sandbox image with pinned versions + smoke-test the result.
 #
 #   cp versions.env.example versions.env   # fill versions
-#   ./cerberus/sandbox/docker/build.sh cerberus-sandbox:local
+#   ./sandbox/docker/build.sh cerberus-sandbox:local
 #
-# Build context is the REPO ROOT: the Dockerfile copies cerberus/rules into
-# the image so in-container semgrep runs the same custom rules as the host.
+# Build context is the REPO ROOT (this checkout, however it is named): the
+# Dockerfile copies rules/ and skills/ into the image so in-container semgrep
+# runs the same custom rules as the host.
 set -euo pipefail
 
 IMAGE_TAG="${1:-cerberus-sandbox:local}"
-ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-VERSIONS_FILE="cerberus/sandbox/docker/versions.env"
+VERSIONS_FILE="sandbox/docker/versions.env"
 if [[ ! -f "$VERSIONS_FILE" ]]; then
-    echo "missing $VERSIONS_FILE: cp cerberus/sandbox/docker/versions.env.example cerberus/sandbox/docker/versions.env and fill it in" >&2
+    echo "missing $VERSIONS_FILE: cp sandbox/docker/versions.env.example sandbox/docker/versions.env and fill it in" >&2
     exit 1
 fi
 set -a; . "./$VERSIONS_FILE"; set +a
@@ -82,7 +83,7 @@ echo "[build] ${IMAGE_TAG} (context: repo root)"
 docker buildx inspect cyber >/dev/null 2>&1 \
     || docker buildx create --name cyber --driver docker-container >/dev/null
 docker buildx build --builder cyber --load \
-    -f cerberus/sandbox/docker/Dockerfile "${ARGS[@]}" -t "$IMAGE_TAG" .
+    -f sandbox/docker/Dockerfile "${ARGS[@]}" -t "$IMAGE_TAG" .
 
 # Smoke checks: batched into exactly TWO container invocations:
 # 1. Container 1: Toolchain, versions, python imports, and skills layout (online/default)
@@ -92,7 +93,7 @@ docker buildx build --builder cyber --load \
 
 echo "[smoke 1/2] toolchain, versions, python imports & skills (batched)"
 docker run --rm \
-    -v "$PWD/cerberus/skills/gitleaks/SKILL.md:/tmp/host_gitleaks_skill.md:ro" \
+    -v "$ROOT_DIR/skills/gitleaks/SKILL.md:/tmp/host_gitleaks_skill.md:ro" \
     "$IMAGE_TAG" bash -c '
     set -euo pipefail
 
