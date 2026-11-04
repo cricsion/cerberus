@@ -4,31 +4,13 @@ from pydantic import BaseModel, Field
 from cerberus.prompts.contract import structured_output_contract
 from cerberus.prompts.engine import block
 
-DEDUP_RULES = block("triage/dedup_rules")
-
-SEVERITY_GUIDE = block("triage/severity_guide")
-
-TRIAGE_SYSTEM = block("triage/triage_system")
-
+TRIAGE_INSTRUCTIONS = block("triage/instructions")
+TRIAGE_SYSTEM = TRIAGE_INSTRUCTIONS
 
 def build_triage_batch_task(scope: str, slim_json: str) -> str:
-    # Static prefix first: dedup rules, severity rubric, and output instructions (~6k tokens)
-    # Cached across all triage batches in the scan.
     scope_prefix = f"{scope}\n\n" if (scope or "").strip() else ""
-    contract = structured_output_contract(
-        TriageBatch,
-        guidance=(
-            "Score findings strictly according to their earned exploitability evidence from the severity rubric above.\n"
-            "The threat model may clarify actors and assets. It moves severity DOWN never up: "
-            "an explicitly deprioritized threat in section 5 keeps its status and takes severity low, but "
-            "never acquits anything on its own. Unnamed or in-scope threats must be scored strictly according to "
-            "their earned exploitability evidence from the severity rubric above. "
-            "If the threat model conflicts with that evidence, note the conflict in reason for human review."
-        ),
-    )
+    contract = structured_output_contract(TriageBatch)
     return (
-        f"Deduplication rules:\n{DEDUP_RULES}\n\n"
-        f"Severity rubric:\n{SEVERITY_GUIDE}\n\n"
         f"{contract}\n\n"
         f"{scope_prefix}"
         f"All triage findings of this batch (JSON):\n"

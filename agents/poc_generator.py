@@ -32,6 +32,7 @@ from cerberus.agents.deep import (
 from cerberus.agents.poc import _extract_exit_code, _extract_stdout, stamp_receipts
 from cerberus.config import effective_config, effective_model, get_model_kwargs
 from cerberus.progress import AgentState
+from cerberus.prompts.engine import block
 from cerberus.prompts.untrusted import make_nonce, untrusted_block
 from cerberus.schemas import SEVERITY_ORDER
 
@@ -39,38 +40,7 @@ _logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 15
 
-POC_GEN_SYSTEM = (
-    "You are an expert Security Reproduction & Patch Engineer specializing in in-process exploit verification and robust vulnerability patching.\n"
-    "Your objective: for each assigned finding, author and execute a robust reproduction test script "
-    "inside the Docker container sandbox to prove the vulnerability, and generate a precise code patch.\n\n"
-    "ENVIRONMENT & TOOLS:\n"
-    "- Target repository is mounted in the container working directory.\n"
-    "- Tools available: `read_file`, `write_file`, `edit_file`, `execute`, `glob`, `grep`.\n"
-    "- Write scripts under `/work/_shared/poc/<finding_id>/<filename>` (e.g. test_repro.py, test_repro.js, test_repro.go, test_repro.sh).\n\n"
-    "TWO-SIDED REPRO CONTRACT:\n"
-    "1. Exploit invariant check: Executing the script without flags must trigger the vulnerability, "
-    "assert that the security invariant is violated (e.g. unauthorized access, path traversal, injection), "
-    "print `[POC_PROVEN]` on stdout, and exit with code 0.\n"
-    "2. Control check (--control): When invoked with `--control`, the script must test safe/benign inputs, "
-    "verify normal safe operation without vulnerability, print `[POC_CONTROL_PASSED]` on stdout, and exit with code 0.\n\n"
-    "IN-PROCESS DEBUGGING & MOCKS:\n"
-    "- Use `read_file` to inspect the vulnerable function, its module imports, and configuration.\n"
-    "- In-process mocks: If the application expects external services (database, Redis, network APIs, auth servers), "
-    "mock them directly in the reproduction script (e.g., using unittest.mock, in-memory stubs, or dummy handlers).\n"
-    "- Self-healing loop: Run the script using `execute`. If execution fails (ModuleNotFoundError, syntax error, missing argument), "
-    "read the stderr traceback, use `edit_file` to fix the script, and re-execute until it passes both exploit and control runs.\n\n"
-    "PATCH CONTRACT:\n"
-    "- Author a clean, concrete `patch`: a unified diff (`--- a/path\n+++ b/path\n...`) showing the minimal source modification that eliminates the flaw.\n"
-    "- Provide `patch_summary`: a clear technical explanation of the security invariant enforced by the patch.\n\n"
-    "OUTPUT CONTRACT (path-based — keep payloads small):\n"
-    "- Save each repro script under `/work/_shared/poc/<finding_id>/<filename>` (required for execution anyway) "
-    "and reference that exact file in `script_path`. Do NOT inline the full script source unless the file "
-    "could not be written.\n"
-    "- `observed_output`: the minimum stdout lines (exploit sentinel and control sentinel) you already ran — "
-    "the harness re-executes and stamps its own mechanical receipt regardless.\n"
-    "- Return a structured result covering ALL assigned findings. A finding with no result item is recorded "
-    "as blocked, so omitting findings is worse than reporting a failed attempt.\n"
-)
+POC_GEN_SYSTEM = block("poc/instructions")
 
 class PocResultItem(BaseModel):
     finding_id: str = Field(description="ID of the finding")

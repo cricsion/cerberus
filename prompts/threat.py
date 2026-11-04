@@ -96,16 +96,7 @@ class SwarmPlan(BaseModel):
     mitigations: list[SwarmMitigation] = Field(default_factory=list)
 
 
-SYNTHESIZER_CONTRACT = structured_output_contract(
-    SwarmPlan,
-    guidance=(
-        "- Submit your complete threat model plan by invoking the `SwarmPlan` tool call.\n"
-        "- Do NOT output raw markdown or text; you MUST invoke the `SwarmPlan` tool call.\n"
-        "- The `threats` list MUST contain at least 1-8 concrete threat rows (never return an empty list).\n"
-        "- Every entry point from section 3 must appear in at least one threat's surface.\n"
-        "- Mitigations must provide class-level controls covering the identified threat classes."
-    ),
-)
+SYNTHESIZER_CONTRACT = structured_output_contract(SwarmPlan)
 
 
 class QuestionList(BaseModel):

@@ -5,6 +5,7 @@ import html
 import json
 import re
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from pathlib import Path
 
 from cerberus.schemas import (
@@ -19,9 +20,101 @@ from cerberus.schemas import (
 
 SEV_TO_SARIF = {"critical": "error", "high": "error", "medium": "warning", "low": "note", "info": "note"}
 
+_DEFAULT_CVSS_BY_SEV = {
+    "critical": (9.8, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"),
+    "high": (8.8, "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"),
+    "medium": (5.3, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+    "low": (3.1, "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"),
+    "info": (0.0, "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"),
+}
+
+
+def _cvss_score_and_vector(f: dict) -> tuple[float, str]:
+    sev = str(f.get("severity") or "medium").lower()
+    default_score, default_vec = _DEFAULT_CVSS_BY_SEV.get(
+        sev, (5.0, "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N")
+    )
+    raw_score = f.get("cvss")
+    score = safe_float(raw_score, default_score) if raw_score is not None else default_score
+    vec = str(f.get("cvss_vector") or f.get("vector_string") or default_vec)
+    return score, vec
+
+
+def _cwe_num(cwe_val: object) -> str:
+    m = re.search(r"(\d+)", str(cwe_val or ""))
+    return m.group(1) if m else ""
+
+
+def _parse_step_loc(
+    step: str, default_path: str, default_line: int
+) -> tuple[str, int, str]:
+    """Parse 'path/file.ext:123 - message' or 'path/file.ext:123' into (path, line, msg)."""
+    m = re.match(r"^([^:\s]+):(\d+)(?:-(\d+))?(?:\s*[-:]?\s*(.*))?$", step)
+    if m:
+        file_path = m.group(1)
+        line_no = int(m.group(2))
+        msg = (m.group(4) or step).strip()
+        return file_path, line_no, msg
+    return default_path, default_line, step
+
+
+def _parse_diff_to_replacements(
+    diff_text: str, default_path: str, default_start: int, default_end: int
+) -> list[dict]:
+    """Parse a unified diff into SARIF replacement entries."""
+    hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
+    hunks = list(hunk_re.finditer(diff_text))
+    if not hunks:
+        return [
+            {
+                "deletedRegion": {
+                    "startLine": max(1, default_start),
+                    "endLine": max(1, default_end),
+                },
+                "insertedContent": {"text": diff_text},
+            }
+        ]
+    replacements = []
+    for i, match in enumerate(hunks):
+        start_del = int(match.group(1))
+        count_del = int(match.group(2)) if match.group(2) is not None else 1
+        end_del = start_del + max(0, count_del - 1)
+
+        start_pos = match.end()
+        end_pos = hunks[i + 1].start() if i + 1 < len(hunks) else len(diff_text)
+        hunk_body = diff_text[start_pos:end_pos]
+
+        added_lines = []
+        for line in hunk_body.splitlines():
+            if line.startswith("+") and not line.startswith("+++"):
+                added_lines.append(line[1:])
+        inserted = "\n".join(added_lines)
+        if inserted or count_del > 0:
+            replacements.append(
+                {
+                    "deletedRegion": {
+                        "startLine": max(1, start_del),
+                        "endLine": max(1, end_del),
+                    },
+                    "insertedContent": {"text": inserted},
+                }
+            )
+    return replacements
+
 
 def write_json(findings: list[dict], out: Path) -> None:
-    out.write_text(json.dumps(findings, indent=2), encoding="utf-8")
+    enriched = []
+    for idx, f in enumerate(findings, 1):
+        item = dict(f)
+        if not item.get("id"):
+            item["id"] = f"cb-{idx:03d}"
+        score, vec = _cvss_score_and_vector(item)
+        if item.get("cvss") is None:
+            item["cvss"] = score
+        if not item.get("cvss_vector"):
+            item["cvss_vector"] = vec
+        enriched.append(item)
+    out.write_text(json.dumps(enriched, indent=2), encoding="utf-8")
 
 
 def write_sarif(findings: list[dict], out: Path) -> None:
@@ -31,9 +124,25 @@ def write_sarif(findings: list[dict], out: Path) -> None:
     results = []
     for f in rows:
         rule_id = f.get("cwe") or f.get("title", "finding")
+        score, cvss_vec = _cvss_score_and_vector(f)
+        cwe_num = _cwe_num(f.get("cwe") or "")
         if rule_id not in seen:
-            seen[rule_id] = {"id": rule_id, "name": rule_id,
-                             "shortDescription": {"text": f.get("title", rule_id)}}
+            rule_entry: dict = {
+                "id": rule_id,
+                "name": rule_id,
+                "shortDescription": {"text": f.get("title", rule_id)},
+                "properties": {
+                    "security-severity": f"{score:.1f}",
+                },
+            }
+            if cwe_num:
+                help_uri = f"https://cwe.mitre.org/data/definitions/{cwe_num}.html"
+                rule_entry["helpUri"] = help_uri
+                rule_entry["help"] = {
+                    "text": f"More information: {help_uri}",
+                    "markdown": f"[MITRE CWE-{cwe_num}]({help_uri})",
+                }
+            seen[rule_id] = rule_entry
             rules.append(seen[rule_id])
 
         poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
@@ -51,7 +160,10 @@ def write_sarif(findings: list[dict], out: Path) -> None:
                            "snippet": {"text": f.get("snippet", "")}}}}],
         }
 
-        props: dict = {}
+        props: dict = {
+            "security-severity": f"{score:.1f}",
+            "cvssVector": cvss_vec,
+        }
         if poc_status:
             props["pocStatus"] = poc_status
             props["reproduced"] = (poc_status == "proven")
@@ -69,8 +181,68 @@ def write_sarif(findings: list[dict], out: Path) -> None:
             props["patch"] = f["patch"]
         if f.get("patch_summary"):
             props["patchSummary"] = f["patch_summary"]
-        if props:
-            res_item["properties"] = props
+        res_item["properties"] = props
+
+        taint = f.get("taint") if isinstance(f.get("taint"), dict) else {}
+        t_source = str(taint.get("source") or "").strip()
+        t_sink = str(taint.get("sink") or "").strip()
+        t_path = taint.get("path") or []
+        if t_source or t_sink or t_path:
+            thread_locs = []
+            f_path = str(f.get("path") or "")
+            f_start = max(1, safe_int(f.get("start_line", 1), 1))
+            f_end = max(1, safe_int(f.get("end_line", 1), 1))
+
+            def _make_tfl(u: str, l: int, msg: str) -> dict:
+                return {
+                    "location": {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": u},
+                            "region": {"startLine": max(1, l)},
+                        },
+                        "message": {"text": msg},
+                    }
+                }
+
+            if t_source:
+                thread_locs.append(_make_tfl(f_path, f_start, f"Source: {t_source}"))
+            for step in t_path:
+                step_str = str(step).strip()
+                if step_str:
+                    sp, sl, sm = _parse_step_loc(step_str, f_path, f_start)
+                    thread_locs.append(_make_tfl(sp, sl, sm or step_str))
+            if t_sink:
+                thread_locs.append(_make_tfl(f_path, f_end, f"Sink: {t_sink}"))
+
+            if thread_locs:
+                res_item["codeFlows"] = [
+                    {
+                        "message": {"text": "Taint tracking data-flow path"},
+                        "threadFlows": [{"locations": thread_locs}],
+                    }
+                ]
+
+        # Native SARIF fixes
+        patch_val = _real_diff(f)
+        if patch_val:
+            replacements = _parse_diff_to_replacements(
+                patch_val,
+                str(f.get("path") or ""),
+                max(1, safe_int(f.get("start_line", 1), 1)),
+                max(1, safe_int(f.get("end_line", 1), 1)),
+            )
+            if replacements:
+                res_item["fixes"] = [
+                    {
+                        "description": {"text": _summary(f) or "Apply proposed patch"},
+                        "artifactChanges": [
+                            {
+                                "artifactLocation": {"uri": str(f.get("path") or "")},
+                                "replacements": replacements,
+                            }
+                        ],
+                    }
+                ]
 
         if str(f.get("status", "")).lower() == "fp":
             res_item["suppressions"] = [{
@@ -88,7 +260,11 @@ def write_sarif(findings: list[dict], out: Path) -> None:
 # --- shared rendering helpers -------------------------------------------------
 
 # Validator/pipeline tags appended into `evidence` via `_append_note` (" | ").
-_EVIDENCE_TAG = re.compile(r"^ *(validator|consensus|alt|refute|fallback): ")
+_EVIDENCE_TAG = re.compile(r"^ *(validator|consensus|alt|refute|fallback|triage): ")
+_INTERNAL_NOISE_RE = re.compile(
+    r"(omitted from batch reply|triage:\s*|consensus:\s*|validator round failed)",
+    re.IGNORECASE,
+)
 _LANG_BY_EXT = {"py": "python", "js": "javascript", "mjs": "javascript", "cjs": "javascript",
                 "ts": "typescript", "go": "go", "rb": "ruby", "java": "java", "php": "php",
                 "cs": "csharp", "sh": "bash", "html": "html", "cshtml": "cshtml"}
@@ -96,17 +272,27 @@ _PLACEHOLDER_PATCH_SUMMARIES = {"fix", "fix summary", "n/a", "none", "tbd", "tod
 _THREAD_ORDER = ("critical", "high", "medium", "low", "info")
 
 
-def _evidence_parts(evidence: object) -> tuple[str, dict[str, list[str]]]:
-    """Split the pipe-joined evidence stream into (base, {tag: [chunks]})."""
+def _evidence_parts(evidence: object) -> tuple[str, dict[str, list[str]], list[str]]:
+    """Split the pipe-joined evidence stream into (base, {tag: [chunks]}, audit_trail)."""
     base: list[str] = []
     tags: dict[str, list[str]] = {}
+    audit: list[str] = []
     for chunk in str(evidence or "").split(" | "):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
         m = _EVIDENCE_TAG.match(chunk)
         if m is not None:
-            tags.setdefault(m.group(1), []).append(chunk.split(":", 1)[1].strip())
-        elif chunk.strip():
-            base.append(chunk.strip())
-    return " | ".join(base), tags
+            tag_name = m.group(1)
+            val = chunk.split(":", 1)[1].strip()
+            if tag_name in ("consensus", "validator", "fallback", "triage"):
+                audit.append(chunk)
+            tags.setdefault(tag_name, []).append(val)
+        elif _INTERNAL_NOISE_RE.search(chunk):
+            audit.append(chunk)
+        else:
+            base.append(chunk)
+    return " | ".join(base), tags, audit
 
 
 def _real_diff(f: dict) -> str:
@@ -180,6 +366,26 @@ def _poc_brief(proven: int, attempted: int) -> str:
     return f"Dynamic PoCs: {proven} proven, {attempted} attempted"
 
 
+def _format_diff_html(diff_text: str) -> str:
+    """Highlight unified diff lines (+ green, - red, @@ cyan) with HTML escaping."""
+    if not diff_text:
+        return ""
+    formatted_lines = []
+    for line in diff_text.splitlines():
+        escaped = html.escape(line, quote=True)
+        if line.startswith("+++ ") or line.startswith("--- "):
+            formatted_lines.append(f'<span class="diff-file">{escaped}</span>')
+        elif line.startswith("+"):
+            formatted_lines.append(f'<span class="diff-add">{escaped}</span>')
+        elif line.startswith("-"):
+            formatted_lines.append(f'<span class="diff-del">{escaped}</span>')
+        elif line.startswith("@@"):
+            formatted_lines.append(f'<span class="diff-hunk">{escaped}</span>')
+        else:
+            formatted_lines.append(escaped)
+    return "\n".join(formatted_lines)
+
+
 def write_markdown(findings: list[dict], out: Path) -> None:
     """Human report: confirmed tier first, then needs-review, by severity and
     confidence. FPs and duplicates are dropped; proven PoC payloads and
@@ -204,6 +410,52 @@ def write_markdown(findings: list[dict], out: Path) -> None:
         lines.append(f"- {poc_brief}")
     lines.append("")
 
+    # Executive Summary Matrix
+    matrix_rows = [
+        "| Severity | Count | Proven PoCs | Patched |",
+        "| :--- | :---: | :---: | :---: |",
+    ]
+    tot_count = 0
+    tot_proven = 0
+    tot_patched = 0
+    for sev in _THREAD_ORDER:
+        sev_findings = [f for f in rows if str(f.get("severity", "")).lower() == sev]
+        count = len(sev_findings)
+        if count == 0 and sev not in ("critical", "high", "medium"):
+            continue
+        tot_count += count
+        proven_cnt = sum(1 for f in sev_findings
+                         if isinstance(f.get("poc"), dict) and f["poc"].get("status") == "proven")
+        tot_proven += proven_cnt
+        patch_cnt = sum(1 for f in sev_findings if _real_diff(f) or _summary(f))
+        tot_patched += patch_cnt
+        pct = f" ({int(round(proven_cnt / count * 100))}%)" if count > 0 else ""
+        matrix_rows.append(f"| {sev.upper()} | {count} | {proven_cnt} / {count}{pct} | {patch_cnt} |")
+    tot_pct = f" ({int(round(tot_proven / tot_count * 100))}%)" if tot_count > 0 else ""
+    matrix_rows.append(f"| **TOTAL** | **{tot_count}** | **{tot_proven} / {tot_count}{tot_pct}** | **{tot_patched}** |")
+    lines += matrix_rows
+    lines.append("")
+
+    # Table of Contents
+    lines += ["## Table of Contents", ""]
+    f_num = 0
+    for tier, tier_title in STATUS_TITLES:
+        tier_rows = ([f for f in rows if str(f.get("status", "")).lower() == "confirmed"]
+                     if tier == "confirmed" else
+                     [f for f in rows if str(f.get("status", "")).lower() != "confirmed"])
+        if not tier_rows:
+            continue
+        tier_anchor = tier_title.lower().replace(" ", "-")
+        lines.append(f"- [{tier_title} ({len(tier_rows)})](#{tier_anchor})")
+        for f in tier_rows:
+            f_num += 1
+            f_title = _md_safe(f.get("title", ""))
+            f_sev = str(f.get("severity", "?")).upper()
+            f_loc = f"{_md_safe(f.get('path', ''))}:{safe_int(f.get('start_line', 0), 0)}"
+            lines.append(f"  - [{f_sev}: {f_title} (`{f_loc}`)](#finding-{f_num})")
+    lines.append("")
+
+    f_num = 0
     for tier, tier_title in STATUS_TITLES:
         tier_rows = ([f for f in rows if str(f.get("status", "")).lower() == "confirmed"]
                      if tier == "confirmed" else
@@ -212,18 +464,40 @@ def write_markdown(findings: list[dict], out: Path) -> None:
             continue
         lines += [f"## {tier_title} ({len(tier_rows)})", ""]
         for f in tier_rows:
-            lines += [f"### {str(f.get('severity', '?')).upper()} {_md_safe(f.get('title', ''))}",
-                      f"- CWE: {f.get('cwe', '')} | confidence: {f.get('confidence', 0)}",
-                      f"- Location: `{_md_safe(f.get('path', ''))}:{safe_int(f.get('start_line', 0), 0)}-"
-                      f"{safe_int(f.get('end_line', 0), 0)}`"]
+            f_num += 1
+            score, cvss_vec = _cvss_score_and_vector(f)
+            lines += [
+                f"<a id=\"finding-{f_num}\"></a>",
+                f"### {str(f.get('severity', '?')).upper()} {_md_safe(f.get('title', ''))}",
+                f"- CVSS: **{score:.1f}** (`{cvss_vec}`) | CWE: {f.get('cwe', '')} | confidence: {f.get('confidence', 0)}",
+                f"- Location: `{_md_safe(f.get('path', ''))}:{safe_int(f.get('start_line', 0), 0)}-"
+                f"{safe_int(f.get('end_line', 0), 0)}`"
+            ]
 
             snippet = _snippet(f)
             if snippet:
                 lines += [f"- Vulnerable code (`{_md_safe(f.get('path', ''))}`):",
                           f"```{_lang_for(f.get('path', ''))}", _code_safe(snippet), "```"]
 
-            base, tags = _evidence_parts(f.get("evidence"))
-            lines.append(f"- Evidence: {_md_safe(base)}")
+            # Taint data-flow
+            taint = f.get("taint") if isinstance(f.get("taint"), dict) else {}
+            t_source = str(taint.get("source") or "").strip()
+            t_sink = str(taint.get("sink") or "").strip()
+            t_path = taint.get("path") or []
+            if t_source or t_sink or t_path:
+                lines.append("- Taint Flow:")
+                if t_source:
+                    lines.append(f"  - **Source**: `{_md_safe(t_source)}`")
+                if t_path:
+                    lines.append("  - **Path**:")
+                    for p_step in t_path:
+                        lines.append(f"    - `{_md_safe(p_step)}`")
+                if t_sink:
+                    lines.append(f"  - **Sink**: `{_md_safe(t_sink)}`")
+
+            base, tags, audit = _evidence_parts(f.get("evidence"))
+            if base:
+                lines.append(f"- Evidence: {_md_safe(base)}")
             if "validator" in tags:
                 lines.append(f"  - Validation: {_md_safe(' | '.join(tags['validator']))}")
             if "alt" in tags:
@@ -232,6 +506,8 @@ def write_markdown(findings: list[dict], out: Path) -> None:
                 lines.append(f"  - Consensus: {_md_safe(' | '.join(tags['consensus']))}")
             if "refute" in tags:
                 lines.append(f"  - Refutation: {_md_safe(' | '.join(tags['refute']))}")
+            if audit:
+                lines.append(f"  - Audit Trail: {_md_safe(' | '.join(audit))}")
 
             poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
             poc_status = str(poc.get("status") or "").lower()
@@ -292,11 +568,31 @@ _LIST_JS = """
 document.addEventListener('DOMContentLoaded', function () {
   var main = document.getElementById('findings');
   var cards = Array.prototype.slice.call(main.querySelectorAll('details.finding'));
-  var filter = document.getElementById('sev-filter');
-  filter.addEventListener('change', function () {
-    var v = filter.value;
-    cards.forEach(function (c) { c.style.display = (!v || c.dataset.sev === v) ? '' : 'none'; });
-  });
+  var sevFilter = document.getElementById('sev-filter');
+  var searchBox = document.getElementById('search-box');
+  var pocFilter = document.getElementById('poc-filter');
+
+  function update() {
+    var sev = (sevFilter ? sevFilter.value : '').toLowerCase();
+    var q = (searchBox ? searchBox.value : '').toLowerCase().trim();
+    var pocOnly = pocFilter ? pocFilter.checked : false;
+
+    cards.forEach(function (c) {
+      var cardSev = (c.dataset.sev || '').toLowerCase();
+      var cardPoc = (c.dataset.poc || '').toLowerCase();
+      var cardText = (c.textContent || '').toLowerCase();
+
+      var matchSev = !sev || cardSev === sev;
+      var matchPoc = !pocOnly || cardPoc === 'proven';
+      var matchQ = !q || cardText.indexOf(q) !== -1;
+
+      c.style.display = (matchSev && matchPoc && matchQ) ? '' : 'none';
+    });
+  }
+
+  if (sevFilter) sevFilter.addEventListener('change', update);
+  if (searchBox) searchBox.addEventListener('input', update);
+  if (pocFilter) pocFilter.addEventListener('change', update);
 });
 """
 
@@ -313,6 +609,10 @@ _FINDINGS_CSS = (
     "body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
     "margin:0 auto;max-width:1100px;padding:1.5em;color:#1a1f24;background:#f5f6f8}"
     "h1{font-size:1.5em;margin:.2em 0 .4em}"
+    ".kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:14px 0 18px}"
+    ".kpi-card{background:#fff;border:1px solid #d9dee3;border-radius:10px;padding:12px 14px;box-shadow:0 1px 2px rgba(15,23,42,.05);text-align:center}"
+    ".kpi-val{font-size:1.6em;font-weight:700;color:#0f172a;line-height:1.2}"
+    ".kpi-lbl{font-size:.78em;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}"
     ".controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0 14px;"
     "font-size:.9em;color:#475569}"
     ".controls select{margin-left:4px}"
@@ -351,6 +651,15 @@ _FINDINGS_CSS = (
     "code{background:#eef1f5;padding:1px 5px;border-radius:4px;"
     "font-family:ui-monospace,monospace;font-size:.92em}"
     ".dupe-line{color:#64748b;font-size:.85em;margin-top:12px}"
+    ".diff-add{color:#4ade80;background:rgba(34,197,94,.12);display:block;margin:0 -12px;padding:0 12px}"
+    ".diff-del{color:#f87171;background:rgba(239,68,68,.12);display:block;margin:0 -12px;padding:0 12px}"
+    ".diff-hunk{color:#38bdf8;font-weight:600;display:block;margin:4px -12px;padding:2px 12px;background:rgba(56,189,248,.1)}"
+    ".diff-file{color:#94a3b8;font-weight:600;display:block}"
+    ".taint-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin:8px 0}"
+    ".taint-steps{margin:6px 0;padding-left:22px;font-size:.88em}"
+    ".taint-steps li{margin:3px 0}"
+    ".audit-trail{margin-top:8px;font-size:.85em}"
+    ".audit-trail summary{color:#64748b;cursor:pointer}"
 )
 
 
@@ -364,6 +673,7 @@ def write_html(findings: list[dict], out: Path) -> None:
     """
     rows = reportable_findings(findings)
     dupes: dict[str, list[dict]] = group_duplicates(list(findings or []))
+    c = _counts(findings)
 
     _SEV_CLASS = {"critical": "sev-critical", "high": "sev-high", "medium": "sev-medium",
                   "low": "sev-low", "info": "sev-info"}
@@ -380,6 +690,7 @@ def write_html(findings: list[dict], out: Path) -> None:
         loc = html.escape(f"{f.get('path', '')}:{safe_int(f.get('start_line', 0), 0)}"
                           f"-{safe_int(f.get('end_line', 0), 0)}", quote=True)
         status = html.escape(str(f.get("status", "")), quote=True)
+        score, cvss_vec = _cvss_score_and_vector(f)
         if n_dupe:
             title = (f"{title} <span class='rtag'>+{n_dupe} "
                      f"duplicate{'s' if n_dupe != 1 else ''}</span>")
@@ -442,8 +753,28 @@ def write_html(findings: list[dict], out: Path) -> None:
         poc_section = poc_head + "".join(poc_parts) if (poc_head or poc_parts) else \
             "<p class=\"meta-line\">No dynamic proof attempted for this finding.</p>"
 
+        # -- Taint Data-Flow block ----------------------------------------------
+        taint = f.get("taint") if isinstance(f.get("taint"), dict) else {}
+        t_source = str(taint.get("source") or "").strip()
+        t_sink = str(taint.get("sink") or "").strip()
+        t_path = taint.get("path") or []
+        taint_section = ""
+        if t_source or t_sink or t_path:
+            t_parts = ["<div class=\"taint-box\">"]
+            if t_source:
+                t_parts.append(f"<div class=\"kv\"><strong>Source:</strong> <code>{html.escape(t_source, quote=True)}</code></div>")
+            if t_path:
+                t_parts.append("<ol class=\"taint-steps\">")
+                for step in t_path:
+                    t_parts.append(f"<li><code>{html.escape(str(step), quote=True)}</code></li>")
+                t_parts.append("</ol>")
+            if t_sink:
+                t_parts.append(f"<div class=\"kv\"><strong>Sink:</strong> <code>{html.escape(t_sink, quote=True)}</code></div>")
+            t_parts.append("</div>")
+            taint_section = "<h3>Taint Data-Flow</h3>" + "".join(t_parts)
+
         # -- Evidence block -----------------------------------------------------
-        base, tags = _evidence_parts(f.get("evidence"))
+        base, tags, audit = _evidence_parts(f.get("evidence"))
         ev_parts = []
         if base:
             ev_parts.append(f"<p>{html.escape(base, quote=True)}</p>")
@@ -453,6 +784,10 @@ def write_html(findings: list[dict], out: Path) -> None:
             if tag_chunks:
                 ev_parts.append(f"<p class=\"meta-line\"><strong>{tag_label}:</strong> "
                                 f"{html.escape(' | '.join(tag_chunks), quote=True)}</p>")
+        if audit:
+            audit_escaped = "<br>".join(html.escape(a, quote=True) for a in audit)
+            ev_parts.append(f"<details class=\"audit-trail\"><summary>Audit Trail / Engine Notes ({len(audit)})</summary>"
+                            f"<div class=\"kv\">{audit_escaped}</div></details>")
         evidence_section = "".join(ev_parts) or "<p class=\"meta-line\">—</p>"
 
         # -- Code snippet -------------------------------------------------------
@@ -467,9 +802,9 @@ def write_html(findings: list[dict], out: Path) -> None:
         if summary:
             patch_parts.append(f"<p>{html.escape(summary, quote=True)}</p>")
         if patch_val:
-            patch_escaped = html.escape(patch_val, quote=True)
+            patch_formatted = _format_diff_html(patch_val)
             patch_parts.append("<details><summary>Diff</summary>"
-                               f"<pre class=\"diff\">{patch_escaped}</pre></details>")
+                               f"<pre class=\"diff\">{patch_formatted}</pre></details>")
         patch_section = "".join(patch_parts) if patch_parts else \
             "<p class=\"meta-line\">No patch proposed.</p>"
 
@@ -484,13 +819,14 @@ def write_html(findings: list[dict], out: Path) -> None:
         cards.append(
             f"<details class=\"finding\" data-sev=\"{sev_esc}\" "
             f"data-sevrank=\"{_SEV_RANK.get(sev, 9)}\" data-conf=\"{conf:.2f}\" "
-            f"data-status=\"{status}\">\n"
+            f"data-status=\"{status}\" data-poc=\"{poc_status}\" data-cvss=\"{score:.1f}\">\n"
             f"<summary><span class=\"sev {_SEV_CLASS.get(sev, 'sev-info')}\">{sev_esc}</span>"
             f"<span class=\"title\">{title}</span>"
-            f"<span class=\"fmeta\">{cwe} &middot; {loc} &middot; conf {conf:.2f} &middot; {status}</span>"
+            f"<span class=\"fmeta\">{cwe} &middot; {loc} &middot; CVSS {score:.1f} &middot; conf {conf:.2f} &middot; {status}</span>"
             f"{poc_badge}</summary>\n"
             "<div class=\"body\">"
             "<h3>Vulnerable code</h3>" + snippet_section +
+            taint_section +
             "<h3>Evidence</h3>" + evidence_section +
             "<h3>Dynamic PoC</h3>" + poc_badge + poc_section +
             "<h3>Proposed patch</h3>" + patch_section +
@@ -499,15 +835,37 @@ def write_html(findings: list[dict], out: Path) -> None:
         )
     body = "\n".join(cards)
 
+    # KPI Header Cards
+    total_act = c["total"]
+    crit_cnt = c["by_sev"].get("critical", 0)
+    high_cnt = c["by_sev"].get("high", 0)
+    proven_cnt = c["proven"]
+    poc_pct = f"{int(round(proven_cnt / total_act * 100))}%" if total_act > 0 else "0%"
+    patched_cnt = sum(1 for f in rows if _real_diff(f) or _summary(f))
+
+    kpi_grid = (
+        "<div class=\"kpi-grid\">\n"
+        f"  <div class=\"kpi-card\"><div class=\"kpi-val\">{total_act}</div><div class=\"kpi-lbl\">Actionable Findings</div></div>\n"
+        f"  <div class=\"kpi-card\"><div class=\"kpi-val sev-critical\" style=\"display:inline-block;padding:2px 8px;border-radius:6px\">{crit_cnt}</div><div class=\"kpi-lbl\">Critical</div></div>\n"
+        f"  <div class=\"kpi-card\"><div class=\"kpi-val sev-high\" style=\"display:inline-block;padding:2px 8px;border-radius:6px\">{high_cnt}</div><div class=\"kpi-lbl\">High</div></div>\n"
+        f"  <div class=\"kpi-card\"><div class=\"kpi-val\">{proven_cnt} <span style=\"font-size:.6em;color:#16a34a\">({poc_pct})</span></div><div class=\"kpi-lbl\">Proven PoCs</div></div>\n"
+        f"  <div class=\"kpi-card\"><div class=\"kpi-val\">{patched_cnt}</div><div class=\"kpi-lbl\">Patched</div></div>\n"
+        "</div>\n"
+    )
+
     filter_opts = "".join(f"<option value=\"{s}\">{s}</option>" for s in _THREAD_ORDER)
     doc = (
         "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<title>Cerberus Report</title>\n"
         f"<style>{_FINDINGS_CSS}{_BADGE_CSS}</style>\n</head>\n<body>\n"
         "<h1>Cerberus Report</h1>\n"
+        f"{kpi_grid}"
         "<div class=\"controls\">"
         "<label>Filter severity<select id=\"sev-filter\">"
         f"<option value=\"\">all</option>{filter_opts}</select></label>"
+        "<input type=\"search\" id=\"search-box\" placeholder=\"Search path, CWE, title...\" style=\"padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9em;flex:1;max-width:320px;\">"
+        "<label style=\"display:flex;align-items:center;gap:4px;cursor:pointer;\">"
+        "<input type=\"checkbox\" id=\"poc-filter\"> Proven PoCs only</label>"
         "</div>\n"
         "<main id=\"findings\">\n"
         f"{body}\n"
@@ -527,11 +885,14 @@ def _md_safe(value: object) -> str:
 def write_junit(findings: list[dict], out: Path) -> None:
     rows = reportable_findings(findings)
     failures = 0
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     suite = ET.Element("testsuite", {
         "name": "cerberus",
         "tests": str(len(rows)),
         "errors": "0",
         "skipped": "0",
+        "timestamp": now_iso,
+        "time": "0.000",
     })
     for f in rows:
         sev = str(f.get("severity", "medium"))
@@ -544,17 +905,27 @@ def write_junit(findings: list[dict], out: Path) -> None:
             "classname": cwe,
             "name": name,
         })
+        props = ET.SubElement(case, "properties")
+        poc = f.get("poc") if isinstance(f.get("poc"), dict) else {}
+        poc_status = str(poc.get("status") or "none").lower()
+        score, _ = _cvss_score_and_vector(f)
+        conf = safe_float(f.get("confidence", 0) or 0)
+        has_patch = "true" if (_real_diff(f) or _summary(f)) else "false"
+        ET.SubElement(props, "property", {"name": "poc_status", "value": poc_status})
+        ET.SubElement(props, "property", {"name": "cvss", "value": f"{score:.1f}"})
+        ET.SubElement(props, "property", {"name": "confidence", "value": f"{conf:.2f}"})
+        ET.SubElement(props, "property", {"name": "has_patch", "value": has_patch})
+
         # failure-counting gate deliberately treats junk severity as >=medium;
         # this is NOT schemas.UNKNOWN_SEVERITY_RANK (the sort rank) on purpose.
         is_failure = SEVERITY_ORDER.get(sev, 2) <= SEVERITY_ORDER["high"] and str(f.get("status", "")) != "fp"
         if is_failure:
             failures += 1
-            conf = safe_float(f.get("confidence", 0) or 0)
             msg = f"{title} ({cwe}) {sev} conf={conf} {loc}"
             fail = ET.SubElement(case, "failure", {"message": msg})
-            evidence = str(f.get("evidence", "") or "")
+            base, _, _ = _evidence_parts(f.get("evidence"))
             snippet = str(f.get("snippet", "") or "")
-            fail.text = f"{evidence}\n{snippet}" if (evidence or snippet) else msg
+            fail.text = f"{base}\n{snippet}" if (base or snippet) else msg
     suite.set("failures", str(failures))
     tree = ET.ElementTree(suite)
     ET.indent(tree, space="  ")

@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 
 from cerberus.reporting.reports import (
     write_html,
+    write_json,
     write_junit,
     write_markdown,
     write_sarif,
@@ -319,3 +320,232 @@ def test_reports_render_blocked_poc_and_script_file(tmp_path):
     md2 = md_out.read_text()
     assert "- Script file: `.cerberus/run/scratch/poc/f/test_repro.py`" in md2
     assert "Observed output (stamped receipt):" in md2
+
+
+def test_write_json_enriches_id_and_cvss(tmp_path):
+    sample = [
+        {"title": "Missing ID Finding", "severity": "critical", "path": "app.py"},
+        {"id": "custom-id-99", "title": "Has ID Finding", "severity": "medium", "cvss": 5.5,
+         "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N", "path": "api.py"},
+    ]
+    out = tmp_path / "findings.json"
+    write_json(sample, out)
+    data = json.loads(out.read_text())
+    assert len(data) == 2
+    # Missing ID gets generated fallback
+    assert data[0]["id"] == "cb-001"
+    assert data[0]["cvss"] == 9.8
+    assert "CVSS:3.1" in data[0]["cvss_vector"]
+    # Existing ID and vector are preserved
+    assert data[1]["id"] == "custom-id-99"
+    assert data[1]["cvss"] == 5.5
+    assert data[1]["cvss_vector"] == "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N"
+
+
+def test_write_sarif_mitre_cwe_codeflows_and_fixes(tmp_path):
+    sample = [
+        {
+            "id": "find-taint-1",
+            "title": "SQL Injection",
+            "cwe": "CWE-89",
+            "severity": "critical",
+            "confidence": 0.95,
+            "path": "src/routers/user.js",
+            "start_line": 213,
+            "end_line": 217,
+            "status": "confirmed",
+            "taint": {
+                "source": "req.query.name",
+                "sink": "eval(req.query.name)",
+                "path": [
+                    "src/routers/user.js:213 - entry point",
+                    "src/routers/user.js:215 - processing",
+                ],
+            },
+            "patch": (
+                "--- a/src/routers/user.js\n"
+                "+++ b/src/routers/user.js\n"
+                "@@ -215,1 +215,1 @@\n"
+                "-eval(req.query.name)\n"
+                "+sanitize(req.query.name)\n"
+            ),
+            "patch_summary": "Sanitize query param before evaluation",
+        }
+    ]
+    out = tmp_path / "results.sarif"
+    write_sarif(sample, out)
+    data = json.loads(out.read_text())
+
+    # Rules verification
+    rule = data["runs"][0]["tool"]["driver"]["rules"][0]
+    assert rule["id"] == "CWE-89"
+    assert rule["helpUri"] == "https://cwe.mitre.org/data/definitions/89.html"
+    assert "https://cwe.mitre.org/data/definitions/89.html" in rule["help"]["markdown"]
+    assert rule["properties"]["security-severity"] == "9.8"
+
+    # Result verification
+    result = data["runs"][0]["results"][0]
+    assert result["properties"]["security-severity"] == "9.8"
+    assert "codeFlows" in result
+    flow = result["codeFlows"][0]["threadFlows"][0]["locations"]
+    assert len(flow) >= 3  # source, path hops, sink
+    assert flow[0]["location"]["message"]["text"] == "Source: req.query.name"
+    assert flow[-1]["location"]["message"]["text"] == "Sink: eval(req.query.name)"
+
+    # Native fixes verification
+    assert "fixes" in result
+    fix = result["fixes"][0]
+    assert fix["description"]["text"] == "Sanitize query param before evaluation"
+    replacements = fix["artifactChanges"][0]["replacements"]
+    assert len(replacements) == 1
+    assert replacements[0]["deletedRegion"]["startLine"] == 215
+    assert replacements[0]["insertedContent"]["text"] == "sanitize(req.query.name)"
+
+
+def test_write_junit_suite_timestamp_and_testcase_properties(tmp_path):
+    sample = [
+        {
+            "id": "1",
+            "title": "SQL Injection",
+            "cwe": "CWE-89",
+            "severity": "critical",
+            "confidence": 0.9,
+            "path": "app.py",
+            "start_line": 10,
+            "end_line": 12,
+            "status": "confirmed",
+            "poc": {"status": "proven"},
+            "patch_summary": "Use bind params",
+        }
+    ]
+    out = tmp_path / "junit.xml"
+    write_junit(sample, out)
+    tree = ET.parse(str(out))
+    root = tree.getroot()
+    assert "timestamp" in root.attrib
+    assert root.attrib["time"] == "0.000"
+
+    case = root.find("testcase")
+    props = case.find("properties")
+    prop_dict = {p.attrib["name"]: p.attrib["value"] for p in props.findall("property")}
+    assert prop_dict["poc_status"] == "proven"
+    assert prop_dict["cvss"] == "9.8"
+    assert prop_dict["confidence"] == "0.90"
+    assert prop_dict["has_patch"] == "true"
+
+
+def test_write_markdown_matrix_toc_taint_and_sanitization(tmp_path):
+    sample = [
+        {
+            "id": "f1",
+            "title": "SQL Injection",
+            "cwe": "CWE-89",
+            "severity": "critical",
+            "confidence": 0.95,
+            "path": "app/db.py",
+            "start_line": 10,
+            "end_line": 15,
+            "status": "confirmed",
+            "evidence": "src/routers/user.js:213-217 defines GET | omitted from batch reply | consensus: tie (0c/0f/1n) | triage: review",
+            "taint": {
+                "source": "req.query.name",
+                "sink": "db.execute(sql)",
+                "path": ["app/db.py:10", "app/db.py:12"],
+            },
+            "poc": {"status": "proven"},
+            "patch_summary": "Use parameter binding",
+            "patch": "--- a/app/db.py\n+++ b/app/db.py\n@@ -10,1 +10,1 @@\n-db.execute(raw)\n+db.execute(param)\n",
+        }
+    ]
+    out = tmp_path / "report.md"
+    write_markdown(sample, out)
+    text = out.read_text(encoding="utf-8")
+
+    # Executive matrix
+    assert "| Severity | Count | Proven PoCs | Patched |" in text
+    assert "| CRITICAL | 1 | 1 / 1 (100%) | 1 |" in text
+    assert "| **TOTAL** | **1** | **1 / 1 (100%)** | **1** |" in text
+
+    # Table of Contents
+    assert "## Table of Contents" in text
+    assert "[CRITICAL: SQL Injection (`app/db.py:10`)](#finding-1)" in text
+
+    # CVSS in finding header
+    assert "CVSS: **9.8** (`CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H`)" in text
+
+    # Taint flow
+    assert "- Taint Flow:" in text
+    assert "- **Source**: `req.query.name`" in text
+    assert "- `app/db.py:10`" in text
+    assert "- **Sink**: `db.execute(sql)`" in text
+
+    # Evidence sanitization
+    assert "Evidence: src/routers/user.js:213-217 defines GET" in text
+    assert "omitted from batch reply" not in text.split("Evidence:")[1].splitlines()[0]
+    assert "- Audit Trail:" in text
+
+
+def test_write_html_kpis_diff_styling_search_and_no_expand_all(tmp_path):
+    sample = [
+        {
+            "id": "f1",
+            "title": "SQL Injection",
+            "cwe": "CWE-89",
+            "severity": "critical",
+            "confidence": 0.95,
+            "path": "app/db.py",
+            "start_line": 10,
+            "end_line": 15,
+            "status": "confirmed",
+            "evidence": "src/routers/user.js:213-217 defines GET | omitted from batch reply | consensus: tie",
+            "taint": {
+                "source": "req.query.name",
+                "sink": "db.execute(sql)",
+                "path": ["app/db.py:10"],
+            },
+            "poc": {"status": "proven"},
+            "patch_summary": "Use parameter binding",
+            "patch": (
+                "--- a/app/db.py\n"
+                "+++ b/app/db.py\n"
+                "@@ -10,1 +10,1 @@\n"
+                "-db.execute(raw)\n"
+                "+db.execute(param)\n"
+            ),
+        }
+    ]
+    out = tmp_path / "report.html"
+    write_html(sample, out)
+    text = out.read_text(encoding="utf-8")
+
+    # KPI header
+    assert 'class="kpi-grid"' in text
+    assert 'class="kpi-card"' in text
+    assert "Actionable Findings" in text
+
+    # Diff styling
+    assert 'class="diff-hunk">@@ -10,1 +10,1 @@</span>' in text
+    assert 'class="diff-del">-db.execute(raw)</span>' in text
+    assert 'class="diff-add">+db.execute(param)</span>' in text
+
+    # Search & filters
+    assert 'id="search-box"' in text
+    assert 'id="poc-filter"' in text
+    assert 'data-poc="proven"' in text
+    assert 'data-cvss="9.8"' in text
+
+    # User constraint: NO Expand All / Collapse All button
+    assert "Expand All" not in text
+    assert "Collapse All" not in text
+    assert "expand-all" not in text
+    assert "collapse-all" not in text
+
+    # Taint Data-Flow
+    assert "<h3>Taint Data-Flow</h3>" in text
+    assert "Source:</strong> <code>req.query.name</code>" in text
+    assert "Sink:</strong> <code>db.execute(sql)</code>" in text
+
+    # Sanitized evidence & collapsible audit trail
+    assert "src/routers/user.js:213-217 defines GET" in text
+    assert '<details class="audit-trail">' in text
+

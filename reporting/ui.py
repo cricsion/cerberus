@@ -27,6 +27,7 @@ from typing import Any
 from rich.cells import cell_len
 from rich.console import Console
 from rich.rule import Rule
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
@@ -599,10 +600,17 @@ class ScanReporter:
 
     def _artifacts_text(self, out_path: Path) -> Any:
         text = Text(clean_untrusted(short_path(out_path)))
-        present = [label for name, label in _ARTIFACTS
+        present = [(name, label) for name, label in _ARTIFACTS
                    if _is_file(out_path / name)]
         if present:
-            text.append("  " + " · ".join(present), style="meta")
+            text.append("  ", style="meta")
+            first = True
+            for name, label in present:
+                if not first:
+                    text.append(" · ", style="meta")
+                first = False
+                abs_file = (out_path / name).resolve()
+                text.append(label, style=Style(dim=True, link=f"file://{abs_file}"))
         return text
 
     def _gate_text(self, fail_on: str, min_confidence: float,
@@ -636,8 +644,11 @@ class ScanReporter:
 
     def _hint_text(self, out_path: Path) -> Any:
         raw = str(out_path)
-        return Text(clean_untrusted(
-            f"open {raw}/report.html  ·  cerberus inspect {raw}"), style="meta")
+        abs_html = (out_path / "report.html").resolve()
+        text = Text("open ", style="meta")
+        text.append(f"{raw}/report.html", style=Style(dim=True, link=f"file://{abs_html}"))
+        text.append(f"  ·  cerberus inspect {raw}", style="meta")
+        return text
 
 
 # Module helpers -------------------------------------------------------------

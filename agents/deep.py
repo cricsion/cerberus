@@ -346,7 +346,7 @@ def _scan_middleware(backend: Any, *, scratchpad: bool = False) -> list:
         FilesystemMiddleware(backend=backend,
                              tools=list(_fs_tools(backend, scratchpad=scratchpad)),
                              max_execute_timeout=600,
-                             _permissions=permissions),
+                             permissions=permissions),
         ModelCallLimitMiddleware(run_limit=int(get_config()["model_call_limit"])),
         ToolErrorMiddleware(on_error=_tool_error_message),
         ToolRetryMiddleware(on_failure="error"),
