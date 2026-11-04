@@ -1,6 +1,8 @@
 """Per-repo threat model artifact (THREAT_MODEL.md): scope + prioritization for
 hunters/triage. Threats are class-level with closed enums (past vulns/CVEs are
-`evidence`), LLM-first over a deterministic floor; every stage degrades, never raises.
+`evidence`), LLM-first over a deterministic floor; stages degrade on ordinary
+failures, but fatal failures (malicious/spec-violating input, an unknown schema,
+nothing to bootstrap from) raise ``ValueError`` and are handled by the caller.
 """
 from __future__ import annotations
 

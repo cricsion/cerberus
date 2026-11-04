@@ -14,8 +14,9 @@ target repo
   → threat model
   → partitioner splits the repo into hunter units
   → hunter agents propose candidates
-  → triage (deterministic dedup + LLM batch severity)
-  → validator pool votes findings down 
+  → aggregator (deterministic dedup)
+  → validator pool votes findings down
+  → triage (LLM batch severity, rubric-scored)
   → PoC generation agents prove canonical findings in the sandbox
   → reports: markdown, HTML, SARIF, JUnit; findings.json; scan_meta.json
 ```
@@ -39,6 +40,7 @@ Verify:
 
 ```bash
 cerberus --help
+pip install -e '.[dev]'
 pytest tests -q          
 ```
 
@@ -51,9 +53,12 @@ cp .env.example .env
 ```
 
 - `BASE_URL` — any OpenAI-compatible endpoint; `API_KEY` — the key it wants.
+- Per-role endpoints override the shared one: `{ROLE}_BASE_URL` / `{ROLE}_API_KEY`
+  (e.g. `HUNTER_BASE_URL`, `VALIDATOR_API_KEY`) win over `BASE_URL`/`API_KEY`.
 - Model role defaults: `HUNTER_MODEL`, `VALIDATOR_MODEL`, then per-agent
   overrides (`TRIAGER_MODEL`, `PARTITIONER_MODEL`, `THREAT_MODEL`, `POC_MODEL`).
-- Thinking `EFFORT` (`low|max`), per-agent overrides in `.env` (`*_EFFORT`).
+- Thinking `EFFORT` (`low|medium|high|xhigh|max`; an invalid value is normalized
+  to the global effort, else `max`), per-agent overrides in `.env` (`*_EFFORT`).
 - Budgets: `TIMEOUT`, `MAX_RETRIES`, `RETRY_SLEEP_CAP`, `MODEL_CALL_LIMIT`.
 - Fan-out: `CONCURRENCY` (any positive int).
 - Discovery reruns: `RERUNS` — extra fresh hunter passes per unit and for
@@ -84,10 +89,10 @@ cerberus scan path/to/repo \
 
 | flag | meaning |
 |---|---|
-| `--out` | output directory (default `runs/` under the scan cwd) |
+| `--out` | output directory (default `runs/latest` under the scan cwd) |
 | `--fail-on` | severity gate for exit code (`critical|high|medium|low`) |
-| `--min-confidence` | drop findings below this confidence in reports |
-| `--confirm-critical` | pause for human approval when crit/high are confirmed |
+| `--min-confidence` | CI exit-code gate: findings below this confidence do not fail the run (reports stay unfiltered) |
+| `--confirm-critical` | show a human-approval prompt when crit/high are confirmed (informational only — findings are never demoted, the scan proceeds) |
 | `--threat-model` | override the THREAT_MODEL.md path |
 | `--focus` | comma-separated focus hints |
 | `--votes` | verifier votes per finding (1–5; majority-or-tie final) |
@@ -97,23 +102,27 @@ Scan a run after the fact:
 
 ```bash
 cerberus runs --limit 20            # list discovered runs
+cerberus status runs/<name>         # live agent states for a run
 cerberus inspect runs/<name>        # per-agent receipt + stage view
 cerberus inspect runs/<name> --agent hunter:app --timeline
-cerberus findings runs/<name> --severity high --status confirmed
+cerberus findings runs/<name> --severity high --status confirmed --cwe CWE-89 --limit 50
 cerberus cancel runs/<name>         # request cancellation of a live scan
 ```
+
+Global flags: `--no-color`, `--debug`. Scan extras: `--agent-log quiet|normal`.
+`runs` accepts `--runs-dir`; `threat-model --record-signals` pairs with `--verify`.
 
 ## Threat models
 
 ```bash
 cerberus threat-model path/to/repo             # deterministic bootstrap
-cerberus threat-model path/to/repo --interview # Shostack four questions on stdin
+cerberus threat-model path/to/repo --interview # keyless: Shostack's four questions on stdin; with API_KEY set, LLM-driven interview
 cerberus threat-model path/to/repo --verify    # read-only quality score
 cerberus threat-model path/to/repo --update-from findings.json  # fold validator findings
 ```
 
 Writes `<repo>/THREAT_MODEL.md` by default. The machine cache lives in
-`.harness/THREAT_MODEL.md`; owner files are never touched by `--update-from`.
+`.cerberus/THREAT_MODEL.md`; owner files are never touched by `--update-from`.
 
 ## Sandbox
 
@@ -139,12 +148,12 @@ at build; tool pins live in `docker/versions.env`. Full operator notes, network 
 
 ```
 cerberus/
-├── agents/        # hunter, validator, triage, PoC, partitioner 
+├── agents/        # hunter, validator, triage, PoC
 ├── codegraph/     # the graph intelligence
-├── partitioning/  # unit sizing + grouping
+├── partitioning/  # unit sizing + grouping 
 ├── prompts/       # prompt engine + contracts;
 ├── reporting/     # TUI, reports (md/html/sarif/junit)
-├── rules/         # deterministic regex prefilter pack (semgrep-style YAML)
+├── rules/         # custom Semgrep-style taint rules pack (YAML); the deterministic regex prefilter is Python in tools/sast.py
 ├── sandbox/       # local + docker backends
 ├── threat/        # threat model bootstrap
 ├── tools/         # agent tool wrappers 
@@ -155,7 +164,7 @@ cerberus/
 ## Reporting
 
 Every scan writes `findings.json`, `scan_meta.json` (coverage, tools used,
-budgets) and human reports (markdown/HTML/SARIF/JUnit). Severity order, the
+stage timings) and human reports (markdown/HTML/SARIF/JUnit). Severity order, the
 finding schema, and the PoC receipt taxonomy are defined in
 `cerberus/schemas.py`; the exit-code gate is `--fail-on`.
 

@@ -1,6 +1,7 @@
 """Untrusted-data block helpers for composing agent prompts.
 
-Blocks are nonce-delimited (per-prompt random, both tags): the text predates the
+Blocks are nonce-delimited (random by default; callers pass a ``seed`` so
+hunter/validator blocks are deterministic; both tags): the text predates the
 nonce, so it cannot contain a matching close tag.
 """
 from __future__ import annotations

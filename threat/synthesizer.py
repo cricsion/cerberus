@@ -7,7 +7,8 @@ from __future__ import annotations
 
 
 def get_synthesizer_contract() -> str:
-    """Format the structured output contract for the threat synthesizer."""
+    """Format the structured output contract for the threat synthesizer.
+    """
     from cerberus.prompts.contract import structured_output_contract
     from cerberus.prompts.threat import SwarmPlan
 

@@ -159,8 +159,9 @@ rules:
       - pattern: request.args.get(...)
       - pattern: request.form[...]
     pattern-sinks:
-      - pattern: cursor.execute($QUERY, ...)
-      - focus-metavariable: $QUERY
+      - patterns:
+          - pattern: cursor.execute($QUERY, ...)
+          - focus-metavariable: $QUERY
     pattern-sanitizers:
       - pattern: sanitize(...)
       - pattern: int(...)

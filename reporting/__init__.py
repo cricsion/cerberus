@@ -1,7 +1,8 @@
-"""Reporting: findings export (JSON, SARIF, Markdown, HTML) and scan-time UI."""
+"""Reporting: findings export (JSON, SARIF, Markdown, HTML, JUnit) and scan-time UI."""
 from cerberus.reporting.reports import (
     write_html,
     write_json,
+    write_junit,
     write_markdown,
     write_sarif,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "render_findings",
     "write_html",
     "write_json",
+    "write_junit",
     "write_markdown",
     "write_sarif",
 ]

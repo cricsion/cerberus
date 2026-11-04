@@ -411,7 +411,9 @@ def inspect_type_contract(symbol_name_or_node_id: str, root: str = ".",
             name such as ``CreateUserDto`` / ``User`` / ``login``.
         root: Repo root holding ``.codegraph/codegraph.db``.
         limit: Cap on name-search candidates and on rendered fields/columns.
-            0 = unlimited (hard-clamped at 500).
+            0 = unlimited: search candidates stop at the ``HARD_MAX_ROWS`` row
+            cap (500), while rendered fields and columns stop at
+            ``HARD_MAX_SECTION`` (200).
 
     Returns:
         A bounded contract view (header, fields/parameters, validation summary,

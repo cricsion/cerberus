@@ -38,8 +38,9 @@ def _stage_line(text: str) -> None:
 def _merge_verdict(base: dict, data: dict) -> dict:
     merged = dict(base)
     # Preserve the hunter's original record before validator fields land. Both
-    # fields survive the vote merge (it copies the winning dict) but are never
-    # sent back to the validator or used by the report writers.
+    # fields survive the vote merge (it copies the winning dict); hunter_snippet
+    # survives into reports (reports._snippet); neither is sent back to the
+    # validator (_compact_finding omits both).
     for src, dst in (("evidence", "hunter_evidence"),
                      ("snippet", "hunter_snippet")):
         if base.get(src) and not merged.get(dst):
@@ -209,8 +210,9 @@ def _group_by_unit(findings: list[dict],
 def _compact_finding(f: dict) -> dict:
     """Key filter, not a compactor: every listed field is sent in full.
 
-    ``rationale`` is deliberately absent — the validator must re-derive the
-    claim without the hunter's reasoning (see ``REFUTE_METHOD``).
+    ``rationale`` is deliberately absent — the validator re-derives the claim
+    without the hunter's reasoning (see ``REFUTE_REASONS`` in
+    ``prompts/validator.py``).
     """
     d = dict(f)
     taint = d.get("taint")
@@ -434,7 +436,7 @@ def _plan_validation_cells(
     ``cell_size`` under that unit's name (preserving backward compatibility).
 
     When there are multiple units/hunters:
-      1. Extract full cells of size ``cell_size`` per unit (e.g. 52 -> two 25-item cells).
+      1. Extract full cells of size ``cell_size`` per unit (e.g. 52 -> three 15-item cells + 2 pooled remainders, at the default cell_size 15).
       2. Pool all remaining items (< cell_size) across hunters into a shared remainder pool.
       3. Chunk the pooled remainders into cells of up to ``cell_size`` under
          'cross-unit-remainder' (or the unit name if only one unit contributed).

@@ -181,7 +181,8 @@ def framework_routes(root: str = ".", limit: int | None = None, offset: int = 0)
     """Index-backed web-framework routes (URL + handler file:line). Paginated via limit/offset.
 
     Args:
-        root: Directory to scan for route declarations.
+        root: Repo root holding the CodeGraph index; answers fail closed if it
+            is missing or pending.
         limit: Max routes per page. 0 = unlimited.
         offset: Route index to start from, for paging.
     """
@@ -230,7 +231,8 @@ def callers(func_name: str, root: str = ".", file: str | None = None,
 
     Args:
         func_name: Function name whose call sites to find.
-        root: Directory to search.
+        root: Repo root holding the CodeGraph index; answers fail closed if it
+            is missing or pending.
         file: Optional file path to disambiguate same-named definitions.
         limit: Max call sites per section. 0 = unlimited.
         as_json: Return structured JSON with enriched metadata (confidence, column, target ID).
@@ -285,7 +287,8 @@ def callees(func_name: str, root: str = ".", file: str | None = None,
 
     Args:
         func_name: Function name whose body to scan.
-        root: Directory to search.
+        root: Repo root holding the CodeGraph index; answers fail closed if it
+            is missing or pending.
         file: Optional file path to disambiguate same-named definitions.
         limit: Max callees. 0 = unlimited.
         as_json: Return structured JSON with enriched metadata (confidence, column, target ID).

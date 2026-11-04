@@ -344,9 +344,7 @@ RUN if [ "$WITH_GO" = "1" ]; then \
         && if [ -d /usr/local/go/bin ]; then ln -sf /usr/local/go/bin/* /usr/local/bin/; fi; \
     fi
 
-# --- scan toolchain (mirrors cerberus/tools/sast.py, one tool per sast tool) --
-# semgrep_scan     -> semgrep
-# opengrep_scan    -> opengrep    (NOT on PyPI: built from its own repo tag)
+# --- scan toolchain (sast.py wrappers + direct SAST scanners) -----------------
 # secrets_scan     -> gitleaks (no network ever needed)
 # sca_scan         -> osv-scanner (needs osv.dev egress at scan time)
 # iac_check        -> checkov (the in-container skill passes --skip-download; the
@@ -354,6 +352,8 @@ RUN if [ "$WITH_GO" = "1" ]; then \
 #                     CKV_SKIP_PACKAGE_UPDATE_CHECK=True. Without --skip-download
 #                     checkov calls Prisma Cloud's API to enrich remediation links.
 #                     The host indexer wrapper is left as-is.)
+# semgrep + opengrep: no sast.py wrapper -- SAST scanners for offline rule
+#                     self-test (opengrep is NOT on PyPI: pinned release asset)
 # Extra agent-driven scanners (semgrep/opengrep siblings, run via `execute`,
 # one skill each under cerberus/skills/): bandit (pip), bearer (dataflow),
 # trufflehog (verified secrets), gosec (Go), njsscan (Node), atheris

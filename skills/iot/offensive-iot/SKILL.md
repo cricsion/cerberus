@@ -92,9 +92,8 @@ NAND requires bit-flipping and ECC handling — `nanddump`/`yaffshiv`/`ubireader
 Many devices fetch firmware over HTTP(S). MITM the device:
 
 ```bash
-# Captive AP + transparent proxy
 sudo create_ap wlan0 eth0 IoTLab
-mitmproxy --mode transparent --showhost --ssl-insecure
+mitmdump --mode transparent --showhost --ssl-insecure
 # Or for non-SNI / pinning, use bettercap with custom DNS
 ```
 

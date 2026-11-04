@@ -434,7 +434,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--fail-on", default="high", choices=["critical", "high", "medium", "low"])
     s.add_argument("--min-confidence", type=float, default=0.6)
     s.add_argument("--confirm-critical", action="store_true",
-                   help="pause for human approval when critical/high findings are confirmed")
+                   help="show a human-approval prompt when critical/high findings "
+                        "are confirmed (informational: findings are never demoted, the scan proceeds)")
     s.add_argument("--threat-model", default=None,
                    help="override THREAT_MODEL.md path (default: <repo>/THREAT_MODEL.md, else deterministic draft)")
     s.add_argument("--focus", default=None,
@@ -445,14 +446,18 @@ def build_parser() -> argparse.ArgumentParser:
                    help="per-agent progress lines (quiet suppresses them; stages/receipt still render)")
     s.set_defaults(func=cmd_scan)
     t = sub.add_parser("threat-model", parents=[common], help="bootstrap THREAT_MODEL.md for a repo")
-    t.add_argument("--out", default=None, help="output path (default: <repo>/THREAT_MODEL.md)")
+    t.add_argument("--out", default=None,
+                   help="output path (default: <repo>/THREAT_MODEL.md when repo is a "
+                        "directory, else THREAT_MODEL.md in the cwd)")
     t.add_argument("--interview", action="store_true",
-                   help="ask Shostack's four questions on stdin and append answers")
+                   help="keyless (no API_KEY): ask Shostack's four questions on stdin "
+                        "and append answers; with API_KEY set, run the LLM-driven interview instead")
     t.add_argument("--verify", action="store_true",
                    help="read-only: report quality score and factual failures, write nothing")
     t.add_argument("--record-signals", action="store_true",
-                   help="with --verify: persist indexer signal outputs under "
-                        ".cerberus/<run_id>/signals/ in the target repo")
+                   help="persist indexer signal outputs under "
+                        ".cerberus/<run_id>/signals/ in the target repo (non-verify runs "
+                        "do this automatically; the flag only toggles it in --verify mode)")
     t.add_argument("--update-from", default=None, metavar="FINDINGS_JSON",
                    help="fold validator-released findings into the machine cache "
                         "(.cerberus/THREAT_MODEL.md); owner files are never touched")

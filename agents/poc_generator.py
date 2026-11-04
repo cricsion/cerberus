@@ -4,8 +4,10 @@ Empowers post-triage proof of canonical findings (duplicate_of is None / empty):
 - Groups canonical non-FP findings into batches of up to ``poc.cell_size``
   findings per agent (falls back to ``verification.cell_size``, then the
   module default).
-- Agent uses container sandbox tools (read_file, write_file, edit_file, execute)
-  to author, mock, and test reproduction scripts under /work/_shared/poc/<id>/test_repro.<ext>.
+- Agent is built with ``tools=[]``; its file tools (read_file/write_file/edit_file)
+  come from the deepagents backend's FilesystemMiddleware and are scratchpad-scoped,
+  while the shared /work/_shared/poc/<id>/test_repro.<ext> directory is written via
+  ``execute``.
 - Verifies both exploit invariant (exit 0) and benign baseline control (--control, exit 0).
 - Calls stamp_receipts to stamp immutable mechanical receipts.
 - Fail-closed: unproven PoCs never discard or downgrade valid static findings.
@@ -44,7 +46,7 @@ POC_GEN_SYSTEM = block("poc/instructions")
 
 class PocResultItem(BaseModel):
     finding_id: str = Field(description="ID of the finding")
-    proven: bool = Field(default=False, description="True if test passes exploit and control checks")
+    proven: bool = Field(default=False, description="Advisory only; proven status is determined by the receipt checks (successes == runs and control_status == passed)")
     script: str = Field(default="", description="Full script source; preferred fallback when script_path is unset")
     script_path: str = Field(default="", description="Container path where the script was saved, e.g. /work/_shared/poc/<finding_id>/test_repro.py")
     filename: str = Field(default="test_repro.py", description="Script filename (e.g. test_repro.py)")
@@ -190,7 +192,7 @@ def _close_poc_batch(batch_findings: list[dict], missing: dict[str, str]) -> Non
 def _process_poc_batch(batch_findings: list[dict], cfg: dict, backend: Any,
                        repo: str, batch_idx: int, threat_md: str = "",
                        agent_registry: Any = None) -> list[dict]:
-    """Process a single batch of up to 10 findings with a dedicated PoC generator agent."""
+    """Process a single batch of up to ``cell_size`` findings (default 15) with a dedicated PoC generator agent."""
     if not batch_findings or backend is None:
         return batch_findings
 

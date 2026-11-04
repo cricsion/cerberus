@@ -26,6 +26,9 @@ The order is defined by `cerberus.tools.codegraph.CODEGRAPH_TOOL_NAMES`.
 Keep package and binding containment helpers distinct: they have intentionally
 different path rules.
 
+The harness binds additional native tools beyond this package surface — see
+`cerberus/agents/toolsets.py`.
+
 ## On-disk data
 
 - The index lives at `.codegraph/codegraph.db` under the indexed repository.

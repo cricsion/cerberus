@@ -15,10 +15,12 @@ authority step behind any memory-safety claim.
 
 ## In this environment
 
-- valgrind **3.19.0** is preinstalled with memcheck (default), helgrind and
-  DRD (data races), callgrind (hot paths), cachegrind. Never install.
-- `libc6-dbg` is present, so stacks are readable; rebuild your unit's code
-  with `gcc -g` when its own frames come out bare.
+- valgrind is preinstalled with memcheck (default), helgrind and DRD (data
+  races), callgrind (hot paths), cachegrind. The apt package is **unpinned**
+  from the Debian bookworm base (3.19.x on bookworm). Never install.
+- `libc6-dbg` is **not** installed (gdb only *recommends* it), so library
+  frames may come out bare; rebuild your unit's code with `gcc -g` when its
+  own frames need symbols.
 - **It is slow** — memcheck runs 10–50× real time. Feed it one crasher and a
   small fixed input set, never a fuzz loop, and respect the ~120s `execute`
   timeout by keeping inputs minimal (an `afl-tmin`-reduced crasher is the
@@ -40,8 +42,9 @@ valgrind --tool=helgrind --log-file=/work/hg.txt ./binary
 valgrind --tool=callgrind ./binary small.input
 ```
 
-Exit code is **non-zero when errors were found** — a non-zero exit is a
-successful diagnostic run, not a crashed tool.
+Exit code defaults to the client program's own exit code (normally 0) even
+when memcheck reports errors — pass `--error-exitcode=<n>` when a script needs
+a non-zero status on errors.
 
 ## Reading the output
 

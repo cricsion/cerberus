@@ -1,6 +1,8 @@
 """Deterministic partitioning: which files each hunter sees: vendor isolation ->
 small-repo collapse -> dir grouping -> byte budget -> normalization.
-Units are [{name, files, reason}] (+ budget_exempt on the vendor unit)."""
+When a readable codegraph index exists, ``partition_units`` uses the
+codegraph-native branch (depth-1 module grouping + CAAC fusion) for grouping in
+place of the dir-grouping step below. Units are [{name, files, reason}] (+ budget_exempt on the vendor unit)."""
 from __future__ import annotations
 
 import logging

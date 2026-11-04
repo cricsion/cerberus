@@ -15,9 +15,8 @@ goroutines + shared state). Generic pattern rules miss most of these.
 
 ## In this environment
 
-- gosec is **preinstalled, pinned** (sha256-verified release binary in the
-  scan image). Never install or upgrade it: the repo is read-only and egress
-  may be denied.
+- gosec is **preinstalled, pinned**  . Never install or
+  upgrade it: the repo is read-only and egress may be denied.
 - Pass **explicit paths** — the unit's `.go` files, or `./...` from the unit
   directory. Never scan the repo root: there is no whole-repo scanner in Cerberus, and a bare directory only sees git-tracked files (the target tree
   may have no `.git` at all).

@@ -24,9 +24,10 @@ def _merge_plan(repo: str, blocks: dict[str, str], plan: dict,
                 vulns: list[dict] | None = None,
                 vulns_path: str = "", draft: str = "") -> tuple[str, dict]:
     """Merge the LLM judgment payload into the code-owned skeleton: (md, meta).
-    Code owns every deterministic cell (§1 facts, §3 surface skeleton, §4
-    sorting/ids/enums, §5 non-exclusion note, §6 template unknowns, §7 provenance,
-    §8 mitigation validation); the plan supplies the judgment only.
+    The plan leads the narrative (§1 context_prose, §3 plan entry points first);
+    code-generated rows fill in / corroborate §1 facts and §3 surface rows, and
+    code owns §4 sorting/ids/enums, §5 non-exclusion note, §6 template unknowns,
+    §7 provenance, §8 mitigation validation. The plan supplies the judgment only.
     """
     meta: dict[str, _Any] = {"dropped": []}
     # -- section 3: plan rows + code skeleton --------------------------------

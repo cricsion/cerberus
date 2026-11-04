@@ -13,9 +13,10 @@ sibling does*, *who touches shared state* and *which transition is legal*:
   assignment with no prior-state guard is CWE-840.
 
 Laws: (1) **consensus, not taint** — every finding is a difference between
-reads and writes. (2) **confidence bands are the currency**: ``.45 base / .20
-evidence / .10 gap / .10 strength / .05 no-guard``, clamped ``[.30, .85]`` and
-rendered as ``(confidence: …)``. (3) **bounded output**: ``HARD_MAX_SECTION``
+reads and writes. (2) **confidence bands are the currency**: ``.45 base``
+(``_CONF_BASE``; the cross-function race path starts from ``_CONF_BASE - 0.05``
+= ``.40``) ``/ .20 evidence / .10 gap / .10 strength / .05 no-guard``, clamped
+``[.30, .85]`` and rendered as ``(confidence: …)``. (3) **bounded output**: ``HARD_MAX_SECTION``
 per section, ``limit <= 0`` = the DB row ceiling, the pinned ``+N more`` shapes,
 ``CODEGRAPH_CHARS`` applied once. (4) **guard detection is SYNTAX, not
 vocabulary** (:func:`_has_wrapper`) — an ``async``/``await`` span, a ``with``

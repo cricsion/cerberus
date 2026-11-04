@@ -247,6 +247,15 @@ class AgentRegistry:
     @_bookkeep_method
     def transition(self, agent_id, state, *, message="", error=None, model=None,
                    progress=None, ts=None, if_changed: bool = False, **kw):
+        """Record a state transition (creating the handle on first sight).
+
+        Terminal states are sticky: once an agent is terminal it cannot move
+        to a non-terminal or different terminal state, so late completion
+        events for an already-finished agent are absorbed. ``if_changed`` makes
+        this call a no-op (the same handle is returned untouched) when the
+        resulting state is unchanged. Always appends one event and dispatches
+        it.
+        """
         aid = _agent_id(agent_id)
         handle = None
         evt = None

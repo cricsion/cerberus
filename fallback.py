@@ -20,8 +20,9 @@ def _append_note(prev: str, text: str) -> str:
 
 
 def needs_review_verdicts(items: list[dict], note: str) -> list[dict]:
-    """One needs-review verdict per item, to fail open a batch/round; omitted ids
-    would otherwise become false consensus downstream."""
+    """One needs-review verdict per item that carries an id, to fail open a
+    batch/round (items without an id are skipped); omitted ids would otherwise
+    become false consensus downstream."""
     out: list[dict] = []
     for f in items or []:
         if not isinstance(f, dict):

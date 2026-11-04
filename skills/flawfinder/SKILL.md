@@ -61,7 +61,8 @@ File,Line,Column,DefaultLevel,Level,Category,Name,Warning,Suggestion,Note,CWEs,C
 | `Code`/`Context` | the offending line (in `--columns` output) |
 
 The text form prints the same fields plus a histogram (`Hits@level`) and a
-lines-analyzed summary. The C/C++ ruleset carries **222** rules — a bare
+lines-analyzed summary. The C/C++ ruleset carries **71** FF rule entries
+(upstream's 222 figure counts expanded dangerous-function names) — a bare
 `strcpy` is a call site, not a vulnerability: it is exploitable only when the
 source can exceed the destination, so confirm reachability before reporting
 above `needs-review`.
@@ -78,6 +79,6 @@ above `needs-review`.
 
 A lexical scanner: it matches known-dangerous names, so misses anything
 behind a wrapper (`safe_copy(dst, src)`), anything with dataflow, and any
-memory-safety bug that is not one of its ~50 built-in patterns. For native
+memory-safety bug that is not one of its ~71 built-in rules. For native
 dataflow you need manual reasoning (or a language server) — union it with
 opengrep/semgrep (broad, structural) and reading the code.

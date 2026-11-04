@@ -276,7 +276,7 @@ jobs:
   semgrep:
     runs-on: ubuntu-latest
     container:
-      image: returntocorp/semgrep
+      image: semgrep/semgrep
 
     steps:
       - uses: actions/checkout@v4

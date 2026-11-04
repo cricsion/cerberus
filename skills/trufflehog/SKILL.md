@@ -16,8 +16,7 @@ unverified regex match is a lead.
 
 ## In this environment
 
-- Trufflehog is **preinstalled, pinned** (sha256-verified release binary in
-  the scan image). Never install or upgrade it: the repo is read-only and
+- Trufflehog is **preinstalled, pinned**. Never install or upgrade it: the repo is read-only and
   egress may be denied.
 - **Always pass `--no-update`**: detector-set updates are a network fetch,
   and egress may be denied or restricted. The pinned detector set is what
@@ -65,9 +64,11 @@ Verification means live calls to third-party services **with the target
 repo's credentials embedded** — under `bridge` egress that traffic leaves
 the sandbox by design, and a verified hit silently tells the service
 "someone is testing this key". That is the tool working as intended, but it
-is a behavior to be deliberate about: unverified-only scans (`--results=unverified`
-is the wrong flag — default JSON already carries `Verified`) or gitleaks are
-the quieter option when egress is restricted. Absence of a finding is not
+is a behavior to be deliberate about: `--results` is a multi-value flag
+(`verified`, `unknown`, `unverified`; default all three), so
+`--results=unverified` gives an unverified-only scan and `--results=verified`
+narrows to verified secrets only. An unverified-only scan, or gitleaks, is the
+quieter option when egress is restricted. Absence of a finding is not
 clean — a format the detector set does not know (an internal token scheme)
 will pass silently, so union with the secret rules of the semgrep engines
 and your own reading of the code.

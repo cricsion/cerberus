@@ -11,6 +11,7 @@ SKIP_PARTS = frozenset({
     ".git", "node_modules", ".venv", "venv", "__pycache__",
     "dist", "build", ".tox", ".mypy_cache", ".pytest_cache",
     ".hg", ".svn", ".idea", ".vscode", ".codegraph", "tmp",
+    ".cerberus",
 })
 
 _MANIFESTS: dict[str, dict[str, Any]] = {}

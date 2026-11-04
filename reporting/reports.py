@@ -1,4 +1,4 @@
-"""Minimal reporters: JSON + SARIF 2.1.0 + Markdown. No external deps."""
+"""Report writers: JSON, SARIF 2.1.0, Markdown, self-contained HTML, and JUnit XML. No external deps."""
 from __future__ import annotations
 
 import html

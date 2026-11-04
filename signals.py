@@ -42,8 +42,10 @@ def signals_dir(repo: str) -> Path:
 def signal_stats(body: str) -> tuple[int, str]:
     """``(count, one-line summary)`` for a raw tool output.
 
-    Count is the parsed JSON list length when the body is one, else the number
-    of non-empty lines; the summary is the first non-empty line.
+    Count is the parsed JSON list length when the body is one, the list
+    length under ``results``/``findings``/``failed_checks`` when the body is
+    an object with one of those keys, else the number of non-empty lines; the
+    summary is the first non-empty line.
     """
     text = str(body or "").strip()
     if not text:

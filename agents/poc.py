@@ -132,8 +132,11 @@ def materialize_poc(finding: dict, backend: Any, run_id: str | None = None,
                     repo_path: str | Path | None = None) -> tuple[Path | None, str | None]:
     """Write repro script to host persistent storage and container shared tmpfs.
 
-    Host path: .cerberus/<run_id>/scratch/poc/<finding_id>/poc.py
-    Container path: /work/_shared/poc/<finding_id>/poc.py
+    Host path: .cerberus/<run_id>/scratch/poc/<finding_id>/<name>.<ext>
+    Container path: /work/_shared/poc/<finding_id>/<name>.<ext>
+    The filename is dynamic (``_resolve_filename``: ``poc["filename"]`` ->
+    ``poc["language"]`` -> shebang -> ``poc.py``); in the generator flow it is
+    usually ``test_repro.py``, with ``poc.py`` only the fallback name.
     """
     poc = finding.get("poc")
     if hasattr(poc, "model_dump"):

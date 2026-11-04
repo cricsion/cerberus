@@ -368,8 +368,7 @@ curl -sI https://target.com | grep -i strict-transport-security
 # 2. Replacing domains with similar subdomains not covered by HSTS
 # 3. Proxying the real HTTPS connection on the attacker side
 
-# mitmproxy with sslstrip mode
-mitmproxy --mode transparent --ssl-insecure --set block_global=false
+mitmdump --mode transparent --ssl-insecure --set block_global=false
 ```
 
 HSTS bypass vectors:

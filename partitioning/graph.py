@@ -1,7 +1,7 @@
 """Partitioning edge coupling: connects files that belong in the same hunter unit.
 
-When a CodeGraph index exists, coupling edges are read via the
-native CodeGraph SDK (calls, references, imports).
+When a CodeGraph index exists, coupling edges are extracted as classified by
+the codegraph indexer (calls, references, imports).
 When unindexed, returns input edges without inventing connections.
 """
 from __future__ import annotations
@@ -57,8 +57,9 @@ def augment_edges(repo: str, files: list[str],
                   edges: dict[tuple[str, str], int]) -> dict[tuple[str, str], int]:
     """Augment file coupling edges for unit partitioning.
 
-    Native CodeGraph SDK: extracts actual inter-file dependency edges
-    (calls, references, imports) without querying the database directly.
+    Native CodeGraph SDK: extracts inter-file dependency edges as classified
+    by the codegraph indexer (calls/references/imports), without querying the
+    database directly.
     """
     out = dict(edges or {})
     file_list = sorted(set(files or []))

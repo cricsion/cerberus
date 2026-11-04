@@ -12,7 +12,7 @@ Laws (each an invariant of this module):
 - LAW-3 — a hop is one edge plus the argument map the index does not model; a
   synthesized edge reports its wiring site, and a coordinate nobody owns is
   labelled ``SUSPECT_LINE_BASIS``.
-- LAW-4 — a blind spot is a ranked list of unresolved refs (six ``_SCORE_*``
+- LAW-4 — a blind spot is a ranked list of unresolved refs (seven ``_SCORE_*``
   weights, the ``1. score 8  app.py:13  function unsafe_query`` render,
   implementer counts, ``## n.`` blocks capped with totals).
 - LAW-5 — containment and never-raise: hostile input is capped and echoes

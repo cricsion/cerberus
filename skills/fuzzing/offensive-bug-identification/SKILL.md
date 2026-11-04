@@ -178,7 +178,7 @@ Before diving into specific bug hunting techniques, it's essential to understand
   - IOCTL handlers that accept a fixed‑size struct and pass a user‑controlled `PHYSICAL_ADDRESS` directly to `MmMapIoSpace`
   - then memcpy out/in mapped memory (sometimes via wrappers that swap src/dst) indicate physical memory read/write primitives.
   - Similarly, unguarded MSR read/write paths yield `RDMSR/WRMSR` primitives.
-- See the Lenovo `LnvMSRIO.sys` case study in [windows-kernel.md](/exploit/windows-kernel.md)
+- See the Lenovo `LnvMSRIO.sys` case study in the Windows kernel exploitation skill.
 
 ### eBPF & XDP
 

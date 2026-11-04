@@ -353,15 +353,17 @@ def api_key_present(cfg: dict | None = None) -> bool:
     return bool(resolve_api_key(cfg))
 
 
-# Reasoning effort is passed through verbatim; the backend accepts
-# low/medium/high/xhigh/max, and no token caps are set.
+# Reasoning effort reaches the backend only as a value in EFFORT_LEVELS
+# (low/medium/high/xhigh/max); an invalid per-agent or global value is
+# normalized at call time (global effort first, else "max"). No token caps
+# are set.
 
 
 def get_reasoning_kwargs(cfg: dict, agent: str | None = None) -> dict:
     """Thinking-effort params from the normalized cfg.
 
-    ``effort_by_agent`` (hunter, validator, triager, partitioner, threat) wins
-    over the global ``effort``.
+    ``effort_by_agent`` (hunter, validator, triager, partitioner, threat, poc)
+    wins over the global ``effort``.
     """
     cfg = effective_config(cfg)
     level = ""

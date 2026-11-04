@@ -16,9 +16,8 @@ hits are not the semgrep engines'.
 
 ## In this environment
 
-- Bearer is **preinstalled, pinned** (sha256-verified release binary in the
-  scan image). Never install or upgrade it: the repo is read-only and egress
-  may be denied.
+- Bearer is **preinstalled, pinned** (release binary downloaded at image build;). Never install or
+  upgrade it: the repo is read-only and egress may be denied.
 - Bearer resolves imports, so it always analyzes a **directory**, not loose
   files. Point it at the unit's directory, or a `/work` scratch dir with the
   unit's files copied in — never at the repo root: there is no whole-repo

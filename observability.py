@@ -1,8 +1,9 @@
 """Fail-open Langfuse observability for scans.
 
 Langfuse tracing is enabled iff ``LANGFUSE_PUBLIC_KEY``, ``LANGFUSE_SECRET_KEY``
-and ``LANGFUSE_BASE_URL`` are all present; ``observability.enabled`` in the
-harness config can override that gate with ``true``/``false``.
+and ``LANGFUSE_BASE_URL`` are all present; ``observability.enabled`` may
+additionally disable it (``false``), but cannot force-enable without the env
+keys — a force-on request without keys is refused with a logged note.
 Everything here fails open: a missing or unusable SDK is a no-op,
 and a failed init/auth/export logs one ``[observability]`` stderr line instead
 of sinking a scan.

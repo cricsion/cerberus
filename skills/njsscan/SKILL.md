@@ -51,7 +51,7 @@ A JSON **dict**, not an array (verified against 1.0.1):
 ```json
 {
   "errors": [],
-  "njsscan_version": "0.4.2",
+  "njsscan_version": "1.0.1",
   "nodejs": {
     "eval_nodejs": {
       "files": [
@@ -80,7 +80,7 @@ A JSON **dict**, not an array (verified against 1.0.1):
 | `nodejs.<rule_id>.metadata` | `cwe` (full CWE **title** string), `description`, `owasp-web`, **`severity`** — the severity lives here, not on the finding |
 | `templates` | non-Node template findings (Jinja etc.); empty dict for pure JS/TS |
 | `errors` | files it could not analyze — check it |
-| `njsscan_version` | the internal banner version, which lags the package (reports 0.4.2 on 1.0.1) — do not use it for verification |
+| `njsscan_version` | the installed njsscan package version (1.0.1 at this pin; from `njsscan.__version__`) |
 
 Mapping to the finding contract: `cwe` from `metadata.cwe` (strip the title
 after the colon — e.g. `CWE-79: ...` → `CWE-79`; leave blank if absent),

@@ -4,7 +4,8 @@ One bounded inspection complements ordinary call-graph analysis: whether a
 recognized network call in a function span uses a dynamic URL target.
 
 LAWS
-- Egress uses CONSTANT / DYNAMIC / PARTIAL verdicts.
+- Egress verdicts are HOST_DYNAMIC / PATH_DYNAMIC / PARTIAL / FULLY_CONSTANT;
+  CONSTANT / DYNAMIC are per-URL-part kinds, not verdicts.
 - Source reads stay contained and byte-capped; the tool degrades to a bounded
   success-shaped report and never raises on hostile input.
 

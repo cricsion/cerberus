@@ -21,7 +21,9 @@ from cerberus.schemas import HunterResult, safe_float, safe_int
 
 _logger = logging.getLogger(__name__)
 
-# Discovery-loop stop rule: two consecutive passes with zero new findings.
+# Discovery-loop stop rule: two consecutive passes with zero finder-backs
+# (rerun passes count any returned finding, repeats included; pass 1 is
+# deduped against seen).
 _EMPTY_PASS_STREAK = 2
 
 try:
@@ -216,9 +218,10 @@ def _run_unit(unit: dict, repo: str, files: list[str], candidates: list[dict],
               _tools_out: list | None = None) -> list[dict]:
     """One discovery pass for one unit — a fresh agent session.
 
-    ``prior_findings`` (for rerun passes) seeds the task prompt with
-    every finding already reported on this unit; the pass must return
-    only ADDITIONAL findings."""
+    ``prior_findings`` (for rerun passes) seeds the task prompt with every
+    already-reported finding on this unit, up to the 500-item prior-findings
+    block cap (per-finding text slimmed/truncated); the pass must return only
+    ADDITIONAL findings."""
 
     from cerberus.config import get_model_kwargs
 

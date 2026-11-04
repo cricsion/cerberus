@@ -1,1 +1,1 @@
-"""Hunter + validator agent definitions"""
+"""Hunter, validator, triage and PoC agent definitions plus the deep-agent harness."""

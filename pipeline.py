@@ -32,7 +32,8 @@ class Overwrite:
 
 CVSS_BASE = {"critical": 9.0, "high": 7.5, "medium": 5.0, "low": 2.5, "info": 0.0}
 
-# Channels that accumulate across stages (everything else is last-writer-wins).
+# Channels that accumulate across stages; ``verified`` appends via its own
+# reducer (not listed here), everything else is last-writer-wins.
 _ADD_KEYS = ("candidates", "findings", "tools_used")
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,9 @@ class ScanState(TypedDict, total=False):
     candidates: list[dict]
     signals: list[dict]
     findings: list[dict]
-    # Two writers (hunter workers, then validator_node); append-only — aggregator joins against it so nothing validates twice.
+    # Writers: per-unit inline validation futures, then validator_node; plain
+    # updates append (via _verified_reducer) and late-stage rewrites go through
+    # Overwrite(...) below — aggregator joins against it so nothing validates twice.
     verified: list[dict]
     pending: list[dict]
 

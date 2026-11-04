@@ -38,7 +38,7 @@ model_profile:
   max_input_tokens: ${MODEL_MAX_INPUT_TOKENS:-400000}
   structured_output: ${MODEL_STRUCTURED_OUTPUT:-}
 # Concurrency: THE single knob = max parallel agents at a time
-# Values are clamped to 1-32 at config load. Applies from the next run.
+# Any integer >= 1 at config load. Applies from the next run.
 concurrency: ${CONCURRENCY:-8}
 # Max LangGraph supersteps per agent.
 recursion_limit: ${RECURSION_LIMIT:-64000}
@@ -98,21 +98,24 @@ sandbox:
   docker_bin: ${SANDBOX_DOCKER_BIN:-docker}
   pull_image: ${SANDBOX_PULL_IMAGE:-0}
   # The runner container is started once per scan; commands are exec'd in
-  # it over the docker-py SDK channel (demuxed, bounded in-container by
-  # `timeout -k 5`). The container is torn down at scan
+  # it over the docker-py SDK channel (demuxed; deliberately no in-container
+  # `timeout` wrapper — command_timeout and the output cap are enforced
+  # client-side on the read deadline). The container is torn down at scan
   # exit (success, failure, or SIGINT/SIGTERM).
   # Network policy: bridge = full egress inside the sandbox (default);
   # none = no network. `host` is refused (it would join the host netns).
   network: ${SANDBOX_NETWORK:-bridge}
   # Per-command stdout+stderr capture cap (bytes). Output past the cap is
-  # truncated; exit code still reflects the command, so a chatty command cannot grow the
-  # harness process unbounded. 0 = unlimited.
+  # truncated; exit code still reflects the command, so a chatty command cannot
+  # grow the harness process unbounded. The docker lane multiplies the value by 4
+  # (event-chunk reads, docker_channel.BYTE_CAP_FACTOR); the local lane uses it
+  # as-is. 0 is coerced to 1 — there is no unlimited setting.
   max_output_bytes: ${SANDBOX_MAX_OUTPUT_BYTES:-200000}
   # Per-command timeout (seconds) for commands executed in the sandbox.
   command_timeout: ${SANDBOX_COMMAND_TIMEOUT:-120}
   # The three below bound the ONE shared run container, not a container per
-  # agent: all agents of the run share this budget (default concurrency is
-  # 8-30 parallel agents), so a runaway agent affects the whole run.
+  # agent: all agents of the run share this budget (default concurrency is 8),
+  # so a runaway agent affects the whole run.
   memory: ${SANDBOX_MEMORY:-2g}
   cpus: ${SANDBOX_CPUS:-2}
   pids_limit: ${SANDBOX_PIDS_LIMIT:-512}

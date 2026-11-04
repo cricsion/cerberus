@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from cerberus.prompts.contract import structured_output_contract
 from cerberus.prompts.engine import block
 
-# Output contract for both swarm stages and the synthesizer; mirrors the threat-model skill's schema contract.
+# Output contract for the finalize stage (build_finalize_task); the synthesizer uses
+# SYNTHESIZER_CONTRACT (the SwarmPlan structured-output contract) instead.
 SCHEMA_CONTRACT = block("threat/schema_contract")
 
 
@@ -254,7 +255,8 @@ def build_synth_task(repo: str, draft_md: str, research_json: str,
         "survives the next bug over a patch for the last one.\n\n"
         "INVARIANTS (checked by code): every entry point must be named by "
         "at least one threat surface; at least one threat row must have an "
-        "EMPTY evidence cell (the gap-fill ran). Order does not matter — "
+        "EMPTY evidence cell (one row's evidence cell must still be empty — "
+        "see the invariant). Order does not matter — "
         "the harness sorts threats and assigns ids.\n\n"
         f"{SYNTHESIZER_CONTRACT}"
     )

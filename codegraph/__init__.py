@@ -24,6 +24,10 @@ Foundation:
                      taxonomy (``codegraph/src/ui-server/api/effects.ts``), so
                      "what does this call leave the process for?" is one call
                      away.
+    ``native``     — high-order native tools (explore, find_path, impact,
+                     routing_manifest, circular_and_dead_code, build_context,
+                     type_hierarchy, caller/callee JSON, file dependencies)
+                     answered via a Node runner over the index.
 
 Tool modules (the micro-agent partition from the SAST tool suite design):
     ``navigation`` — Taint & Injection agent's context tools:

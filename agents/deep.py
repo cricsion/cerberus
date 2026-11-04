@@ -637,8 +637,14 @@ def run_structured_batch(mk: dict | None, model: Any, system: str,
                          max_retries: int | None = None, name: str | None = None,
                          max_concurrency: int | None = None,
                          meta_extra: dict | None = None) -> list[Any]:
-    """Batched one-shot structured output : one LLM call per
-    input;"""
+    """Run one structured-output LLM call per input, concurrently.
+
+    Calls use ``return_exceptions=True``, so a failed item is returned in place
+    as its exception rather than aborting the batch. A reply that parses to no
+    tool call is retried through ``recover_structured``; if that still yields
+    nothing, a per-item ``RuntimeError("structured reply contained no tool
+    call")`` is placed in the result list for callers to recover downstream.
+    """
     target_schema = model if isinstance(model, type) else getattr(model, "schema", model)
     target_name = getattr(target_schema, "__name__", None)
     if target_name and target_name not in (system or ""):

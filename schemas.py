@@ -1,9 +1,10 @@
 """Canonical finding schema plus ordering and coercion helpers.
 
 ``Finding`` (wrapped by ``HunterResult``) is the structured-output contract
-hunters emit. After discovery, findings travel as plain dicts; the validator
-and triage stages add ``status``, ``patch_summary``, ``control_type``,
-``duplicate_of`` and ``triage`` in place.
+hunters emit. After discovery, findings travel as plain dicts: ``status``
+exists from discovery (default ``needs-review``), and later stages return
+new dicts that add ``patch_summary``, ``control_type``, ``duplicate_of``
+and ``triage``.
 """
 from __future__ import annotations
 
@@ -267,7 +268,9 @@ def group_duplicates(rows: list[dict]) -> dict[str, list[dict]]:
 
 
 def safe_int(value: object, default: int = 0) -> int:
-    """Lenient int for LLM-produced numbers ("12-15", "unknown", 12.7 all occur); never raises."""
+    """Lenient int for LLM-produced numbers; never raises. Accepts ints and
+    floats, plus pure digit strings ("12"); anything else ("12-15", "unknown",
+    True) returns ``default``."""
     try:
         if isinstance(value, bool):
             return default

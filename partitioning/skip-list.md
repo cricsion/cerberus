@@ -8,14 +8,15 @@ Validated against the whole benchmark, not samples:
   `_INVENTORY_EXTS` + Dockerfile/shebang). The current static policy in
   `tools/code.is_skipped_dir` inventories 3,662 files across the same repos;
   the rule table below is unchanged.
-- 988 scoreable findings from `runs/*-run-001/findings.json` (severity != info, skip-ids excluded)
+- 988 scoreable findings from `runs/*-run-001/findings.json` (severity != info, skip-ids excluded; these `runs/` artifacts are historical and no longer in the repo)
 - ground truth: all 4,594 GT items across all GT dirs (4,314 vulnerable)
 
 **Verdict:** 1,039 of 5,282 inventory files (19.7%) can be skipped. 149 of 988
 findings (15.1%, in 21 repos) are anchored on those files, and every one is a
 false positive — **zero of 4,314 vulnerable GT items lives there**. Macro
 precision moves 28.2% → ~36.4%; recall unchanged. Machine-readable per-repo
-file lists: `runs/llm_eval_results/skip_list_materialized.json`.
+file lists: `runs/llm_eval_results/skip_list_materialized.json` (historical; the
+artifact is no longer in the repo).
 
 ## Where this plugs in
 
@@ -51,7 +52,8 @@ no such exclude) R7 is what drops vendor trees — historically 14 finding rows
 skips `vendor/` unconditionally via `tools/code.is_skipped_dir`.
 
 Row counts can double-count a finding matching two rules; deduped union is 149.
-Per-repo file lists and counts: `skip_list_materialized.json`. Top repos:
+Per-repo file lists and counts: `skip_list_materialized.json` (historical; the
+artifact is no longer in the repo). Top repos:
 juice-shop 366/764, juice-shop-goof 335/658, oss-oopssec-store 85/329,
 djangoat 45/180, dvga 43/83, vulnpy 40/126, vulnerable-app-angular 26/127,
 nodegoat 19/69, lets-be-bad-guys 15/63, vulnnodeapp 9/1782, dvws-node 7/53.

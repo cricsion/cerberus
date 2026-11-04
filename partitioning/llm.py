@@ -222,7 +222,8 @@ def _build_partition_message(ctx: str, baseline: list[dict],
 def _agent_units(mk: dict, msg: str, repo: str, timeout: int,
                  backend: Any = None) -> list[dict]:
     """Run the Deep-Agent partitioner with hunter tools and extract parsed units;
-    an empty result falls back to deterministic grouping in `units._units_from_dirs`."""
+    empty output raises, and the pipeline falls back to the full deterministic
+    partition (`partitioning.partition_units`) when the agent path fails."""
     from cerberus.agents.deep import run_structured
     from cerberus.agents.toolsets import graph_tools
     from cerberus.partitioning.prompts import PARTITIONER_SYSTEM, UnitList

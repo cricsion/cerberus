@@ -8,6 +8,8 @@ Exposes CodeGraph's native features:
 - Graph topological hygiene (``circular_and_dead_code``): cycles & orphaned components.
 - Task-focused context assembly (``build_context``): relevant symbols, relationships & entry points.
 - Type hierarchy (``type_hierarchy``): ancestors + descendants across extends/implements.
+- Caller/callee edge tables (``callers_json`` / ``callees_json``) and cross-file
+  dependency pairs (``file_dependency_pairs``): native edge metadata.
 """
 from __future__ import annotations
 
@@ -168,7 +170,12 @@ def build_context(task: str, repo: str | None = None, max_nodes: int = 20, timeo
 
 
 def callers_json(func_name: str, repo: str | None = None, file: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
-    """Retrieve callers as structured JSON with enriched metadata (confidence, column, target ID)."""
+    """Retrieve callers as structured JSON.
+
+    Definitions carry ``id, name, kind, filePath, startLine, signature``; call
+    sites carry ``id, name, kind, filePath, line, edgeKind, confidence``. There
+    is no ``column`` or target-ID field.
+    """
     args = [func_name, str(limit)]
     if file:
         args.append(str(file))
@@ -179,7 +186,11 @@ def callers_json(func_name: str, repo: str | None = None, file: str | None = Non
 
 
 def callees_json(func_name: str, repo: str | None = None, file: str | None = None, limit: int = 100, timeout: int = 30) -> dict:
-    """Retrieve callees as structured JSON with enriched metadata (confidence, column, target ID)."""
+    """Retrieve callees as structured JSON.
+
+    Each row carries ``id, name, kind, filePath, startLine, label``; there is no
+    ``confidence``, ``column``, or target-ID field.
+    """
     args = [func_name, str(limit)]
     if file:
         args.append(str(file))
