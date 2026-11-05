@@ -1,0 +1,3080 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-502",
+              "name": "CWE-502",
+              "shortDescription": {
+                "text": "Insecure deserialization via pickle.loads on object parameter"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/502.html",
+                "markdown": "[MITRE CWE-502](https://cwe.mitre.org/data/definitions/502.html)"
+              }
+            },
+            {
+              "id": "CWE-78",
+              "name": "CWE-78",
+              "shortDescription": {
+                "text": "OS command injection via domain nslookup shell"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/78.html",
+                "markdown": "[MITRE CWE-78](https://cwe.mitre.org/data/definitions/78.html)"
+              }
+            },
+            {
+              "id": "CWE-94",
+              "name": "CWE-94",
+              "shortDescription": {
+                "text": "Remote code execution via exec on include content"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/94.html",
+                "markdown": "[MITRE CWE-94](https://cwe.mitre.org/data/definitions/94.html)"
+              }
+            },
+            {
+              "id": "CWE-89",
+              "name": "CWE-89",
+              "shortDescription": {
+                "text": "DOM-based XSS via location.hash lang document.write"
+              },
+              "properties": {
+                "security-severity": "7.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/89.html",
+                "markdown": "[MITRE CWE-89](https://cwe.mitre.org/data/definitions/89.html)"
+              }
+            },
+            {
+              "id": "CWE-22",
+              "name": "CWE-22",
+              "shortDescription": {
+                "text": "Path traversal and SSRF via path file-fetch handler"
+              },
+              "properties": {
+                "security-severity": "7.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/22.html",
+                "markdown": "[MITRE CWE-22](https://cwe.mitre.org/data/definitions/22.html)"
+              }
+            },
+            {
+              "id": "CWE-611",
+              "name": "CWE-611",
+              "shortDescription": {
+                "text": "XXE via lxml parser with DTD and network enabled"
+              },
+              "properties": {
+                "security-severity": "7.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/611.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/611.html",
+                "markdown": "[MITRE CWE-611](https://cwe.mitre.org/data/definitions/611.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Cross-request stored XSS via comments store"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-918",
+              "name": "CWE-918",
+              "shortDescription": {
+                "text": "LFI and SSRF via include file fetch"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/918.html",
+                "markdown": "[MITRE CWE-918](https://cwe.mitre.org/data/definitions/918.html)"
+              }
+            },
+            {
+              "id": "CWE-643",
+              "name": "CWE-643",
+              "shortDescription": {
+                "text": "XPath injection via name parameter interpolation"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/643.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/643.html",
+                "markdown": "[MITRE CWE-643](https://cwe.mitre.org/data/definitions/643.html)"
+              }
+            },
+            {
+              "id": "CWE-400",
+              "name": "CWE-400",
+              "shortDescription": {
+                "text": "Denial of service via unbounded size allocation"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/400.html",
+                "markdown": "[MITRE CWE-400](https://cwe.mitre.org/data/definitions/400.html)"
+              }
+            },
+            {
+              "id": "CWE-113",
+              "name": "CWE-113",
+              "shortDescription": {
+                "text": "HTTP header injection via charset Content-Type reflection"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/113.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/113.html",
+                "markdown": "[MITRE CWE-113](https://cwe.mitre.org/data/definitions/113.html)"
+              }
+            },
+            {
+              "id": "CWE-209",
+              "name": "CWE-209",
+              "shortDescription": {
+                "text": "Information disclosure via full traceback error responses"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/209.html",
+                "markdown": "[MITRE CWE-209](https://cwe.mitre.org/data/definitions/209.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing CSRF protection on comment insertion endpoint"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Missing authentication on users.json sensitive data exposure"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            },
+            {
+              "id": "CWE-307",
+              "name": "CWE-307",
+              "shortDescription": {
+                "text": "Missing rate limiting on login"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/307.html",
+                "markdown": "[MITRE CWE-307](https://cwe.mitre.org/data/definitions/307.html)"
+              }
+            },
+            {
+              "id": "CWE-1333",
+              "name": "CWE-1333",
+              "shortDescription": {
+                "text": "Regular expression injection via parameter name in query parser"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1333.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/1333.html",
+                "markdown": "[MITRE CWE-1333](https://cwe.mitre.org/data/definitions/1333.html)"
+              }
+            },
+            {
+              "id": "CWE-338",
+              "name": "CWE-338",
+              "shortDescription": {
+                "text": "Weak predictable SESSIONID with insecure meta cookie delivery"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/338.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/338.html",
+                "markdown": "[MITRE CWE-338](https://cwe.mitre.org/data/definitions/338.html)"
+              }
+            },
+            {
+              "id": "CWE-693",
+              "name": "CWE-693",
+              "shortDescription": {
+                "text": "Disabled XSS auditor via X-XSS-Protection zero"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/693.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/693.html",
+                "markdown": "[MITRE CWE-693](https://cwe.mitre.org/data/definitions/693.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Hardcoded credentials in USERS_XML fixture"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-362",
+              "name": "CWE-362",
+              "shortDescription": {
+                "text": "Concurrent race on shared SQLite connection"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/362.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/362.html",
+                "markdown": "[MITRE CWE-362](https://cwe.mitre.org/data/definitions/362.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-502",
+          "level": "error",
+          "message": {
+            "text": "Insecure deserialization via pickle.loads on object parameter (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 35,
+                  "endLine": 35,
+                  "snippet": {
+                    "text": "content = str(pickle.loads(params[\"object\"].encode()))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "python3 poc.py",
+            "patchSummary": "Remove pickle.loads object handler; use JSON with strict parsing if demo needed"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param object"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params object extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "pickle.loads sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: pickle.loads attacker-controlled bytes"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-78",
+          "level": "error",
+          "message": {
+            "text": "OS command injection via domain nslookup shell (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 39,
+                  "endLine": 39,
+                  "snippet": {
+                    "text": "content = subprocess.run(\"nslookup \" + params[\"domain\"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl 'http://127.0.0.1:65412/?domain=www.google.com;%20id'",
+            "patchSummary": "Remove shell handler or use shell=False with arg list and strict domain validation"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param domain"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params domain extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "subprocess shell sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: subprocess.run shell=True"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-94",
+          "level": "error",
+          "message": {
+            "text": "Remote code execution via exec on include content (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 57,
+                  "snippet": {
+                    "text": "exec(program, envs)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl include RCE",
+            "patchSummary": "Remove include/exec handler entirely; never exec local/remote user-controlled bytes"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param include content"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "program fetched from include"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "exec sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: exec() of remote/local bytes"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "DOM-based XSS via location.hash lang document.write (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "document.write with decodeURIComponent hash lang"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n document.write dsvw.py",
+            "patchSummary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: URL fragment location.hash"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "fragment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: document.write unsafely rendered hash input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection id handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "cursor.execute sin"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "dsvw.py:26"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "dsvw.py:30"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cursor.execute"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via v parameter version reflection (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 33,
+                  "endLine": 33,
+                  "snippet": {
+                    "text": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl 'http://127.0.0.1:65412/?v=0.4<script>alert(1)</script>'",
+            "patchSummary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 33
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param v"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params v extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 33
+                          }
+                        },
+                        "message": {
+                          "text": "re.sub sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 33
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: re.sub replacement reflected into HTML response"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-22",
+          "level": "error",
+          "message": {
+            "text": "Path traversal and SSRF via path file-fetch handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 37,
+                  "endLine": 37,
+                  "snippet": {
+                    "text": "content = (open(os.path.abspath(params[\"path\"]), \"rb\") if not \"://\" in params[\"path\"] else urllib.request.urlopen(params[\"path\"])).read().decode()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl 'http://127.0.0.1:65412/?path=dsvw.py'",
+            "patchSummary": "Remove path fetch handler or constrain to allowlisted docroot via realpath check and deny urlopen on user input"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param path"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params path extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "open/urlopen sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: filesystem open and outbound urlopen on same input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-611",
+          "level": "error",
+          "message": {
+            "text": "XXE via lxml parser with DTD and network enabled (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 41,
+                  "endLine": 41,
+                  "snippet": {
+                    "text": "content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params[\"xml\"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl XXE payload to /?xml=",
+            "patchSummary": "Set XMLParser(load_dtd=False, resolve_entities=False, no_network=True) or use defusedxml"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param xml"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params xml extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "lxml parse sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: lxml parse with entity/network resolution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL injection via comment INSERT handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 50,
+                  "endLine": 50,
+                  "snippet": {
+                    "text": "cursor.execute(\"INSERT INTO comments VALUES(NULL, '%s', '%s')\" % (params[\"comment\"], time.ctime()))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl comment SQLi",
+            "patchSummary": "Use parameterized INSERT cursor.execute('INSERT INTO comments VALUES(NULL,?,?)',(comment,time))"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param comment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params comment extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "cursor.execute sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cursor.execute raw INSERT"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Cross-request stored XSS via comments store (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 53,
+                  "endLine": 54,
+                  "snippet": {
+                    "text": "SELECT id, comment, time FROM comments"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Parameterize comment INSERT and HTML-encode comment/time on SELECT render with CSP."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET comment param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params comment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "INSERT INTO comments"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "SELECT FROM comments"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unencoded HTML table render of stored comments"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-918",
+          "level": "error",
+          "message": {
+            "text": "LFI and SSRF via include file fetch (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 56,
+                  "endLine": 56,
+                  "snippet": {
+                    "text": "backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params[\"include\"], \"rb\") if not \"://\" in params[\"include\"] else urllib.request.urlopen(params[\"include\"])).read(),"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl include SSRF",
+            "patchSummary": "Remove include fetch or restrict to allowlisted files and deny remote urlopen"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param include"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params include extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "open/urlopen fetch sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: local open and remote urlopen on attacker input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via redir meta-refresh injection (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 61,
+                  "snippet": {
+                    "text": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "HTML-encode redir and validate allowlist before meta-refresh reflection."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /?redir= query parameter"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "query -> params[redir]"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "meta-refresh interpolation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: meta refresh HTML reflection without encoding"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-643",
+          "level": "warning",
+          "message": {
+            "text": "XPath injection via name parameter interpolation (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 43,
+                  "snippet": {
+                    "text": "found = lxml.etree.parse(io.BytesIO(USERS_XML.encode())).xpath(\".//user[name/text()='%s']\" % params[\"name\"])"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl name xpath payload",
+            "patchSummary": "Avoid XPath string interpolation; use variable binding or strict allowlist/escaping of name"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params name extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "xpath sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: xpath() with string interpolation"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "warning",
+          "message": {
+            "text": "Denial of service via unbounded size allocation (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 46,
+                  "endLine": 46,
+                  "snippet": {
+                    "text": "start, _ = time.time(), \"<br>\".join(\"#\" * int(params[\"size\"]) for _ in range(int(params[\"size\"])))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl 'http://127.0.0.1:65412/?size=9999999'",
+            "patchSummary": "Enforce max size bound (e.g. reject size>256) and timeout/limit allocation"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param size"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params size extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "allocation sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: quadratic string allocation and join"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-113",
+          "level": "warning",
+          "message": {
+            "text": "HTTP header injection via charset Content-Type reflection (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 78,
+                  "endLine": 78,
+                  "snippet": {
+                    "text": "self.send_header(\"Content-Type\", \"%s%s\" % (\"text/html\" if content.startswith(\"<!DOCTYPE html>\") else \"text/plain\", \"; charset=%s\" % params.get(\"charset\", \"utf8\")))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl charset header injection",
+            "patchSummary": "Allowlist charset (e.g. utf-8 only) and strip CR/LF before send_header; reject %0D%0A."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param charset"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params charset extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "send_header sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Content-Type header with attacker charset"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "warning",
+          "message": {
+            "text": "Second-order XSS via unencoded id query result rendering (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "content += \"<div><span>Result(s):</span></div><table><thead><th>id</th><th>username</th><th>name</th><th>surname</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl UNION XSS",
+            "patchSummary": "Parameterize id query and HTML-encode all DB fields on render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Source: DB rows influenced by id UNION payload"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params id extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "table render sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unencoded <td> reflection of query rows"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "warning",
+          "message": {
+            "text": "JSONP reflected XSS via users.json callback (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 65,
+                  "endLine": 65,
+                  "snippet": {
+                    "text": "content = \"%s%s%s\" % (\"\" if not \"callback\" in params else \"%s(\" % params[\"callback\"], json.dumps(dict((_.findtext(\"username\"),"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl users.json callback",
+            "patchSummary": "Validate callback against ^[A-Za-z0-9_.]+$ or remove JSONP callback support"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param callback"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params callback extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "JSONP wrap sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: callback reflected as JS function call"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "note",
+          "message": {
+            "text": "SQL injection authentication bypass via login password (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 67,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "cursor.execute(\"SELECT * FROM users WHERE username='\" + re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")) + \"' AND password='\" + params.get(\"password\", \"\") + \"'\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl login bypass",
+            "patchSummary": "Use parameterized login query with placeholders for username and password"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query param password on /login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params password extraction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "cursor.execute sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cursor.execute raw login query"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-209",
+          "level": "note",
+          "message": {
+            "text": "Information disclosure via full traceback error responses (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 72,
+                  "endLine": 72,
+                  "snippet": {
+                    "text": "content = ex.output if isinstance(ex, subprocess.CalledProcessError) else traceback.format_exc()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl error trigger",
+            "patchSummary": "Return generic error page with 500 and log traceback server-side only; do not reflect ex.output/traceback in HTTP body."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker-triggered exception"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "failing open on attacker path"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "traceback sink to response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: traceback.format_exc() written to HTTP body"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "Missing CSRF protection on comment insertion endpoint (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 50,
+                  "endLine": 50,
+                  "snippet": {
+                    "text": "INSERT INTO comments VALUES"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET comment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params comment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: state-changing SQL INSERT via GET without token"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on users.json sensitive data exposure (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 65,
+                  "snippet": {
+                    "text": "elif path == \"/users.json\":"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET users.json"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "path users.json"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "json dumps user map"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unauthenticated disclosure of user list"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-307",
+          "level": "note",
+          "message": {
+            "text": "Missing rate limiting on login (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 67,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "SELECT * FROM users WHERE username"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "params username password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unbounded authentication attempts"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-1333",
+          "level": "note",
+          "message": {
+            "text": "Regular expression injection via parameter name in query parser (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 26,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "code, content, params, cursor = http.client.OK, HTML_PREFIX, dict((match.group(\"parameter\"), urllib.parse.unquote(','.join(re.findall(r\"(?:\\A|[?&])%s=([^&]+)\" % match.group(\"parameter\"), query))))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl regex param name"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker-controlled parameter name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "raw query string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "regex construction sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: re.findall pattern built from param name"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-338",
+          "level": "note",
+          "message": {
+            "text": "Weak predictable SESSIONID with insecure meta cookie delivery (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 68,
+                  "endLine": 68,
+                  "snippet": {
+                    "text": "content += \"Welcome <b>%s</b><meta http-equiv=\\\"Set-Cookie\\\" content=\\\"SESSIONID=%s; path=/\\\"><meta http-equiv=\\\"refresh\\\" content=\\\"1; url=/\\\"/>\" % (re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")), \"\".join(random.sample(string.ascii_letters + string.digits, 20)))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl login SESSIONID"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 68
+                          }
+                        },
+                        "message": {
+                          "text": "Source: weak PRNG token generation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 68
+                          }
+                        },
+                        "message": {
+                          "text": "random.sample token source"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 68
+                          }
+                        },
+                        "message": {
+                          "text": "meta Set-Cookie sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 68
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: predictable SESSIONID in meta tag"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "note",
+          "message": {
+            "text": "Disabled XSS auditor via X-XSS-Protection zero (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 77,
+                  "endLine": 77,
+                  "snippet": {
+                    "text": "self.send_header(\"X-XSS-Protection\", \"0\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -i / | grep XSS"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 77
+                          }
+                        },
+                        "message": {
+                          "text": "Source: server default header configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 77
+                          }
+                        },
+                        "message": {
+                          "text": "header emission"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 77
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: X-XSS-Protection: 0 disables filter"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "note",
+          "message": {
+            "text": "Hardcoded credentials in USERS_XML fixture (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "USERS_XML = \"\"\"<?xml version=\"1.0\" encoding=\"utf-8\"?><users><user id=\"0\"><username>admin</username><name>admin</name><surname>admin</surname><password>7en8aiDoh!</password></user>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl ?path=dsvw.py"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: embedded password literals"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "hardcoded credential store"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: seeded SQLite users and XPath oracle"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-362",
+          "level": "note",
+          "message": {
+            "text": "Concurrent race on shared SQLite connection (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "dsvw.py"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "connection = sqlite3.connect(\":memory:\", isolation_level=None, check_same_thread=False)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "concurrent requests"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: thread-shared DB handle configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "shared connection creation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "dsvw.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: connection.cursor() per thread without lock"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

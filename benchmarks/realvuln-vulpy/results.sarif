@@ -1,0 +1,2309 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-287",
+              "name": "CWE-287",
+              "shortDescription": {
+                "text": "Broken authentication: unsigned base64 session cookie allows forgery"
+              },
+              "properties": {
+                "security-severity": "8.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/287.html",
+                "markdown": "[MITRE CWE-287](https://cwe.mitre.org/data/definitions/287.html)"
+              }
+            },
+            {
+              "id": "CWE-89",
+              "name": "CWE-89",
+              "shortDescription": {
+                "text": "SQL injection in bad libuser.login"
+              },
+              "properties": {
+                "security-severity": "8.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/89.html",
+                "markdown": "[MITRE CWE-89](https://cwe.mitre.org/data/definitions/89.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Stored XSS via posts rendered with |safe (cross-unit web+API to template)"
+              },
+              "properties": {
+                "security-severity": "7.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Hardcoded secrets and default credentials"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-863",
+              "name": "CWE-863",
+              "shortDescription": {
+                "text": "API mass-assignment allows forging posts as arbitrary user"
+              },
+              "properties": {
+                "security-severity": "7.2"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/863.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/863.html",
+                "markdown": "[MITRE CWE-863](https://cwe.mitre.org/data/definitions/863.html)"
+              }
+            },
+            {
+              "id": "CWE-73",
+              "name": "CWE-73",
+              "shortDescription": {
+                "text": "Glob-injection arbitrary file deletion in API key rotation"
+              },
+              "properties": {
+                "security-severity": "7.1"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/73.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/73.html",
+                "markdown": "[MITRE CWE-73](https://cwe.mitre.org/data/definitions/73.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing authentication/CSRF controls on chpasswd and MFA disable"
+              },
+              "properties": {
+                "security-severity": "7.1"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "name": "CWE-614",
+              "shortDescription": {
+                "text": "Insecure configuration: cookie without flags, debug mode, no brute-force protection"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/614.html",
+                "markdown": "[MITRE CWE-614](https://cwe.mitre.org/data/definitions/614.html)"
+              }
+            },
+            {
+              "id": "CWE-338",
+              "name": "CWE-338",
+              "shortDescription": {
+                "text": "Predictable API keys from non-cryptographic PRNG"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/338.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/338.html",
+                "markdown": "[MITRE CWE-338](https://cwe.mitre.org/data/definitions/338.html)"
+              }
+            },
+            {
+              "id": "CWE-285",
+              "name": "CWE-285",
+              "shortDescription": {
+                "text": "Missing authorization: unauthenticated read of any user's posts"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/285.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/285.html",
+                "markdown": "[MITRE CWE-285](https://cwe.mitre.org/data/definitions/285.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-287",
+          "level": "error",
+          "message": {
+            "text": "Broken authentication: unsigned base64 session cookie allows forgery (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libsession.py"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20,
+                  "snippet": {
+                    "text": "session = json.loads(base64.b64decode(cookie))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Replace client cookie with random server-side session or HMAC/Fernet-signed token and validate integrity/expiry on load."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Source: Cookie vulpy_session (client-controlled)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "attacker cookie vulpy_session"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "b64decode+json loads"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/vulpy.py"
+                          },
+                          "region": {
+                            "startLine": 42
+                          }
+                        },
+                        "message": {
+                          "text": "g.session assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "/ bad/mod_user.py:80 / bad/mod_mfa.py:57 auth checks"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: server trusts client-controlled session dict for authorization"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in bad libuser.login (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libuser.py"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "c.execute(\"SELECT * FROM users WHERE username = '{}' and password = '{}'\".format(username, password))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Use parameterized query: c.execute(\"SELECT * FROM users WHERE username=? and password=?\", (username,password))."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Source: request.form username password via do_login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "form to login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "execute"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sqlite3 execute with formatted SQL"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-287",
+          "level": "error",
+          "message": {
+            "text": "API key issuance authentication bypass with empty password (conf 0.97)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libapi.py"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "if password: if not libuser.login(username, password): return None"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Always authenticate: remove truthiness gate, require non-empty password and return None unless libuser.login succeeds."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /api/key JSON username/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "request.get_json attacker JSON"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "libapi.keygen(data['username'], data['password'])"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "truthiness gate skips login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "key file created and returned"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: API key issuance without authentication"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via posts rendered with |safe (cross-unit web+API to template) (conf 0.97)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/templates/posts.view.html"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "<li><span class=\"w3-h3\">{{ post.text | safe }}</span></li>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe at bad/templates/posts.view.html:23 and HTML-escape/sanitize post.text on input/output."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /posts/ text and POST /api/post JSON text"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "request.form text"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "request JSON text"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libposts.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "INSERT posts"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libposts.py"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "SELECT posts"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "|safe render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Jinja |safe render of stored post.text"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL injection in password_change via chpasswd (cross-unit) (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libuser.py"
+                },
+                "region": {
+                  "startLine": 53,
+                  "endLine": 53,
+                  "snippet": {
+                    "text": "c.execute(\"UPDATE users SET password = '{}' WHERE username = '{}'\".format(password, username))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Use parameterized UPDATE with placeholders for password/username and validate inputs."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /user/chpasswd form password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "request.form.get password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "libuser.password_change(g.session username,password)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "c.execute format UPDATE"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libuser.py"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: c.execute string-format UPDATE in password_change"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded secrets and default credentials (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/vulpy.py"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "app.config['SECRET_KEY'] = 'aaaaaaa'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Load Flask/Fernet/JWT secrets from env/secret manager, rotate, hash passwords with salted KDF and remove seeded defaults."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/vulpy.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Source: committed source/config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/vulpy.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: hardcoded crypto/session secrets and default credentials in source"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-863",
+          "level": "error",
+          "message": {
+            "text": "API mass-assignment allows forging posts as arbitrary user (conf 0.92)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/mod_api.py"
+                },
+                "region": {
+                  "startLine": 69,
+                  "endLine": 69,
+                  "snippet": {
+                    "text": "libposts.post(data['username'], data['text'])"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.2",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Do not merge client JSON over authenticated identity; use server-side username only and set post_schema additionalProperties:False."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /api/post JSON body username plus X-APIKEY header"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "X-APIKEY -> authenticate -> data['username']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "request.get_json()['username'] overwrites data['username']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: libposts.post with forged username"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-73",
+          "level": "error",
+          "message": {
+            "text": "Glob-injection arbitrary file deletion in API key rotation (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libapi.py"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 18,
+                  "snippet": {
+                    "text": "    for f in Path('/tmp/').glob('vulpy.apikey.' + username + '.*'):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Validate username against ^[a-z]+$ and replace glob+unlink with exact-path lookup or directory listing with equality check before unlink."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /api/key JSON username"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "request.get_json username"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "libapi.keygen(data['username'],...)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "glob with attacker username"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "f.unlink() deletion"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Path.glob + unlink on attacker-controlled pattern in /tmp"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-287",
+          "level": "error",
+          "message": {
+            "text": "API authentication bypass via glob injection in /tmp key lookup (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libapi.py"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "for f in Path('/tmp/').glob('vulpy.apikey.*.' + key):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Store keys server-side indexed by exact key hash and compare with hmac.compare_digest; reject glob metacharacters and never use glob as auth decision."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: HTTP header X-APIKEY"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "libapi.authenticate(request)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "request.headers X-APIKEY"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Path glob with key"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: filesystem glob as auth decision"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication/CSRF controls on chpasswd and MFA disable (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/mod_user.py"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 65,
+                  "snippet": {
+                    "text": "@mod_user.route('/chpasswd', methods=['GET', 'POST'])"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require authenticated session + current-password re-auth for chpasswd and POST+anti-CSRF token (+OTP) for MFA disable; make state changes POST-only."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site request + forgeable session"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "unauthenticated POST chpasswd"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "unauthenticated GET disable"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_user.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: password_change and mfa_disable state changes"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "good/templates/posts.view.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "<li><span class=\"w3-h3\">{{ post.text | safe }}</span></li>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe in good/templates/posts.view.html:23 (rely on Jinja autoescape) and/or sanitize/escape post.text on store/render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "error",
+          "message": {
+            "text": "MFA disable protected only by spoofable Referer check plus state-changing GET (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "good/mod_mfa.py"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 65,
+                  "snippet": {
+                    "text": "    if 'referer' not in request.headers or request.headers['referer'] != 'vulpy.com':"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "6.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Make disable POST-only with anti-CSRF token and require current-password or OTP re-authentication; remove Referer-equality gate."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Source: authenticated GET + spoofable Referer header"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "GET /mfa/disable with victim cookie"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Referer header check (attacker-controlled)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "libmfa.mfa_disable"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/mod_mfa.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MFA disable without OTP/CSRF"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "warning",
+          "message": {
+            "text": "Insecure configuration: cookie without flags, debug mode, no brute-force protection (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libsession.py"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "response.set_cookie('vulpy_session', session)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Set HttpOnly;Secure;SameSite on session cookie, disable debug in prod, add login/key rate-limiting/lockout."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Source: missing cookie flags, debug mode, missing throttling"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "cookie issuance without flags"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "XSS exfiltration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libsession.py"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cookie theft + debug exposure + brute force"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-338",
+          "level": "warning",
+          "message": {
+            "text": "Predictable API keys from non-cryptographic PRNG (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/libapi.py"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "    key = hashlib.sha256(str(random.getrandbits(2048)).encode()).hexdigest()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Generate keys with secrets.token_hex(32) or secrets.token_urlsafe."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Source: CSPRNG misuse (no untrusted source needed)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_api.py"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "libapi.keygen"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "random.getrandbits key derivation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libapi.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: predictable API bearer token generation"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "Missing CSRF on POST /posts enables forced stored-post creation (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/mod_posts.py"
+                },
+                "region": {
+                  "startLine": 25,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "@mod_posts.route('/', methods=['POST'])\ndef do_create():"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add per-session anti-CSRF token validated on POST and set session cookie with SameSite=Lax/Strict."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site form POST to /posts/"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "cross-site POST with victim cookie"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "g.session username + form text"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 33
+                          }
+                        },
+                        "message": {
+                          "text": "libposts.post"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: authenticated post creation without CSRF check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/templates/posts.view.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/posts.view.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/templates/mfa.enable.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/mfa.enable.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/mfa.enable.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/templates/welcome.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/welcome.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/templates/welcome.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "good/templates/mfa.enable.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/mfa.enable.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/mfa.enable.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "good/templates/welcome.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/welcome.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "good/templates/welcome.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-285",
+          "level": "note",
+          "message": {
+            "text": "Missing authorization: unauthenticated read of any user's posts (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bad/mod_posts.py"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "@mod_posts.route('/<username>')"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: URL path /posts/<username> and /api/post/<username>"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "path username"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/libposts.py"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "SELECT posts WHERE username=?"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bad/mod_posts.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: render/json of arbitrary user posts"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

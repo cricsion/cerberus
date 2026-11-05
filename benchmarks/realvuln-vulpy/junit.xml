@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="15" errors="0" skipped="0" timestamp="2026-11-04T20:42:26Z" time="0.000" failures="12">
+  <testcase classname="CWE-287" name="Broken authentication: unsigned base64 session cookie allows forgery [critical] bad/libsession.py:20-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken authentication: unsigned base64 session cookie allows forgery (CWE-287) critical conf=0.98 bad/libsession.py:20-20">bad/libsession.py:18-20 base64+json decode with no HMAC; bad/vulpy.py:42 before_request trusts g.session username for all authz
+session = json.loads(base64.b64decode(cookie))</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in bad libuser.login [critical] bad/libuser.py:12-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in bad libuser.login (CWE-89) critical conf=0.98 bad/libuser.py:12-12">user = c.execute(SELECT FROM users WHERE username format username password).fetchone()
+c.execute("SELECT * FROM users WHERE username = '{}' and password = '{}'".format(username, password))</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="API key issuance authentication bypass with empty password [critical] bad/libapi.py:10-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="API key issuance authentication bypass with empty password (CWE-287) critical conf=0.97 bad/libapi.py:10-12">bad/mod_api.py:39 passes attacker JSON password (empty string passes key_schema) to bad/libapi.py:10 where falsy check skips libuser.login and returns a valid key
+if password: if not libuser.login(username, password): return None</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via posts rendered with |safe (cross-unit web+API to template) [high] bad/templates/posts.view.html:23-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via posts rendered with |safe (cross-unit web+API to template) (CWE-79) high conf=0.97 bad/templates/posts.view.html:23-23">bad/mod_posts.py:34 text and bad/mod_api.py:61-68 JSON text stored via libposts.post then rendered unescaped at posts.view.html:23 with |safe | safe }} reachable via bad/mod_posts.py:11-21
+&lt;li&gt;&lt;span class="w3-h3"&gt;{{ post.text | safe }}&lt;/span&gt;&lt;/li&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in password_change via chpasswd (cross-unit) [high] bad/libuser.py:53-53">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in password_change via chpasswd (cross-unit) (CWE-89) high conf=0.95 bad/libuser.py:53-53">bad/mod_user.py:69-80 new password flows into bad/libuser.py:53 UPDATE with format(); no current-password check and no auth gate on route
+c.execute("UPDATE users SET password = '{}' WHERE username = '{}'".format(password, username))</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded secrets and default credentials [high] bad/vulpy.py:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded secrets and default credentials (CWE-798) high conf=0.95 bad/vulpy.py:16-16">hardcoded app secrets in source: Flask SECRET_KEY in bad/vulpy.py:16 and bad/vulpy-ssl.py:13, Fernet key in good/libsession.py:11, JWT secret in good/libapi.py:11; default seeded passwords in bad/db_init.py:11-15
+app.config['SECRET_KEY'] = 'aaaaaaa'</failure>
+  </testcase>
+  <testcase classname="CWE-863" name="API mass-assignment allows forging posts as arbitrary user [high] bad/mod_api.py:69-69">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="API mass-assignment allows forging posts as arbitrary user (CWE-863) high conf=0.92 bad/mod_api.py:69-69">bad/mod_api.py:57 authenticates as self, bad/mod_api.py:62 overwrites username from request JSON, bad/mod_api.py:69 writes post as forged username; post_schema at bad/mod_api.py:21 allows extra properties
+libposts.post(data['username'], data['text'])</failure>
+  </testcase>
+  <testcase classname="CWE-73" name="Glob-injection arbitrary file deletion in API key rotation [high] bad/libapi.py:16-18">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Glob-injection arbitrary file deletion in API key rotation (CWE-73) high conf=0.9 bad/libapi.py:16-18">bad/mod_api.py:39 flows JSON username into bad/libapi.py:16 glob pattern; username='*' matches all vulpy.apikey files and f.unlink deletes them
+    for f in Path('/tmp/').glob('vulpy.apikey.' + username + '.*'):</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="API authentication bypass via glob injection in /tmp key lookup [high] bad/libapi.py:30-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="API authentication bypass via glob injection in /tmp key lookup (CWE-287) high conf=0.9 bad/libapi.py:30-31">bad/mod_api.py:54-57 X-APIKEY header flows into bad/libapi.py:30 glob pattern; '*' matches any key file and returns victim username
+for f in Path('/tmp/').glob('vulpy.apikey.*.' + key):</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing authentication/CSRF controls on chpasswd and MFA disable [high] bad/mod_user.py:64-65">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication/CSRF controls on chpasswd and MFA disable (CWE-352) high conf=0.9 bad/mod_user.py:64-65">bad/mod_user.py:64-65 chpasswd route has no session check, no current-password, no CSRF; bad/mod_mfa.py:56-57 disable is state-changing GET with no OTP/CSRF
+@mod_user.route('/chpasswd', methods=['GET', 'POST'])</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [high] good/templates/posts.view.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="template reflection surface (CWE-79) high conf=0.9 good/templates/posts.view.html:0-0">heuristic: form + {{ }} co-occurrence | safe }} renders attacker text stored via good/mod_posts.py:33-35 -&gt; good/libposts.py:21 INSERT without sanitization, reachable via GET good/mod_posts.py:11-21
+&lt;li&gt;&lt;span class="w3-h3"&gt;{{ post.text | safe }}&lt;/span&gt;&lt;/li&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="MFA disable protected only by spoofable Referer check plus state-changing GET [high] good/mod_mfa.py:64-65">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="MFA disable protected only by spoofable Referer check plus state-changing GET (CWE-352) high conf=0.85 good/mod_mfa.py:64-65">good/mod_mfa.py:64 checks client-controlled Referer header for exact 'vulpy.com'; attacker sets Referer to bypass and GET /mfa/disable disables MFA without OTP or CSRF token
+    if 'referer' not in request.headers or request.headers['referer'] != 'vulpy.com':</failure>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure configuration: cookie without flags, debug mode, no brute-force protection [medium] bad/libsession.py:7-7">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Predictable API keys from non-cryptographic PRNG [medium] bad/libapi.py:14-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF on POST /posts enables forced stored-post creation [medium] bad/mod_posts.py:25-26">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

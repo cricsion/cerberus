@@ -1,0 +1,1003 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="110" errors="0" skipped="0" timestamp="2026-11-04T16:49:11Z" time="0.000" failures="58">
+  <testcase classname="CWE-502" name="Pickle RCE in insec_des_lab deserialize_data [critical] dockerized_labs/insec_des_lab/main.py:38-38">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Pickle RCE in insec_des_lab deserialize_data (CWE-502) critical conf=0.98 dockerized_labs/insec_des_lab/main.py:38-38">user = pickle.loads(decoded_data)
+user = pickle.loads(decoded_data)</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="Code injection in mitre_lab_25_api via eval [critical] introduction/mitre.py:218-218">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection in mitre_lab_25_api via eval (CWE-95) critical conf=0.98 introduction/mitre.py:218-218">result = eval(expression)
+result = eval(expression)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Arbitrary file write RCE in log_function_checker [critical] introduction/apis.py:69-75">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Arbitrary file write RCE in log_function_checker (CWE-94) critical conf=0.97 introduction/apis.py:69-75">f = open(log_filename,"w")
+f = open(log_filename,"w")</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Arbitrary file write in A6_disscussion_api_2 [critical] introduction/apis.py:131-134">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Arbitrary file write in A6_disscussion_api_2 (CWE-94) critical conf=0.97 introduction/apis.py:131-134">f = open(filename,"w")
+f = open(filename,"w")</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS command injection in mitre_lab_17_api via nmap concatenation [critical] introduction/mitre.py:241-241">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection in mitre_lab_17_api via nmap concatenation (CWE-78) critical conf=0.97 introduction/mitre.py:241-241">command = "nmap " + ip
+command = "nmap " + ip</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on MITRE RCE APIs (eval and nmap) [critical] introduction/mitre.py:215-215">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on MITRE RCE APIs (eval and nmap) (CWE-306) critical conf=0.95 introduction/mitre.py:215-215">introduction/mitre.py:213 commented authentication_decorator + introduction/mitre.py:214 csrf_exempt + introduction/mitre.py:237 csrf_exempt with no auth, routes at introduction/urls.py:119 and :122
+def mitre_lab_25_api(request):</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Shell wrapper command_out executes caller string with shell=True [critical] introduction/mitre.py:233-233">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Shell wrapper command_out executes caller string with shell=True (CWE-78) critical conf=0.95 introduction/mitre.py:233-233">process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated bulk PII exposure in all_users_data_view [high] dockerized_labs/sensitive_data_exposure/dataexposure/views.py:130-130">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated bulk PII exposure in all_users_data_view (CWE-200) high conf=0.98 dockerized_labs/sensitive_data_exposure/dataexposure/views.py:130-130">return JsonResponse({'users': all_users_data})
+return JsonResponse({'users': all_users_data})</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="Code injection in cmd_lab2 via eval [high] introduction/views.py:460-460">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection in cmd_lab2 via eval (CWE-95) high conf=0.98 introduction/views.py:460-460">output = eval(val)
+output = eval(val)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Django SECRET_KEY in pygoat settings [high] pygoat/settings.py:25-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Django SECRET_KEY in pygoat settings (CWE-798) high conf=0.98 pygoat/settings.py:25-25">SECRET_KEY = 'lr66%-a!$km5ed@n5ug!tya5bv!0(yqwa1tn!q%0%3m2nh%oml'
+SECRET_KEY = 'lr66%-a!$km5ed@n5ug!tya5bv!0(yqwa1tn!q%0%3m2nh%oml'</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Insecure deserialization in insec_des_lab via pickle cookie [high] introduction/views.py:214-214">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure deserialization in insec_des_lab via pickle cookie (CWE-502) high conf=0.97 introduction/views.py:214-214">admin = pickle.loads(token)
+admin = pickle.loads(token)</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage in auth_lab_signup [high] introduction/views.py:286-291">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password storage in auth_lab_signup (CWE-256) high conf=0.97 introduction/views.py:286-291">obj = authLogin.objects.create(name=name,username=user_name,password=passwd)
+obj = authLogin.objects.create(name=name,username=user_name,password=passwd)</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Authentication bypass in auth_lab_login via userid cookie [high] introduction/views.py:302-299">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authentication bypass in auth_lab_login via userid cookie (CWE-287) high conf=0.97 introduction/views.py:302-299">obj = authLogin.objects.filter(userid=request.COOKIES['userid'])[0]
+obj = authLogin.objects.filter(userid=request.COOKIES['userid'])[0]</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Broken access control in ba_lab via client-side admin cookie [high] introduction/views.py:349-350">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken access control in ba_lab via client-side admin cookie (CWE-639) high conf=0.97 introduction/views.py:349-350">if request.COOKIES.get('admin') == "1":
+if request.COOKIES.get('admin') == "1":</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Broken access control in a1_broken_access_lab_1 via admin cookie [high] introduction/views.py:754-754">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken access control in a1_broken_access_lab_1 via admin cookie (CWE-639) high conf=0.97 introduction/views.py:754-754">if request.COOKIES.get('admin') == "1":
+if request.COOKIES.get('admin') == "1":</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Authorization bypass in a1_broken_access_lab_2 via User-Agent header [high] introduction/views.py:794-794">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authorization bypass in a1_broken_access_lab_2 via User-Agent header (CWE-639) high conf=0.97 introduction/views.py:794-794">if (user_agent == "pygoat_admin"):
+if (user_agent == "pygoat_admin"):</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization in a1_broken_access_lab3_secret [high] introduction/views.py:837-840">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization in a1_broken_access_lab3_secret (CWE-862) high conf=0.97 introduction/views.py:837-840">def a1_broken_access_lab3_secret(request):
+def a1_broken_access_lab3_secret(request):</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal file read in ssrf_lab [high] introduction/views.py:927-927">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal file read in ssrf_lab (CWE-22) high conf=0.96 introduction/views.py:927-927">file = open(filename,"r")
+file = open(filename,"r")</failure>
+  </testcase>
+  <testcase classname="CWE-565" name="Unsigned cookie privilege escalation in crypto_failure_lab3 [high] introduction/views.py:1065-1065">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsigned cookie privilege escalation in crypto_failure_lab3 (CWE-565) high conf=0.96 introduction/views.py:1065-1065">elif cookie.split('|')[0] == 'admin':
+elif cookie.split('|')[0] == 'admin':</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Flask secret_key in broken-auth lab [high] dockerized_labs/broken_auth_lab/app.py:8-8">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Flask secret_key in broken-auth lab (CWE-798) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:8-8">app.secret_key = 'your-secret-key-here'  # Vulnerable: Hardcoded secret key
+app.secret_key = 'your-secret-key-here'</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded weak default credentials in broken-auth lab [high] dockerized_labs/broken_auth_lab/app.py:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded weak default credentials in broken-auth lab (CWE-798) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:13-13">'password': 'admin123',  # Vulnerable: Weak password
+'password': 'admin123'</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Forgeable session token in broken_auth_lab login [high] dockerized_labs/broken_auth_lab/app.py:42-47">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Forgeable session token in broken_auth_lab login (CWE-287) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:42-47">session_token = base64.b64encode(f"{username}:{datetime.now()}".encode()).decode()
+session_token = base64.b64encode(f"{username}:{datetime.now()}".encode()).decode()</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage in broken-auth register [high] dockerized_labs/broken_auth_lab/app.py:68-68">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password storage in broken-auth register (CWE-256) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:68-68">'password': password,  # Vulnerable: Storing plain text passwords
+'password': password</failure>
+  </testcase>
+  <testcase classname="CWE-330" name="Predictable reset token with disclosure in reset_password [high] dockerized_labs/broken_auth_lab/app.py:84-89">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Predictable reset token with disclosure in reset_password (CWE-330) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:84-89">token = hashlib.md5(f"{email}:{datetime.now()}".encode()).hexdigest()
+token = hashlib.md5(f"{email}:{datetime.now()}".encode()).hexdigest()</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Authentication bypass in broken_auth_lab dashboard [high] dockerized_labs/broken_auth_lab/app.py:112-113">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authentication bypass in broken_auth_lab dashboard (CWE-287) high conf=0.95 dockerized_labs/broken_auth_lab/app.py:112-113">username = base64.b64decode(session_token).decode().split(':')[0]
+username = base64.b64decode(session_token).decode().split(':')[0]</failure>
+  </testcase>
+  <testcase classname="CWE-312" name="Plaintext PAN storage in UserData model [high] dockerized_labs/sensitive_data_exposure/dataexposure/models.py:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext PAN storage in UserData model (CWE-312) high conf=0.95 dockerized_labs/sensitive_data_exposure/dataexposure/models.py:6-6">credit_card = models.CharField(max_length=16)  # probly should encrypt this lol
+credit_card = models.CharField(max_length=16)  # probly should encrypt this lol</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Django SECRET_KEY in sensitive-data lab [high] dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py:8-8">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Django SECRET_KEY in sensitive-data lab (CWE-798) high conf=0.95 dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py:8-8">SECRET_KEY = 'django-insecure-key-for-demonstration-only'
+SECRET_KEY = 'django-insecure-key-for-demonstration-only'</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on log_function_checker file-write API [high] introduction/apis.py:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on log_function_checker file-write API (CWE-306) high conf=0.95 introduction/apis.py:61-61">introduction/apis.py:59 csrf_exempt + introduction/apis.py:61 def without authentication_decorator (commented out at line 60) reachable via introduction/urls.py:83
+def log_function_checker(request):</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on A6_disscussion_api_2 arbitrary file-write [high] introduction/apis.py:126-126">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on A6_disscussion_api_2 arbitrary file-write (CWE-306) high conf=0.95 introduction/apis.py:126-126">Route introduction/urls.py:89 `path("2021/discussion/A6/api2",apis.A6_disscussion_api_2)` reaches apis.py:126 with only @csrf_exempt and no is_authenticated/authentication_decorator check, then writes request-controlled `code` to playground/A6/utility.py at apis.py:131-134
+def A6_disscussion_api_2(request):</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded JWT secret in csrf_lab_login [high] introduction/mitre.py:169-169">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT secret in csrf_lab_login (CWE-798) high conf=0.95 introduction/mitre.py:169-169">cookie = jwt.encode(payload, 'csrf_vulneribility', algorithm='HS256')
+cookie = jwt.encode(payload, 'csrf_vulneribility', algorithm='HS256')</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF money transfer in csrf_transfer_monei_api via GET [high] introduction/mitre.py:191-202">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="CSRF money transfer in csrf_transfer_monei_api via GET (CWE-352) high conf=0.95 introduction/mitre.py:191-202">def csrf_transfer_monei_api(request,recipent,amount):
+def csrf_transfer_monei_api(request,recipent,amount):</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via |safe in xss_lab_2.html [high] introduction/templates/Lab/XSS/xss_lab_2.html:20-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via |safe in xss_lab_2.html (CWE-79) high conf=0.95 introduction/templates/Lab/XSS/xss_lab_2.html:20-20">&lt;p&gt;Hello, {{ username|safe }}&lt;/p&gt;
+&lt;p&gt;Hello, {{ username|safe }}&lt;/p&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in sql_lab via string-concatenated raw query [high] introduction/views.py:158-162">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in sql_lab via string-concatenated raw query (CWE-89) high conf=0.95 introduction/views.py:158-162">sql_query = "SELECT * FROM introduction_login WHERE user='"+name+"' AND password='"+password+"'"
+sql_query = "SELECT * FROM introduction_login WHERE user='"+name+"' AND password='"+password+"'"</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on xxe_parse endpoint [high] introduction/views.py:256-256">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on xxe_parse endpoint (CWE-306) high conf=0.95 introduction/views.py:256-256">def xxe_parse(request):
+def xxe_parse(request):</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE in xxe_parse with external entities enabled [high] introduction/views.py:258-260">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE in xxe_parse with external entities enabled (CWE-611) high conf=0.95 introduction/views.py:258-260">parser.setFeature(feature_external_ges, True)
+parser.setFeature(feature_external_ges, True)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS command injection in cmd_lab via shell=True [high] introduction/views.py:430-431">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection in cmd_lab via shell=True (CWE-78) high conf=0.95 introduction/views.py:430-431">process = subprocess.Popen(
+process = subprocess.Popen(</failure>
+  </testcase>
+  <testcase classname="CWE-330" name="Predictable and disclosed OTP in Otp handler [high] introduction/views.py:496-497">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Predictable and disclosed OTP in Otp handler (CWE-330) high conf=0.95 introduction/views.py:496-497">otpN=randint(100,999)
+otpN=randint(100,999)</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe YAML deserialization in a9_lab via yaml.Loader [high] introduction/views.py:560-560">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe YAML deserialization in a9_lab via yaml.Loader (CWE-502) high conf=0.95 introduction/views.py:560-560">data = yaml.load(file,yaml.Loader)
+data = yaml.load(file,yaml.Loader)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded credentials in a1_broken_access_lab_3 [high] introduction/views.py:831-833">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded credentials in a1_broken_access_lab_3 (CWE-798) high conf=0.95 introduction/views.py:831-833">if username == 'John' and password == 'reaper':
+if username == 'John' and password == 'reaper':</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in injection_sql_lab via raw query [high] introduction/views.py:864-864">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in injection_sql_lab via raw query (CWE-89) high conf=0.95 introduction/views.py:864-864">sql_query = "SELECT * FROM introduction_sql_lab_table WHERE id='"+name+"'AND password='"+password+"'"
+sql_query = "SELECT * FROM introduction_sql_lab_table WHERE id='"+name+"'AND password='"+password+"'"</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in ssrf_lab2 via unchecked requests.get [high] introduction/views.py:963-963">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF in ssrf_lab2 via unchecked requests.get (CWE-918) high conf=0.95 introduction/views.py:963-963">response = requests.get(url)
+response = requests.get(url)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Stored SSTI in ssti_lab via template file write [high] introduction/views.py:995-995">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored SSTI in ssti_lab via template file write (CWE-94) high conf=0.95 introduction/views.py:995-995">file = open(filename, "w+")
+file = open(filename, "w+")</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded login in crypto_failure_lab3 [high] introduction/views.py:1072-1072">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded login in crypto_failure_lab3 (CWE-798) high conf=0.95 introduction/views.py:1072-1072">if username == "User" and password == "P@$$w0rd":
+if username == "User" and password == "P@$$w0rd":</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded JWT cookie signing key in settings [high] pygoat/settings.py:171-171">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT cookie signing key in settings (CWE-798) high conf=0.95 pygoat/settings.py:171-171">SECRET_COOKIE_KEY = "PYGOAT"
+SECRET_COOKIE_KEY = "PYGOAT"</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Code injection file write in ssrf_code_converter [high] introduction/utility.py:35-35">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection file write in ssrf_code_converter (CWE-94) high conf=0.92 introduction/utility.py:35-35">f = open(filename,"w")
+f = open(filename,"w")</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in playground ssrf_lab [high] introduction/playground/ssrf/main.py:8-8">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in playground ssrf_lab (CWE-22) high conf=0.9 introduction/playground/ssrf/main.py:8-8">file = open(filename,"r")
+file = open(filename,"r")</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="JS-context XSS via {{code}} in script block [high] introduction/templates/Lab/XSS/xss_lab_3.html:20-22">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="JS-context XSS via {{code}} in script block (CWE-79) high conf=0.9 introduction/templates/Lab/XSS/xss_lab_3.html:20-22">&lt;script&gt;
+    // LAB 3 JS CODE
+    {{code}}
+&lt;script&gt;
+    // LAB 3 JS CODE
+    {{code}}</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="XSS via |safe rendering of SSRF response [high] introduction/templates/Lab/ssrf/ssrf_lab2.html:23-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XSS via |safe rendering of SSRF response (CWE-79) high conf=0.9 introduction/templates/Lab/ssrf/ssrf_lab2.html:23-23">&lt;div style="width:70%;overflow:scroll;background-color:#000"&gt;{{response | safe}}&lt;div&gt;
+&lt;div style="width:70%;overflow:scroll;background-color:#000"&gt;{{response | safe}}&lt;div&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="SSTI artifact discloses password hashes [high] introduction/templates/Lab_2021/A3_Injection/Blogs/9d73d120683d.html:2-4">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI artifact discloses password hashes (CWE-200) high conf=0.9 introduction/templates/Lab_2021/A3_Injection/Blogs/9d73d120683d.html:2-4">{% get_admin_log 5 as log %}
+{% get_admin_log 5 as log %}</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="SSTI artifact discloses SECRET_KEY [high] introduction/templates/Lab_2021/A3_Injection/Blogs/a2538af1b5e4.html:1-2">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI artifact discloses SECRET_KEY (CWE-200) high conf=0.9 introduction/templates/Lab_2021/A3_Injection/Blogs/a2538af1b5e4.html:1-2">&lt;h2&gt; ip --&gt; {{ip}} &lt;/h2&gt;
+&lt;h2&gt; ip --&gt; {{ip}} &lt;/h2&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via |safe username in A8 lab2 [high] introduction/templates/Lab_2021/A8_software_and_data_integrity_failure/lab2.html:11-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via |safe username in A8 lab2 (CWE-79) high conf=0.9 introduction/templates/Lab_2021/A8_software_and_data_integrity_failure/lab2.html:11-11">&lt;h1&gt;Hey {{username | safe}},&lt;/h1&gt;
+&lt;h1&gt;Hey {{username | safe}},&lt;/h1&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in xss_lab via q parameter [high] introduction/views.py:101-101">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in xss_lab via q parameter (CWE-79) high conf=0.9 introduction/views.py:101-101">return render(request,'Lab/XSS/xss_lab.html', {'query': q})
+return render(request,'Lab/XSS/xss_lab.html', {'query': q})</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="OTP verification bypass via admin-OTP OR condition [high] introduction/views.py:514-514">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OTP verification bypass via admin-OTP OR condition (CWE-287) high conf=0.9 introduction/views.py:514-514">if otp.objects.filter(email=email,otp=otpR) or otp.objects.filter(id=2,otp=otpR):
+if otp.objects.filter(email=email,otp=otpR) or otp.objects.filter(id=2,otp=otpR):</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="Code injection in a9_lab2 via ImageMath.eval [high] introduction/views.py:588-588">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection in a9_lab2 via ImageMath.eval (CWE-95) high conf=0.9 introduction/views.py:588-588">output = ImageMath.eval(function_str,img = img, b=b, r=r, g=g)
+output = ImageMath.eval(function_str,img = img, b=b, r=r, g=g)</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext credential comparison in a10_lab [high] introduction/views.py:628-628">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext credential comparison in a10_lab (CWE-256) high conf=0.9 introduction/views.py:628-628">if login.objects.filter(user=user,password=password):
+if login.objects.filter(user=user,password=password):</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Forgeable JWT in sec_misconfig_lab3 via hardcoded key [high] introduction/views.py:1095-1095">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Forgeable JWT in sec_misconfig_lab3 via hardcoded key (CWE-798) high conf=0.9 introduction/views.py:1095-1095">payload = jwt.decode(cookie, SECRET_COOKIE_KEY, algorithms=['HS256'])
+payload = jwt.decode(cookie, SECRET_COOKIE_KEY, algorithms=['HS256'])</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded admin password disclosed in code comment [high] introduction/views.py:1119-1119">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded admin password disclosed in code comment (CWE-798) high conf=0.9 introduction/views.py:1119-1119">introduction/views.py:1119 code comment discloses the live admin password for auth_failure_lab2 (password=*** redacted). No other finding reports this line; hardcoded logins reported at 831/833/1072 are different endpoints.
+## used admin password --&gt; ***</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="DOM XSS via innerHTML in a9.js [high] introduction/static/js/a9.js:40-40">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="DOM XSS via innerHTML in a9.js (CWE-79) high conf=0.85 introduction/static/js/a9.js:40-40">li.innerHTML = data.logs[i];
+li.innerHTML = data.logs[i];</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Weak MD5 password hashing in crypto_failure_lab [medium] introduction/views.py:1026-1026">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="Flask debug mode enabled in broken-auth lab [medium] dockerized_labs/broken_auth_lab/app.py:123-123">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Plaintext credential logging in log_function_target [medium] introduction/playground/A9/archive.py:12-12">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in a9_lab2 form [medium] introduction/templates/Lab/A9/a9_lab2.html:21-21">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in cmd_lab form [medium] introduction/templates/Lab/CMD/cmd_lab.html:9-9">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in cmd_lab2 form [medium] introduction/templates/Lab/CMD/cmd_lab2.html:10-10">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] introduction/templates/Lab/XSS/xss_lab.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] introduction/templates/Lab/XSS/xss_lab_2.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in broken_access_lab_1 form [medium] introduction/templates/Lab_2021/A1_BrokenAccessControl/broken_access_lab_1.html:11-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in broken_access_lab_2 form [medium] introduction/templates/Lab_2021/A1_BrokenAccessControl/broken_access_lab_2.html:11-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] introduction/templates/Lab_2021/A8_software_and_data_integrity_failure/lab2.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Inadequate XSS filter in xss_lab2 [medium] introduction/views.py:111-112">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Header-spoof authorization in secret view [medium] introduction/views.py:537-538">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in software_and_data_integrity_failure_lab2 [medium] introduction/views.py:1223-1224">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Unmasked PII disclosure in api_data_view [medium] dockerized_labs/sensitive_data_exposure/dataexposure/views.py:109-109">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="DEBUG True in sensitive-data lab settings [medium] dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py:11-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded demo credentials in login template [medium] dockerized_labs/sensitive_data_exposure/templates/login.html:73-74">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Full PII disclosure in HTML comment on profile page [medium] dockerized_labs/sensitive_data_exposure/templates/profile.html:128-130">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="MD5 password hashing in csrf_lab_login [medium] introduction/mitre.py:161-161">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in a9_lab upload form [medium] introduction/templates/Lab/A9/a9_lab.html:10-10">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] introduction/templates/Lab/XSS/xss_lab_3.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] introduction/templates/Lab/ssrf/ssrf_lab2.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Weak reversible customHash primitive (SHA256 reversed) [medium] introduction/utility.py:58-59">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="XSS bypass in xss_lab3 via alphanumeric strip [medium] introduction/views.py:129-129">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure userid cookie flags in auth_lab_signup [medium] introduction/views.py:291-291">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure userid cookie flags in auth_lab_login GET branch [medium] introduction/views.py:305-305">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure userid cookie flags in auth_lab_login POST branch [medium] introduction/views.py:319-319">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Missing authorization on debug log disclosure [medium] introduction/views.py:636-639">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="IP spoofing bypass in ssrf_target via X-Forwarded-For [medium] introduction/views.py:946-949">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Insecure custom hash in crypto_failure_lab2 [medium] introduction/views.py:1042-1042">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Unsalted SHA256 password check in auth_failure_lab3 [medium] introduction/views.py:1194-1194">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="Django DEBUG enabled in production settings [medium] pygoat/settings.py:30-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Unsalted SHA256 flag hashing with prefix bypass in Challenge.save [medium] challenge/models.py:28-28">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak PRNG API key generation in generate_api_key [medium] dockerized_labs/sensitive_data_exposure/dataexposure/views.py:41-41">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-16" name="Wildcard ALLOWED_HOSTS in sensitive-data lab [medium] dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-328" name="Seeded MD5 hashes without salt (0017) [medium] introduction/migrations/0017_cf_user.py:21-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-328" name="Seeded weak hashes without salt (0018) [medium] introduction/migrations/0018_cf_user_password2.py:21-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded default credentials in log_function_target [medium] introduction/playground/A9/api.py:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in ba_lab form [medium] introduction/templates/Lab/BrokenAccess/ba_lab.html:11-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF token in otp form [medium] introduction/templates/Lab/BrokenAuth/otp.html:18-18">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection in XXE submission [medium] introduction/templates/Lab/XXE/xxe_lab.html:15-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-117" name="Log injection via spoofable IP in a10_lab2 [medium] introduction/views.py:654-654">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak PRNG ticket codes in gentckt [medium] introduction/views.py:680-680">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR in ssti_view_blog missing author check [medium] introduction/views.py:1003-1006">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-22" name="Template path traversal in ssti_view_blog [medium] introduction/views.py:1006-1006">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Image decompression bomb DoS in a9_lab2 [medium] introduction/views.py:584-584">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.4" />
+      <property name="confidence" value="0.75" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure persistent session cookie without flags in broken-auth login [low] dockerized_labs/broken_auth_lab/app.py:49-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Version disclosure in get_version [low] introduction/views.py:571-571">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unhandled KeyError denial of service via missing User-Agent header [low] introduction/views.py:791-791">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure cookie flags in crypto_failure_lab3 [low] introduction/views.py:1076-1076">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unhandled KeyError DoS and missing response in auth_failure_lab3 [low] introduction/views.py:1200-1200">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure persistent session_id cookie in auth_failure_lab3 [low] introduction/views.py:1204-1204">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

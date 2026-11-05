@@ -1,0 +1,7 @@
+{
+  "repo": "realvuln-flask-xss",
+  "language": "Python",
+  "duration_seconds": 2558.4034259319305,
+  "returncode": 1,
+  "completed_at": "2026-11-05T00:22:31.688179"
+}

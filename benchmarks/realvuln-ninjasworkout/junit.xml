@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="40" errors="0" skipped="0" timestamp="2026-11-04T20:00:29Z" time="0.000" failures="20">
+  <testcase classname="CWE-798" name="Hardcoded JWT signing secret 'hello' enables universal token forgery [critical] routers/index.js:10-10">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT signing secret 'hello' enables universal token forgery (CWE-798) critical conf=1.0 routers/index.js:10-10">const accessTokenSecret = 'hello';
+const accessTokenSecret = 'hello';</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Authenticated node-serialize deserialization leads to RCE [critical] routers/index.js:727-727">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authenticated node-serialize deserialization leads to RCE (CWE-502) critical conf=1.0 routers/index.js:727-727">const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation =&gt; Remote Code Execution
+const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation =&gt; Remote Code Execution</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL operator injection in login findOne enables authentication bypass [critical] routers/index.js:148-151">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL operator injection in login findOne enables authentication bypass (CWE-943) critical conf=0.95 routers/index.js:148-151">userSchema.findOne({
+        username: req.body.username,
+        password:req.body.password
+userSchema.findOne({
+        username: req.body.username,
+        password:req.body.password</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection and full user dump via query param [critical] routers/index.js:235-239">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection and full user dump via query param (CWE-943) critical conf=0.95 routers/index.js:235-239">userSchema.findOne({
+       username:req.query.user
+userSchema.findOne({
+       username:req.query.user</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection and user disclosure via username lookup [critical] routers/index.js:263-267">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection and user disclosure via username lookup (CWE-943) critical conf=0.95 routers/index.js:263-267">userSchema.findOne({
+     username:req.body.username
+userSchema.findOne({
+     username:req.body.username</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Mass-assignment of admin flag plus plaintext password storage on signup [critical] routers/index.js:320-321">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass-assignment of admin flag plus plaintext password storage on signup (CWE-915) critical conf=0.95 routers/index.js:320-321">admin:req.body.admin, // privilege escalation
+admin:req.body.admin, // privilege escalation</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Unauthenticated RCE via alg=none JWT forgery chaining into node-serialize shell sink [critical] routers/index.js:727-728">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated RCE via alg=none JWT forgery chaining into node-serialize shell sink (CWE-287) critical conf=0.95 routers/index.js:727-728">routers/index.js:206 jwt.verify accepts alg=none (jwa none verifier returns true on empty signature) proven by direct node repro; routers/index.js:718 shell route gated only by authenticateToken; routers/index.js:727 unserialize sink
+  const uns = serialize.unserialize(req.body)</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="DOM XSS via eval of URL id parameter [high] home.html:249-250">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="DOM XSS via eval of URL id parameter (CWE-95) high conf=1.0 home.html:249-250">eval(id);
+eval(id);</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="Unauthenticated SSRF with reflected content via needle fetch [high] routers/index.js:696-700">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated SSRF with reflected content via needle fetch (CWE-918) high conf=0.95 routers/index.js:696-700">needle.get(url, { timeout: 3000 }, function(error, response1) {
+needle.get(url, { timeout: 3000 }, function(error, response1) {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via SSRF url in success branch [high] routers/index.js:700-700">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via SSRF url in success branch (CWE-79) high conf=0.95 routers/index.js:700-700">response.write('&lt;h2&gt;I am an application. I want to be useful, so I requested: &lt;font color="red"&gt;'+url+'&lt;/font&gt; for you\n&lt;/h2&gt;&lt;br&gt;&lt;br&gt;\n\n\n');
+      response.write('&lt;h2&gt;I am an application. I want to be useful, so I requested: &lt;font color="red"&gt;'+url+'&lt;/font&gt; for you\n&lt;/h2&gt;&lt;br&gt;&lt;br&gt;\n\n\n');</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via SSRF url in error branch [high] routers/index.js:706-706">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via SSRF url in error branch (CWE-79) high conf=0.95 routers/index.js:706-706">response.write('&lt;h2&gt;I wanted to be useful, but I could not find: &lt;font color="red"&gt;'+url+'&lt;/font&gt; for you\n&lt;/h2&gt;&lt;br&gt;&lt;br&gt;\n\n\n');
+      response.write('&lt;h2&gt;I wanted to be useful, but I could not find: &lt;font color="red"&gt;'+url+'&lt;/font&gt; for you\n&lt;/h2&gt;&lt;br&gt;&lt;br&gt;\n\n\n');</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Sensitive SSRF and user-dump endpoints lack authentication [high] routers/index.js:685-685">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Sensitive SSRF and user-dump endpoints lack authentication (CWE-306) high conf=0.92 routers/index.js:685-685">routers/index.js:685 GET /secret/ has no authenticateToken; routers/index.js:230 POST /secret/?user has no authenticateToken; routers/index.js:259 POST /secret/username has no authenticateToken; siblings routers/index.js:357,366,434 require authenticateToken
+router.get('/secret/', function(request, response){</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Directory traversal via express-blinker static mount [high] app.js:27-36">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Directory traversal via express-blinker static mount (CWE-22) high conf=0.9 app.js:27-36">app.use(blinker(basePath, [
+app.use(blinker(basePath, [</failure>
+  </testcase>
+  <testcase classname="CWE-434" name="Global multer middleware enables unauthenticated file persistence via any POST endpoint [high] app.js:74-74">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Global multer middleware enables unauthenticated file persistence via any POST endpoint (CWE-434) high conf=0.9 app.js:74-74">app.js:74 mounts multer globally before router mount; app.js:42 destination images/ with diskStorage; routers/index.js:673 postcheck reflects req.file unauthenticated proving global parsing; images/ served via blinker app.js:27 and serve-static
+app.use(imageUpload.single('file'))</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Broken access control allows reading any user's posts [high] routers/index.js:381-391">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken access control allows reading any user's posts (CWE-639) high conf=0.9 routers/index.js:381-391">if(payload.username){ // broken access control
+if(payload.username){ // broken access control</failure>
+  </testcase>
+  <testcase classname="CWE-362" name="Global-state post attribution enables cross-user forgery and stored XSS [high] routers/index.js:436-449">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Global-state post attribution enables cross-user forgery and stored XSS (CWE-362) high conf=0.9 routers/index.js:436-449">postSchema.find({
+
+username: hello
+postSchema.find({
+
+username: hello</failure>
+  </testcase>
+  <testcase classname="CWE-203" name="Password-reset user enumeration and Host-header poisonable reset link [high] routers/index.js:546-550">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Password-reset user enumeration and Host-header poisonable reset link (CWE-203) high conf=0.9 routers/index.js:546-550">const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`;
+const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`;</failure>
+  </testcase>
+  <testcase classname="CWE-620" name="Password reset overwrites plaintext password without token invalidation or expiry [high] routers/index.js:613-618">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Password reset overwrites plaintext password without token invalidation or expiry (CWE-620) high conf=0.9 routers/index.js:613-618">let doc =  userSchema.findOneAndUpdate(filter, update, {
+let doc =  userSchema.findOneAndUpdate(filter, update, {</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Typeless password field disables casting and preserves operator injection [high] models/user.js:11-19">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Typeless password field disables casting and preserves operator injection (CWE-915) high conf=0.85 models/user.js:11-19">password: {
+password: {</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="OAuth token exfiltration via wildcard postMessage [high] public/redirect.html:31-31">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OAuth token exfiltration via wildcard postMessage (CWE-200) high conf=0.85 public/redirect.html:31-31">window.opener.postMessage({"accesstoken": params.access_token}, "*");
+window.opener.postMessage({"accesstoken": params.access_token}, "*");</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF protection defined but never enforced on state-changing routes [medium] routers/index.js:33-33">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-620" name="Password-reset token rotation no-op leaves old token valid [medium] routers/index.js:539-539">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-434" name="Weak upload validation allows malicious file persistence in webroot [medium] app.js:61-66">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="OAuth implicit flow with static state never validated enables login CSRF [medium] routers/index.js:79-83">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-287" name="JWT verification without algorithm allowlist or expiry enables forgery [medium] routers/index.js:206-211">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Href attribute injection via poisonable reset link [medium] utils/sendemail.js:212-212">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-362" name="Implicit global assignments enable cross-request state pollution and data leakage [medium] models/strict.js:5-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-942" name="Unrestricted CORS allows cross-origin reads of sensitive data [medium] routers/index.js:46-46">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Auth cookie in OAuth callback lacks HttpOnly/Secure/SameSite [low] routers/index.js:99-99">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-248" name="Password-reset mailer references undefined res causing crash on success [low] utils/sendemail.js:294-299">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded express-session secret with insecure cookie defaults [low] app.js:92-92">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Session JWT written to server logs in profile handler [low] routers/index.js:54-54">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Plaintext login password written to logs [low] routers/index.js:138-138">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Minted session JWT logged after login [low] routers/index.js:166-166">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Login Auth cookie lacks HttpOnly/Secure/SameSite and has no expiry [low] routers/index.js:168-168">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-476" name="Null dereference and global pollution on missing upload file [low] routers/index.js:438-438">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-252" name="Unchecked email dereference DoS in forgot handler [low] routers/index.js:501-501">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="OAuth bearer token logged in auth callback [low] routers/index.js:82-82">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-613" name="Logout clears cookie but does not invalidate JWT/server session [low] routers/index.js:487-489">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-640" name="Password-reset first request never sends email (inverted Token branch) [low] routers/index.js:529-534">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

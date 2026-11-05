@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="36" errors="0" skipped="0" timestamp="2026-11-04T19:52:15Z" time="0.000" failures="19">
+  <testcase classname="CWE-285" name="Broken function-level authorization in UserDelete.delete() [critical] server/api/v1/api_v1.py:232-232">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken function-level authorization in UserDelete.delete() (CWE-285) critical conf=0.95 server/api/v1/api_v1.py:232-232">cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Flask/JWT secret in Config [critical] server/config.py:7-7">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Flask/JWT secret in Config (CWE-798) critical conf=0.95 server/config.py:7-7">SECRET_KEY = "just_another_secret" # application secret
+SECRET_KEY = "just_another_secret" # application secret</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection in dashboard() via search parameter [critical] server/routes.py:137-138">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection in dashboard() via search parameter (CWE-89) critical conf=0.95 server/routes.py:137-138">s_query = f"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'"
+s_query = f"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via safe filter in dashboard.html [high] client/templates/dashboard.html:64-64">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via safe filter in dashboard.html (CWE-79) high conf=0.95 client/templates/dashboard.html:64-64">&lt;input type="text" name="search" placeholder="Search files..." value="{{ search_query | safe }}"&gt; | safe }}" disables autoescape
+&lt;input type="text" name="search" placeholder="Search files..." value="{{ search_query | safe }}"&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="BOLA unauthenticated profile disclosure in UserProfile.get() [high] server/api/v1/api_v1.py:164-165">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="BOLA unauthenticated profile disclosure in UserProfile.get() (CWE-639) high conf=0.95 server/api/v1/api_v1.py:164-165">cursor.execute(query, (user_id,))
+cursor.execute(query, (user_id,))</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication in ProfilePicture.post() allows arbitrary picture overwrite [high] server/api/v1/api_v1.py:243-243">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication in ProfilePicture.post() allows arbitrary picture overwrite (CWE-862) high conf=0.95 server/api/v1/api_v1.py:243-243">def post(self):
+    def post(self):</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in ProfilePicture.post() via picture_url [high] server/api/v1/api_v1.py:254-254">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF in ProfilePicture.post() via picture_url (CWE-918) high conf=0.95 server/api/v1/api_v1.py:254-254">response = requests.get(picture_url)
+response = requests.get(picture_url)</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Weak password storage in signup() [high] server/routes.py:93-99">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Weak password storage in signup() (CWE-327) high conf=0.95 server/routes.py:93-99">hashed_password = custom_hash(password)
+hashed_password = custom_hash(password)</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Broken password hashing in custom_hash() uses unsalted MD5 [high] server/routes.py:393-403">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken password hashing in custom_hash() uses unsalted MD5 (CWE-327) high conf=0.95 server/routes.py:393-403">return hashlib.md5(password.encode()).hexdigest()
+return hashlib.md5(password.encode()).hexdigest()</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Weak JWT issuance with hardcoded secret in UserLogin.post() [high] server/api/v1/api_v1.py:130-133">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Weak JWT issuance with hardcoded secret in UserLogin.post() (CWE-798) high conf=0.9 server/api/v1/api_v1.py:130-133">}, Config.SECRET_KEY, algorithm='HS256')
+}, Config.SECRET_KEY, algorithm='HS256')</failure>
+  </testcase>
+  <testcase classname="CWE-434" name="Unrestricted remote file write in ProfilePicture.post() [high] server/api/v1/api_v1.py:284-285">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unrestricted remote file write in ProfilePicture.post() (CWE-434) high conf=0.9 server/api/v1/api_v1.py:284-285">file.write(response.content)
+file.write(response.content)</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection in update_profile() [high] server/routes.py:170-171">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing CSRF protection in update_profile() (CWE-352) high conf=0.9 server/routes.py:170-171">@app.route('/update_profile', methods=['POST'])
+def update_profile():
+@app.route('/update_profile', methods=['POST'])
+def update_profile():</failure>
+  </testcase>
+  <testcase classname="CWE-285" name="Mass-assignment privilege escalation in update_profile() [high] server/routes.py:190-196">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass-assignment privilege escalation in update_profile() (CWE-285) high conf=0.9 server/routes.py:190-196">role = request.form['role'] or current_user['role']
+role = request.form['role'] or current_user['role']</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection in upload_file() [high] server/routes.py:248-249">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing CSRF protection in upload_file() (CWE-352) high conf=0.9 server/routes.py:248-249">@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():</failure>
+  </testcase>
+  <testcase classname="CWE-434" name="Unrestricted file upload with path traversal in upload_file() [high] server/routes.py:262-264">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unrestricted file upload with path traversal in upload_file() (CWE-434) high conf=0.9 server/routes.py:262-264">file.save(filepath)
+file.save(filepath)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication on profile_pictures() file serve [high] server/routes.py:308-309">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on profile_pictures() file serve (CWE-862) high conf=0.9 server/routes.py:308-309">return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)
+return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection in delete_file() [high] server/routes.py:340-341">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing CSRF protection in delete_file() (CWE-352) high conf=0.9 server/routes.py:340-341">@app.route('/delete/&lt;filename&gt;', methods=['POST'])
+def delete_file(filename):
+@app.route('/delete/&lt;filename&gt;', methods=['POST'])
+def delete_file(filename):</failure>
+  </testcase>
+  <testcase classname="CWE-285" name="Cross-unit privilege escalation: web mass-assignment persists admin role that bypasses API sensitive-update gate [high] server/api/v1/api_v1.py:201-202">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-unit privilege escalation: web mass-assignment persists admin role that bypasses API sensitive-update gate (CWE-285) high conf=0.85 server/api/v1/api_v1.py:201-202">server/routes.py:190 mass-assigns role from request.form; server/routes.py:234 persists role/permissions; server/api/v1/api_v1.py:201 gates sensitive_updates on DB role==admin which attacker just set
+            if user_profile['role'] == "admin":
+                updates.update({key: value for key, value in data.items() if key in sensitive_updates})</failure>
+  </testcase>
+  <testcase classname="CWE-384" name="Session fixation on web login/signup: session never regenerated at privilege change [high] server/routes.py:51-52">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Session fixation on web login/signup: session never regenerated at privilege change (CWE-384) high conf=0.85 server/routes.py:51-52">server/routes.py:51 sets session['username'] without session.clear()/regeneration; same pattern at server/routes.py:109; only server/routes.py:389 clears on logout
+session['username'] = user['username']
+            session['user_id'] = user['id']</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [medium] client/templates/dashboard.html:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via safe filter in profile.html [medium] client/templates/profile.html:41-41">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="Flask debug server execution in run.py [medium] run.py:10-10">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection on session-authenticated POST /api/v1/update-profile [medium] server/api/v1/api_v1.py:182-185">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="SSRF fetch without timeout enables worker-hang DoS [medium] server/api/v1/api_v1.py:254-254">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="Debug mode enabled in Config [medium] server/config.py:5-5">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Missing upload size limit and security headers in app factory [medium] server/__init__.py:7-7">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="No brute-force protection in API UserLogin.post() [medium] server/api/v1/api_v1.py:114-114">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="No brute-force protection in login() [medium] server/routes.py:51-52">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-204" name="User enumeration oracle on /signup with no anti-automation [medium] server/routes.py:101-103">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="HttpOnly disabled for session cookie in Config [low] server/config.py:6-6">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure session cookie configuration in run.py [low] run.py:8-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Missing Secure and SameSite cookie flags in Config [low] server/config.py:4-4">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Logout CSRF: state-changing GET /logout with no CSRF token [low] server/routes.py:386-389">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Sensitive session data logged via print(session) in UserProfileUpdate [low] server/api/v1/api_v1.py:182-182">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Internal error disclosure in ProfilePicture.post() [low] server/api/v1/api_v1.py:298-298">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-20" name="Missing-field 500 DoS and error echo in POST /api/v1/update_picture [low] server/api/v1/api_v1.py:248-250">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

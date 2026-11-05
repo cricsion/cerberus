@@ -1,0 +1,2133 @@
+[
+  {
+    "id": "unit-test-0",
+    "title": "Eval injection via req.query.red in rgbToHex handler",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 32,
+    "end_line": 32,
+    "snippet": "var red = eval(req.query.red);",
+    "taint": {
+      "source": "req.query.red untrusted query string",
+      "sink": "eval code execution",
+      "path": [
+        "app/server.js:32 req.query.red to eval"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 32,
+        "note": "eval sink on untrusted query param"
+      }
+    ],
+    "evidence": "  var red = eval(req.query.red); | validator: app/server.js:29 GET /cwe95/rgbToHex passes untrusted req.query.red to eval at app/server.js:32 with no parseInt/allowlist; fix commented out at app/server.js:36 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls query param red. HOW: req.query.red flows directly into eval() with no validation then into converter.rgbToHex. WHAT: breaks code-injection invariant, arbitrary JS executes in server process enabling RCE and DoS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var red = eval(req.query.red);",
+    "hunter_snippet": "  var red = eval(req.query.red);",
+    "patch_summary": "Replace eval(req.query.red) with parseInt(req.query.red,10) and validate numeric range before converter.rgbToHex.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-1",
+    "title": "Eval injection via req.query.green in rgbToHex handler",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "var green = eval(req.query.green, 10);",
+    "taint": {
+      "source": "req.query.green untrusted query string",
+      "sink": "eval code execution",
+      "path": [
+        "app/server.js:33 req.query.green to eval"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 33,
+        "note": "eval sink on green param"
+      }
+    ],
+    "evidence": "  var green = eval(req.query.green, 10); | validator: app/server.js:29 GET /cwe95/rgbToHex passes untrusted req.query.green to eval at app/server.js:33 with no sanitizer; parseInt fix commented at app/server.js:37 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls query param green. HOW: req.query.green flows directly into eval() with no sanitization. WHAT: breaks code-injection invariant, arbitrary server-side JS execution.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var green = eval(req.query.green, 10);",
+    "hunter_snippet": "  var green = eval(req.query.green, 10);",
+    "patch_summary": "Replace eval(req.query.green,10) with parseInt(req.query.green,10) with range check.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-0",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-2",
+    "title": "Eval injection via req.query.blue in rgbToHex handler",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "var blue  = eval(req.query.blue, 10);",
+    "taint": {
+      "source": "req.query.blue untrusted query string",
+      "sink": "eval code execution",
+      "path": [
+        "app/server.js:34 req.query.blue to eval"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 34,
+        "note": "eval sink on blue param"
+      }
+    ],
+    "evidence": "  var blue  = eval(req.query.blue, 10); | validator: app/server.js:29 GET /cwe95/rgbToHex passes untrusted req.query.blue to eval at app/server.js:34 with no sanitizer; parseInt fix commented at app/server.js:38 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls query param blue. HOW: req.query.blue flows directly into eval(). WHAT: breaks code-injection invariant, arbitrary JS evaluated in Node process.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var blue  = eval(req.query.blue, 10);",
+    "hunter_snippet": "  var blue  = eval(req.query.blue, 10);",
+    "patch_summary": "Replace eval(req.query.blue,10) with parseInt(req.query.blue,10) with range check.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-0",
+    "cvss": 9.0,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-8",
+    "title": "Unsafe deserialization RCE in cwe502 serialize handler",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 97,
+    "end_line": 97,
+    "snippet": "serialize.unserialize(req.query.foo);",
+    "taint": {
+      "source": "req.query.foo untrusted",
+      "sink": "node-serialize unserialize code exec",
+      "path": [
+        "app/server.js:97 req.query.foo to unserialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 97,
+        "note": "unserialize of untrusted string"
+      }
+    ],
+    "evidence": "  serialize.unserialize(req.query.foo); | validator: app/server.js:96 GET /cwe502/serialize passes untrusted req.query.foo to serialize.unserialize at app/server.js:97; package.json:18 pins node-serialize 0.0.4 with _$$ND_FUNC$$_ RCE | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls foo. HOW: req.query.foo passed to node-serialize unserialize which evaluates function payloads as JS. WHAT: breaks deserialization invariant, unauthenticated RCE.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  serialize.unserialize(req.query.foo);",
+    "hunter_snippet": "  serialize.unserialize(req.query.foo);",
+    "patch_summary": "Remove node-serialize unserialize of query input; use JSON.parse with schema validation and drop node-serialize dependency.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-9",
+    "title": "OS command injection in cwe78 childprocess handler",
+    "cwe": "CWE-78",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 106,
+    "end_line": 106,
+    "snippet": "cprocess.exec(req.query.foo, (error,stdout,stderr) => {",
+    "taint": {
+      "source": "req.query.foo untrusted",
+      "sink": "child_process.exec OS command",
+      "path": [
+        "app/server.js:106 req.query.foo to exec"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 106,
+        "note": "untrusted input as shell command"
+      }
+    ],
+    "evidence": "  cprocess.exec(req.query.foo, (error,stdout,stderr) => { | validator: app/server.js:105 GET /cwe78/childprocess passes untrusted req.query.foo to cprocess.exec shell at app/server.js:106 with no allowlist/escaping | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls foo. HOW: req.query.foo passed as shell string to child_process.exec with shell interpretation and no allowlist. WHAT: breaks command-confinement invariant, arbitrary OS command execution.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  cprocess.exec(req.query.foo, (error,stdout,stderr) => {",
+    "hunter_snippet": "  cprocess.exec(req.query.foo, (error,stdout,stderr) => {",
+    "patch_summary": "Stop passing query to child_process.exec; use execFile with allowlisted command/args and no shell.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-cross-eval-converter-xss-rce",
+    "title": "Cross-unit Eval RCE to response via converter.rgbToHex",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 39,
+    "end_line": 40,
+    "snippet": "  var hex = converter.rgbToHex(red, green, blue);\n  res.send(hex);",
+    "taint": {
+      "source": "app/server.js:32 req.query.red/green/blue via eval()",
+      "sink": "app/server.js:40 res.send(hex)",
+      "path": [
+        "app/server.js:32 eval(req.query.red)",
+        "app/server.js:39 converter.rgbToHex(red, green, blue)",
+        "app/converter.js:3 red.toString(16) + pad concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 32,
+        "note": "untrusted source evaluated: eval(req.query.red)"
+      },
+      {
+        "file": "app/converter.js",
+        "line": 3,
+        "note": "cross-unit transfer: red.toString(16) on attacker-controlled evaluated value"
+      },
+      {
+        "file": "app/server.js",
+        "line": 39,
+        "note": "helper return flows to response: converter.rgbToHex(red, green, blue)"
+      },
+      {
+        "file": "app/server.js",
+        "line": 40,
+        "note": "response sink reflecting derived value"
+      }
+    ],
+    "evidence": "source app/server.js:32 eval(req.query.red) -> app/converter.js:3 red.toString(16) -> sink app/server.js:40 res.send(hex) | validator: app/server.js:29 GET /cwe95/rgbToHex unauthenticated; app/server.js:32 eval(req.query.red) executes attacker JS; app/server.js:39-40 converter.rgbToHex flows to res.send | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated query params are evaluated with eval() then flow cross-module into converter.rgbToHex() and are reflected via res.send(). This is a concrete server.js -> converter.js -> response taint path enabling RCE at the eval stage and reflected content at the response sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "source app/server.js:32 eval(req.query.red) -> app/converter.js:3 red.toString(16) -> sink app/server.js:40 res.send(hex)",
+    "hunter_snippet": "  var hex = converter.rgbToHex(red, green, blue);\n  res.send(hex);",
+    "patch_summary": "Replace eval(req.query.*) at app/server.js:32-34 with parseInt(req.query.*,10) and validate numeric range before converter.rgbToHex.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-exec-no-timeout-dos",
+    "title": "Unbounded OS command execution without timeout allows DoS in /cwe78/childprocess",
+    "cwe": "CWE-78",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/server.js",
+    "start_line": 106,
+    "end_line": 106,
+    "snippet": "cprocess.exec(req.query.foo, (error,stdout,stderr) => {",
+    "taint": {
+      "source": "req.query.foo in /cwe78/childprocess handler",
+      "sink": "child_process.exec OS command with unlimited runtime/output",
+      "path": [
+        "app/server.js:105 req.query.foo entry",
+        "app/server.js:106 cprocess.exec shell sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 8,
+        "note": "bare express() with no rate-limit/timeout middleware"
+      },
+      {
+        "file": "app/server.js",
+        "line": 105,
+        "note": "entry point GET /cwe78/childprocess"
+      },
+      {
+        "file": "app/server.js",
+        "line": 106,
+        "note": "cprocess.exec without timeout/maxBuffer options"
+      }
+    ],
+    "evidence": "app/server.js:105 route receives req.query.foo; app/server.js:106 calls cprocess.exec(req.query.foo, callback) with no timeout/maxBuffer/killSignal options and no rate-limiting middleware (app/server.js:8 bare express()) | validator: app/server.js:105 GET /cwe78/childprocess unauthenticated; app/server.js:106 cprocess.exec(req.query.foo) shell-executes raw query with no allowlist or execFile | consensus: 1/1 confirmed",
+    "rationale": "OS command sink is reachable cross-unit: route input flows through child_process library to OS shell. Call supplies no options object, so no timeout, no maxBuffer cap, no killSignal. Attacker can run sleep/yes or large-output commands to block event loop, exhaust memory, or hang workers. Repeated hits are unthrottled (no rate limiter). Distinct from the command-injection itself; this is missing resource control enabling DoS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/server.js:105 route receives req.query.foo; app/server.js:106 calls cprocess.exec(req.query.foo, callback) with no timeout/maxBuffer/killSignal options and no rate-limiting middleware (app/server.js:8 bare express())",
+    "hunter_snippet": "cprocess.exec(req.query.foo, (error,stdout,stderr) => {",
+    "patch_summary": "Remove shell exec of user input at app/server.js:106; use execFile with allowlisted commands/args, no shell, add timeout/maxBuffer.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-9",
+    "cvss": 9.0,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-4",
+    "title": "Use of known-vulnerable node-serialize component",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 2,
+    "end_line": 2,
+    "snippet": "serialize.unserialize(req.query.foo);",
+    "taint": {
+      "source": "third-party vulnerable component",
+      "sink": "vulnerable deserializer exposed",
+      "path": [
+        "app/server.js:2 require node-serialize",
+        "app/server.js:97 unserialize attacker payload"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 2,
+        "note": "import of known-RCE library"
+      },
+      {
+        "file": "app/server.js",
+        "line": 97,
+        "note": "unserialize sink made reachable"
+      }
+    ],
+    "evidence": "var serialize = require('node-serialize'); | validator: app/server.js:96-99 serialize.unserialize(req.query.foo) deserializes unauthenticated query input via known-RCE node-serialize required at app/server.js:2 | consensus: 1/1 confirmed",
+    "rationale": "WHO: any remote client once app runs. HOW: line 2 imports node-serialize, a known-vulnerable unmaintained package whose unserialize evaluates _$$ND_FUNC$$_ payloads as JS (exploited at line 97). Importing it makes RCE reachable by design. WHAT: breaks use-of-unmaintained/vulnerable-component invariant, distinct from the sink call site.",
+    "status": "confirmed",
+    "conditions": [
+      "Application installed with node-serialize dependency; unauthenticated GET to /cwe502/serialize"
+    ],
+    "unit": "test",
+    "hunter_evidence": "var serialize = require('node-serialize');",
+    "hunter_snippet": "var serialize = require('node-serialize');",
+    "patch_summary": "Remove node-serialize dependency; replace serialize.unserialize(req.query.foo) with JSON.parse on validated schema and reject _$$ND_FUNC$$_ payloads.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-serialize-unhandled-dos",
+    "title": "Unhandled exception DoS in /cwe502/serialize deserialization handler",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 97,
+    "end_line": 97,
+    "snippet": "serialize.unserialize(req.query.foo);",
+    "taint": {
+      "source": "req.query.foo missing or malformed in /cwe502/serialize handler",
+      "sink": "uncaught exception from deserializer (500/crash)",
+      "path": [
+        "app/server.js:96 req.query.foo entry",
+        "app/server.js:97 serialize.unserialize throw site"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 96,
+        "note": "entry point GET /cwe502/serialize"
+      },
+      {
+        "file": "app/server.js",
+        "line": 97,
+        "note": "unserialize without try/catch or validation"
+      }
+    ],
+    "evidence": "app/server.js:96 route receives req.query.foo; app/server.js:97 calls serialize.unserialize(req.query.foo) with no try/catch and no centralized error handler in file | validator: app/server.js:2 requires vulnerable node-serialize; app/server.js:96-97 GET /cwe502/serialize calls serialize.unserialize(req.query.foo) on untrusted input enabling _$$ND_FUNC$$_ RCE | consensus: 1/1 confirmed",
+    "rationale": "Deserialization handler passes untrusted/missing foo directly to node-serialize unserialize which JSON.parses input. Missing param or malformed payload (e.g. /cwe502/serialize with no query, or foo=%%% ) throws SyntaxError/TypeError. No try/catch around sink and no app error middleware, so request yields 500 and, under load, repeated exceptions exhaust/hang the single-threaded server. Distinct from the RCE itself.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/server.js:96 route receives req.query.foo; app/server.js:97 calls serialize.unserialize(req.query.foo) with no try/catch and no centralized error handler in file",
+    "hunter_snippet": "serialize.unserialize(req.query.foo);",
+    "patch_summary": "Replace serialize.unserialize at app/server.js:97 with JSON.parse on validated schema; remove node-serialize dependency.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-8",
+    "cvss": 8.8,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-3",
+    "title": "Path traversal arbitrary file read in cwe73 read handler",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 54,
+    "end_line": 54,
+    "snippet": "res.send(fse.readJsonSync(req.query.foo));",
+    "taint": {
+      "source": "req.query.foo untrusted query string",
+      "sink": "readJsonSync filesystem read",
+      "path": [
+        "app/server.js:54 req.query.foo to readJsonSync to res.send"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 54,
+        "note": "untrusted filename to readJsonSync"
+      }
+    ],
+    "evidence": "  res.send(fse.readJsonSync(req.query.foo)); | validator: app/server.js:53 GET /cwe73/read passes untrusted req.query.foo to fse.readJsonSync at app/server.js:54 with no allowlist/normalization or auth gate | consensus: tie/no-majority (1c/1f/0n of 2)",
+    "rationale": "WHO: unauthenticated remote client controls query param foo. HOW: req.query.foo passed directly to fse.readJsonSync with no allowlist or jail. WHAT: breaks path-confinement invariant, arbitrary file read plus sync blocking and unhandled throw.",
+    "status": "needs-review",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  res.send(fse.readJsonSync(req.query.foo));",
+    "hunter_snippet": "  res.send(fse.readJsonSync(req.query.foo));",
+    "patch_summary": "Resolve req.query.foo against allowlisted directory, normalize and reject traversal, or remove arbitrary-path read.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-3",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-4",
+    "title": "Reflected XSS in cwe79 echo handler",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 62,
+    "end_line": 62,
+    "snippet": "res.send(\"<p>You sent this: \" + req.query.text + \"</p>\")",
+    "taint": {
+      "source": "req.query.text untrusted query string",
+      "sink": "res.send HTML response",
+      "path": [
+        "app/server.js:62 req.query.text to res.send"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 62,
+        "note": "unescaped concat into HTML response"
+      }
+    ],
+    "evidence": "  res.send(textConcat); | validator: app/server.js:61 GET /cwe79/echo concatenates untrusted req.query.text into HTML at app/server.js:62 and res.send renders as text/html with no escaping | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls query param text. HOW: req.query.text concatenated into HTML string passed to res.send with no escaping. WHAT: breaks output-neutralization invariant, reflected XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  res.send(textConcat);",
+    "hunter_snippet": "  res.send(textConcat);",
+    "patch_summary": "HTML-encode req.query.text or send as text/plain / JSON instead of HTML concatenation.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-3",
+    "title": "Missing authentication on CWE-73 file-read route",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 53,
+    "end_line": 53,
+    "snippet": "res.send(fse.readJsonSync(req.query.foo));",
+    "taint": {
+      "source": "unauthenticated GET /cwe73/read?foo",
+      "sink": "readJsonSync file read",
+      "path": [
+        "app/server.js:53 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 53,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get(\"/cwe73/read\", function(req, res) { | validator: app/server.js:53 GET /cwe73/read passes untrusted req.query.foo to fse.readJsonSync at app/server.js:54 with no allowlist/normalization or auth gate | consensus: tie/no-majority (1c/1f/0n of 2)",
+    "rationale": "WHO: unauthenticated client. HOW: /cwe73/read has no auth, passes foo to sync fs read. WHAT: missing auth exposes file read.",
+    "status": "needs-review",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get(\"/cwe73/read\", function(req, res) {",
+    "hunter_snippet": "app.get(\"/cwe73/read\", function(req, res) {",
+    "patch_summary": "Resolve req.query.foo against allowlisted directory, normalize and reject traversal, or remove arbitrary-path read.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-hardcoded-veracode-keys",
+    "title": "Hardcoded Veracode API credentials in start-agent-server.sh",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "start-agent-server.sh",
+    "start_line": 3,
+    "end_line": 4,
+    "snippet": "export VERACODE_API_KEY_ID=***\nexport VERACODE_API_KEY_SECRET=***",
+    "taint": {
+      "source": "hardcoded credential assignment",
+      "sink": "committed plaintext credential in start-agent-server.sh:3-4",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "start-agent-server.sh",
+        "line": 3,
+        "note": "hardcoded VERACODE_API_KEY_ID=***"
+      },
+      {
+        "file": "start-agent-server.sh",
+        "line": 4,
+        "note": "hardcoded VERACODE_API_KEY_SECRET=***"
+      }
+    ],
+    "evidence": "start-agent-server.sh:3 exports VERACODE_API_KEY_ID and start-agent-server.sh:4 exports VERACODE_API_KEY_SECRET committed in plaintext | validator: start-agent-server.sh:3 exports VERACODE_API_KEY_ID plaintext and start-agent-server.sh:4 exports VERACODE_API_KEY_SECRET plaintext committed to repo | consensus: 1/1 confirmed",
+    "rationale": "Long-lived Veracode API key ID and secret are hardcoded in a committed shell helper and exported to the environment, exposing credentials to any repo reader and to process environments. Type and location reported without values.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "start-agent-server.sh:3 exports VERACODE_API_KEY_ID and start-agent-server.sh:4 exports VERACODE_API_KEY_SECRET committed in plaintext",
+    "hunter_snippet": "export VERACODE_API_KEY_ID=***\nexport VERACODE_API_KEY_SECRET=***",
+    "patch_summary": "Remove hardcoded keys from start-agent-server.sh:3-4, load from vault/env at runtime, rotate exposed Veracode credentials.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-cross-pathread-json-dos",
+    "title": "Cross-unit path traversal with unhandled JSON-parse exception via fs-extra",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 54,
+    "end_line": 54,
+    "snippet": "  res.send(fse.readJsonSync(req.query.foo));",
+    "taint": {
+      "source": "app/server.js:54 req.query.foo",
+      "sink": "app/server.js:54 fse.readJsonSync + res.send",
+      "path": [
+        "app/server.js:53 GET /cwe73/read handler",
+        "app/server.js:54 req.query.foo argument"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 53,
+        "note": "unauthenticated entry: GET /cwe73/read"
+      },
+      {
+        "file": "app/server.js",
+        "line": 54,
+        "note": "file-read + JSON-parse sink on attacker path with no guard"
+      }
+    ],
+    "evidence": "source app/server.js:53 route /cwe73/read with req.query.foo -> sink app/server.js:54 fse.readJsonSync(req.query.foo) in res.send with no try/catch, allowlist, or path confinement | validator: app/server.js:53 GET /cwe73/read unauthenticated; app/server.js:54 fse.readJsonSync(req.query.foo) arbitrary file read with no allowlist, confinement, or try/catch sent via res.send | consensus: 1/1 confirmed",
+    "rationale": "Attacker-controlled file name flows into synchronous fs-extra readJsonSync (file read + JSON parse) and directly to response with no error handling. Beyond traversal, non-existent or non-JSON targets throw uncaught exceptions producing 500/stack disclosure and request-level DoS, a cross-library flow route -> fs-extra -> response.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "source app/server.js:53 route /cwe73/read with req.query.foo -> sink app/server.js:54 fse.readJsonSync(req.query.foo) in res.send with no try/catch, allowlist, or path confinement",
+    "hunter_snippet": "  res.send(fse.readJsonSync(req.query.foo));",
+    "patch_summary": "Stop passing req.query.foo to readJsonSync; enforce allowlist/basename, confine to safe directory, validate JSON and handle errors.",
+    "control_type": "none",
+    "duplicate_of": "unit-test-3",
+    "cvss": 7.3,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-xss-cwe201-exposure",
+    "title": "Reflected XSS in /cwe201/exposure via unsanitized res.send",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 80,
+    "end_line": 80,
+    "snippet": "res.send(req.query.text);",
+    "taint": {
+      "source": "req.query.text in /cwe201/exposure handler",
+      "sink": "res.send attacker string as text/html",
+      "path": [
+        "app/server.js:79 req.query.text entry",
+        "app/server.js:80 res.send sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 79,
+        "note": "entry point GET /cwe201/exposure"
+      },
+      {
+        "file": "app/server.js",
+        "line": 80,
+        "note": "unsanitized sink res.send(req.query.text) defaults to text/html"
+      }
+    ],
+    "evidence": "app/server.js:79 route receives req.query.text; app/server.js:80 sinks it via res.send(req.query.text) with default text/html content-type and no output encoding | validator: app/server.js:79 GET /cwe201/exposure entry req.query.text; app/server.js:80 res.send(req.query.text) reflects attacker string as text/html with no encoding | consensus: 1/1 confirmed",
+    "rationale": "GET /cwe201/exposure reflects req.query.text via res.send(string) which defaults to text/html. No encoding, no content-type override, no validation. Payload ?text=<script>alert(1)</script> executes in victim browser. Unit hunters flagged this route only as CWE-201 info-exposure, missing the XSS sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/server.js:79 route receives req.query.text; app/server.js:80 sinks it via res.send(req.query.text) with default text/html content-type and no output encoding",
+    "hunter_snippet": "res.send(req.query.text);",
+    "patch_summary": "Encode req.query.text before res.send or set text/plain content-type and escape HTML at app/server.js:80.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-test-5",
+    "title": "HTTP response splitting in cwe113 split handler",
+    "cwe": "CWE-113",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/server.js",
+    "start_line": 70,
+    "end_line": 70,
+    "snippet": "res.append(req.query.key, req.query.value);",
+    "taint": {
+      "source": "req.query.key and value untrusted",
+      "sink": "res.append header injection",
+      "path": [
+        "app/server.js:70 req.query.key value to res.append"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 70,
+        "note": "attacker-controlled name and value to res.append"
+      }
+    ],
+    "evidence": "  res.append(req.query.key, req.query.value); | validator: app/server.js:69 GET /cwe113/split passes untrusted req.query.key/value to res.append header sink at app/server.js:70 with no allowlist/validation | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client controls key and value. HOW: both flow into res.append with no allowlist or CRLF stripping. WHAT: breaks header-confinement invariant, arbitrary headers and response splitting.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  res.append(req.query.key, req.query.value);",
+    "hunter_snippet": "  res.append(req.query.key, req.query.value);",
+    "patch_summary": "Allowlist header name and validate/sanitize header value; reject CR/LF and unknown headers.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-test-8",
+    "title": "Missing authentication on CWE-502 deserialize route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 96,
+    "end_line": 96,
+    "snippet": "app.get(\"/cwe502/serialize\", function(req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe502/serialize?foo",
+      "sink": "unserialize RCE",
+      "path": [
+        "app/server.js:96 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 96,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get(\"/cwe502/serialize\", function(req, res) { | validator: No auth model in app: app/server.js:1-8 imports only express/serialize/child_process/fs-extra with zero auth middleware, so app/server.js:96 serialize route lacks no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls foo. HOW: /cwe502/serialize has no auth, passes to unserialize RCE. WHAT: missing auth exposes RCE.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get(\"/cwe502/serialize\", function(req, res) {",
+    "hunter_snippet": "app.get(\"/cwe502/serialize\", function(req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-9",
+    "title": "Missing authentication on CWE-78 exec route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 105,
+    "end_line": 105,
+    "snippet": "app.get(\"/cwe78/childprocess\", function(req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe78/childprocess?foo",
+      "sink": "exec shell",
+      "path": [
+        "app/server.js:105 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 105,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get(\"/cwe78/childprocess\", function(req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth/session/login, so app/server.js:105 exec route has no defined principal to bypass; real issue is OS injection not missing guard | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls foo. HOW: /cwe78/childprocess has no auth, passes to exec shell. WHAT: missing auth exposes OS command exec.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get(\"/cwe78/childprocess\", function(req, res) {",
+    "hunter_snippet": "app.get(\"/cwe78/childprocess\", function(req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-22",
+    "title": "TLS verification disabled in IAST status poll",
+    "cwe": "CWE-297",
+    "severity": "info",
+    "confidence": 0.98,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "          status_code=`curl --write-out \"%{http_code}\" --silent --output /dev/null --insecure $(AGENT_SERVER_URL)`",
+    "taint": {
+      "source": "AGENT_SERVER_URL response",
+      "sink": "curl --insecure",
+      "path": [
+        "azure-pipelines-1.yml:38 insecure curl"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 38,
+        "note": "--insecure"
+      }
+    ],
+    "evidence": "          status_code=`curl --write-out \"%{http_code}\" --silent --output /dev/null --insecure $(AGENT_SERVER_URL)` | validator: CI config excluded: azure-pipelines-1.yml:11-21 defines pool/resources IAST sidecar and azure-pipelines-1.yml:38 --insecure polls internal $(AGENT_SERVER_URL) | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: network attacker. HOW: status poll curl uses --insecure disabling cert verify. WHAT: TLS-validation break, MITM.",
+    "status": "fp",
+    "conditions": [
+      "CI runner network attacker"
+    ],
+    "unit": "test",
+    "hunter_evidence": "          status_code=`curl --write-out \"%{http_code}\" --silent --output /dev/null --insecure $(AGENT_SERVER_URL)`",
+    "hunter_snippet": "          status_code=`curl --write-out \"%{http_code}\" --silent --output /dev/null --insecure $(AGENT_SERVER_URL)`",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-23",
+    "title": "TLS verification disabled in IAST session allocation",
+    "cwe": "CWE-297",
+    "severity": "info",
+    "confidence": 0.98,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 47,
+    "end_line": 47,
+    "snippet": "        SESSION_ID=`curl -H \"Content-Type:application/json\" -H \"x-iast-event:session_start\" --silent --insecure -X POST -d \"{\\\"BUILD_TAG\\\":\\\"${BUILD_TAG}\\\"}\" ${AGENT_SERVER_URL}/events | jq -r '.session_id'`",
+    "taint": {
+      "source": "AGENT_SERVER_URL response",
+      "sink": "curl --insecure POST",
+      "path": [
+        "azure-pipelines-1.yml:47 insecure curl"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 47,
+        "note": "--insecure session POST"
+      }
+    ],
+    "evidence": "        SESSION_ID=`curl -H \"Content-Type:application/json\" -H \"x-iast-event:session_start\" --silent --insecure -X POST -d \"{\\\"BUILD_TAG\\\":\\\"${BUILD_TAG}\\\"}\" ${AGENT_SERVER_URL}/events | jq -r '.session_id'` | validator: CI config excluded: azure-pipelines-1.yml:11-21 is Azure CI pipeline and azure-pipelines-1.yml:47 --insecure POSTs to internal ${AGENT_SERVER_URL}/events sidecar | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: network attacker. HOW: session POST uses --insecure. WHAT: MITM steals session_id.",
+    "status": "fp",
+    "conditions": [
+      "CI runner network attacker"
+    ],
+    "unit": "test",
+    "hunter_evidence": "        SESSION_ID=`curl -H \"Content-Type:application/json\" -H \"x-iast-event:session_start\" --silent --insecure -X POST -d \"{\\\"BUILD_TAG\\\":\\\"${BUILD_TAG}\\\"}\" ${AGENT_SERVER_URL}/events | jq -r '.session_id'`",
+    "hunter_snippet": "        SESSION_ID=`curl -H \"Content-Type:application/json\" -H \"x-iast-event:session_start\" --silent --insecure -X POST -d \"{\\\"BUILD_TAG\\\":\\\"${BUILD_TAG}\\\"}\" ${AGENT_SERVER_URL}/events | jq -r '.session_id'`",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-25",
+    "title": "TLS verification disabled in IAST results fetch",
+    "cwe": "CWE-297",
+    "severity": "info",
+    "confidence": 0.98,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 76,
+    "end_line": 76,
+    "snippet": "        curl -H \"Accept:text/plain\" --silent --insecure -X GET $(AGENT_SERVER_URL)/results?session_id=${SESSION_ID}",
+    "taint": {
+      "source": "AGENT_SERVER_URL results",
+      "sink": "curl --insecure GET",
+      "path": [
+        "azure-pipelines-1.yml:76 insecure curl"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 76,
+        "note": "--insecure results GET"
+      }
+    ],
+    "evidence": "        curl -H \"Accept:text/plain\" --silent --insecure -X GET $(AGENT_SERVER_URL)/results?session_id=${SESSION_ID} | validator: CI config excluded: azure-pipelines-1.yml:70-76 Get IAST Results step and azure-pipelines-1.yml:76 --insecure GETs internal $(AGENT_SERVER_URL)/results | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: network attacker. HOW: results GET uses --insecure with session_id. WHAT: MITM steals findings/session.",
+    "status": "fp",
+    "conditions": [
+      "CI runner network attacker"
+    ],
+    "unit": "test",
+    "hunter_evidence": "        curl -H \"Accept:text/plain\" --silent --insecure -X GET $(AGENT_SERVER_URL)/results?session_id=${SESSION_ID}",
+    "hunter_snippet": "        curl -H \"Accept:text/plain\" --silent --insecure -X GET $(AGENT_SERVER_URL)/results?session_id=${SESSION_ID}",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-1",
+    "title": "Missing authentication on CWE-95 rgbToHex route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 29,
+    "end_line": 29,
+    "snippet": "app.get(\"/cwe95/rgbToHex\", function(req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe95/rgbToHex",
+      "sink": "eval RCE handler",
+      "path": [
+        "app/server.js:29 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 29,
+        "note": "route with no auth"
+      }
+    ],
+    "evidence": "app.get(\"/cwe95/rgbToHex\", function(req, res) { | validator: No auth model in app: app/server.js:1-8 has zero auth checks, so app/server.js:29 eval route defines no authenticated principal; real vuln is eval RCE not guard | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client. HOW: /cwe95 route has no auth guard and evals query params. WHAT: missing auth exposes RCE sink.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated network access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get(\"/cwe95/rgbToHex\", function(req, res) {",
+    "hunter_snippet": "app.get(\"/cwe95/rgbToHex\", function(req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-4",
+    "title": "Missing authentication on CWE-79 echo route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "app.get('/cwe79/echo', function (req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe79/echo?text",
+      "sink": "res.send HTML reflection",
+      "path": [
+        "app/server.js:61 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 61,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get('/cwe79/echo', function (req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth middleware, so app/server.js:61 echo route crosses no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls text. HOW: /cwe79/echo has no auth and reflects text to HTML. WHAT: missing auth widens XSS.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get('/cwe79/echo', function (req, res) {",
+    "hunter_snippet": "app.get('/cwe79/echo', function (req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-5",
+    "title": "Missing authentication on CWE-113 header-split route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 69,
+    "end_line": 69,
+    "snippet": "app.get('/cwe113/split', function (req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe113/split",
+      "sink": "res.append header injection",
+      "path": [
+        "app/server.js:69 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 69,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get('/cwe113/split', function (req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth middleware, so app/server.js:69 split route crosses no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls key/value. HOW: /cwe113/split has no auth, flows to res.append. WHAT: missing auth exposes header injection.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get('/cwe113/split', function (req, res) {",
+    "hunter_snippet": "app.get('/cwe113/split', function (req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-6",
+    "title": "Missing authentication on CWE-201 exposure route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 79,
+    "end_line": 79,
+    "snippet": "app.get('/cwe201/exposure', function (req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe201/exposure",
+      "sink": "res.send reflection",
+      "path": [
+        "app/server.js:79 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 79,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get('/cwe201/exposure', function (req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth middleware, so app/server.js:79 exposure route crosses no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client. HOW: /cwe201/exposure has no auth and reflects text. WHAT: missing auth creates reflector.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get('/cwe201/exposure', function (req, res) {",
+    "hunter_snippet": "app.get('/cwe201/exposure', function (req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-7",
+    "title": "Missing authentication on CWE-601 redirect route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 88,
+    "end_line": 88,
+    "snippet": "app.get('/cwe601/redirect', function (req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /cwe601/redirect",
+      "sink": "res.redirect tainted URL",
+      "path": [
+        "app/server.js:88 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 88,
+        "note": "route no auth"
+      }
+    ],
+    "evidence": "app.get('/cwe601/redirect', function (req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth middleware, so app/server.js:88 redirect route crosses no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls text. HOW: /cwe601/redirect has no auth, builds Location from text. WHAT: missing auth exposes open redirect.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get('/cwe601/redirect', function (req, res) {",
+    "hunter_snippet": "app.get('/cwe601/redirect', function (req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-2",
+    "title": "Missing authentication on hexToRgb route",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "app.get(\"/hexToRgb\", function(req, res) {",
+    "taint": {
+      "source": "unauthenticated GET /hexToRgb?hex",
+      "sink": "hexToRgb substring",
+      "path": [
+        "app/server.js:43 route no guard"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 43,
+        "note": "exposed route no auth"
+      }
+    ],
+    "evidence": "app.get(\"/hexToRgb\", function(req, res) { | validator: No auth model in app: app/server.js:1-8 has no auth middleware, so app/server.js:43 hexToRgb route crosses no defined boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls hex. HOW: /hexToRgb has no auth, forwards hex unchecked to substring sink. WHAT: missing auth plus validation.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "app.get(\"/hexToRgb\", function(req, res) {",
+    "hunter_snippet": "app.get(\"/hexToRgb\", function(req, res) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-10",
+    "title": "Missing validation on green in rgbToHex allows TypeError DoS",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "  var greenHex = green.toString(16);",
+    "taint": {
+      "source": "caller-controlled green",
+      "sink": "green.toString deref",
+      "path": [
+        "app/server.js:33 eval to app/converter.js:4"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 4,
+        "note": "unvalidated toString"
+      }
+    ],
+    "evidence": "  var greenHex = green.toString(16); | validator: No security boundary: app/converter.js:4 green.toString throws per-request 500 only, app/server.js:121-124 process stays listening, no crash/DoS demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client via eval green. HOW: green.toString with no type check; undefined throws. WHAT: TypeError DoS.",
+    "status": "fp",
+    "conditions": [
+      "attacker omits green"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  var greenHex = green.toString(16);",
+    "hunter_snippet": "  var greenHex = green.toString(16);",
+    "control_type": "none",
+    "duplicate_of": "unit-test-11",
+    "cvss": 0.0,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-11",
+    "title": "Missing validation on blue in rgbToHex allows TypeError DoS",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "  var blueHex  = blue.toString(16);",
+    "taint": {
+      "source": "caller-controlled blue",
+      "sink": "blue.toString deref",
+      "path": [
+        "app/server.js:34 eval to app/converter.js:5"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 5,
+        "note": "unvalidated toString"
+      }
+    ],
+    "evidence": "  var blueHex  = blue.toString(16); | validator: No security boundary: app/converter.js:5 blue.toString throws per-request 500 only, app/server.js:121-124 server persists, no persistent DoS | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client via eval blue. HOW: blue.toString with no check; undefined throws. WHAT: TypeError DoS distinct site.",
+    "status": "fp",
+    "conditions": [
+      "attacker omits blue"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  var blueHex  = blue.toString(16);",
+    "hunter_snippet": "  var blueHex  = blue.toString(16);",
+    "control_type": "none",
+    "duplicate_of": "unit-test-11",
+    "cvss": 0.0,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-13",
+    "title": "Missing validation on green slice in hexToRgb",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "  var green = parseInt(hex.substring(2, 4), 16);",
+    "taint": {
+      "source": "req.query.hex attacker string",
+      "sink": "substring without validation",
+      "path": [
+        "app/server.js:44 hex to app/converter.js:18"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 18,
+        "note": "unvalidated substring"
+      }
+    ],
+    "evidence": "  var green = parseInt(hex.substring(2, 4), 16); | validator: No crash on short input: app/converter.js:18 substring on short string returns empty/NaN via parseInt, only undefined throws per-request 500 handled by Express | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls hex. HOW: green slice substring(2,4) with no length/type check; absent/short yields throw or NaN. WHAT: DoS/logic error.",
+    "status": "fp",
+    "conditions": [
+      "attacker omits or shortens hex"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  var green = parseInt(hex.substring(2, 4), 16);",
+    "hunter_snippet": "  var green = parseInt(hex.substring(2, 4), 16);",
+    "control_type": "none",
+    "duplicate_of": "unit-test-12",
+    "cvss": 0.0,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-14",
+    "title": "Missing validation on blue slice in hexToRgb",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 19,
+    "end_line": 19,
+    "snippet": "  var blue  = parseInt(hex.substring(4, 6), 16);",
+    "taint": {
+      "source": "req.query.hex attacker string",
+      "sink": "substring without validation",
+      "path": [
+        "app/server.js:44 hex to app/converter.js:19"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 19,
+        "note": "unvalidated substring"
+      }
+    ],
+    "evidence": "  var blue  = parseInt(hex.substring(4, 6), 16); | validator: No crash on short input: app/converter.js:19 substring on short string returns empty/NaN, only undefined throws per-request 500 with server retained at app/server.js:121 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls hex. HOW: blue slice substring(4,6) with no checks. WHAT: DoS/logic error distinct slice.",
+    "status": "fp",
+    "conditions": [
+      "attacker omits or shortens hex"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  var blue  = parseInt(hex.substring(4, 6), 16);",
+    "hunter_snippet": "  var blue  = parseInt(hex.substring(4, 6), 16);",
+    "control_type": "none",
+    "duplicate_of": "unit-test-12",
+    "cvss": 0.0,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-6",
+    "title": "Information exposure in cwe201 exposure handler",
+    "cwe": "CWE-201",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 80,
+    "end_line": 80,
+    "snippet": "res.send(req.query.text);",
+    "taint": {
+      "source": "req.query.text untrusted",
+      "sink": "res.send information exposure",
+      "path": [
+        "app/server.js:80 req.query.text to res.send"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 80,
+        "note": "verbatim reflection of input"
+      }
+    ],
+    "evidence": "  res.send(req.query.text); | validator: app/server.js:79-80 res.send(req.query.text) reflects only attacker-supplied query value; no server secret, file, or store read at that sink | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote client controls text. HOW: req.query.text reflected verbatim via res.send with no check. WHAT: breaks exposure-minimization invariant, reflector for sensitive data.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  res.send(req.query.text);",
+    "hunter_snippet": "  res.send(req.query.text);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-7",
+    "title": "Open redirect in cwe601 redirect handler",
+    "cwe": "CWE-601",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "app/server.js",
+    "start_line": 89,
+    "end_line": 89,
+    "snippet": "res.redirect(\"http://localhost:3001/echo?text=\" + req.query.text",
+    "taint": {
+      "source": "req.query.text untrusted",
+      "sink": "res.redirect tainted URL",
+      "path": [
+        "app/server.js:89 req.query.text to res.redirect"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 89,
+        "note": "untrusted input into redirect Location"
+      }
+    ],
+    "evidence": "  res.redirect(redirectTarget); | validator: app/server.js:88-89 redirect Location hardcoded to http://localhost:3001/echo?text= + req.query.text; attacker controls only query suffix, not host/scheme | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote client controls text. HOW: req.query.text concatenated into Location via res.redirect with no allowlist. WHAT: breaks redirect-confinement invariant, phishing and header injection.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  res.redirect(redirectTarget);",
+    "hunter_snippet": "  res.redirect(redirectTarget);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-11",
+    "title": "Missing input validation in rgbToHex converter",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 3,
+    "end_line": 5,
+    "snippet": "var redHex   = red.toString(16);",
+    "taint": {
+      "source": "red green blue caller-controlled",
+      "sink": "toString on unvalidated type",
+      "path": [
+        "app/converter.js:3 red to toString"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 3,
+        "note": "toString on unvalidated red"
+      }
+    ],
+    "evidence": "  var redHex   = red.toString(16); | validator: app/converter.js:3 red.toString(16) is internal type-robustness with no auth/secret/injection boundary; external code exec already covered at app/server.js:32 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: caller including remote-influenced eval results controls red green blue. HOW: rgbToHex calls toString on each with no type check; undefined throws TypeError. WHAT: breaks input-validation invariant, crash and incorrect output.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var redHex   = red.toString(16);",
+    "hunter_snippet": "  var redHex   = red.toString(16);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-12",
+    "title": "Missing input validation in hexToRgb converter",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 17,
+    "end_line": 19,
+    "snippet": "var red   = parseInt(hex.substring(0, 2), 16);",
+    "taint": {
+      "source": "hex caller-controlled",
+      "sink": "substring on unvalidated input",
+      "path": [
+        "app/converter.js:17 hex to substring"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 17,
+        "note": "substring on unvalidated hex"
+      }
+    ],
+    "evidence": "  var red   = parseInt(hex.substring(0, 2), 16); | validator: app/converter.js:17 hex.substring internal helper has no direct network entry; crash-only type error with no secret/auth boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: caller controls hex directly from query. HOW: hexToRgb calls substring with no presence or type check; undefined throws, short strings yield NaN. WHAT: breaks input-validation invariant, exception DoS and silent logic error.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var red   = parseInt(hex.substring(0, 2), 16);",
+    "hunter_snippet": "  var red   = parseInt(hex.substring(0, 2), 16);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-10",
+    "title": "Unhandled exception DoS via unvalidated hex in hexToRgb handler",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/server.js",
+    "start_line": 44,
+    "end_line": 45,
+    "snippet": "var hex = req.query.hex;",
+    "taint": {
+      "source": "req.query.hex possibly absent",
+      "sink": "substring on unvalidated input",
+      "path": [
+        "app/server.js:44 req.query.hex to hexToRgb"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 44,
+        "note": "unvalidated hex from query"
+      },
+      {
+        "file": "app/server.js",
+        "line": 45,
+        "note": "unchecked forward to substring sink"
+      }
+    ],
+    "evidence": "  var hex = req.query.hex; | validator: app/server.js:43-45 /hexToRgb with missing hex yields per-request TypeError/500 via Express sync-error handling; no process crash or resource exhaustion shown | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote client controls presence of hex. HOW: req.query.hex forwarded unchecked to hexToRgb which calls substring; undefined throws TypeError uncaught causing 500. WHAT: breaks robustness invariant, caller-driven exception DoS.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "test",
+    "hunter_evidence": "  var hex = req.query.hex;",
+    "hunter_snippet": "  var hex = req.query.hex;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-24",
+    "title": "Remote code execution via curl piped to sh",
+    "cwe": "CWE-494",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 52,
+    "end_line": 52,
+    "snippet": "curl --silent --insecure ${AGENT_SERVER_URL}/downloads | sh",
+    "taint": {
+      "source": "remote downloads script",
+      "sink": "sh execution",
+      "path": [
+        "azure-pipelines-1.yml:52 curl to sh"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 52,
+        "note": "curl pipe to shell"
+      }
+    ],
+    "evidence": "        curl --silent --insecure ${AGENT_SERVER_URL}/downloads | sh | validator: azure-pipelines-1.yml:52 curl --insecure ${AGENT_SERVER_URL}/downloads | sh is CI/CD pipeline config, excluded as infrastructure & build configuration | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: controller of AGENT_SERVER_URL. HOW: curl downloads piped to sh with no integrity check plus --insecure. WHAT: full CI RCE.",
+    "status": "fp",
+    "conditions": [
+      "attacker controls URL or MITM"
+    ],
+    "unit": "test",
+    "hunter_evidence": "        curl --silent --insecure ${AGENT_SERVER_URL}/downloads | sh",
+    "hunter_snippet": "        curl --silent --insecure ${AGENT_SERVER_URL}/downloads | sh",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-17",
+    "title": "Uncaught exception DoS via rgbToHex call",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 39,
+    "end_line": 39,
+    "snippet": "  var hex = converter.rgbToHex(red, green, blue);",
+    "taint": {
+      "source": "missing query params",
+      "sink": "uncaught throw",
+      "path": [
+        "app/server.js:32 eval to app/server.js:39"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 39,
+        "note": "no try/catch"
+      }
+    ],
+    "evidence": "  var hex = converter.rgbToHex(red, green, blue); | validator: app/server.js:29-40 sync throw inside Express handler returns 500 via default error handler, no process crash; no DoS boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client omitting params. HOW: handler calls rgbToHex without try/catch; throw becomes 500. WHAT: unauthenticated exception DoS.",
+    "status": "fp",
+    "conditions": [
+      "attacker omits params"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  var hex = converter.rgbToHex(red, green, blue);",
+    "hunter_snippet": "  var hex = converter.rgbToHex(red, green, blue);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-0",
+    "title": "Express app without any security middleware",
+    "cwe": "CWE-693",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 8,
+    "end_line": 8,
+    "snippet": "var app = express();",
+    "taint": {
+      "source": "untrusted HTTP requests to bare app",
+      "sink": "unprotected route handlers",
+      "path": [
+        "app/server.js:8 bare express()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 8,
+        "note": "bare app no middleware"
+      }
+    ],
+    "evidence": "var app = express(); | validator: app/server.js:8 bare express() is generic hardening absence with no demonstrated principal/resource violation | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote client. HOW: bare express app with no helmet/cors/rate-limit/auth; all 9 routes inherit it. WHAT: breaks protection-mechanism invariant.",
+    "status": "fp",
+    "conditions": [
+      "network reachable, no upstream WAF"
+    ],
+    "unit": "test",
+    "hunter_evidence": "var app = express();",
+    "hunter_snippet": "var app = express();",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-15",
+    "title": "Missing 0-255 range check in rgbToHex",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 1,
+    "end_line": 1,
+    "snippet": "exports.rgbToHex = function(red, green, blue) {",
+    "taint": {
+      "source": "attacker eval red/green/blue",
+      "sink": "overlong hex return",
+      "path": [
+        "app/server.js:32 eval to app/converter.js:1"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 1,
+        "note": "no range validation"
+      }
+    ],
+    "evidence": "exports.rgbToHex = function(red, green, blue) { | validator: app/converter.js:1-8 out-of-range numbers only produce longer hex string, no security boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client via eval numbers. HOW: rgbToHex has no 0-255 range check; 1000/-1/3.5 yield overlong/malformed hex. WHAT: output integrity break.",
+    "status": "fp",
+    "conditions": [
+      "attacker sends out-of-range numbers"
+    ],
+    "unit": "test",
+    "hunter_evidence": "exports.rgbToHex = function(red, green, blue) {",
+    "hunter_snippet": "exports.rgbToHex = function(red, green, blue) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-16",
+    "title": "Missing hex format check in hexToRgb",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/converter.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "exports.hexToRgb = function(hex) {",
+    "taint": {
+      "source": "req.query.hex attacker string",
+      "sink": "NaN array return",
+      "path": [
+        "app/server.js:44 hex to app/converter.js:15"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 15,
+        "note": "no format validation"
+      }
+    ],
+    "evidence": "exports.hexToRgb = function(hex) { | validator: app/converter.js:15-22 non-hex input only yields NaN array via parseInt, no security boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls hex. HOW: hexToRgb has no length-6 or hex-charset check; garbage yields NaN array with 200. WHAT: silent logic error.",
+    "status": "fp",
+    "conditions": [
+      "attacker sends non-hex"
+    ],
+    "unit": "test",
+    "hunter_evidence": "exports.hexToRgb = function(hex) {",
+    "hunter_snippet": "exports.hexToRgb = function(hex) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-20",
+    "title": "Cleartext HTTP listen without TLS",
+    "cwe": "CWE-319",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 122,
+    "end_line": 122,
+    "snippet": "var server = app.listen(3001, function () {",
+    "taint": {
+      "source": "network traffic port 3001",
+      "sink": "cleartext HTTP listener",
+      "path": [
+        "app/server.js:122 listen no TLS"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 122,
+        "note": "insecure transport"
+      }
+    ],
+    "evidence": "var server = app.listen(3001, function () { | validator: app/server.js:122 app.listen(3001) plain HTTP is local dev listener; TLS is deployment concern with no secret flow demonstrated in code | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network client. HOW: listen(3001) cleartext HTTP all interfaces, no TLS/helmet/HSTS. WHAT: transit confidentiality break.",
+    "status": "fp",
+    "conditions": [
+      "no terminating TLS proxy"
+    ],
+    "unit": "test",
+    "hunter_evidence": "var server = app.listen(3001, function () {",
+    "hunter_snippet": "var server = app.listen(3001, function () {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-26",
+    "title": "Unpinned container image in Semgrep workflow",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": ".github/workflows/semgrep.yml",
+    "start_line": 19,
+    "end_line": 19,
+    "snippet": "      image: returntocorp/semgrep",
+    "taint": {
+      "source": "container registry image",
+      "sink": "CI execution",
+      "path": [
+        ".github/workflows/semgrep.yml:19 unpinned"
+      ]
+    },
+    "refs": [
+      {
+        "file": ".github/workflows/semgrep.yml",
+        "line": 19,
+        "note": "no digest"
+      }
+    ],
+    "evidence": "      image: returntocorp/semgrep | validator: .github/workflows/semgrep.yml:19 container image in CI workflow manifest is out-of-scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: registry attacker. HOW: container image without digest pin. WHAT: supply-chain drift.",
+    "status": "fp",
+    "conditions": [
+      "compromised registry tag"
+    ],
+    "unit": "test",
+    "hunter_evidence": "      image: returntocorp/semgrep",
+    "hunter_snippet": "      image: returntocorp/semgrep",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-27",
+    "title": "Unpinned GitHub Action checkout@v3",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": ".github/workflows/semgrep.yml",
+    "start_line": 21,
+    "end_line": 21,
+    "snippet": "    - uses: actions/checkout@v3",
+    "taint": {
+      "source": "upstream action tag",
+      "sink": "CI execution with secrets",
+      "path": [
+        ".github/workflows/semgrep.yml:21 floating tag"
+      ]
+    },
+    "refs": [
+      {
+        "file": ".github/workflows/semgrep.yml",
+        "line": 21,
+        "note": "floating tag"
+      }
+    ],
+    "evidence": "    - uses: actions/checkout@v3 | validator: .github/workflows/semgrep.yml:21 actions/checkout@v3 in CI workflow manifest is out-of-scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: upstream action attacker. HOW: checkout@v3 floating major tag. WHAT: tag rewrite injects CI code with token.",
+    "status": "fp",
+    "conditions": [
+      "tag rewrite upstream"
+    ],
+    "unit": "test",
+    "hunter_evidence": "    - uses: actions/checkout@v3",
+    "hunter_snippet": "    - uses: actions/checkout@v3",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-12",
+    "title": "Unsafe length dereference in pad helper",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/converter.js",
+    "start_line": 11,
+    "end_line": 12,
+    "snippet": "function pad(hex) {",
+    "taint": {
+      "source": "attacker-derived hex fragments",
+      "sink": "hex.length deref",
+      "path": [
+        "app/converter.js:3 toString to app/converter.js:12"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/converter.js",
+        "line": 12,
+        "note": "length deref no check"
+      }
+    ],
+    "evidence": "function pad(hex) { | validator: app/converter.js:11-13 pad(null).length only throws TypeError resulting in 500, no memory-safety or security boundary in JS | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote-influenced hex fragment. HOW: pad derefs hex.length with no check; malicious toString can yield undefined. WHAT: TypeError DoS in helper.",
+    "status": "fp",
+    "conditions": [
+      "attacker object with bad toString via eval"
+    ],
+    "unit": "test",
+    "hunter_evidence": "function pad(hex) {",
+    "hunter_snippet": "function pad(hex) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-19",
+    "title": "Log injection via exec error in console.log",
+    "cwe": "CWE-117",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "app/server.js",
+    "start_line": 108,
+    "end_line": 108,
+    "snippet": "    console.log(`Error executing endpoint /cwe78/childprocess: ${error}`);",
+    "taint": {
+      "source": "req.query.foo in error",
+      "sink": "console.log log sink",
+      "path": [
+        "app/server.js:106 exec to app/server.js:108 log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 108,
+        "note": "tainted log"
+      }
+    ],
+    "evidence": "    console.log(`Error executing endpoint /cwe78/childprocess: ${error}`); | validator: app/server.js:108 console.log to local stdout has no log-integrity boundary; underlying risk is the CWE-78 exec at app/server.js:106 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls foo inside error. HOW: exec error interpolated into console.log template unsanitized. WHAT: log injection and command leakage.",
+    "status": "fp",
+    "conditions": [
+      "attacker CRLF in foo, logs collected"
+    ],
+    "unit": "test",
+    "hunter_evidence": "    console.log(`Error executing endpoint /cwe78/childprocess: ${error}`);",
+    "hunter_snippet": "    console.log(`Error executing endpoint /cwe78/childprocess: ${error}`);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-18",
+    "title": "NaN results returned as success in hexToRgb response",
+    "cwe": "CWE-209",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 46,
+    "end_line": 46,
+    "snippet": "  res.send(JSON.stringify(rgb));",
+    "taint": {
+      "source": "attacker hex yielding NaN",
+      "sink": "JSON 200 response",
+      "path": [
+        "app/server.js:44 hex to app/server.js:46"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 46,
+        "note": "always-200 NaN reflection"
+      }
+    ],
+    "evidence": "  res.send(JSON.stringify(rgb)); | validator: app/server.js:43-46 JSON NaN reflection with 200 is functional correctness, no secret or error-leak boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls hex. HOW: NaN array JSON-stringified and sent as 200 with no validation. WHAT: masks failure, leaks fingerprint.",
+    "status": "fp",
+    "conditions": [
+      "attacker sends non-hex"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  res.send(JSON.stringify(rgb));",
+    "hunter_snippet": "  res.send(JSON.stringify(rgb));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-21",
+    "title": "Abrupt process.exit in gracefulShutdown",
+    "cwe": "CWE-248",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "  process.exit();",
+    "taint": {
+      "source": "SIGTERM/SIGINT",
+      "sink": "process.exit abrupt",
+      "path": [
+        "app/server.js:20 SIGTERM to app/server.js:16"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 16,
+        "note": "no server.close drain"
+      }
+    ],
+    "evidence": "  process.exit(); | validator: app/server.js:12-21 process.exit only on local SIGTERM/SIGINT gracefulShutdown, not reachable from untrusted network input | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: signal sender. HOW: gracefulShutdown calls process.exit() immediately despite comment to wait. WHAT: dropped requests DoS on restart.",
+    "status": "fp",
+    "conditions": [
+      "signal during active connections"
+    ],
+    "unit": "test",
+    "hunter_evidence": "  process.exit();",
+    "hunter_snippet": "  process.exit();",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-5",
+    "title": "Unpinned floating container image in Azure pipeline",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "    image: 'veracode/iast-agent-server:latest'",
+    "taint": {
+      "source": "container registry tag",
+      "sink": "CI execution of unpinned image",
+      "path": [
+        "azure-pipelines-1.yml:17 floating image to CI service"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 17,
+        "note": "floating latest tag without digest"
+      }
+    ],
+    "evidence": "    image: 'veracode/iast-agent-server:latest' | validator: azure-pipelines-1.yml:17 container image tag is CI/build configuration out-of-scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: registry attacker or compromised upstream. HOW: resources.containers image veracode/iast-agent-server:latest floats to newest tag with no digest pin. CI pulls and runs it as service with secrets in env. WHAT: breaks supply-chain pinning invariant, tag mutation or cache poisoning injects code into privileged CI.",
+    "status": "fp",
+    "conditions": [
+      "Azure Pipelines run pulling public container image"
+    ],
+    "unit": "test",
+    "hunter_evidence": "    image: 'veracode/iast-agent-server:latest'",
+    "hunter_snippet": "    image: 'veracode/iast-agent-server:latest'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-7",
+    "title": "Session token exposed in CI logs via echo",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "azure-pipelines-1.yml",
+    "start_line": 48,
+    "end_line": 48,
+    "snippet": "        echo Using session_id: $SESSION_ID",
+    "taint": {
+      "source": "IAST agent session_id bearer",
+      "sink": "sensitive session token in persistent logs",
+      "path": [
+        "azure-pipelines-1.yml:47 SESSION_ID assignment",
+        "azure-pipelines-1.yml:48 echo to CI logs"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 47,
+        "note": "session_id allocation"
+      },
+      {
+        "file": "azure-pipelines-1.yml",
+        "line": 48,
+        "note": "session_id printed to logs"
+      }
+    ],
+    "evidence": "        echo Using session_id: $SESSION_ID | validator: azure-pipelines-1.yml:48 echo in CI build script is build-configuration logging out-of-scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: any principal with CI log read (including PR author). HOW: SESSION_ID allocated from agent server at line 47 is echoed verbatim at line 48 via echo Using session_id. Logs persist in Azure DevOps. WHAT: breaks secret-in-log invariant, session bearer token exposed enabling session hijack / results theft, distinct from TLS lines.",
+    "status": "fp",
+    "conditions": [
+      "Azure Pipelines run with log access"
+    ],
+    "unit": "test",
+    "hunter_evidence": "        echo Using session_id: $SESSION_ID",
+    "hunter_snippet": "        echo Using session_id: $SESSION_ID",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-test-9",
+    "title": "End-of-life Node.js 8.x toolchain",
+    "cwe": "CWE-1104",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "azure-pipelines.yml",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "    versionSpec: '8.x'",
+    "taint": {
+      "source": "EOL Node distribution",
+      "sink": "vulnerable runtime for build/test",
+      "path": [
+        "azure-pipelines.yml:15 Node 8.x toolchain"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines.yml",
+        "line": 15,
+        "note": "EOL Node 8.x spec"
+      }
+    ],
+    "evidence": "    versionSpec: '8.x' | validator: azure-pipelines.yml:15 Node versionSpec is CI toolchain pin out-of-scope per infrastructure/build exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: build system. HOW: NodeTool versionSpec 8.x at line 15 installs end-of-life Node 8 (EOL 2019) with known CVEs and no security patches. App and tests then run on it. WHAT: breaks use-of-supported-component invariant, exposes build/test/runtime to unpatched engine vulns.",
+    "status": "fp",
+    "conditions": [
+      "CI builds on default pipeline"
+    ],
+    "unit": "test",
+    "hunter_evidence": "    versionSpec: '8.x'",
+    "hunter_snippet": "    versionSpec: '8.x'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "sys-cross-hex-converter-dos",
+    "title": "Cross-unit unvalidated hex to converter substring DoS and response disclosure",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/server.js",
+    "start_line": 44,
+    "end_line": 46,
+    "snippet": "  var hex = req.query.hex;\n  var rgb = converter.hexToRgb(hex);\n  res.send(JSON.stringify(rgb));",
+    "taint": {
+      "source": "app/server.js:44 req.query.hex",
+      "sink": "app/server.js:46 res.send(JSON.stringify(rgb))",
+      "path": [
+        "app/server.js:44 var hex = req.query.hex",
+        "app/converter.js:17 hex.substring(0,2)",
+        "app/server.js:45 converter.hexToRgb(hex)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 44,
+        "note": "untrusted source without validation: req.query.hex"
+      },
+      {
+        "file": "app/converter.js",
+        "line": 17,
+        "note": "cross-unit sink: hex.substring on unvalidated value"
+      },
+      {
+        "file": "app/server.js",
+        "line": 45,
+        "note": "propagation: converter.hexToRgb(hex)"
+      },
+      {
+        "file": "app/server.js",
+        "line": 46,
+        "note": "response sink disclosing NaN array"
+      }
+    ],
+    "evidence": "source app/server.js:44 req.query.hex -> app/converter.js:17 hex.substring -> sink app/server.js:46 res.send(JSON.stringify(rgb)) | validator: app/server.js:44-46 req.query.hex to converter.hexToRgb to res.send only yields NaN array; app/converter.js:17-19 substring/parseInt has no security boundary crossing | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "Unvalidated hex query param crosses from route handler into converter.hexToRgb() where substring/parseInt are called without null/type checks, then returns to res.send(). Missing input reaches across modules to cause TypeError DoS when undefined and NaN disclosure on malformed input.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "source app/server.js:44 req.query.hex -> app/converter.js:17 hex.substring -> sink app/server.js:46 res.send(JSON.stringify(rgb))",
+    "hunter_snippet": "  var hex = req.query.hex;\n  var rgb = converter.hexToRgb(hex);\n  res.send(JSON.stringify(rgb));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "sys-crlf-cwe601-redirect",
+    "title": "CRLF header injection in /cwe601/redirect Location header",
+    "cwe": "CWE-113",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/server.js",
+    "start_line": 89,
+    "end_line": 89,
+    "snippet": "res.redirect(\"http://localhost:3001/echo?text=\" + req.query.text + \" (Redirected)\");",
+    "taint": {
+      "source": "req.query.text in /cwe601/redirect handler",
+      "sink": "res.redirect Location header with attacker CRLF",
+      "path": [
+        "app/server.js:88 req.query.text entry",
+        "app/server.js:89 string concat into Location",
+        "app/server.js:89 res.redirect header sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/server.js",
+        "line": 88,
+        "note": "entry point GET /cwe601/redirect"
+      },
+      {
+        "file": "app/server.js",
+        "line": 89,
+        "note": "user input concatenated into redirect Location header"
+      }
+    ],
+    "evidence": "app/server.js:88 route receives req.query.text; app/server.js:89 concatenates it into res.redirect Location header with no CRLF strip or encoding | validator: app/server.js:89 res.redirect fixed prefix http://localhost:3001/echo?text= + req.query.text cannot split headers/off-site; Node http rejects CRLF so no response splitting | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "GET /cwe601/redirect builds Location header as \"http://localhost:3001/echo?text=\" + req.query.text. Attacker controls header value. CRLF payload (%0d%0aSet-Cookie: ...) enables HTTP response splitting on vulnerable Node (repo pins EOL Node 8.x) or triggers ERR_INVALID_CHAR unhandled exception DoS on hardened Node. Unit hunters flagged only open-redirect, missing header-injection aspect.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/server.js:88 route receives req.query.text; app/server.js:89 concatenates it into res.redirect Location header with no CRLF strip or encoding",
+    "hunter_snippet": "res.redirect(\"http://localhost:3001/echo?text=\" + req.query.text + \" (Redirected)\");",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

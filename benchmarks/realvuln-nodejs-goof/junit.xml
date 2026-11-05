@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="47" errors="0" skipped="0" timestamp="2026-11-04T19:16:23Z" time="0.000" failures="28">
+  <testcase classname="CWE-78" name="OS Command Injection in create via identify URL [critical] routes/index.js:161-161">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS Command Injection in create via identify URL (CWE-78) critical conf=0.95 routes/index.js:161-161">exec('identify ' + url, function (err, stdout, stderr) {
+exec('identify ' + url, function (err, stdout, stderr) {</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Cross-Unit Authentication Bypass to Template Takeover via Session (NoSQLi to HBS Layout Control) [critical] routes/index.js:107-107">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Authentication Bypass to Template Takeover via Session (NoSQLi to HBS Layout Control) (CWE-287) critical conf=0.85 routes/index.js:107-107">routes/index.js:39 User.find with attacker JSON operators bypasses password check, routes/index.js:55 sets session.loggedIn=1 on any non-empty result, routes/index.js:116 isLoggedIn gates only on that flag, routes/index.js:89-107 passes full req.body including extra layout key to res.render account.hbs
+    return res.render('account.hbs', profile)</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Cross-Unit Prototype-Pollution Authentication Bypass (PUT /chat to isLoggedIn via Object.prototype.loggedIn) [critical] routes/index.js:115-117">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Prototype-Pollution Authentication Bypass (PUT /chat to isLoggedIn via Object.prototype.loggedIn) (CWE-287) critical conf=0.85 routes/index.js:115-117">PUT /chat _.merge pollutes Object.prototype (routes/index.js:347) with attacker key loggedIn; isLoggedIn at routes/index.js:115-116 reads req.session.loggedIn via prototype chain; guarded routes at app.js:56-58; entry auth uses known user:pwd at routes/index.js:313-317
+  if (req.session.loggedIn === 1) {</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Missing Authorization in import allows anonymous file upload [critical] routes/index.js:241-241">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization in import allows anonymous file upload (CWE-94) critical conf=0.85 routes/index.js:241-241">exports.import = function (req, res, next) {
+exports.import = function (req, res, next) {</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Dust Template Injection via device in about_new [critical] routes/index.js:300-300">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Dust Template Injection via device in about_new (CWE-94) critical conf=0.85 routes/index.js:300-300">return res.render("about_new.dust",
+return res.render("about_new.dust",</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Session Secret keyboard cat [high] app.js:43-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Session Secret keyboard cat (CWE-798) high conf=0.95 app.js:43-43">secret: 'keyboard cat',
+secret: 'keyboard cat',</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing Authentication on /users API Allows Unauthenticated Admin Creation and Enumeration [high] app.js:69-69">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on /users API Allows Unauthenticated Admin Creation and Enumeration (CWE-306) high conf=0.95 app.js:69-69">app.js:69 mounts /users router with no auth middleware, while sibling routes app.js:56-58 require routes.isLoggedIn; routes/users.js:8 GET returns repo.find({id:1}) and routes/users.js:23 POST does repo.save(user with attacker role) with comment admitting auth not implemented
+app.use('/users', routesUsers)</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext Password Storage in Mongoose User Schema [high] mongoose-db.js:14-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext Password Storage in Mongoose User Schema (CWE-256) high conf=0.95 mongoose-db.js:14-14">password: String,
+password: String,</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Operator Injection in loginHandler password [high] routes/index.js:39-39">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL Operator Injection in loginHandler password (CWE-943) high conf=0.95 routes/index.js:39-39">User.find({ username: req.body.username, password: req.body.password }, function (err, users) {
+User.find({ username: req.body.username, password: req.body.password }, function (err, users) {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="Open Redirect in adminLoginSuccess via redirectPage [high] routes/index.js:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Open Redirect in adminLoginSuccess via redirectPage (CWE-943) high conf=0.95 routes/index.js:61-61">return res.redirect(redirectPage)
+User.find({ username: req.body.username, password: req.body.password }, function (err, users) {</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Chat Credential Enables Authenticated Prototype-Pollution Entry [high] routes/index.js:315-315">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Chat Credential Enables Authenticated Prototype-Pollution Entry (CWE-798) high conf=0.95 routes/index.js:315-315">routes/index.js:315 defines default chat credential password=*** with comment that password is known; PUT /chat at routes/index.js:335 authenticates via findUser against this value, app.js:67 exposes PUT /chat without session guard
+  { name: 'user', password: *** },</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded MySQL root Credentials [high] typeorm-db.js:12-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded MySQL root Credentials (CWE-798) high conf=0.95 typeorm-db.js:12-12">password: "root",
+password: "root",</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing Authorization and IDOR on Todo lifecycle routes (create/destroy/edit/update/import) [high] app.js:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization and IDOR on Todo lifecycle routes (create/destroy/edit/update/import) (CWE-639) high conf=0.9 app.js:61-61">app.js:60 POST /create, app.js:61 GET /destroy/:id, app.js:62 GET /edit/:id, app.js:63 POST /update/:id, app.js:64 POST /import have no isLoggedIn guard unlike app.js:56-58; handlers use req.params.id directly in Todo.findById/remove/save (routes/index.js:191,203,219) with no ownership check; IDs are publicly leaked at GET / via views/index.ejs edit/destroy links
+app.get('/destroy/:id', routes.destroy);</failure>
+  </testcase>
+  <testcase classname="CWE-532" name="MongoDB Connection String Disclosure in Logs [high] mongoose-db.js:43-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="MongoDB Connection String Disclosure in Logs (CWE-532) high conf=0.9 mongoose-db.js:43-43">console.log("Using Mongo URI " + mongoUri);
+console.log("Using Mongo URI " + mongoUri);</failure>
+  </testcase>
+  <testcase classname="CWE-532" name="User Password Disclosure via console.log(users) [high] mongoose-db.js:49-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="User Password Disclosure via console.log(users) (CWE-532) high conf=0.9 mongoose-db.js:49-49">console.log(users);
+console.log(users);</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Hardcoded Plaintext Mongo Admin Password [high] mongoose-db.js:52-52">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Plaintext Mongo Admin Password (CWE-256) high conf=0.9 mongoose-db.js:52-52">new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save
+new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="Server-Side Request Forgery via ImageMagick identify URL fetch in POST /create [high] routes/index.js:161-161">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-Side Request Forgery via ImageMagick identify URL fetch in POST /create (CWE-918) high conf=0.9 routes/index.js:161-161">POST /create imgRegex extracts http* URL at routes/index.js:156-158; URL passed to exec('identify '+url) at routes/index.js:161 where ImageMagick identify fetches remote URL server-side
+    exec('identify ' + url, function (err, stdout, stderr) {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authorization in destroy allows arbitrary deletion [high] routes/index.js:191-191">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization in destroy allows arbitrary deletion (CWE-862) high conf=0.9 routes/index.js:191-191">Todo.findById(req.params.id, function (err, todo) {
+Todo.findById(req.params.id, function (err, todo) {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authorization in update allows arbitrary overwrite [high] routes/index.js:221-221">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization in update allows arbitrary overwrite (CWE-862) high conf=0.9 routes/index.js:221-221">todo.content = req.body.content;
+todo.content = req.body.content;</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Zip-Slip Arbitrary File Overwrite in import [high] routes/index.js:257-257">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Zip-Slip Arbitrary File Overwrite in import (CWE-22) high conf=0.9 routes/index.js:257-257">zip.extractAllTo(extracted_path, true);
+zip.extractAllTo(extracted_path, true);</failure>
+  </testcase>
+  <testcase classname="CWE-1321" name="Prototype Pollution in chat.add via lodash merge [high] routes/index.js:347-347">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Prototype Pollution in chat.add via lodash merge (CWE-1321) high conf=0.9 routes/index.js:347-347">_.merge(message, req.body.message, {
+_.merge(message, req.body.message, {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Unauthenticated User Enumeration in GET /users [high] routes/users.js:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated User Enumeration in GET /users (CWE-862) high conf=0.9 routes/users.js:16-16">const results = await repo.find({ id: 1 })
+const results = await repo.find({ id: 1 })</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Mass Assignment Role Escalation in POST /users [high] routes/users.js:36-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass Assignment Role Escalation in POST /users (CWE-915) high conf=0.9 routes/users.js:36-36">const savedRecord = await repo.save(user)
+const savedRecord = await repo.save(user)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via redirectPage in admin.ejs [high] views/admin.ejs:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via redirectPage in admin.ejs (CWE-79) high conf=0.9 views/admin.ejs:17-17">&lt;input type="hidden" name="redirectPage" value="&lt;%- redirectPage %&gt;" /&gt;
+&lt;input type="hidden" name="redirectPage" value="&lt;%- redirectPage %&gt;" /&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Template Layout Control via save_account_details [high] routes/index.js:107-107">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Template Layout Control via save_account_details (CWE-94) high conf=0.85 routes/index.js:107-107">return res.render('account.hbs', profile)
+return res.render('account.hbs', profile)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Missing Authorization in edit exposes all todos [high] routes/index.js:203-203">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization in edit exposes all todos (CWE-94) high conf=0.85 routes/index.js:203-203">exports.edit = function (req, res, next) {
+exports.edit = function (req, res, next) {</failure>
+  </testcase>
+  <testcase classname="CWE-1321" name="Cross-Unit Prototype-Pollution Privilege Escalation (PUT /chat to DELETE /chat and /users Query Hijack) [high] routes/index.js:359-359">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Prototype-Pollution Privilege Escalation (PUT /chat to DELETE /chat and /users Query Hijack) (CWE-1321) high conf=0.85 routes/index.js:359-359">routes/index.js:347 _.merge(message, req.body.message) with lodash 4.17.4 allows __proto__ pollution by low-priv holder of hardcoded credential; polluted Object.prototype.canDelete=true makes routes/index.js:359 !user.canDelete check pass for non-admin; polluted Object.prototype.where observed at routes/users.js:20 affects repo.find({id:1}) at routes/users.js:16
+    if (!user || !user.canDelete) {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via Todo content in index.ejs [high] views/index.ejs:20-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via Todo content in index.ejs (CWE-79) high conf=0.85 views/index.ejs:20-20">&lt;%- marked(new String(todo.content)) %&gt;
+&lt;%- marked(new String(todo.content)) %&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing Authentication on GET /chat Exposes In-Memory Chat History [medium] app.js:66-66">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unbounded File Upload Size in express-fileupload [medium] app.js:49-49">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF via State-Changing GET /destroy/:id route [medium] app.js:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Cloud Environment Disclosure in Logs [medium] mongoose-db.js:21-21">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authorization in create allows anonymous todo creation [medium] routes/index.js:152-152">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unbounded Zip Decompression in import enables zip-bomb DoS [medium] routes/index.js:255-255">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated Chat History Disclosure in chat.get [medium] routes/index.js:332-332">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF, Security Headers, Rate Limiting and Hardened Cookies [medium] app.js:42-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-384" name="Session Fixation in adminLoginSuccess missing regeneration [medium] routes/index.js:55-55">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-476" name="Null-Dereference DoS in update missing existence check [medium] routes/index.js:219-219">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Attacker-Controlled Moment Locale in import [medium] routes/index.js:279-279">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-829" name="Insecure HTTP Script Include in layout.ejs [medium] views/layout.ejs:7-7">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure Session Cookie Flags [low] app.js:45-45">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded SECRET_TOKEN Logged to Console [low] app.js:83-83">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Stored XSS via import CSV content persistence [low] routes/index.js:285-288">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose Error Disclosure via development errorHandler [low] app.js:80-80">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak Random Admin Password in chat users [low] routes/index.js:317-317">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-117" name="Log Injection via Unsanitized CSV Field in POST /import [low] routes/index.js:271-271">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Verbose SQL Logging Leaks PII in TypeORM [low] typeorm-db.js:15-15">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.75" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

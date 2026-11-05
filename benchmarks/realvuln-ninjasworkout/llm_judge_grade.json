@@ -1,0 +1,24 @@
+{
+  "tp": 16,
+  "fp": 24,
+  "fn": 6,
+  "n_labels": 22,
+  "n_findings": 40,
+  "correct_findings": 16,
+  "F1": {
+    "precision": 0.4,
+    "recall": 0.7272727272727273,
+    "F1": 0.5161290322580645
+  },
+  "F2": {
+    "precision": 0.4,
+    "recall": 0.7272727272727273,
+    "F2": 0.625
+  },
+  "F3": {
+    "precision": 0.4,
+    "recall": 0.7272727272727273,
+    "F3": 0.6722689075630253
+  },
+  "method": "llm-tp+correct"
+}

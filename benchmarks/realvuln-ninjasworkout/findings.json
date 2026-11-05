@@ -1,0 +1,3612 @@
+[
+  {
+    "id": "unit-routers-0",
+    "title": "Hardcoded JWT signing secret 'hello' enables universal token forgery",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "routers/index.js",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "const accessTokenSecret = 'hello';",
+    "taint": {
+      "source": "hardcoded literal in source",
+      "sink": "jwt.sign/jwt.verify HMAC key",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 10,
+        "note": "hardcoded JWT HMAC secret literal"
+      }
+    ],
+    "evidence": "const accessTokenSecret = 'hello'; | validator: routers/index.js:10 hardcodes accessTokenSecret='hello' used as HMAC key in jwt.sign at routers/index.js:97,165 and jwt.verify at routers/index.js:206 | consensus: 1/1 confirmed",
+    "rationale": "WHO: any remote user controls nothing yet; the secret itself is the flaw. HOW: const accessTokenSecret='hello' is compiled into server and reused by every jwt.sign/jwt.verify in this file. WHAT: hardcoded low-entropy JWT HMAC secret allows anyone who reads repo to forge arbitrary Auth and password-reset tokens, breaking all session authentication.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to app"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "const accessTokenSecret = 'hello';",
+    "hunter_snippet": "const accessTokenSecret = 'hello';",
+    "patch_summary": "Load JWT secret from env (process.env.JWT_SECRET) with startup failure if missing, rotate secret, set short expiresIn and re-issue tokens.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-18",
+    "title": "Authenticated node-serialize deserialization leads to RCE",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "routers/index.js",
+    "start_line": 727,
+    "end_line": 727,
+    "snippet": "const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation => Remote Code Execution",
+    "taint": {
+      "source": "authenticated POST JSON body",
+      "sink": "node-serialize unserialize code execution",
+      "path": [
+        "routers/index.js:718 req.body",
+        "routers/index.js:727 unserialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 727,
+        "note": "node-serialize unserialize of request body"
+      }
+    ],
+    "evidence": "const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation => Remote Code Execution | validator: routers/index.js:718-727 POST /secret/shell passes req.body directly to serialize.unserialize with authenticateToken only; node-serialize@0.0.4 in package.json:27 allows _$$ND_FUNC$$_ RCE | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated low-privilege user controls full JSON body. HOW: handler calls serialize.unserialize(req.body) from node-serialize which evaluates embedded $func/$code (IIFE) during deserialization, then res.send(uns). WHAT: deterministic remote code execution in Node process by submitting serialized function payload.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated with any valid Auth cookie; ability to POST JSON"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation => Remote Code Execution",
+    "hunter_snippet": "const uns = serialize.unserialize(req.body)    // Insecure Deserailiazation => Remote Code Execution",
+    "patch_summary": "Remove node-serialize; use JSON.parse with schema validation and never unserialize untrusted input.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-3",
+    "title": "NoSQL operator injection in login findOne enables authentication bypass",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 148,
+    "end_line": 151,
+    "snippet": "userSchema.findOne({\n        username: req.body.username,\n        password:req.body.password",
+    "taint": {
+      "source": "POST /secret/login body username/password",
+      "sink": "Mongoose findOne query operator injection",
+      "path": [
+        "routers/index.js:118 req.body.username/password",
+        "routers/index.js:148 findOne filter"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 148,
+        "note": "findOne sink with attacker-controlled username/password"
+      }
+    ],
+    "evidence": "userSchema.findOne({\n        username: req.body.username,\n        password:req.body.password | validator: routers/index.js:148-151 userSchema.findOne({username:req.body.username,password:req.body.password}) with only notEmpty checks at routers/index.js:119-130; bodyParser.json at routers/index.js:47 allows object operators like {\"$gt\":\"\"} to bypass auth | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls req.body.username and req.body.password (JSON body parsed). HOW: express-validator only checks notEmpty, then values flow verbatim into userSchema.findOne({username:req.body.username,password:req.body.password}). Mongoose passes objects through, so {$ne:null} or {$gt:\"\"} operators survive (password path has no String type). WHAT: NoSQL operator injection bypasses password check and enables authentication bypass and data exfiltration.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/login with JSON or urlencoded body"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "userSchema.findOne({\n        username: req.body.username,\n        password:req.body.password",
+    "hunter_snippet": "userSchema.findOne({\n        username: req.body.username,\n        password:req.body.password",
+    "patch_summary": "Enforce string types and reject keys starting with $/containing . before Mongoose query; use exact-match parameterized lookup plus password hash compare.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-7",
+    "title": "NoSQL injection and full user dump via query param",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 235,
+    "end_line": 239,
+    "snippet": "userSchema.findOne({\n       username:req.query.user",
+    "taint": {
+      "source": "query param ?user=",
+      "sink": "findOne + res.json full user document",
+      "path": [
+        "routers/index.js:230 req.query.user",
+        "routers/index.js:235 findOne",
+        "routers/index.js:244 res.json(result)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 235,
+        "note": "findOne sink using query param"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 244,
+        "note": "full document res.json disclosure"
+      }
+    ],
+    "evidence": "userSchema.findOne({\n       username:req.query.user | validator: routers/index.js:230-244 POST /secret/?user does userSchema.findOne({username:req.query.user}) with no validation then res.json(result) disclosing full user document including password/admin | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls req.query.user. HOW: value flows directly into userSchema.findOne({username:req.query.user}) with no sanitization, then full Mongoose document is returned via res.json(result) including password and admin. WHAT: NoSQL operator injection (e.g., ?user[$ne]=x) dumps arbitrary user records with credentials.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/?user?user="
+    ],
+    "unit": "routers",
+    "hunter_evidence": "userSchema.findOne({\n       username:req.query.user",
+    "hunter_snippet": "userSchema.findOne({\n       username:req.query.user",
+    "patch_summary": "Require authentication/authorization, validate user as string, reject operators, and never res.json full user document.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-8",
+    "title": "NoSQL injection and user disclosure via username lookup",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 263,
+    "end_line": 267,
+    "snippet": "userSchema.findOne({\n     username:req.body.username",
+    "taint": {
+      "source": "POST body username",
+      "sink": "findOne + res.json full document",
+      "path": [
+        "routers/index.js:259 req.body.username",
+        "routers/index.js:263 findOne",
+        "routers/index.js:271 res.json(result)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 263,
+        "note": "findOne sink using body username"
+      }
+    ],
+    "evidence": "userSchema.findOne({\n     username:req.body.username | validator: routers/index.js:259-271 POST /secret/username does userSchema.findOne({username:req.body.username}) with no validation then res.json(result) disclosing full user document | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls req.body.username. HOW: value flows into userSchema.findOne({username:req.body.username}) with no operator stripping, then handler does res.json(result) disclosing password/admin/email. WHAT: NoSQL operator injection via JSON body (e.g., {\"username\":{\"$ne\":null}}) bypasses matching and exfiltrates user PII and credentials.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/username"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "userSchema.findOne({\n     username:req.body.username",
+    "hunter_snippet": "userSchema.findOne({\n     username:req.body.username",
+    "patch_summary": "Require auth, strictly validate username string, reject Mongo operators, and return minimal fields only.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-9",
+    "title": "Mass-assignment of admin flag plus plaintext password storage on signup",
+    "cwe": "CWE-915",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 320,
+    "end_line": 321,
+    "snippet": "admin:req.body.admin, // privilege escalation",
+    "taint": {
+      "source": "POST signup body admin",
+      "sink": "user creation with attacker-controlled admin flag",
+      "path": [
+        "routers/index.js:292 req.body.admin",
+        "routers/index.js:320 new userSchema"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 320,
+        "note": "admin mass assignment from body"
+      }
+    ],
+    "evidence": "admin:req.body.admin, // privilege escalation | validator: routers/index.js:292-321 unauthenticated signup builds new userSchema with admin:req.body.admin and password:req.body.password; models/user.js:5-21 stores password verbatim with no hash and no bcrypt in package.json | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls req.body.admin. HOW: handler constructs new userSchema with admin:req.body.admin verbatim and saves with plaintext password:req.body.password. WHAT: mass-assignment privilege escalation lets anyone self-register admin:true, plus credentials stored in cleartext.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/signup"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "admin:req.body.admin, // privilege escalation",
+    "hunter_snippet": "admin:req.body.admin, // privilege escalation",
+    "patch_summary": "Whitelist signup fields (username/email/password only), force admin:false server-side, and hash passwords with bcrypt.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-ALGNONE-SHELL-RCE-CHAIN",
+    "title": "Unauthenticated RCE via alg=none JWT forgery chaining into node-serialize shell sink",
+    "cwe": "CWE-287",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 727,
+    "end_line": 728,
+    "snippet": "  const uns = serialize.unserialize(req.body)",
+    "taint": {
+      "source": "unauthenticated HTTP cookie Auth with forged alg=none JWT",
+      "sink": "node-serialize unserialize RCE",
+      "path": [
+        "unauth attacker mints alg=none Auth cookie -> routers/index.js:206",
+        "authenticateToken passes -> routers/index.js:718",
+        "req.body -> routers/index.js:727"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 206,
+        "note": "authenticateToken jwt.verify without algorithm allowlist"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 718,
+        "note": "shell route relies solely on authenticateToken"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 727,
+        "note": "node-serialize unserialize sink"
+      }
+    ],
+    "evidence": "routers/index.js:206 jwt.verify accepts alg=none (jwa none verifier returns true on empty signature) proven by direct node repro; routers/index.js:718 shell route gated only by authenticateToken; routers/index.js:727 unserialize sink | validator: routers/index.js:197-211 authenticateToken calls jwt.verify(token,accessTokenSecret) with no algorithms allowlist; jsonwebtoken@0.4.0/jwa accepts alg=none with empty signature (proven: trailing-dot none token verifies); routers/index.js:718 shell gated only by authenticateToken; routers/index.js:727 serialize.unserialize(req.body) evals _$$ND_FUNC$$_ (node-serialize/lib/serialize.js eval) | consensus: 1/1 confirmed",
+    "rationale": "Unit hunters reported JWT forgery and authenticated deserialization separately but not the chained unauthenticated RCE. jsonwebtoken@0.4.0/jwa accepts alg=none with empty signature regardless of secret (verified by repro), so any remote attacker can mint Auth cookie and pass authenticateToken, reaching node-serialize unserialize. This spans auth unit into deserialization sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routers/index.js:206 jwt.verify accepts alg=none (jwa none verifier returns true on empty signature) proven by direct node repro; routers/index.js:718 shell route gated only by authenticateToken; routers/index.js:727 unserialize sink",
+    "hunter_snippet": "  const uns = serialize.unserialize(req.body)",
+    "patch_summary": "Enforce algorithm allowlist in jwt.verify (e.g. {algorithms:['HS256']}), rotate hardcoded secret routers/index.js:10 to env secret with expiry, and replace node-serialize unserialize at routers/index.js:727 with JSON.parse plus schema validation.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-29",
+    "title": "DOM XSS via eval of URL id parameter",
+    "cwe": "CWE-95",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "home.html",
+    "start_line": 249,
+    "end_line": 250,
+    "snippet": "eval(id);",
+    "taint": {
+      "source": "?id= query param",
+      "sink": "eval attacker string",
+      "path": [
+        "home.html:241 location.search",
+        "home.html:249 eval"
+      ]
+    },
+    "refs": [
+      {
+        "file": "home.html",
+        "line": 249,
+        "note": "eval of URL param"
+      }
+    ],
+    "evidence": "eval(id); | validator: home.html:241-250 reads params.get('id') from location.search and calls eval(id) with no sanitization; reachable via app.js:117 GET /home sendFile home.html | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker crafting link controls ?id= query value. HOW: const params=new URLSearchParams(location.search); id=params.get('id'); eval(id) executes attacker string in victim origin. WHAT: direct DOM code execution, cookie/session theft and actions as victim.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim visits crafted link to /home?id="
+    ],
+    "unit": "routers",
+    "hunter_evidence": "eval(id);",
+    "hunter_snippet": "eval(id);",
+    "patch_summary": "Remove eval(id); treat id as data (textContent/URL allowlist) and never execute URL input.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-20",
+    "title": "Reflected XSS via SSRF url in success branch",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 700,
+    "end_line": 700,
+    "snippet": "      response.write('<h2>I am an application. I want to be useful, so I requested: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "taint": {
+      "source": "?url= query parameter",
+      "sink": "reflected HTML with attacker URL",
+      "path": [
+        "routers/index.js:687 req.query url",
+        "routers/index.js:700 response.write url"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 700,
+        "note": "unescaped url reflected into HTML"
+      }
+    ],
+    "evidence": "      response.write('<h2>I am an application. I want to be useful, so I requested: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n'); | validator: routers/index.js:687 url=req.query[url] flows unescaped to routers/index.js:700 response.write(...url...) with Content-Type text/html at routers/index.js:696 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated caller controls ?url=. HOW: SSRF success branch concatenates url directly into response.write HTML with no escaping while serving text/html. WHAT: reflected XSS in application origin.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker crafts /secret/?url=<script> link",
+      "Response viewed in browser"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "      response.write('<h2>I am an application. I want to be useful, so I requested: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "hunter_snippet": "      response.write('<h2>I am an application. I want to be useful, so I requested: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "patch_summary": "HTML-escape url before response.write and/or set Content-Type text/plain; validate url scheme.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-21",
+    "title": "Reflected XSS via SSRF url in error branch",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 706,
+    "end_line": 706,
+    "snippet": "      response.write('<h2>I wanted to be useful, but I could not find: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "taint": {
+      "source": "?url= query parameter",
+      "sink": "reflected HTML in error page",
+      "path": [
+        "routers/index.js:687 req.query url",
+        "routers/index.js:706 error-branch write"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 706,
+        "note": "unescaped url in 404 branch"
+      }
+    ],
+    "evidence": "      response.write('<h2>I wanted to be useful, but I could not find: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n'); | validator: routers/index.js:687 url=req.query[url] flows unescaped to routers/index.js:706 error-branch response.write(...url...) with Content-Type text/html at routers/index.js:703 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated caller controls ?url=. HOW: SSRF error branch writes same unescaped url into 404 HTML body. WHAT: second reflected-XSS sink even when fetch fails.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker crafts /secret/?url= link that fails to fetch"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "      response.write('<h2>I wanted to be useful, but I could not find: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "hunter_snippet": "      response.write('<h2>I wanted to be useful, but I could not find: <font color=\"red\">'+url+'</font> for you\\n</h2><br><br>\\n\\n\\n');",
+    "patch_summary": "HTML-escape url in 404 branch before response.write; validate url scheme.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-17",
+    "title": "Unauthenticated SSRF with reflected content via needle fetch",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 696,
+    "end_line": 700,
+    "snippet": "needle.get(url, { timeout: 3000 }, function(error, response1) {",
+    "taint": {
+      "source": "query param url",
+      "sink": "server fetch + reflected body/URL",
+      "path": [
+        "routers/index.js:688 req.query url",
+        "routers/index.js:696 needle.get",
+        "routers/index.js:702 response.write body"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 696,
+        "note": "server-side fetch of attacker URL"
+      }
+    ],
+    "evidence": "needle.get(url, { timeout: 3000 }, function(error, response1) { | validator: routers/index.js:685-702 GET /secret/ takes request.query['url'] with no allowlist and calls needle.get(url) then reflects url and response1.body; no auth gate, only rate-limit at app.js:25-30 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls ?url= and ?mime=. HOW: handler passes url verbatim to needle.get(url,{timeout:3000}) with no allowlist, DNS, or private-IP block, then writes response1.body and url into HTML response. WHAT: full SSRF to internal/cloud-metadata services plus reflected XSS via url and unencoded upstream body.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /secret/?url="
+    ],
+    "unit": "routers",
+    "hunter_evidence": "needle.get(url, { timeout: 3000 }, function(error, response1) {",
+    "hunter_snippet": "needle.get(url, { timeout: 3000 }, function(error, response1) {",
+    "patch_summary": "Remove open fetch or enforce allowlisted hosts/schemes, block internal/metadata IPs, validate mime, and avoid reflecting body/URL.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-missing-auth-ssrf-user-oracles",
+    "title": "Sensitive SSRF and user-dump endpoints lack authentication",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.92,
+    "path": "routers/index.js",
+    "start_line": 685,
+    "end_line": 685,
+    "snippet": "router.get('/secret/', function(request, response){",
+    "taint": {
+      "source": "unauthenticated network input (query/body)",
+      "sink": "SSRF fetch + full user document disclosure without auth",
+      "path": [
+        "routers/index.js:685 unauthenticated entry",
+        "routers/index.js:230 unauthenticated entry",
+        "routers/index.js:259 unauthenticated entry"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 685,
+        "note": "unauthenticated SSRF proxy route definition"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 230,
+        "note": "unauthenticated user-dump via query param"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 259,
+        "note": "unauthenticated user-dump via body"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 357,
+        "note": "sibling route requires authenticateToken"
+      }
+    ],
+    "evidence": "routers/index.js:685 GET /secret/ has no authenticateToken; routers/index.js:230 POST /secret/?user has no authenticateToken; routers/index.js:259 POST /secret/username has no authenticateToken; siblings routers/index.js:357,366,434 require authenticateToken | validator: routers/index.js:685 GET /secret/ (needle.get(url)) has no authenticateToken; routers/index.js:230 POST /secret/?user res.json(full user doc) has no auth; routers/index.js:259 POST /secret/username res.json(full doc) has no auth; siblings routers/index.js:357,366,434 require authenticateToken | consensus: 1/1 confirmed",
+    "rationale": "Three sensitive handlers lack any authentication while sibling routes enforce authenticateToken. GET /secret/ performs server-side fetch of attacker URL and reflects body (SSRF). POST oracles return full user documents (including password/admin) via findOne. No auth means unauthenticated remote attacker can pivot internally and enumerate/dump accounts. Unit hunters reported the SSRF/NoSQL sinks but not the missing-authentication control gap versus sibling consensus.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routers/index.js:685 GET /secret/ has no authenticateToken; routers/index.js:230 POST /secret/?user has no authenticateToken; routers/index.js:259 POST /secret/username has no authenticateToken; siblings routers/index.js:357,366,434 require authenticateToken",
+    "hunter_snippet": "router.get('/secret/', function(request, response){",
+    "patch_summary": "Add authenticateToken to routers/index.js:230,259,685; restrict user-dump to self/minimal fields; allowlist SSRF outbound hosts, block metadata/internal IPs, and validate mime/redirects.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.2,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-11",
+    "title": "Global-state post attribution enables cross-user forgery and stored XSS",
+    "cwe": "CWE-362",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 436,
+    "end_line": 449,
+    "snippet": "postSchema.find({\n\nusername: hello",
+    "taint": {
+      "source": "global.hello set by other sessions",
+      "sink": "post creation attributed to global user",
+      "path": [
+        "routers/index.js:170 global.hello=result.username",
+        "routers/index.js:436 username:hello"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 434,
+        "note": "addpost handler using global instead of req.user"
+      }
+    ],
+    "evidence": "postSchema.find({\n\nusername: hello | validator: routers/index.js:170 global.hello=result.username set on login; routers/index.js:438-450 addpost uses bare hello for find and new postSchema instead of req.user | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated attacker; attribution uses process-global state last set by login/callback. HOW: POST handler queries postSchema.find({username:hello}) and creates post with username:hello where hello resolves to global.hello, not req.user from verified JWT. Concurrent logins overwrite the global. WHAT: race/confused-deputy attribution writes posts under victim identity and bypasses per-user limit check, plus title/description/file saved unsanitized enabling stored XSS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated as any user; prior login by victim in same process"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "postSchema.find({\n\nusername: hello",
+    "hunter_snippet": "postSchema.find({\n\nusername: hello",
+    "patch_summary": "Use req.user.username from authenticateToken for attribution; remove global.hello shared state.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-15",
+    "title": "Password reset overwrites plaintext password without token invalidation or expiry",
+    "cwe": "CWE-620",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 613,
+    "end_line": 618,
+    "snippet": "let doc =  userSchema.findOneAndUpdate(filter, update, {",
+    "taint": {
+      "source": "path token + new password body",
+      "sink": "password overwrite with plaintext, token not burned",
+      "path": [
+        "routers/index.js:595 req.params.token + req.body.password",
+        "routers/index.js:613 findOneAndUpdate"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 613,
+        "note": "plaintext password update without invalidation"
+      }
+    ],
+    "evidence": "let doc =  userSchema.findOneAndUpdate(filter, update, { | validator: routers/index.js:606-618 verify() then findOneAndUpdate password with req.body.password plaintext and no Token delete; commented reset.delete shows no invalidation | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote attacker controls :username/:token path and req.body.password. HOW: handler verifies JWT via custom verify() with hardcoded secret and no expiry, checks only username equality, then does findOneAndUpdate({username},{password:req.body.password}) with plaintext unsanitized password and never deletes/invalidates Token (delete commented out). WHAT: indefinite token reuse, no password strength/hashing, allows account takeover and persistence.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Knowledge of username and token string (DB token); ability to POST new password"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "let doc =  userSchema.findOneAndUpdate(filter, update, {",
+    "hunter_snippet": "let doc =  userSchema.findOneAndUpdate(filter, update, {",
+    "patch_summary": "Hash password with bcrypt, verify DB token + signature + expiry, then delete/burn Token after use.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-22",
+    "title": "Directory traversal via express-blinker static mount",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 27,
+    "end_line": 36,
+    "snippet": "app.use(blinker(basePath, [",
+    "taint": {
+      "source": "URL path",
+      "sink": "filesystem file read",
+      "path": [
+        "app.js:124 URL path",
+        "app.js:27 blinker file serve"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 27,
+        "note": "blinker static mount with wildcard test"
+      }
+    ],
+    "evidence": "app.use(blinker(basePath, [ | validator: app.js:27 blinker(basePath, [{test:/.*/}]) mounted; node_modules/express-blinker/index.js:126 filePath=basePath+req.url with no normalization allowing ../ escape | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote user controls URL path. HOW: app.use(blinker(basePath,[{test:/.*/,...}])) mounts express-blinker over images dir with catch-all regex and etag/cache, historically vulnerable to directory traversal via encoded ../ sequences. WHAT: filesystem read outside webroot via traversal, exposing server files.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to static paths"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "app.use(blinker(basePath, [",
+    "hunter_snippet": "app.use(blinker(basePath, [",
+    "patch_summary": "Normalize and contain resolved path under basePath with path.join/normalize check; reject traversals.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-10",
+    "title": "Broken access control allows reading any user's posts",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 381,
+    "end_line": 391,
+    "snippet": "if(payload.username){ // broken access control",
+    "taint": {
+      "source": ":username path param + any valid Auth JWT",
+      "sink": "res.render postview with other user's posts",
+      "path": [
+        "routers/index.js:366 req.params.username",
+        "routers/index.js:381 payload check"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 381,
+        "note": "re-verify JWT and truthiness check instead of equality"
+      }
+    ],
+    "evidence": "if(payload.username){ // broken access control | validator: routers/index.js:366 GET /secret/posts/:username queries req.params.username; routers/index.js:381 if(payload.username) truthiness check instead of payload.username==req.params.username | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated low-privilege user controls :username path param. HOW: handler finds posts by req.params.username but authorizes with only if(payload.username) truthiness instead of comparing payload.username to requested username. WHAT: broken object-level authorization lets any user read any other user's posts.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated as any user with valid Auth cookie"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "if(payload.username){ // broken access control",
+    "hunter_snippet": "if(payload.username){ // broken access control",
+    "patch_summary": "Enforce payload.username===req.params.username (plus admin exception) before rendering other user posts.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-12",
+    "title": "Password-reset user enumeration and Host-header poisonable reset link",
+    "cwe": "CWE-203",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 546,
+    "end_line": 550,
+    "snippet": "const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`;",
+    "taint": {
+      "source": "email body + Host header",
+      "sink": "password-reset email with poisonable host",
+      "path": [
+        "routers/index.js:499 req.body.email + req.get(host)",
+        "routers/index.js:546 link",
+        "routers/index.js:547 sendEmail"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 514,
+        "note": "enumeration branch for null result"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 546,
+        "note": "reset link built from Host header"
+      }
+    ],
+    "evidence": "const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`; | validator: routers/index.js:514 renders Email not associated vs Reset Mail Sent oracle; routers/index.js:545-546 var host=req.get('host') and link http://${host}/secret/password-reset then sendEmail | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker controls req.body.email and Host header. HOW: email lookup distinguishes non-existent vs existent via different forgotmsg, reset JWT is signed with no expiresIn, and reset link is built as http://${host}/secret/password-reset/... using attacker-supplied Host, then emailed. WHAT: user enumeration plus Host-header poisoning produces phishing reset links; tokens are indefinite and update logic uses wrong filter so reuse persists.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/forgot; control of Host header"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`;",
+    "hunter_snippet": "const link = `http://${host}/secret/password-reset/${result.username}/${resettoken}`;",
+    "patch_summary": "Use uniform forgot response and build reset link from configured absolute base URL, not Host header.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-global-multer-unauth-write",
+    "title": "Global multer middleware enables unauthenticated file persistence via any POST endpoint",
+    "cwe": "CWE-434",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 74,
+    "end_line": 74,
+    "snippet": "app.use(imageUpload.single('file'))",
+    "taint": {
+      "source": "unauthenticated multipart field 'file' on any POST endpoint",
+      "sink": "persistent file write to images/ served via static/blinker",
+      "path": [
+        "app.js:74 global multer -> diskStorage images/",
+        "routers/index.js:118 POST /secret/login (unauth multipart parsed)",
+        "routers/index.js:292 POST /secret/signup (unauth multipart parsed)",
+        "routers/index.js:499 POST /secret/forgot (unauth multipart parsed)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 74,
+        "note": "global multer mount affecting all routes"
+      },
+      {
+        "file": "app.js",
+        "line": 42,
+        "note": "diskStorage destination images/"
+      },
+      {
+        "file": "app.js",
+        "line": 60,
+        "note": "weak extension-only fileFilter"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 673,
+        "note": "unauthenticated postcheck proves req.file exists on non-addpost routes"
+      }
+    ],
+    "evidence": "app.js:74 mounts multer globally before router mount; app.js:42 destination images/ with diskStorage; routers/index.js:673 postcheck reflects req.file unauthenticated proving global parsing; images/ served via blinker app.js:27 and serve-static | validator: app.js:74 app.use(imageUpload.single('file')) mounts multer globally before router; app.js:42 diskStorage destination images/; routers/index.js:673 POST /secret/postcheck (no auth) reflects req.file proving unauth file write; app.js:60 fileFilter only checks /\\.(png|jpg)$/ extension | consensus: 1/1 confirmed",
+    "rationale": "imageUpload.single('file') is mounted with app.use before app.use(userrouter), so EVERY POST (login/signup/forgot/callback/shell) parses multipart and writes a file to images/ on disk even without authentication. Disk filename is attacker-influenced (fieldname + ext from originalname). The webroot is served via express-blinker/serve-static, turning unauthenticated upload into persistent stored content. Unit hunters only flagged weak png/jpg check on the authenticated addpost path, missing the global unauthenticated write path.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:74 mounts multer globally before router mount; app.js:42 destination images/ with diskStorage; routers/index.js:673 postcheck reflects req.file unauthenticated proving global parsing; images/ served via blinker app.js:27 and serve-static",
+    "hunter_snippet": "app.use(imageUpload.single('file'))",
+    "patch_summary": "Remove global app.use(imageUpload.single) at app.js:74; apply multer only on routers/index.js:434 POST /secret/addpost behind authenticateToken with content-type sniffing, random names, and storage outside webroot.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-26",
+    "title": "Typeless password field disables casting and preserves operator injection",
+    "cwe": "CWE-915",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "models/user.js",
+    "start_line": 11,
+    "end_line": 19,
+    "snippet": "password: {",
+    "taint": {
+      "source": "JSON body operator object",
+      "sink": "query casting bypass preserving operators",
+      "path": [
+        "models/user.js:11 typeless password",
+        "routers/index.js:148 findOne"
+      ]
+    },
+    "refs": [
+      {
+        "file": "models/user.js",
+        "line": 11,
+        "note": "password without type allows object injection"
+      }
+    ],
+    "evidence": "password: { | validator: models/user.js:11 password:{} with no String type disables casting; routers/index.js:148 findOne({username:req.body.username,password:req.body.password}) passes JSON operators via bodyParser.json | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote user submitting JSON. HOW: password field declared as bare password:{} with no String type, while findOne/login/signup pass req.body values directly; Mixed type preserves operator objects instead of casting to string. WHAT: disables Mongoose type-casting protection, preserving $ne/$gt payloads for NoSQL injection and allowing non-string password storage.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Ability to submit signup/login JSON with object values"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "password: {",
+    "hunter_snippet": "password: {",
+    "patch_summary": "Type password as String, reject non-string/operator objects, and use strict query sanitization.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-32",
+    "title": "OAuth token exfiltration via wildcard postMessage",
+    "cwe": "CWE-200",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "public/redirect.html",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "window.opener.postMessage({\"accesstoken\": params.access_token}, \"*\");",
+    "taint": {
+      "source": "URL hash access_token",
+      "sink": "postMessage token to *",
+      "path": [
+        "public/redirect.html:24 location.hash",
+        "public/redirect.html:31 postMessage"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/redirect.html",
+        "line": 31,
+        "note": "wildcard postMessage of access token"
+      }
+    ],
+    "evidence": "window.opener.postMessage({\"accesstoken\": params.access_token}, \"*\"); | validator: public/redirect.html:24 parses location.hash access_token; public/redirect.html:31 window.opener.postMessage({accesstoken},\"*\") served via app.js:119 serve-static public | consensus: 1/1 confirmed",
+    "rationale": "WHO: any window that opened redirect popup controls receipt. HOW: window.opener.postMessage({\"accesstoken\":params.access_token},\"*\") broadcasts OAuth access_token with wildcard targetOrigin, then POSTs token to /auth/callback. WHAT: token disclosure to arbitrary opener origin enables session hijack and account takeover.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim opens OAuth popup; attacker window is opener"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "window.opener.postMessage({\"accesstoken\": params.access_token}, \"*\");",
+    "hunter_snippet": "window.opener.postMessage({\"accesstoken\": params.access_token}, \"*\");",
+    "patch_summary": "Replace \"*\" with explicit expected origin and validate opener; avoid forwarding raw OAuth token via postMessage.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routers-20",
+    "title": "CSRF protection defined but never enforced on state-changing routes",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "var csrfProtection = csrf({ cookie: true })",
+    "taint": {
+      "source": "cross-site forged request with cookies",
+      "sink": "state-changing POSTs without CSRF check",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 33,
+        "note": "csrf protection defined but never mounted"
+      }
+    ],
+    "evidence": "var csrfProtection = csrf({ cookie: true }) | validator: routers/index.js:33 csrfProtection defined but never used as middleware; app.js has no csrf mount and forms use secrettoken random string never verified | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker site forcing victim browser. HOW: var csrfProtection=csrf({cookie:true}) is defined but never applied to any POST route; login/signup/forgot/addpost/password-reset render secrettoken random string without verification. WHAT: no CSRF token validation, so cross-site form posts execute state-changing actions with victim cookies.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any network user can POST forms"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "var csrfProtection = csrf({ cookie: true })",
+    "hunter_snippet": "var csrfProtection = csrf({ cookie: true })",
+    "patch_summary": "Mount csrfProtection on state-changing POSTs and validate token; set SameSite/HttpOnly on Auth cookie.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-16",
+    "title": "Password-reset token rotation no-op leaves old token valid",
+    "cwe": "CWE-620",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 539,
+    "end_line": 539,
+    "snippet": "        Token.updateOne({'token':resettoken},function(err,t1){",
+    "taint": {
+      "source": "second forgot request for same email",
+      "sink": "token rotation silently skipped",
+      "path": [
+        "routers/index.js:526 Token.findOne existing token",
+        "routers/index.js:539 Token.updateOne no-op"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 539,
+        "note": "updateOne called without update document"
+      }
+    ],
+    "evidence": "        Token.updateOne({'token':resettoken},function(err,t1){ | validator: routers/index.js:539 Token.updateOne({'token':resettoken},function) passes no update document so rotation is no-op while new link emailed at routers/index.js:544-547 | consensus: 1/1 confirmed",
+    "rationale": "WHO: server logic handling second reset request. HOW: else branch calls Token.updateOne({'token':resettoken},callback) with only a filter and no update document, so no field is updated. WHAT: old reset token never replaced, leaving first emailed token valid indefinitely.",
+    "status": "confirmed",
+    "conditions": [
+      "Password-reset requested twice for same user"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "        Token.updateOne({'token':resettoken},function(err,t1){",
+    "hunter_snippet": "        Token.updateOne({'token':resettoken},function(err,t1){",
+    "patch_summary": "Pass update doc e.g. updateOne({email},{$set:{token:resettoken}}) or delete-then-insert; send only stored token.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-23",
+    "title": "Weak upload validation allows malicious file persistence in webroot",
+    "cwe": "CWE-434",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app.js",
+    "start_line": 61,
+    "end_line": 66,
+    "snippet": "if (!file.originalname.match(/\\.(png|jpg)$/)) {",
+    "taint": {
+      "source": "multipart file name/content",
+      "sink": "disk write in webroot + static serve",
+      "path": [
+        "app.js:60 file.originalname",
+        "app.js:47 filename + extname"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 60,
+        "note": "extension-only fileFilter with error misuse"
+      }
+    ],
+    "evidence": "if (!file.originalname.match(/\\.(png|jpg)$/)) { | validator: app.js:47-66 filename fieldname+Date+extname with fileFilter only originalname.match(/\\.(png|jpg)$/); app.js:74 app.use(imageUpload.single('file')) globally before auth saves file pre-gate | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated attacker controls file.originalname and content. HOW: fileFilter only checks originalname.match(/\\.(png|jpg)$/) case-sensitive, takes extension via path.extname(originalname) into disk filename, and on mismatch calls cb(file.originalname) misusing error arg; storage is images/ inside blinker webroot with no content-type sniffing or randomization. WHAT: polyglot/double-extension or case-variant uploads persist executable content reachable over HTTP, enabling stored XSS or server-side execution.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated ability to POST multipart to any route"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "if (!file.originalname.match(/\\.(png|jpg)$/)) {",
+    "hunter_snippet": "if (!file.originalname.match(/\\.(png|jpg)$/)) {",
+    "patch_summary": "Validate content-type/magic bytes, randomize names, store outside webroot/no-exec and serve with safe Content-Type.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-5",
+    "title": "JWT verification without algorithm allowlist or expiry enables forgery",
+    "cwe": "CWE-287",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 206,
+    "end_line": 211,
+    "snippet": "jwt.verify(token, accessTokenSecret, (err,user) => {",
+    "taint": {
+      "source": "client-supplied Auth cookie",
+      "sink": "authentication decision req.user= user; next()",
+      "path": [
+        "routers/index.js:200 req.cookies.Auth",
+        "routers/index.js:206 jwt.verify"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 206,
+        "note": "jwt.verify without algorithms/expiry options"
+      }
+    ],
+    "evidence": "jwt.verify(token, accessTokenSecret, (err,user) => { | validator: routers/index.js:206 jwt.verify(token,accessTokenSecret) with no algorithms/expiry options and routers/index.js:165 jwt.sign with no expiresIn creates indefinite tokens; forgery via known secret already covered but indefinite validity and alg-confusion hardening missing | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote bearer of forged token. HOW: authenticateToken reads req.cookies.Auth and calls jwt.verify(token, accessTokenSecret) with no algorithms allowlist, no issuer/audience, no expiry enforcement (sign sites omit expiresIn). WHAT: accepts tokens forged with hardcoded secret and, on vulnerable jsonwebtoken versions, alg=none/confusion tokens, granting authenticated access to all guarded routes.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Possession of any JWT or ability to send crafted Alg none token"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "jwt.verify(token, accessTokenSecret, (err,user) => {",
+    "hunter_snippet": "jwt.verify(token, accessTokenSecret, (err,user) => {",
+    "patch_summary": "Call jwt.verify with algorithms:['HS256'] and maxAge, and sign with short expiresIn; reject alg none.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-31",
+    "title": "Href attribute injection via poisonable reset link",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "utils/sendemail.js",
+    "start_line": 212,
+    "end_line": 212,
+    "snippet": "<a href=${text} target=\"_blank\" style=\"display: inline-block; padding: 16px 36px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;\">Do Something Sweet</a>",
+    "taint": {
+      "source": "Host header + reset token URL",
+      "sink": "unquoted href attribute injection",
+      "path": [
+        "routers/index.js:544 Host header",
+        "routers/index.js:546 reset link",
+        "utils/sendemail.js:212 href interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "utils/sendemail.js",
+        "line": 212,
+        "note": "unquoted href with poisonable URL"
+      }
+    ],
+    "evidence": "<a href=${text} target=\"_blank\" style=\"display: inline-block; padding: 16px 36px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;\">Do Something Sweet</a> | validator: routers/index.js:542-546 link built from req.get('host') with no allowlist then utils/sendemail.js:212 interpolated unquoted href=${text} emailed to victim | consensus: 1/1 confirmed",
+    "rationale": "WHO: forgot caller controls Host used to build reset link. HOW: template emits unquoted href=${text} with attacker-influenced URL. WHAT: attribute-breakout injection turning email into phishing payload.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker controls Host header on forgot request",
+      "Victim clicks button in email"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "<a href=${text} target=\"_blank\" style=\"display: inline-block; padding: 16px 36px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;\">Do Something Sweet</a>",
+    "hunter_snippet": "<a href=${text} target=\"_blank\" style=\"display: inline-block; padding: 16px 36px; font-family: 'Source Sans Pro', Helvetica, Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; border-radius: 6px;\">Do Something Sweet</a>",
+    "patch_summary": "Build reset links from allowlisted base URL, quote/escape href attribute, and store-then-send same token.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-04-OAUTH-STATIC-STATE",
+    "title": "OAuth implicit flow with static state never validated enables login CSRF",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 79,
+    "end_line": 83,
+    "snippet": "router.post(\"/auth/callback\", async (req, res) => {\n  try {\n    console.log(req.body)\n    const { token } = req.body;",
+    "taint": {
+      "source": "attacker-influenced OAuth token / cross-site request to callback",
+      "sink": "session minted without OAuth CSRF validation",
+      "path": [
+        "views/login.pug:359 (static state OAuth URL)",
+        "public/redirect.html:11 hash parsing",
+        "routers/index.js:79 POST /auth/callback (no state check)",
+        "routers/index.js:97 JWT mint"
+      ]
+    },
+    "refs": [
+      {
+        "file": "views/login.pug",
+        "line": 359,
+        "note": "hardcoded response_type=token and state=random_state_string"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 79,
+        "note": "POST /auth/callback without state validation"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 83,
+        "note": "only token extracted, no state check"
+      }
+    ],
+    "evidence": "views/login.pug:359 builds Google OAuth URL with response_type=token and state=random_state_string hardcoded; routers/index.js:79-83 POST /auth/callback reads only {token} from body and never validates state, nonce, or PKCE | validator: views/login.pug:359 builds Google OAuth URL with hardcoded state=random_state_string; public/redirect.html ignores state; routers/index.js:79-83 POST /auth/callback reads only {token} and mints JWT at routers/index.js:97 with no state/nonce/PKCE check | consensus: 1/1 confirmed",
+    "rationale": "Cross-unit OAuth flow (login.pug popup -> redirect.html hash parse -> POST /auth/callback -> JWT mint) uses deprecated implicit flow exposing token in URL hash and a static state value that is never checked server-side. Attacker can forge cross-site request to /auth/callback or trick victim into completing OAuth with attacker token (login CSRF), and hash token leaks via history/referer/logs.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "views/login.pug:359 builds Google OAuth URL with response_type=token and state=random_state_string hardcoded; routers/index.js:79-83 POST /auth/callback reads only {token} from body and never validates state, nonce, or PKCE",
+    "hunter_snippet": "router.post(\"/auth/callback\", async (req, res) => {\n  try {\n    console.log(req.body)\n    const { token } = req.body;",
+    "patch_summary": "Generate per-session crypto-random OAuth state/nonce, store in session, validate it in POST /auth/callback, and switch from implicit token flow to authorization-code + PKCE.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-19",
+    "title": "Unrestricted CORS allows cross-origin reads of sensitive data",
+    "cwe": "CWE-942",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "routers/index.js",
+    "start_line": 46,
+    "end_line": 46,
+    "snippet": "router.use(cors())",
+    "taint": {
+      "source": "server middleware config",
+      "sink": "CORS wildcard on all router responses",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 46,
+        "note": "unrestricted CORS middleware"
+      }
+    ],
+    "evidence": "router.use(cors()) | validator: routers/index.js:46 router.use(cors()) defaults to ACAO *; routers/index.js:259 res.json(result) dumps full user doc on unauthenticated endpoint readable cross-origin | consensus: 1/1 confirmed",
+    "rationale": "WHO: any cross-origin attacker site. HOW: router.use(cors()) with no origin allowlist sends Access-Control-Allow-Origin:* and allows browsers to read responses including res.json user dumps. WHAT: permits cross-site reading of sensitive authenticated responses, aiding exfiltration.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any cross-origin site can call API"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "router.use(cors())",
+    "hunter_snippet": "router.use(cors())",
+    "patch_summary": "Restrict CORS to explicit allowlisted origins and disable for sensitive routes; do not use default wildcard.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-implicit-global-cross-request-pollution",
+    "title": "Implicit global assignments enable cross-request state pollution and data leakage",
+    "cwe": "CWE-362",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "models/strict.js",
+    "start_line": 5,
+    "end_line": 6,
+    "snippet": "email = req.body.email;",
+    "taint": {
+      "source": "attacker-controlled request bodies/files on concurrent requests",
+      "sink": "cross-request use of poisoned globals in DB queries and post creation",
+      "path": [
+        "models/strict.js:5 email = req.body.email (global write)",
+        "routers/index.js:314 email = req.email (global read/write)",
+        "routers/index.js:500 email1 = req.body.email (global write)",
+        "routers/index.js:438 file = req.file.filename (global write)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "models/strict.js",
+        "line": 5,
+        "note": "implicit global email from request body"
+      },
+      {
+        "file": "models/strict.js",
+        "line": 9,
+        "note": "implicit global regex"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 314,
+        "note": "implicit global email on signup"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 500,
+        "note": "implicit global email1/email on forgot"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 438,
+        "note": "implicit global file on addpost"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 453,
+        "note": "implicit global title/description on addpost"
+      }
+    ],
+    "evidence": "models/strict.js:5 assigns email without declaration; models/strict.js:9 assigns regex without declaration; routers/index.js:314-315,500-501,438,453-454,530 assign email/email1/file/title/description/token without var/let/const, creating Node globals shared across concurrent requests | validator: models/strict.js:5 email=req.body.email and models/strict.js:9 regex= without declaration; routers/index.js:314 email=req.email, routers/index.js:500 email1=req.body.email, routers/index.js:438 file=req.file.filename, routers/index.js:453-454 title=/description= create Node globals shared across requests with async DB gaps (e.g. sendEmail(email1) at routers/index.js:548 inside callback) | consensus: 1/1 confirmed",
+    "rationale": "In non-strict CommonJS, assignments without declaration become global.*. Signup (strict.js email + routers email), forgot (email1/email), and addpost (file/title/description) all use implicit globals. Concurrent requests overwrite each other's values, so attacker request can poison victim's email normalization, reset lookup, or post attribution/content. This is a systemic cross-unit flow (models/strict.js -> routers/index.js) distinct from the single global.hello issue.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "models/strict.js:5 assigns email without declaration; models/strict.js:9 assigns regex without declaration; routers/index.js:314-315,500-501,438,453-454,530 assign email/email1/file/title/description/token without var/let/const, creating Node globals shared across concurrent requests",
+    "hunter_snippet": "email = req.body.email;",
+    "patch_summary": "Declare all request-scoped values with const/let (email, regex, email1, file, title, description, token) in models/strict.js and routers/index.js and enable strict mode to prevent implicit globals.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-3",
+    "title": "Plaintext login password written to logs",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 138,
+    "end_line": 138,
+    "snippet": "    console.log(data)",
+    "taint": {
+      "source": "login POST body credentials",
+      "sink": "plaintext password to logs",
+      "path": [
+        "routers/index.js:118 req.body.username/password",
+        "routers/index.js:138 console.log(data)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 138,
+        "note": "plaintext password object logged"
+      }
+    ],
+    "evidence": "    console.log(data) | validator: routers/index.js:118-138 data built from req.body.username/password then routers/index.js:138 console.log(data) writes plaintext password to logs | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated login caller controls req.body.username/password. HOW: handler copies them into data object and executes console.log(data) before validation/query. WHAT: plaintext password written to logs on every login attempt.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker can POST to /secret/login with any credentials"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "    console.log(data)",
+    "hunter_snippet": "    console.log(data)",
+    "patch_summary": "Remove console.log(data) containing password; never log credentials.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-4",
+    "title": "Minted session JWT logged after login",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 166,
+    "end_line": 166,
+    "snippet": "          console.log(accessToken)",
+    "taint": {
+      "source": "server-minted Auth token",
+      "sink": "session JWT to logs",
+      "path": [
+        "routers/index.js:165 jwt.sign session token",
+        "routers/index.js:166 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 166,
+        "note": "minted Auth JWT logged"
+      }
+    ],
+    "evidence": "          console.log(accessToken) | validator: routers/index.js:165 jwt.sign session then routers/index.js:166 console.log(accessToken) writes mintable Auth JWT to logs | consensus: 1/1 confirmed",
+    "rationale": "WHO: server mints JWT after successful credential match. HOW: immediately after jwt.sign, handler executes console.log(accessToken) where accessToken is the long-lived session bearer. WHAT: session token disclosure to logs enables hijack.",
+    "status": "confirmed",
+    "conditions": [
+      "Successful login occurs",
+      "Logs are accessible"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "          console.log(accessToken)",
+    "hunter_snippet": "          console.log(accessToken)",
+    "patch_summary": "Remove console.log(accessToken); never log session JWTs.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-21",
+    "title": "Hardcoded express-session secret with insecure cookie defaults",
+    "cwe": "CWE-798",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 92,
+    "end_line": 92,
+    "snippet": "secret: 'Your_Secret_Key',",
+    "taint": {
+      "source": "hardcoded literal",
+      "sink": "express-session cookie signing",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 92,
+        "note": "hardcoded express-session secret"
+      }
+    ],
+    "evidence": "secret: 'Your_Secret_Key', | validator: app.js:92 hardcodes express-session secret 'Your_Secret_Key'; no session-based authz relies on it (routers/index.js:55,100 show req.session use commented out), so forgery impact is limited | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone reading repo. HOW: app.use(session({secret:'Your_Secret_Key',...})) hardcodes session signing secret with predictable default and no Secure/HttpOnly/SameSite cookie flags. WHAT: session cookies can be forged and stolen via XSS/cleartext, breaking session integrity.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Local repo read or process env access"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "secret: 'Your_Secret_Key',",
+    "hunter_snippet": "secret: 'Your_Secret_Key',",
+    "patch_summary": "Load session secret from env with strong random value and set secure/httpOnly/sameSite cookie options.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-2",
+    "title": "Auth cookie in OAuth callback lacks HttpOnly/Secure/SameSite",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 99,
+    "end_line": 99,
+    "snippet": "res.cookie(\"Auth\",accessToken)",
+    "taint": {
+      "source": "server-minted JWT",
+      "sink": "res.cookie Auth without flags",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 99,
+        "note": "insecure Auth cookie set without flags"
+      }
+    ],
+    "evidence": "res.cookie(\"Auth\",accessToken) | validator: routers/index.js:99 res.cookie(\"Auth\",accessToken) sets JWT with no httpOnly/secure/sameSite/maxAge; no httpOnly flag anywhere in routers/index.js or app.js | consensus: 1/1 confirmed",
+    "rationale": "WHO: server issuer. HOW: res.cookie(\"Auth\",accessToken) in auth callback sets session JWT without HttpOnly, Secure, SameSite flags. WHAT: cookie readable via XSS, sent over cleartext, and sent cross-site, enabling theft and CSRF session abuse.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access; can read Set-Cookie"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "res.cookie(\"Auth\",accessToken)",
+    "hunter_snippet": "res.cookie(\"Auth\",accessToken)",
+    "patch_summary": "Set res.cookie Auth with httpOnly:true, secure:true, sameSite:'strict' and short maxAge aligned with JWT expiry.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-4",
+    "title": "Login Auth cookie lacks HttpOnly/Secure/SameSite and has no expiry",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 168,
+    "end_line": 168,
+    "snippet": "res.cookie(\"Auth\",accessToken)",
+    "taint": {
+      "source": "server-minted login JWT",
+      "sink": "res.cookie Auth without flags, indefinite JWT",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 165,
+        "note": "jwt.sign without expiry"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 168,
+        "note": "insecure cookie set"
+      }
+    ],
+    "evidence": "res.cookie(\"Auth\",accessToken) | validator: routers/index.js:165 jwt.sign without expiresIn and routers/index.js:168 res.cookie(\"Auth\",accessToken) with no httpOnly/secure/sameSite flags | consensus: 1/1 confirmed",
+    "rationale": "WHO: server issuer after login. HOW: res.cookie(\"Auth\",accessToken) after successful findOne sets JWT with no HttpOnly/Secure/SameSite, and jwt.sign has no expiresIn so token is indefinite. WHAT: long-lived bearer cookie exposed to XSS theft and replay, no session expiry.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access; can read Set-Cookie"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "res.cookie(\"Auth\",accessToken)",
+    "hunter_snippet": "res.cookie(\"Auth\",accessToken)",
+    "patch_summary": "Add short expiresIn to jwt.sign and set Auth cookie with httpOnly/secure/sameSite/maxAge.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-0",
+    "title": "Session JWT written to server logs in profile handler",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 54,
+    "end_line": 54,
+    "snippet": "    console.log(req.cookies.Auth);",
+    "taint": {
+      "source": "client-supplied Auth cookie",
+      "sink": "sensitive JWT written to logs",
+      "path": [
+        "routers/index.js:52 req.cookies.Auth",
+        "routers/index.js:54 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 54,
+        "note": "console.log of full Auth JWT bearer"
+      }
+    ],
+    "evidence": "    console.log(req.cookies.Auth); | validator: routers/index.js:54 console.log(req.cookies.Auth) logs full JWT bearer on active GET /secret/profile | consensus: 1/1 confirmed",
+    "rationale": "WHO: any client presenting an Auth cookie. HOW: handler at routers/index.js:52 logs req.cookies.Auth verbatim via console.log, where Auth is the full JWT session bearer. WHAT: sensitive session credential written to stdout/logs, enabling session hijack for anyone with log access.",
+    "status": "confirmed",
+    "conditions": [
+      "Application logging to stdout/file is enabled",
+      "Attacker can trigger GET /secret/profile with any Auth cookie"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "    console.log(req.cookies.Auth);",
+    "hunter_snippet": "    console.log(req.cookies.Auth);",
+    "patch_summary": "Remove console.log of Auth cookie; replace with structured logger that redacts Authorization/cookies.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-12",
+    "title": "Null dereference and global pollution on missing upload file",
+    "cwe": "CWE-476",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 438,
+    "end_line": 438,
+    "snippet": "  file = req.file.filename;",
+    "taint": {
+      "source": "authenticated multipart request without valid file",
+      "sink": "null dereference + global pollution",
+      "path": [
+        "routers/index.js:434 multipart file input",
+        "routers/index.js:438 req.file.filename"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 438,
+        "note": "unchecked req.file dereference with implicit global"
+      }
+    ],
+    "evidence": "  file = req.file.filename; | validator: routers/index.js:438 file=req.file.filename dereferences possibly-undefined req.file with implicit global and no guard | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated poster controls multipart body. HOW: handler executes file = req.file.filename with implicit global and no existence check; when multer rejects or no file sent, req.file is undefined. WHAT: TypeError crash plus implicit-global pollution.",
+    "status": "confirmed",
+    "conditions": [
+      "Authenticated caller POSTs to /secret/addpost without file part or with rejected file type"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "  file = req.file.filename;",
+    "hunter_snippet": "  file = req.file.filename;",
+    "patch_summary": "Guard missing/rejected file: if(!req.file) return 400; declare with const/let.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-15",
+    "title": "Unchecked email dereference DoS in forgot handler",
+    "cwe": "CWE-252",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 501,
+    "end_line": 501,
+    "snippet": "  email =email1.toLowerCase();",
+    "taint": {
+      "source": "forgot POST email parameter",
+      "sink": "TypeError crash + global assignment",
+      "path": [
+        "routers/index.js:499 req.body.email",
+        "routers/index.js:501 toLowerCase"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 501,
+        "note": "unchecked toLowerCase on attacker input"
+      }
+    ],
+    "evidence": "  email =email1.toLowerCase(); | validator: routers/index.js:499-501 email1=req.body.email then email1.toLowerCase() with no missing/object check and implicit global | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated forgot caller controls req.body.email. HOW: handler does email1.toLowerCase() with implicit globals and no presence/type check; missing field gives undefined.toLowerCase. WHAT: TypeError crash (DoS) from unauthenticated input plus global pollution.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker POSTs to /secret/forgot without email field or with JSON object email"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "  email =email1.toLowerCase();",
+    "hunter_snippet": "  email =email1.toLowerCase();",
+    "patch_summary": "Validate typeof email1==='string' before toLowerCase; declare with const/let and return 400 on missing/invalid.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-02-SENDEMAIL-RES",
+    "title": "Password-reset mailer references undefined res causing crash on success",
+    "cwe": "CWE-248",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "utils/sendemail.js",
+    "start_line": 294,
+    "end_line": 299,
+    "snippet": "mailTransporter.sendMail(mailDetails, function(err, data) {\n    if(err) {\n        console.log('Error Occurs');\n    } else {\n        res.render('forgot',{forgotmsg:\" Reset Mail Sent to \" + email})",
+    "taint": {
+      "source": "unauthenticated forgot-password email body",
+      "sink": "ReferenceError / uncaught exception on email success",
+      "path": [
+        "routers/index.js:499 POST /secret/forgot (email input)",
+        "routers/index.js:547 sendEmail(email1,...)",
+        "utils/sendemail.js:298 res.render with undefined res"
+      ]
+    },
+    "refs": [
+      {
+        "file": "utils/sendemail.js",
+        "line": 5,
+        "note": "function has no res param"
+      },
+      {
+        "file": "utils/sendemail.js",
+        "line": 298,
+        "note": "uses undefined res.render"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 547,
+        "note": "forgot handler calls sendEmail without res"
+      }
+    ],
+    "evidence": "utils/sendemail.js:5 defines sendEmail(email,subject,text,username) with no res param, but utils/sendemail.js:298 calls res.render in sendMail success callback; caller routers/index.js:547 invokes sendEmail without res and already renders at routers/index.js:553 | validator: utils/sendemail.js:5 defines sendEmail(email,subject,text,username) with no res param but utils/sendemail.js:298 calls res.render in sendMail success callback (ReferenceError on success); caller routers/index.js:548 calls sendEmail without res and already renders at routers/index.js:553 | consensus: 1/1 confirmed",
+    "rationale": "On successful Gmail send, callback dereferences out-of-scope res causing ReferenceError inside async callback, crashing request handling and breaking password-reset completion/auditing. Caller already sent response, so even if res existed it would be double-render / headers-sent. Reachable via unauthenticated POST /secret/forgot email flow.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "utils/sendemail.js:5 defines sendEmail(email,subject,text,username) with no res param, but utils/sendemail.js:298 calls res.render in sendMail success callback; caller routers/index.js:547 invokes sendEmail without res and already renders at routers/index.js:553",
+    "hunter_snippet": "mailTransporter.sendMail(mailDetails, function(err, data) {\n    if(err) {\n        console.log('Error Occurs');\n    } else {\n        res.render('forgot',{forgotmsg:\" Reset Mail Sent to \" + email})",
+    "patch_summary": "Remove res.render from utils/sendemail.js:298 callback (return status/log only) and let caller routers/index.js:553 render once; handle err/success via promise return.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-2",
+    "title": "OAuth bearer token logged in auth callback",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 82,
+    "end_line": 82,
+    "snippet": "    console.log(req.body)",
+    "taint": {
+      "source": "unauthenticated POST body {token}",
+      "sink": "OAuth bearer written to logs",
+      "path": [
+        "routers/index.js:79 req.body.token",
+        "routers/index.js:82 console.log(req.body)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 82,
+        "note": "logs full body containing OAuth bearer token"
+      }
+    ],
+    "evidence": "    console.log(req.body) | validator: routers/index.js:79 req.body.token holds Google OAuth bearer then routers/index.js:82 console.log(req.body) writes it to server logs | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote caller controls JSON body {token}. HOW: /auth/callback handler executes console.log(req.body) where body contains the raw Google OAuth bearer token. WHAT: writes third-party OAuth bearer credential to server logs, enabling replay.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker can POST to /auth/callback",
+      "Server logs are retained"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "    console.log(req.body)",
+    "hunter_snippet": "    console.log(req.body)",
+    "patch_summary": "Remove console.log of request body/token; log only non-sensitive metadata with redaction.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-03-LOGOUT-INVALIDATION",
+    "title": "Logout clears cookie but does not invalidate JWT/server session",
+    "cwe": "CWE-613",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 487,
+    "end_line": 489,
+    "snippet": "router.get('/secret/logout',(req, res) => {\n  res.clearCookie('Auth');",
+    "taint": {
+      "source": "authenticated user logout request",
+      "sink": "session remains valid after logout",
+      "path": [
+        "routers/index.js:165 JWT minted on login",
+        "routers/index.js:488 logout clears cookie only",
+        "routers/index.js:206 jwt.verify still accepts old token"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 487,
+        "note": "GET logout without auth guard"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 488,
+        "note": "only clears cookie, no session destroy"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 199,
+        "note": "authenticateToken still trusts old JWT"
+      }
+    ],
+    "evidence": "routers/index.js:487 defines GET /secret/logout without authenticateToken; handler at routers/index.js:488 only does res.clearCookie('Auth') with no req.session.destroy and no JWT revocation/denylist, while authenticateToken at routers/index.js:199-211 accepts any valid JWT signed with hardcoded secret | validator: routers/index.js:487-489 GET /secret/logout only does res.clearCookie('Auth') with no denylist/expiry; tokens minted at routers/index.js:165 and routers/index.js:523 have no exp, and routers/index.js:199-211 verify still accepts old JWT | consensus: 1/1 confirmed",
+    "rationale": "Logout is state-changing via GET with no auth/CSRF check and only clears client cookie. Stateless JWT (no expiry allowlist, signed with hardcoded secret) remains valid and is still accepted by authenticateToken, so stolen token survives logout. Express-session is never destroyed, enabling session reuse. Also enables logout-CSRF.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routers/index.js:487 defines GET /secret/logout without authenticateToken; handler at routers/index.js:488 only does res.clearCookie('Auth') with no req.session.destroy and no JWT revocation/denylist, while authenticateToken at routers/index.js:199-211 accepts any valid JWT signed with hardcoded secret",
+    "hunter_snippet": "router.get('/secret/logout',(req, res) => {\n  res.clearCookie('Auth');",
+    "patch_summary": "Issue short-lived JWTs with exp, set HttpOnly/SameSite cookies, and add server-side revocation/denylist checked in authenticateToken and cleared on logout.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-forgot-first-request-never-emails",
+    "title": "Password-reset first request never sends email (inverted Token branch)",
+    "cwe": "CWE-640",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 529,
+    "end_line": 534,
+    "snippet": "if(reset == null) {",
+    "taint": {
+      "source": "unauthenticated email input",
+      "sink": "password-reset email delivery skipped on first request",
+      "path": [
+        "routers/index.js:499 POST /secret/forgot entry",
+        "routers/index.js:529 Token.findOne branch",
+        "routers/index.js:548 sendEmail (only in else)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 529,
+        "note": "branch that creates token without emailing"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 548,
+        "note": "sendEmail only in else branch"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 553,
+        "note": "misleading success render in both branches"
+      }
+    ],
+    "evidence": "routers/index.js:529 if(reset==null) only saves Token and never calls sendEmail; routers/index.js:537 else branch is the only place sendEmail is called; routers/index.js:553 still renders 'Reset Mail Sent' in both cases | validator: routers/index.js:529 if(reset==null) only saves Token and never calls sendEmail; routers/index.js:537-548 else is the only sendEmail site; routers/index.js:553 renders 'Reset Mail Sent' in both branches | consensus: 1/1 confirmed",
+    "rationale": "Forgot-password Token.findOne branches: when no prior token exists it creates and saves a new Token but does not send the reset link (sendEmail only in else). User is still told mail was sent. First-time reset therefore never delivers, causing availability failure and forcing second request; combined with the no-op Token.updateOne filter, token lifecycle is broken and can leave stale valid tokens.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routers/index.js:529 if(reset==null) only saves Token and never calls sendEmail; routers/index.js:537 else branch is the only place sendEmail is called; routers/index.js:553 still renders 'Reset Mail Sent' in both cases",
+    "hunter_snippet": "if(reset == null) {",
+    "patch_summary": "Send reset email in both Token branches (create and update) at routers/index.js:529-548, fix Token.updateOne filter to match by email/username, and only render success after mail queued.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-6",
+    "title": "Duplicate profile route omits authentication check",
+    "cwe": "CWE-285",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 218,
+    "end_line": 222,
+    "snippet": "router.get('/secret/profile', function(req, res){",
+    "taint": {
+      "source": "unauthenticated GET /secret/profile",
+      "sink": "res.render profile without auth check",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 218,
+        "note": "unauthenticated profile handler without guard"
+      }
+    ],
+    "evidence": "router.get('/secret/profile', function(req, res){ | validator: routers/index.js:53 first GET /secret/profile has authenticateToken and ends with res.render; routers/index.js:218 second identical route never reached | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote user. HOW: second router.get('/secret/profile', function...) at this site renders profile with no authenticateToken, while an earlier definition required it; Express registers both so unauthenticated GET succeeds. WHAT: authentication control omitted on sensitive profile endpoint, exposing authenticated view without token.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /secret/profile"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "router.get('/secret/profile', function(req, res){",
+    "hunter_snippet": "router.get('/secret/profile', function(req, res){",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-28",
+    "title": "Unauthenticated MongoDB connection string",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "database/db.js",
+    "start_line": 2,
+    "end_line": 3,
+    "snippet": "db: 'mongodb://localhost:27017/User'",
+    "taint": {
+      "source": "hardcoded URI",
+      "sink": "mongoose.connect without credentials",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "database/db.js",
+        "line": 2,
+        "note": "unauthenticated Mongo URI"
+      }
+    ],
+    "evidence": "db: 'mongodb://localhost:27017/User' | validator: database/db.js:2 mongodb://localhost:27017/User localhost-only URI; no remote untrusted path to DB shown, only via app layer | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any local network client. HOW: module exports db:'mongodb://localhost:27017/User' with no username/password, authSource, or TLS. WHAT: unauthenticated datastore; anyone reaching Mongo can read/write users, posts, and reset tokens, breaking confidentiality and integrity.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Local network or config read"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "db: 'mongodb://localhost:27017/User'",
+    "hunter_snippet": "db: 'mongodb://localhost:27017/User'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-33",
+    "title": "Duplicate OAuth token leak via wildcard postMessage",
+    "cwe": "CWE-200",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "views/redirect.html",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "window.opener.postMessage({\"accesstoken\":params.access_token},\"*\");",
+    "taint": {
+      "source": "hash access_token",
+      "sink": "postMessage to *",
+      "path": [
+        "views/redirect.html:23 location.hash",
+        "views/redirect.html:33 postMessage"
+      ]
+    },
+    "refs": [
+      {
+        "file": "views/redirect.html",
+        "line": 33,
+        "note": "wildcard postMessage of token"
+      }
+    ],
+    "evidence": "window.opener.postMessage({\"accesstoken\":params.access_token},\"*\"); | validator: views/redirect.html:33 same wildcard postMessage but app.js:119 only serves public/ and no router renders views/redirect.html so unmounted | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: arbitrary opener window. HOW: views/redirect.html extracts hash access_token and calls window.opener.postMessage({\"accesstoken\":...},\"*\") without origin check. WHAT: same token leak as public copy; any malicious opener harvests OAuth bearer usable at /auth/callback.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim opens redirect page with attacker opener"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "window.opener.postMessage({\"accesstoken\":params.access_token},\"*\");",
+    "hunter_snippet": "window.opener.postMessage({\"accesstoken\":params.access_token},\"*\");",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-34",
+    "title": "Stored/DOM XSS via unsanitized nickname and console echo",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "public/hack.js",
+    "start_line": 154,
+    "end_line": 154,
+    "snippet": "$objectivesContainer.append('<li> ' + chat['/'][i].replace('#{nickname}', nickname) + '</li>');",
+    "taint": {
+      "source": "nickname/console text input",
+      "sink": "jQuery append/html XSS",
+      "path": [
+        "public/hack.js:149 nickname input",
+        "public/hack.js:154 append HTML"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 154,
+        "note": "nickname concatenated into append HTML"
+      }
+    ],
+    "evidence": "$objectivesContainer.append('<li> ' + chat['/'][i].replace('#{nickname}', nickname) + '</li>'); | validator: public/hack.js:149 nickname=$nicknameInput.val() local only; public/hack.js:154 append with nickname is self-DOM XSS with no server storage or cross-user render | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: local user/attacker typing nickname and console input. HOW: $nicknameInput.val() stored to nickname then concatenated into $objectivesContainer.append('<li> '+...+nickname+'</li>') and onEnter does $display1.append('<div>'+input+'</div>') plus .html(val) rendering. WHAT: unsanitized HTML injection executes script in page origin, stealing cookies and actions.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker supplies nickname or console input in game UI"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "$objectivesContainer.append('<li> ' + chat['/'][i].replace('#{nickname}', nickname) + '</li>');",
+    "hunter_snippet": "$objectivesContainer.append('<li> ' + chat['/'][i].replace('#{nickname}', nickname) + '</li>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-14",
+    "title": "Password-reset GET validates only DB presence, not token signature",
+    "cwe": "CWE-287",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 569,
+    "end_line": 583,
+    "snippet": "Token.findOne({username: req.params.username,token: req.params.token},function(err, reset){",
+    "taint": {
+      "source": "URL path username/token",
+      "sink": "render resetpassword without signature check",
+      "path": [
+        "routers/index.js:563 req.params.username/token",
+        "routers/index.js:569 Token.findOne"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 569,
+        "note": "DB existence check without JWT verify"
+      }
+    ],
+    "evidence": "Token.findOne({username: req.params.username,token: req.params.token},function(err, reset){ | validator: routers/index.js:569-583 GET only renders resetpassword form; routers/index.js:602-610 POST enforces verify(token) signature and username equality before findOneAndUpdate | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated holder of username/token path params. HOW: GET handler only checks Token.findOne({username,token}) existence and renders reset form without verifying JWT signature or expiry. WHAT: knowledge of DB token (leaked via enumeration/SSRF/log) grants reset UI even for forged/expired JWTs; no cryptographic binding.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET password-reset link"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "Token.findOne({username: req.params.username,token: req.params.token},function(err, reset){",
+    "hunter_snippet": "Token.findOne({username: req.params.username,token: req.params.token},function(err, reset){",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-27",
+    "title": "Weak email regex with global pollution and reflected value",
+    "cwe": "CWE-185",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "models/strict.js",
+    "start_line": 4,
+    "end_line": 23,
+    "snippet": "var validRegex = /^[a-zA-Z0-9.!#$&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*.com$/;",
+    "taint": {
+      "source": "signup email body",
+      "sink": "weak check + reflected email + global assignment",
+      "path": [
+        "models/strict.js:5 req.body.email",
+        "models/strict.js:23 res.render email"
+      ]
+    },
+    "refs": [
+      {
+        "file": "models/strict.js",
+        "line": 4,
+        "note": "weak email regex with unescaped dot"
+      }
+    ],
+    "evidence": "var validRegex = /^[a-zA-Z0-9.!#$&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*.com$/; | validator: models/strict.js:23 concatenates email into invalidemail but views/Register.pug:159 uses h3=invalidemail which HTML-escapes; no unescaped sink | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated signup user controls req.body.email. HOW: validRegex uses unescaped dot before com and weak Orgemail regex .*( @ninjasworkout.com)$ with unescaped dots; assignments use implicit globals email/regex, and failure path renders register with \"...\"+email. WHAT: incorrect validation accepts malformed/spoofed domains, pollutes globals, and reflects email into view enabling XSS if unescaped.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated POST to /secret/signup with crafted email"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "var validRegex = /^[a-zA-Z0-9.!#$&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*.com$/;",
+    "hunter_snippet": "var validRegex = /^[a-zA-Z0-9.!#$&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*.com$/;",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-30",
+    "title": "Prototype pollution via jquery-deparam parsing",
+    "cwe": "CWE-1321",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "home.html",
+    "start_line": 256,
+    "end_line": 257,
+    "snippet": "var query = deparam(location.search.slice(1));",
+    "taint": {
+      "source": "URL query/hash",
+      "sink": "prototype-polluting object merge",
+      "path": [
+        "home.html:256 location.search/hash",
+        "home.html:256 deparam"
+      ]
+    },
+    "refs": [
+      {
+        "file": "home.html",
+        "line": 256,
+        "note": "unsanitized deparam of query/hash"
+      }
+    ],
+    "evidence": "var query = deparam(location.search.slice(1)); | validator: home.html:256 var query=deparam(...) result never merged/used; sink is third-party jquery-deparam client lib, SCA out of scope | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controls location.search/hash. HOW: deparam(location.search.slice(1)) and deparam(location.hash.slice(1)) from jquery-deparam parse __proto__/constructor/prototype keys into objects without sanitization. WHAT: client-side prototype pollution altering app logic, plus page loads third-party scripts (rawcdn, ads-twitter) without integrity allowing supply-chain code execution.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim visits crafted URL with query/hash"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "var query = deparam(location.search.slice(1));",
+    "hunter_snippet": "var query = deparam(location.search.slice(1));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-31",
+    "title": "Prototype pollution demo page parsing untrusted URL",
+    "cwe": "CWE-1321",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "proto.html",
+    "start_line": 12,
+    "end_line": 13,
+    "snippet": "var query = deparam(location.search.slice(1));",
+    "taint": {
+      "source": "URL query/hash",
+      "sink": "object merge without key filtering",
+      "path": [
+        "proto.html:12 location.search",
+        "proto.html:12 deparam"
+      ]
+    },
+    "refs": [
+      {
+        "file": "proto.html",
+        "line": 12,
+        "note": "deparam of attacker URL"
+      }
+    ],
+    "evidence": "var query = deparam(location.search.slice(1)); | validator: proto.html:12 var query=deparam(location.search.slice(1)) never merged into prototype or sinks; lib is remote client-side dependency | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controls URL query/hash. HOW: proto.html calls deparam(location.search.slice(1)) and deparam(location.hash.slice(1)) with known-polluting library. WHAT: prototype pollution primitives in victim browser, trackable to gadget chains.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim visits crafted URL"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "var query = deparam(location.search.slice(1));",
+    "hunter_snippet": "var query = deparam(location.search.slice(1));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-13",
+    "title": "Creation of alg-none JWT reset token with empty secret",
+    "cwe": "CWE-200",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 523,
+    "end_line": 523,
+    "snippet": "const resettoken1 = jwt.sign({ username: result.username,  email: result.email, admin: result.admin},'',{algorithm:'none'});",
+    "taint": {
+      "source": "server-side token minting",
+      "sink": "jwt.sign with alg none and empty secret",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 523,
+        "note": "alg none token creation with empty secret"
+      }
+    ],
+    "evidence": "const resettoken1 = jwt.sign({ username: result.username,  email: result.email, admin: result.admin},'',{algorithm:'none'}); | validator: routers/index.js:523 resettoken1 minted with alg none but never stored/sent/verified; only resettoken at routers/index.js:522 persisted and link at routers/index.js:541 uses resettoken | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: server itself creates weak token. HOW: handler creates resettoken1=jwt.sign(payload,'',{algorithm:'none'}) and console.log(resettoken1). WHAT: alg=none unsecured token material is generated and logged; if ever accepted by lenient verifier it yields signature-less forgery, and logging leaks token structure.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Ability to view server logs or responses"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "const resettoken1 = jwt.sign({ username: result.username,  email: result.email, admin: result.admin},'',{algorithm:'none'});",
+    "hunter_snippet": "const resettoken1 = jwt.sign({ username: result.username,  email: result.email, admin: result.admin},'',{algorithm:'none'});",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-16",
+    "title": "Unauthenticated postcheck handler exposes file/body oracle",
+    "cwe": "CWE-285",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 673,
+    "end_line": 679,
+    "snippet": "router.post('/secret/postcheck',(req, res) => {",
+    "taint": {
+      "source": "unauthenticated POST body",
+      "sink": "unauth file/body echo + logging",
+      "path": [
+        "routers/index.js:673 req.body/req.file",
+        "routers/index.js:676 res.send(req.file)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 673,
+        "note": "postcheck route without auth guard"
+      }
+    ],
+    "evidence": "router.post('/secret/postcheck',(req, res) => { | validator: routers/index.js:673-677 postcheck only echoes caller's own req.file/req.body with no cross-user resource; missing auth alone is not a boundary violation | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote user controls POST body/file. HOW: router.post('/secret/postcheck') has no authenticateToken, logs JSON.stringify(req.body) and returns res.send(req.file). WHAT: missing authorization exposes upload/file handling oracle and enables log-injection via logged body.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /secret/postcheck"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "router.post('/secret/postcheck',(req, res) => {",
+    "hunter_snippet": "router.post('/secret/postcheck',(req, res) => {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-35",
+    "title": "Unpinned third-party actions on PR-triggered Codacy workflow",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": ".github/workflows/codacy-analysis.yml",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "uses: codacy/codacy-analysis-cli-action@1.1.0",
+    "taint": {
+      "source": "untrusted PR + mutable tag",
+      "sink": "CI execution of third-party action on PR",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": ".github/workflows/codacy-analysis.yml",
+        "line": 30,
+        "note": "unpinned action by mutable tag"
+      }
+    ],
+    "evidence": "uses: codacy/codacy-analysis-cli-action@1.1.0 | validator: .github/workflows/codacy-analysis.yml:30 CI workflow manifest explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: untrusted PR author and upstream action owners. HOW: workflow triggers on pull_request to master and runs codacy/codacy-analysis-cli-action@1.1.0, actions/checkout@v2, codeql upload@v1 by mutable tag with max-allowed-issues bypass and secret CODACY_PROJECT_TOKEN exposed to fork runs. WHAT: tag-mutability and PR execution allow supply-chain code execution and secret exfiltration.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "PR from fork; runner executes workflow"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "uses: codacy/codacy-analysis-cli-action@1.1.0",
+    "hunter_snippet": "uses: codacy/codacy-analysis-cli-action@1.1.0",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-36",
+    "title": "PR-triggered Docker build with unpinned checkout",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": ".github/workflows/docker-image.yml",
+    "start_line": 16,
+    "end_line": 18,
+    "snippet": "- uses: actions/checkout@v2",
+    "taint": {
+      "source": "untrusted PR Dockerfile",
+      "sink": "docker build of PR-controlled context",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": ".github/workflows/docker-image.yml",
+        "line": 16,
+        "note": "checkout by mutable tag on PR builds"
+      }
+    ],
+    "evidence": "- uses: actions/checkout@v2 | validator: .github/workflows/docker-image.yml:16 CI workflow/build config explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: untrusted PR contributor. HOW: Docker Image CI triggers on pull_request and runs actions/checkout@v2 by mutable tag then docker build . with attacker-controlled Dockerfile/context. WHAT: arbitrary build steps execute in privileged runner, cache poisoning or exfiltration, no pin to SHA.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "PR from fork; runner builds image"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "- uses: actions/checkout@v2",
+    "hunter_snippet": "- uses: actions/checkout@v2",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-37",
+    "title": "Scanner workflow pinned to mutable master branch on PRs",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": ".github/workflows/njsscan-analysis.yml",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "uses: ajinabraham/njsscan-action@master",
+    "taint": {
+      "source": "mutable branch ref + untrusted PR",
+      "sink": "third-party scanner execution on PR",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": ".github/workflows/njsscan-analysis.yml",
+        "line": 18,
+        "note": "action pinned to mutable master branch"
+      }
+    ],
+    "evidence": "uses: ajinabraham/njsscan-action@master | validator: .github/workflows/njsscan-analysis.yml:18 CI workflow manifest explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: untrusted PR author plus action publisher. HOW: njsscan workflow triggers on pull_request and executes ajinabraham/njsscan-action@master (branch tag) plus checkout@v2 and codeql upload@v1. WHAT: floating master allows silent malicious updates executed with repo token on attacker PRs.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "PR from fork; runner executes scanner"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "uses: ajinabraham/njsscan-action@master",
+    "hunter_snippet": "uses: ajinabraham/njsscan-action@master",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-17",
+    "title": "Null dereference DoS on invalid password-reset token",
+    "cwe": "CWE-476",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 601,
+    "end_line": 601,
+    "snippet": "  console.log(!decoded.username == req.params.username)",
+    "taint": {
+      "source": "URL token path parameter",
+      "sink": "null dereference crash",
+      "path": [
+        "routers/index.js:595 req.params.token",
+        "routers/index.js:600 verify returns false",
+        "routers/index.js:601 decoded.username deref"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 601,
+        "note": "dereferences .username on false before guard"
+      }
+    ],
+    "evidence": "  console.log(!decoded.username == req.params.username) | validator: routers/index.js:658-668 verify() returns boolean false on failure, so routers/index.js:601 false.username yields undefined not a null dereference; guard at routers/index.js:602 handles it | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated caller controls :token path. HOW: verify() returns false for invalid tokens, then code immediately evaluates !decoded.username dereferencing .username on false before the if(!decoded) guard. WHAT: TypeError on every invalid-token submission gives unauthenticated DoS.",
+    "status": "fp",
+    "conditions": [
+      "Attacker POSTs to /secret/password-reset/:username/:anyInvalidToken"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "  console.log(!decoded.username == req.params.username)",
+    "hunter_snippet": "  console.log(!decoded.username == req.params.username)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-25",
+    "title": "DOM XSS via console input echo in onEnter",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "public/hack.js",
+    "start_line": 171,
+    "end_line": 171,
+    "snippet": "\t\t$display1.append('<div>' + input + '</div>');",
+    "taint": {
+      "source": "console input text",
+      "sink": "jQuery HTML injection",
+      "path": [
+        "public/hack.js:163 console input",
+        "public/hack.js:171 append HTML"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 171,
+        "note": "raw console input appended as HTML"
+      }
+    ],
+    "evidence": "\t\t$display1.append('<div>' + input + '</div>'); | validator: public/hack.js:163-171 input is local console keystroke only, appended to own DOM at public/hack.js:171; no attacker-deliverable cross-user flow (self-XSS only) | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: local user/attacker controls console input. HOW: onEnter executes $display1.append with raw input concatenation. WHAT: DOM XSS in page origin.",
+    "status": "fp",
+    "conditions": [
+      "Local user types nickname with HTML/JS",
+      "Nickname submitted via Enter"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "\t\t$display1.append('<div>' + input + '</div>');",
+    "hunter_snippet": "\t\t$display1.append('<div>' + input + '</div>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-24",
+    "title": "Hardcoded Gmail identity in mail config",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "config/mail.js",
+    "start_line": 2,
+    "end_line": 4,
+    "snippet": "USER = \"tester876905@gmail.com\"",
+    "taint": {
+      "source": "hardcoded literal",
+      "sink": "SMTP credential committed to repo",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "config/mail.js",
+        "line": 2,
+        "note": "hardcoded Gmail user literal"
+      }
+    ],
+    "evidence": "USER = \"tester876905@gmail.com\" | validator: config/mail.js:1-4 shows USER email literal with PASS=\"\" empty placeholder and SERVICE gmail; email address alone is not a secret and no credential is disclosed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: anyone cloning repo. HOW: config/mail.js assigns global USER=\"tester876905@gmail.com\" and empty PASS with SERVICE gmail without env indirection. WHAT: SMTP identity and placeholder secret committed to source, enabling credential reuse and mail abuse if real.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Repo read access"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "USER = \"tester876905@gmail.com\"",
+    "hunter_snippet": "USER = \"tester876905@gmail.com\"",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-25",
+    "title": "Hardcoded SMTP credentials and HTML injection in reset email",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "utils/sendemail.js",
+    "start_line": 7,
+    "end_line": 13,
+    "snippet": "let mailTransporter  = nodemailer.createTransport({",
+    "taint": {
+      "source": "hardcoded secret + DB username/reset link",
+      "sink": "SMTP send + HTML email injection",
+      "path": [
+        "utils/sendemail.js:7 hardcoded auth",
+        "utils/sendemail.js:197 username interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "utils/sendemail.js",
+        "line": 7,
+        "note": "hardcoded SMTP transport credentials"
+      }
+    ],
+    "evidence": "let mailTransporter  = nodemailer.createTransport({ | validator: utils/sendemail.js:9-12 uses placeholder pass '_________' not a real credential; alleged HTML injection via ${username} at utils/sendemail.js:197 is constrained by signup validator rejecting non-alphanumerics at routers/index.js:292-303 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: repo reader and mail recipient. HOW: nodemailer.createTransport({service:'gmail',auth:{user:'tester876905@gmail.com',pass:'_________'}}) hardcodes credentials, and mailDetails interpolates unescaped attacker-controlled username and poisonable reset text into href=${text} without quotes and ${username}. WHAT: secret in code plus HTML/attribute injection in password-reset email enables phishing and credential theft.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Repo read access; ability to receive reset mail"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "let mailTransporter  = nodemailer.createTransport({",
+    "hunter_snippet": "let mailTransporter  = nodemailer.createTransport({",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-1",
+    "title": "OAuth callback trusts arbitrary bearer token and mints authenticated session",
+    "cwe": "CWE-287",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 97,
+    "end_line": 102,
+    "snippet": "const accessToken = jwt.sign({ username: username,  email: email, admin: false}, accessTokenSecret);",
+    "taint": {
+      "source": "unauthenticated POST body {token}",
+      "sink": "jwt.sign + res.cookie Auth session issuance",
+      "path": [
+        "routers/index.js:79 req.body.token",
+        "routers/index.js:84 axios.get Authorization Bearer",
+        "routers/index.js:97 jwt.sign"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 79,
+        "note": "POST /auth/callback entry reads attacker token"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 97,
+        "note": "mints Auth JWT from third-party userinfo"
+      }
+    ],
+    "evidence": "const accessToken = jwt.sign({ username: username,  email: email, admin: false}, accessTokenSecret); | validator: routers/index.js:83-97 verifies supplied token via axios GET googleapis userinfo with Bearer header before jwt.sign; server never mints on attacker string alone (catch returns 500 at routers/index.js:106-109) | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated remote attacker supplies JSON body {token}. HOW: handler reads req.body token, uses it as Bearer to googleapis userinfo, then trusts returned name/email without audience/state checks and mints Auth JWT with admin:false, sets cookie and sets global.hello. WHAT: attacker can present any valid Google token for their own account (or attacker-controlled IdP confusion) to obtain authenticated session; no binding to local account, no verification of token audience.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /auth/callback"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "const accessToken = jwt.sign({ username: username,  email: email, admin: false}, accessTokenSecret);",
+    "hunter_snippet": "const accessToken = jwt.sign({ username: username,  email: email, admin: false}, accessTokenSecret);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-26",
+    "title": "DOM XSS via unrecognized-command echo",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "public/hack.js",
+    "start_line": 185,
+    "end_line": 185,
+    "snippet": "\t\t\t\t$display1.append('<div>[' + input + '] command not recognized. Type help for a list of available commands.</div>');",
+    "taint": {
+      "source": "console command text",
+      "sink": "HTML injection in error message",
+      "path": [
+        "public/hack.js:163 console input",
+        "public/hack.js:185 default append"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 185,
+        "note": "raw input in unrecognized-command message"
+      }
+    ],
+    "evidence": "\t\t\t\t$display1.append('<div>[' + input + '] command not recognized. Type help for a list of available commands.</div>'); | validator: public/hack.js:185 appends onEnter($(this).val()) from public/hack.js:218 self keystrokes with no URL/storage cross-user vector | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: user controls console input. HOW: default branch builds append with raw input in error message. WHAT: DOM XSS even for unknown commands.",
+    "status": "fp",
+    "conditions": [
+      "User types unrecognized command with markup"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "\t\t\t\t$display1.append('<div>[' + input + '] command not recognized. Type help for a list of available commands.</div>');",
+    "hunter_snippet": "\t\t\t\t$display1.append('<div>[' + input + '] command not recognized. Type help for a list of available commands.</div>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 59,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-1",
+    "title": "CSRF secretstring disclosed via console.log on login render",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 69,
+    "end_line": 69,
+    "snippet": "  console.log(secretstring);",
+    "taint": {
+      "source": "server-generated secretstring",
+      "sink": "CSRF secret disclosure to logs",
+      "path": [
+        "routers/index.js:17 crypto.randomBytes secretstring",
+        "routers/index.js:69 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 69,
+        "note": "secretstring logged on every login render"
+      }
+    ],
+    "evidence": "  console.log(secretstring); | validator: routers/index.js:19 secretstring rendered publicly at routers/index.js:70 and views/login.pug:350 hidden _csrf field; csrfProtection at routers/index.js:30 never mounted so value is not secret | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated visitor requesting login page. HOW: handler generates secretstring once via crypto.randomBytes at startup and every GET /secret/login executes console.log(secretstring) before rendering it as secrettoken. WHAT: exposes the purported CSRF secret to log readers, defeating its unguessability.",
+    "status": "fp",
+    "conditions": [
+      "Server stdout/logs are collected or visible",
+      "Attacker triggers GET /secret/login"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "  console.log(secretstring);",
+    "hunter_snippet": "  console.log(secretstring);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 60,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-13",
+    "title": "Stored XSS via unsanitized post title",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 453,
+    "end_line": 453,
+    "snippet": "title= req.body.title",
+    "taint": {
+      "source": "authenticated post title input",
+      "sink": "stored post title rendered as HTML",
+      "path": [
+        "routers/index.js:434 req.body.title",
+        "routers/index.js:453 title assignment",
+        "routers/index.js:460 post.save"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 453,
+        "note": "unsanitized title persisted for HTML rendering"
+      }
+    ],
+    "evidence": "title= req.body.title | validator: views/postview.pug:78 h2=n.title uses Pug escaped = (not !=) so routers/index.js:453 stored title is output-encoded | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated poster controls req.body.title. HOW: handler assigns title verbatim with no sanitization then persists to posts; postview renders n.title as HTML. WHAT: stored XSS in viewer sessions.",
+    "status": "fp",
+    "conditions": [
+      "Authenticated user creates post with crafted title",
+      "Victim views /secret/posts/:username"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "title= req.body.title",
+    "hunter_snippet": "title= req.body.title",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 61,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-14",
+    "title": "Stored XSS via unsanitized post description",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routers/index.js",
+    "start_line": 454,
+    "end_line": 454,
+    "snippet": "description= req.body.description",
+    "taint": {
+      "source": "authenticated description input",
+      "sink": "stored description rendered as HTML",
+      "path": [
+        "routers/index.js:434 req.body.description",
+        "routers/index.js:454 assignment",
+        "routers/index.js:460 post.save"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 454,
+        "note": "unsanitized description persisted"
+      }
+    ],
+    "evidence": "description= req.body.description | validator: views/postview.pug:79 h5=n.description uses Pug escaped = so routers/index.js:454 stored description is output-encoded | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated poster controls req.body.description. HOW: handler stores description verbatim without validation then renders via postview. WHAT: persistent script injection in victim browsers.",
+    "status": "fp",
+    "conditions": [
+      "Authenticated user creates post with crafted description",
+      "Victim views posts page"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "description= req.body.description",
+    "hunter_snippet": "description= req.body.description",
+    "control_type": "sanitizer",
+    "duplicate_of": "unit-routers-13",
+    "cvss": 0.0,
+    "rank": 62,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-19",
+    "title": "Broken async JWT verify always returns false",
+    "cwe": "CWE-287",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "routers/index.js",
+    "start_line": 656,
+    "end_line": 660,
+    "snippet": "function verify(token) {",
+    "taint": {
+      "source": "reset token verification",
+      "sink": "authentication decision on always-false value",
+      "path": [
+        "routers/index.js:600 verify call",
+        "routers/index.js:656 verify definition",
+        "routers/index.js:658 async jwt.verify callback"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 656,
+        "note": "async verify returned synchronously"
+      }
+    ],
+    "evidence": "function verify(token) { | validator: routers/index.js:656-665 verify() returns decoded synchronously before async jwt.verify callback runs, caller routers/index.js:602 if(!decoded) fail-closed denies all resets | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: server verifying reset token. HOW: function verify uses jwt.verify with async callback but returns local decoded synchronously before callback runs. WHAT: verify always returns false at call time, breaking authentication logic and denying legitimate resets.",
+    "status": "fp",
+    "conditions": [
+      "Any password-reset attempt occurs (valid or invalid token)"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "function verify(token) {",
+    "hunter_snippet": "function verify(token) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 63,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-27",
+    "title": "DOM XSS via arrow-up history rendering",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "public/hack.js",
+    "start_line": 199,
+    "end_line": 199,
+    "snippet": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "taint": {
+      "source": "console input on arrow-up",
+      "sink": "HTML parsing of attacker text",
+      "path": [
+        "public/hack.js:193 console input value",
+        "public/hack.js:199 .html() render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 199,
+        "note": ".html() with raw input on arrow-up"
+      }
+    ],
+    "evidence": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>'); | validator: public/hack.js:199 $consoleVisibleInput.html($consoleInput.val()+...) mirrors self keystrokes on arrow-up with no cross-user delivery | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: user controls console input value. HOW: onArrowUp calls .html() with raw input. WHAT: DOM XSS via history navigation.",
+    "status": "fp",
+    "conditions": [
+      "User presses Up arrow with markup in visible input"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "hunter_snippet": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 64,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-28",
+    "title": "DOM XSS via arrow-down history rendering",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "public/hack.js",
+    "start_line": 208,
+    "end_line": 208,
+    "snippet": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "taint": {
+      "source": "console input on arrow-down",
+      "sink": "HTML parsing of attacker text",
+      "path": [
+        "public/hack.js:202 forward-history value",
+        "public/hack.js:208 .html() render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 208,
+        "note": ".html() with raw input on arrow-down"
+      }
+    ],
+    "evidence": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>'); | validator: public/hack.js:208 identical .html(self input) mirror on arrow-down; source is own history buffer only | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: user controls console history value. HOW: onArrowDown calls .html() without escaping. WHAT: DOM XSS via down-arrow.",
+    "status": "fp",
+    "conditions": [
+      "User presses Down arrow with markup in input"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "hunter_snippet": "\t\t$consoleVisibleInput.html($consoleInput.val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 65,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-29",
+    "title": "DOM XSS via live keystroke HTML mirror",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "public/hack.js",
+    "start_line": 216,
+    "end_line": 216,
+    "snippet": "\t\t$consoleVisibleInput.html($(this).val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "taint": {
+      "source": "console keystrokes",
+      "sink": "per-keystroke HTML injection",
+      "path": [
+        "public/hack.js:214 keyup input value",
+        "public/hack.js:216 .html() mirror"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/hack.js",
+        "line": 216,
+        "note": ".html() mirror of keystrokes"
+      }
+    ],
+    "evidence": "\t\t$consoleVisibleInput.html($(this).val() + '<div id=\"console-caret\">&nbsp</div>'); | validator: public/hack.js:214-216 keyup .html($(this).val()+...) live mirror of own typing; self-XSS only | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: user controls keystrokes. HOW: keyup handler mirrors val() into .html() on every key. WHAT: keystroke-driven DOM XSS.",
+    "status": "fp",
+    "conditions": [
+      "User types markup into console input"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "\t\t$consoleVisibleInput.html($(this).val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "hunter_snippet": "\t\t$consoleVisibleInput.html($(this).val() + '<div id=\"console-caret\">&nbsp</div>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 66,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-30",
+    "title": "HTML injection via username in reset email",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "utils/sendemail.js",
+    "start_line": 197,
+    "end_line": 197,
+    "snippet": "<h3 align=center\">Hey !${username}</h3>",
+    "taint": {
+      "source": "attacker-chosen username",
+      "sink": "HTML email body injection",
+      "path": [
+        "routers/index.js:292 req.body.username signup",
+        "routers/index.js:547 sendEmail username",
+        "utils/sendemail.js:197 HTML interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "utils/sendemail.js",
+        "line": 197,
+        "note": "unescaped username in HTML email"
+      }
+    ],
+    "evidence": "<h3 align=center\">Hey !${username}</h3> | validator: routers/index.js:293-300 not().custom(/[^A-za-z0-9\\s]/) rejects <> in signup username and forgot emails victim-owned username to own mailbox; utils/sendemail.js:197 not cross-principal | refute: sanitized | consensus: 1/1 fp | triage: Self-only DOM value never merged to prototype, third-party lib",
+    "rationale": "WHO: signup attacker controls username passed to sendEmail. HOW: template interpolates username directly into HTML h3 without escaping. WHAT: HTML injection in reset email enables phishing.",
+    "status": "fp",
+    "conditions": [
+      "Attacker registers with HTML/JS username",
+      "Reset email viewed in HTML client"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "<h3 align=center\">Hey !${username}</h3>",
+    "hunter_snippet": "<h3 align=center\">Hey !${username}</h3>",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "not_reachable",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No prototype merge or sink, self-only FP"
+    },
+    "cvss": 0.0,
+    "rank": 67,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routers-7",
+    "title": "Uncaught exception DoS in login DB callback",
+    "cwe": "CWE-248",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routers/index.js",
+    "start_line": 153,
+    "end_line": 153,
+    "snippet": "         if (err) throw err;",
+    "taint": {
+      "source": "database error triggerable by remote input",
+      "sink": "uncaught exception crashing process",
+      "path": [
+        "routers/index.js:148 findOne login query",
+        "routers/index.js:153 throw err"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routers/index.js",
+        "line": 153,
+        "note": "uncaught throw in async DB callback"
+      }
+    ],
+    "evidence": "         if (err) throw err; | validator: routers/index.js:148-156 err only on DB failure; invalid creds yield result==null not err, no evidence remote input forces err to reach routers/index.js:153 throw | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated login caller. HOW: Mongoose findOne callback executes if (err) throw err inside async callback with no try/catch. WHAT: thrown error is uncaught, crashing the single Node process for unauthenticated DoS.",
+    "status": "fp",
+    "conditions": [
+      "Attacker can POST to /secret/login",
+      "MongoDB error occurs"
+    ],
+    "unit": "routers",
+    "hunter_evidence": "         if (err) throw err;",
+    "hunter_snippet": "         if (err) throw err;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 68,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "SYS-01-ORIGIN-RECEIVER",
+    "title": "OAuth postMessage receiver accepts tokens from any origin (missing origin validation)",
+    "cwe": "CWE-346",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "views/login.pug",
+    "start_line": 365,
+    "end_line": 366,
+    "snippet": "window.addEventListener('message', function(event) {// Check the origin for security\n    const data = event.data;",
+    "taint": {
+      "source": "attacker window postMessage to victim login page",
+      "sink": "unvalidated cross-origin message accepted as OAuth token",
+      "path": [
+        "public/redirect.html:31 (postMessage *)",
+        "views/login.pug:365 (unvalidated receiver)",
+        "routers/index.js:79 (POST /auth/callback mints JWT)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "views/login.pug",
+        "line": 365,
+        "note": "message listener without origin check"
+      },
+      {
+        "file": "views/login.pug",
+        "line": 366,
+        "note": "uses event.data without validation"
+      },
+      {
+        "file": "public/redirect.html",
+        "line": 31,
+        "note": "sender uses wildcard targetOrigin"
+      },
+      {
+        "file": "routers/index.js",
+        "line": 79,
+        "note": "callback mints session from supplied token"
+      }
+    ],
+    "evidence": "views/login.pug:365 registers message handler with comment claiming origin check but code at views/login.pug:366 reads event.data without any event.origin validation; sender in public/redirect.html:31 and views/redirect.html:33 uses postMessage with targetOrigin * | validator: views/login.pug:365-373 message listener only console.logs data.accesstoken and never forwards to fetch/cookie/session mint; no dataflow from event.data to routers/index.js:79 /auth/callback JWT mint | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "Attacker-controlled window (malicious popup/iframe) can postMessage an arbitrary accesstoken to victim's login page. Receiver accepts any origin, logs/stores attacker-chosen token without verification, enabling login-CSRF / token injection into OAuth flow that later mints Auth JWT via POST /auth/callback.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "views/login.pug:365 registers message handler with comment claiming origin check but code at views/login.pug:366 reads event.data without any event.origin validation; sender in public/redirect.html:31 and views/redirect.html:33 uses postMessage with targetOrigin *",
+    "hunter_snippet": "window.addEventListener('message', function(event) {// Check the origin for security\n    const data = event.data;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 69,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

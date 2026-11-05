@@ -1,0 +1,5320 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-94",
+              "name": "CWE-94",
+              "shortDescription": {
+                "text": "Server-Side JS Injection via eval(req.body.preTax) in handleContributionsUpdate"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/94.html",
+                "markdown": "[MITRE CWE-94](https://cwe.mitre.org/data/definitions/94.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Default Administrative Credentials in db-reset.js"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-943",
+              "name": "CWE-943",
+              "shortDescription": {
+                "text": "NoSQL/JavaScript Injection via $where threshold interpolation in getByUserIdAndThreshold"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/943.html",
+                "markdown": "[MITRE CWE-943](https://cwe.mitre.org/data/definitions/943.html)"
+              }
+            },
+            {
+              "id": "CWE-256",
+              "name": "CWE-256",
+              "shortDescription": {
+                "text": "Plaintext Password Storage in UserDAO.addUser"
+              },
+              "properties": {
+                "security-severity": "7.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/256.html",
+                "markdown": "[MITRE CWE-256](https://cwe.mitre.org/data/definitions/256.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Global Template Autoescape Disabled in server.js"
+              },
+              "properties": {
+                "security-severity": "7.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-639",
+              "name": "CWE-639",
+              "shortDescription": {
+                "text": "Insecure Direct Object Reference in displayAllocations uses URL userId"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/639.html",
+                "markdown": "[MITRE CWE-639](https://cwe.mitre.org/data/definitions/639.html)"
+              }
+            },
+            {
+              "id": "CWE-862",
+              "name": "CWE-862",
+              "shortDescription": {
+                "text": "Missing Function-Level Authorization on GET /benefits"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/862.html",
+                "markdown": "[MITRE CWE-862](https://cwe.mitre.org/data/definitions/862.html)"
+              }
+            },
+            {
+              "id": "CWE-918",
+              "name": "CWE-918",
+              "shortDescription": {
+                "text": "Server-Side Request Forgery in displayResearch via url+symbol"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/918.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/918.html",
+                "markdown": "[MITRE CWE-918](https://cwe.mitre.org/data/definitions/918.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing CSRF Protection (csurf disabled) in server.js"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            },
+            {
+              "id": "CWE-312",
+              "name": "CWE-312",
+              "shortDescription": {
+                "text": "Unencrypted Sensitive PII Storage in ProfileDAO.updateUser"
+              },
+              "properties": {
+                "security-severity": "7.1"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/312.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/312.html",
+                "markdown": "[MITRE CWE-312](https://cwe.mitre.org/data/definitions/312.html)"
+              }
+            },
+            {
+              "id": "CWE-384",
+              "name": "CWE-384",
+              "shortDescription": {
+                "text": "Session Fixation in handleLoginRequest (no session regeneration)"
+              },
+              "properties": {
+                "security-severity": "7.1"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/384.html",
+                "markdown": "[MITRE CWE-384](https://cwe.mitre.org/data/definitions/384.html)"
+              }
+            },
+            {
+              "id": "CWE-319",
+              "name": "CWE-319",
+              "shortDescription": {
+                "text": "Cleartext HTTP Transport (HTTPS disabled) in server.js"
+              },
+              "properties": {
+                "security-severity": "7.1"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/319.html",
+                "markdown": "[MITRE CWE-319](https://cwe.mitre.org/data/definitions/319.html)"
+              }
+            },
+            {
+              "id": "CWE-601",
+              "name": "CWE-601",
+              "shortDescription": {
+                "text": "Open Redirect in /learn via req.query.url"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/601.html",
+                "markdown": "[MITRE CWE-601](https://cwe.mitre.org/data/definitions/601.html)"
+              }
+            },
+            {
+              "id": "CWE-1333",
+              "name": "CWE-1333",
+              "shortDescription": {
+                "text": "Regular Expression DoS (ReDoS) in bankRouting validation"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1333.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/1333.html",
+                "markdown": "[MITRE CWE-1333](https://cwe.mitre.org/data/definitions/1333.html)"
+              }
+            },
+            {
+              "id": "CWE-521",
+              "name": "CWE-521",
+              "shortDescription": {
+                "text": "Weak Password Policy in validateSignup"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/521.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/521.html",
+                "markdown": "[MITRE CWE-521](https://cwe.mitre.org/data/definitions/521.html)"
+              }
+            },
+            {
+              "id": "CWE-209",
+              "name": "CWE-209",
+              "shortDescription": {
+                "text": "Verbose Error Disclosure and XSS in errorHandler"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/209.html",
+                "markdown": "[MITRE CWE-209](https://cwe.mitre.org/data/definitions/209.html)"
+              }
+            },
+            {
+              "id": "CWE-204",
+              "name": "CWE-204",
+              "shortDescription": {
+                "text": "User Enumeration via Distinct Login Error Messages in handleLoginRequest"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/204.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/204.html",
+                "markdown": "[MITRE CWE-204](https://cwe.mitre.org/data/definitions/204.html)"
+              }
+            },
+            {
+              "id": "CWE-532",
+              "name": "CWE-532",
+              "shortDescription": {
+                "text": "Secret Disclosure via Config Dump to Logs"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/532.html",
+                "markdown": "[MITRE CWE-532](https://cwe.mitre.org/data/definitions/532.html)"
+              }
+            },
+            {
+              "id": "CWE-693",
+              "name": "CWE-693",
+              "shortDescription": {
+                "text": "Disabled Helmet Security Headers in server.js"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/693.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/693.html",
+                "markdown": "[MITRE CWE-693](https://cwe.mitre.org/data/definitions/693.html)"
+              }
+            },
+            {
+              "id": "CWE-307",
+              "name": "CWE-307",
+              "shortDescription": {
+                "text": "Missing Rate Limiting / Brute-Force Protection on POST /login"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/307.html",
+                "markdown": "[MITRE CWE-307](https://cwe.mitre.org/data/definitions/307.html)"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "name": "CWE-614",
+              "shortDescription": {
+                "text": "Insecure Session Cookie Configuration (missing HttpOnly/Secure) in server.js"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/614.html",
+                "markdown": "[MITRE CWE-614](https://cwe.mitre.org/data/definitions/614.html)"
+              }
+            },
+            {
+              "id": "CWE-117",
+              "name": "CWE-117",
+              "shortDescription": {
+                "text": "Log Forging via Unsanitized userName in handleLoginRequest"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/117.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/117.html",
+                "markdown": "[MITRE CWE-117](https://cwe.mitre.org/data/definitions/117.html)"
+              }
+            },
+            {
+              "id": "CWE-20",
+              "name": "CWE-20",
+              "shortDescription": {
+                "text": "Missing Input Validation and Size Limit on POST /memos"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/20.html",
+                "markdown": "[MITRE CWE-20](https://cwe.mitre.org/data/definitions/20.html)"
+              }
+            },
+            {
+              "id": "CWE-338",
+              "name": "CWE-338",
+              "shortDescription": {
+                "text": "Insecure Randomness (Math.random) for Allocations in prepareUserData"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/338.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/338.html",
+                "markdown": "[MITRE CWE-338](https://cwe.mitre.org/data/definitions/338.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Excessive Data Exposure in MemosHandler.displayMemos"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-94",
+          "level": "error",
+          "message": {
+            "text": "Server-Side JS Injection via eval(req.body.preTax) in handleContributionsUpdate (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/contributions.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "endLine": 32,
+                  "snippet": {
+                    "text": "const preTax = eval(req.body.preTax);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Replace eval with parseInt/Number validation as in commented fix and reject non-numeric input"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/contributions.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.preTax (POST /contributions)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/contributions.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: eval() server-side JS execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Default Administrative Credentials in db-reset.js (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/db-reset.js"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20,
+                  "snippet": {
+                    "text": "\"password\": \"Admin_123\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Remove seeded default plaintext credentials; require generated passwords and hashed storage"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "artifacts/db-reset.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded default passwords"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "artifacts/db-reset.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: users collection seeded credentials"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL/JavaScript Injection via $where threshold interpolation in getByUserIdAndThreshold (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/allocations-dao.js"
+                },
+                "region": {
+                  "startLine": 78,
+                  "endLine": 78,
+                  "snippet": {
+                    "text": "$where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Enable commented parseInt threshold validation 0-99 and interpolate only parsedThreshold integer"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/allocations-dao.js"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.threshold via displayAllocations"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/allocations-dao.js"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB $where JavaScript query"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext Password Storage in UserDAO.addUser (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "password //received from request param"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Hash passwords with bcrypt.hashSync before insert as in commented fix"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: usersCol.insert() plaintext password persist"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext Password Comparison in validateLogin (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 62,
+                  "endLine": 62,
+                  "snippet": {
+                    "text": "return fromDB === fromUser;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Verify with bcrypt.compareSync against stored hash instead of === plaintext compare"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.password vs stored password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext password comparison"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded Session Secret and Crypto Key in default config (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/all.js"
+                },
+                "region": {
+                  "startLine": 8,
+                  "endLine": 8,
+                  "snippet": {
+                    "text": "cookieSecret: \"session_cookie_secret_key_here\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Load cookieSecret/cryptoKey from environment/secret manager, remove hardcoded defaults"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/all.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded config value"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/all.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: express-session secret"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Global Template Autoescape Disabled in server.js (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 137,
+                  "endLine": 137,
+                  "snippet": {
+                    "text": "autoescape: false"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Set swig autoescape:true to escape all template interpolations by default"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 137
+                          }
+                        },
+                        "message": {
+                          "text": "Source: any stored/reflected user input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 137
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: all swig template interpolations"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-639",
+          "level": "error",
+          "message": {
+            "text": "Insecure Direct Object Reference in displayAllocations uses URL userId (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/allocations.js"
+                },
+                "region": {
+                  "startLine": 22,
+                  "endLine": 24,
+                  "snippet": {
+                    "text": "} = req.params;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Take userId from req.session per commented fix and enforce ownership / isAdmin check"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/allocations.js"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.params.userId"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/allocations.js"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: allocationsDAO.getByUserIdAndThreshold arbitrary user read + render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-862",
+          "level": "error",
+          "message": {
+            "text": "Missing Function-Level Authorization on GET /benefits (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 55,
+                  "endLine": 55,
+                  "snippet": {
+                    "text": "app.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Add isAdmin middleware to GET /benefits route: app.get(\"/benefits\", isLoggedIn, isAdmin, benefitsHandler.displayBenefits)."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 55
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /benefits by non-admin"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 55
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: benefitsHandler.displayBenefits admin-only data exposure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-918",
+          "level": "error",
+          "message": {
+            "text": "Server-Side Request Forgery in displayResearch via url+symbol (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "return needle.get(url, (error, newResponse, body) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Allowlist base URL server-side and validate/encode symbol instead of concatenating req.query.url"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/research.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.url + req.query.symbol"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/research.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: needle.get() server-side fetch"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Committed TLS Private Key in artifacts/cert/server.key (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "artifacts/cert/server.key"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "-----BEGIN RSA PRIVATE KEY-----"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove private key from repo and git history, rotate certificate, load key at deploy time from secret manager/env."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "artifacts/cert/server.key"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: checked-in credential"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "artifacts/cert/server.key"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: committed private key file"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "error",
+          "message": {
+            "text": "Missing CSRF Protection (csurf disabled) in server.js (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 108,
+                  "endLine": 108,
+                  "snippet": {
+                    "text": "// app.use(csrf());"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Uncomment csurf middleware and token injection in server.js:107-112 and enforce csrf token validation on all POST routes; uncomment _csrf inputs in templates."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 108
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site forged request"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 108
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: state-changing POST handlers without token check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-639",
+          "level": "error",
+          "message": {
+            "text": "Horizontal IDOR / Missing Authorization in POST /benefits updateBenefits (conf 0.92)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 35,
+                  "endLine": 35,
+                  "snippet": {
+                    "text": "benefitsDAO.updateBenefits(userId, benefitStartDate, (error) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.2",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enforce authorization in updateBenefits: derive userId from session for non-admins and require isAdmin middleware for arbitrary userId updates."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /benefits req.body.userId (authenticated attacker)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "POST /benefits req.body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "const {userId,benefitStartDate}=req.body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "benefitsDAO.updateBenefits(userId,...)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/benefits-dao.js"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "usersCol.update({_id:parseInt(userId)},$set:{benefitStartDate})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: usersCol.update by attacker-controlled _id (BOLA/IDOR write)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-312",
+          "level": "error",
+          "message": {
+            "text": "Unencrypted Sensitive PII Storage in ProfileDAO.updateUser (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/profile-dao.js"
+                },
+                "region": {
+                  "startLine": 86,
+                  "endLine": 86,
+                  "snippet": {
+                    "text": "user.ssn = ssn;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Encrypt ssn/dob before $set with crypto cipher as in commented fix and decrypt on read."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/profile-dao.js"
+                          },
+                          "region": {
+                            "startLine": 86
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.ssn/dob/bankAcc"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/profile-dao.js"
+                          },
+                          "region": {
+                            "startLine": 86
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: users.update $set plaintext PII"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Spoofed Admin Flag in BenefitsHandler.displayBenefits (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 24,
+                  "snippet": {
+                    "text": "return res.render(\"benefits\", {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable swig autoescape:true and HTML-attribute encode userName before render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Source: BenefitsHandler.displayBenefits hardcoded literal"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "user:{isAdmin:true}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "{% if user.isAdmin %}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template trust of spoofed isAdmin flag"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via memo Markdown rendering in MemosHandler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "memosDAO.insert(req.body.memo, (err, docs) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Sanitize memo markdown on store/render with robust HTML sanitizer and enable autoescape, strip javascript: URLs"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.memo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: marked() + swig render unescaped"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Cross-Site Scripting via unescaped firstNameSafeString in handleProfileUpdate error path (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 60,
+                  "endLine": 60,
+                  "snippet": {
+                    "text": "const firstNameSafeString = firstName;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Encode firstName for HTML/URL context (ESAPI) or enable autoescape and use URL-encoded variable for href."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 60
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 60
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: profile.html value/href interpolation with autoescape false"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via profile fields rendered unescaped on update success (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 95,
+                  "endLine": 95,
+                  "snippet": {
+                    "text": "return res.render(\"profile\", {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Enable swig autoescape:true and context-encode profile fields on render/storage."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 95
+                          }
+                        },
+                        "message": {
+                          "text": "Source: stored profile fields firstName/lastName/ssn/address"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 95
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: swig render with autoescape false"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via unsanitized SSRF body in displayResearch (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/research.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "res.write(body);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Stop writing remote body as HTML; set Content-Type text/plain or sanitize with escaping, and validate/allowlist url param to block SSRF."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/research.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: needle response body from attacker URL"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/research.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.write() HTML response"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-384",
+          "level": "error",
+          "message": {
+            "text": "Session Fixation in handleLoginRequest (no session regeneration) (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 118,
+                  "endLine": 118,
+                  "snippet": {
+                    "text": "req.session.userId = user._id;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Wrap login success in req.session.regenerate(()=>{req.session.userId=user._id; ...}) to issue new session ID on privilege change."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 118
+                          }
+                        },
+                        "message": {
+                          "text": "Source: pre-login session ID"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 118
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: authenticated session binding"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via allocation owner name in allocations.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/allocations.html"
+                },
+                "region": {
+                  "startLine": 35,
+                  "endLine": 35,
+                  "snippet": {
+                    "text": "<strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable autoescape:true and HTML-encode allocation owner names on render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/allocations.html"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Source: stored profile firstName/lastName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 82
+                          }
+                        },
+                        "message": {
+                          "text": "stored firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/allocations-dao.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "alloc.firstName assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/allocations.html"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/allocations.html"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: swig unescaped heading"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via firstName in benefits.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/benefits.html"
+                },
+                "region": {
+                  "startLine": 51,
+                  "endLine": 51,
+                  "snippet": {
+                    "text": "<td>{{user.firstName}}</td>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable autoescape:true and HTML-encode firstName/lastName on render; validate profile inputs."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 51
+                          }
+                        },
+                        "message": {
+                          "text": "Source: stored profile firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 82
+                          }
+                        },
+                        "message": {
+                          "text": "profile.updateUser firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/benefits-dao.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "getAllNonAdminUsers"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 51
+                          }
+                        },
+                        "message": {
+                          "text": "interpolation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 51
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: swig unescaped table cell"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via benefitStartDate in benefits.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/benefits.html"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 57,
+                  "snippet": {
+                    "text": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable autoescape:true, validate benefitStartDate format, and HTML-attribute encode on render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.benefitStartDate (POST /benefits)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.benefitStartDate"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/benefits-dao.js"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "$set persistence"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "value interpolation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: swig interpolation with autoescape false"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Cross-Unit Stored XSS: POST /profile names persist to layout.html top-nav (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/layout.html"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "snippet": {
+                    "text": "<a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\"><i class=\"fa fa-user\"></i> {{firstName}} {{lastName}} <b class=\"caret\"></b></a>"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable autoescape:true and HTML-escape firstName/lastName on store and render; validate profile fields."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /profile req.body.firstName/lastName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/profile-dao.js"
+                          },
+                          "region": {
+                            "startLine": 47
+                          }
+                        },
+                        "message": {
+                          "text": "user.firstName assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/profile-dao.js"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "users.update $set persistence"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 263
+                          }
+                        },
+                        "message": {
+                          "text": "getUserById -> res.render dashboard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "{{firstName}} {{lastName}}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: layout.html unescaped {{firstName}} {{lastName}} with autoescape:false"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via userName in login.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/login.html"
+                },
+                "region": {
+                  "startLine": 110,
+                  "endLine": 110,
+                  "snippet": {
+                    "text": "<input type=\"text\" class=\"form-control\" id=\"userName\" name=\"userName\" value=\"{{userName}}\" placeholder=\"Enter User Name\">"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable swig autoescape:true and HTML-attribute encode userName before render."
+          }
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Cross-Unit Stored XSS: POST /memos memo persistence to memos.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/memos.html"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "{{ marked(doc.memo) }}"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable swig autoescape:true, sanitize markdown output (strip javascript: URLs/HTML) and scope memos per user."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/memos.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /memos req.body.memo (authenticated attacker)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.memo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/memos-dao.js"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "memos={memo}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/memos-dao.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "memosCol.insert"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "getAllMemos"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/memos.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "marked(doc.memo)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/memos.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unescaped template render of stored markdown/HTML"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via userName in signup.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/signup.html"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "snippet": {
+                    "text": "<input type=\"text\" class=\"form-control\" id=\"userName\" value=\"{{userName}}\" name=\"userName\" placeholder=\"Enter user name\">"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enable autoescape:true and HTML-attribute encode userName/firstName on signup render."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/signup.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.userName (POST /signup)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 191
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.userName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 214
+                          }
+                        },
+                        "message": {
+                          "text": "res.render signup with errors"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/signup.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "value interpolation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/signup.html"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unescaped value attribute"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-319",
+          "level": "error",
+          "message": {
+            "text": "Cleartext HTTP Transport (HTTPS disabled) in server.js (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 145,
+                  "endLine": 145,
+                  "snippet": {
+                    "text": "http.createServer(app).listen(port, () => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Serve via https.createServer(httpsOptions,app) and redirect HTTP to HTTPS; enable secure cookies."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 145
+                          }
+                        },
+                        "message": {
+                          "text": "Source: all requests including credentials/PII"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 145
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cleartext HTTP transport"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL Operator Injection Authentication Bypass in validateLogin (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 97,
+                  "endLine": 98,
+                  "snippet": {
+                    "text": "usersCol.findOne({"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "6.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Validate typeof userName==='string' and reject objects/operators before findOne; cast/escape selector."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.userName (JSON object)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 98
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB findOne selector"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-601",
+          "level": "warning",
+          "message": {
+            "text": "Open Redirect in /learn via req.query.url (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 72,
+                  "endLine": 72,
+                  "snippet": {
+                    "text": "return res.redirect(req.query.url);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Validate redirect against allowlisted relative paths instead of raw req.query.url"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.url (GET /learn)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.redirect()"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-1333",
+          "level": "warning",
+          "message": {
+            "text": "Regular Expression DoS (ReDoS) in bankRouting validation (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 57,
+                  "endLine": 57,
+                  "snippet": {
+                    "text": "const regexPattern = /([0-9]+)+\\#;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Use fixed regex /([0-9]+)\\#/ without nested quantifier and add input length bound"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.bankRouting"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: RegExp.test() catastrophic backtracking"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-521",
+          "level": "warning",
+          "message": {
+            "text": "Weak Password Policy in validateSignup (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 150,
+                  "endLine": 150,
+                  "snippet": {
+                    "text": "const PASS_RE = /^.{1,20}$/;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Enforce strong PASS_RE /^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/ as in commented fix."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 150
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 150
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: password acceptance check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-209",
+          "level": "warning",
+          "message": {
+            "text": "Verbose Error Disclosure and XSS in errorHandler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/error.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "res.render(\"error-template\", {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Render generic message, log stack server-side only, and enable swig autoescape:true."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/error.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: err.message/stack + attacker-influenced threshold"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/error.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: error-template {{error}} render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-204",
+          "level": "warning",
+          "message": {
+            "text": "User Enumeration via Distinct Login Error Messages in handleLoginRequest (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 65,
+                  "endLine": 78,
+                  "snippet": {
+                    "text": "loginError: invalidUserNameErrorMessage,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Render identical generic loginError for both noSuchUser and invalidPassword branches."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "Source: login oracle (user existence)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: distinct loginError render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "warning",
+          "message": {
+            "text": "Secret Disclosure via Config Dump to Logs (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/config.js"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "console.log(util.inspect(config, false, null));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Remove config dump to stdout; gate debug logging behind env and redact secrets."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/config.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded secrets in merged config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/config.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "allConf with cookieSecret/cryptoKey"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/config.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "envConf with zapApiKey"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 57
+                          }
+                        },
+                        "message": {
+                          "text": "value interpolation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/config.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: stdout/log secret disclosure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "warning",
+          "message": {
+            "text": "Disabled Helmet Security Headers in server.js (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 90,
+                  "endLine": 90,
+                  "snippet": {
+                    "text": "// app.use(helmet.frameguard()); //xframe deprecated"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Enable helmet (frameguard, hsts, csp, noCache, nosniff) and disable x-powered-by."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 90
+                          }
+                        },
+                        "message": {
+                          "text": "Source: missing hardening middleware"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 90
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: HTTP response headers"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-862",
+          "level": "warning",
+          "message": {
+            "text": "Spoofed Admin Flag in BenefitsHandler.updateBenefits (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/benefits.js"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 48,
+                  "snippet": {
+                    "text": "user: {\n                    isAdmin: true\n                },"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require isAdminUserMiddleware on POST /benefits and authorize userId against session; remove forged isAdmin context."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /benefits by non-admin"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.userId/benefitStartDate"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "hardcoded admin flag render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/benefits.js"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: benefits render with forged admin context"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "warning",
+          "message": {
+            "text": "Error-Handler Reflected XSS via Attacker-Influenced DB Error (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/error.js"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "res.render(\"error-template\", {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Enable swig autoescape:true and validate threshold with parseInt range check before $where, and escape/sanitize error output instead of rendering raw err object."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/error.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /allocations/:userId?threshold= attacker string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/allocations.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.threshold"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/allocations-dao.js"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "$where interpolation error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/error.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "res.render error-template"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/error-template.html"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "{{error}}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/error.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unescaped error reflection in HTML"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-307",
+          "level": "warning",
+          "message": {
+            "text": "Missing Rate Limiting / Brute-Force Protection on POST /login (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 34,
+                  "endLine": 34,
+                  "snippet": {
+                    "text": "app.post(\"/login\", sessionHandler.handleLoginRequest);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add rate-limiting/lockout on POST /login (e.g. express-rate-limit) and use generic auth failure message."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Source: network attacker POST /login userName/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "POST /login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "userDAO.validateLogin(userName,password)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unthrottled authentication decision"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "warning",
+          "message": {
+            "text": "NoSQL Operator Injection in getUserByUserName (conf 0.75)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/data/user-dao.js"
+                },
+                "region": {
+                  "startLine": 104,
+                  "endLine": 105,
+                  "snippet": {
+                    "text": "usersCol.findOne({"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Enforce typeof userName==='string' and strict allow-list match before query; reject/cast non-strings and escape query operators."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 104
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.userName via handleSignup"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/user-dao.js"
+                          },
+                          "region": {
+                            "startLine": 105
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB findOne selector"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "note",
+          "message": {
+            "text": "Insecure Session Cookie Configuration (missing HttpOnly/Secure) in server.js (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "server.js"
+                },
+                "region": {
+                  "startLine": 73,
+                  "endLine": 75,
+                  "snippet": {
+                    "text": "saveUninitialized: true,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Set cookie:{httpOnly:true,secure:true} with generic key/maxAge as in commented fix"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 73
+                          }
+                        },
+                        "message": {
+                          "text": "Source: session middleware config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "server.js"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Set-Cookie session cookie"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "Logout CSRF via State-Changing GET /logout (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 41,
+                  "endLine": 41,
+                  "snippet": {
+                    "text": "app.get(\"/logout\", sessionHandler.displayLogoutPage);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Change logout to POST with CSRF token validation."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site forged request with victim cookies"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "GET /logout"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: req.session.destroy on cross-site GET"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-117",
+          "level": "note",
+          "message": {
+            "text": "Log Forging via Unsanitized userName in handleLoginRequest (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 64,
+                  "endLine": 64,
+                  "snippet": {
+                    "text": "console.log(\"Error: attempt to login with invalid user: \", userName);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "patchSummary": "Strip CRLF (userName.replace(/(\\r\\n|\\r|\\n)/g,'_')) or encode before logging."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.body.userName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 64
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log log file"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "note",
+          "message": {
+            "text": "Hardcoded ZAP API Key in test config (conf 0.75)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/test.js"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "zapApiKey: \"***\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.2",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Remove hardcoded zapApiKey from config/env/test.js and development.js; load from env var, exclude from logs, rotate exposed key."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/test.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded credential in repo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/test.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "hardcoded key"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/config.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "merged and logged"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/test.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: secret committed in source and emitted to logs"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-307",
+          "level": "note",
+          "message": {
+            "text": "Missing Rate Limiting on POST /signup enables mass account creation (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 38,
+                  "snippet": {
+                    "text": "app.post(\"/signup\", sessionHandler.handleSignup);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated POST /signup"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unbounded user creation via UserDAO.addUser"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Missing Input Validation and Size Limit on POST /memos (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/index.js"
+                },
+                "region": {
+                  "startLine": 67,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "app.post(\"/memos\", isLoggedIn, memosHandler.addMemos);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /memos req.body.memo (authenticated attacker)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "POST /memos"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "memosDAO.insert(req.body.memo)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/memos-dao.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "insert + :28 unbounded find"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/index.js"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unvalidated persistence + unbounded read"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "Incorrect Output Encoding (HTML vs URL context) for website link (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/profile.js"
+                },
+                "region": {
+                  "startLine": 26,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "doc.website = ESAPI.encoder().encodeForHTML(doc.website);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Source: stored website / firstName"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/profile.js"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: href/URL rendering"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-338",
+          "level": "note",
+          "message": {
+            "text": "Insecure Randomness (Math.random) for Allocations in prepareUserData (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/session.js"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "const stocks = Math.floor((Math.random() * 40) + 1);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: Math.random PRNG"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/session.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: predictable allocations/dates"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/allocations.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/allocations.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/allocations.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/benefits.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/benefits.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/contributions.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/contributions.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/contributions.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "Unescaped environmentalScripts XSS Sink in layout.html (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/layout.html"
+                },
+                "region": {
+                  "startLine": 126,
+                  "endLine": 126,
+                  "snippet": {
+                    "text": "{{script}}"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 126
+                          }
+                        },
+                        "message": {
+                          "text": "Source: environmentalScripts config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/layout.html"
+                          },
+                          "region": {
+                            "startLine": 126
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: raw <script> emission"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/memos.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/memos.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/memos.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/profile.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/profile.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/profile.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "note",
+          "message": {
+            "text": "Hardcoded ZAP API Key and LiveReload Script Injection in development config (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "config/env/development.js"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "zapApiKey: \"v9dn0balpqas1pcc281tn5ood1\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/development.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded value + environmentalScripts render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "config/env/development.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: config secret + script injection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Excessive Data Exposure in MemosHandler.displayMemos (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/routes/memos.js"
+                },
+                "region": {
+                  "startLine": 25,
+                  "endLine": 32,
+                  "snippet": {
+                    "text": "memosDAO.getAllMemos((err, docs) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "Source: memos collection (other users' memos)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/data/memos-dao.js"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "find({})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "res.render memosList"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/routes/memos.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: render of all memos to any user"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/login.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/login.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/login.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/views/signup.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/signup.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/views/signup.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

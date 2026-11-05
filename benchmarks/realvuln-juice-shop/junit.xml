@@ -1,0 +1,1341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="146" errors="0" skipped="0" timestamp="2026-11-04T16:52:32Z" time="0.000" failures="84">
+  <testcase classname="CWE-798" name="Hardcoded RSA Private Key for JWT signing [critical] lib/insecurity.ts:23-23">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded RSA Private Key for JWT signing (CWE-798) critical conf=1.0 lib/insecurity.ts:23-23">const privateKey = '-----BEGIN RSA PRIVATE KEY-----\r\nMIICXAIBAAKBgQDNwqLEe9wgTXCbC7+RPdDbBbeqjdbs4kOPOIGzqLpX'
+const privateKey = '-----BEGIN RSA PRIVATE KEY-----\r\nMIICXAIBAAKBgQDNwqLEe9wgTXCbC7+RPdDbBbeqjdbs4kOPOIGzqLpX'</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection in login via email/password [critical] routes/login.ts:34-34">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection in login via email/password (CWE-89) critical conf=1.0 routes/login.ts:34-34">models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true })
+models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true })</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection in searchProducts via q parameter [critical] routes/search.ts:23-23">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection in searchProducts via q parameter (CWE-89) critical conf=1.0 routes/search.ts:23-23">models.sequelize.query(`SELECT * FROM Products WHERE ((name LIKE '%${criteria}%' OR description LIKE '%${criteria}%') AND deletedAt IS NULL) ORDER BY name`)
+models.sequelize.query(`SELECT * FROM Products WHERE ((name LIKE '%${criteria}%' OR description LIKE '%${criteria}%') AND deletedAt IS NULL) ORDER BY name`)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection login bypass or 1=1 [critical] test/api/loginApiSpec.ts:156-156">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection login bypass or 1=1 (CWE-89) critical conf=0.98 test/api/loginApiSpec.ts:156-156">email: '\' or 1=1--',
+email: '\' or 1=1--',</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="eval() on captcha text in Cypress helper [critical] test/cypress/e2e/contact.spec.ts:258-259">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="eval() on captcha text in Cypress helper (CWE-89) critical conf=0.98 test/cypress/e2e/contact.spec.ts:258-259">const answer = eval(val).toString()
+      const answer = eval(val).toString()</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Privilege Escalation via Unenforced registerAdminChallenge (role=admin) [critical] routes/verify.ts:43-44">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Privilege Escalation via Unenforced registerAdminChallenge (role=admin) (CWE-639) critical conf=0.95 routes/verify.ts:43-44">return req.body &amp;&amp; req.body.role === security.roles.admin
+return req.body &amp;&amp; req.body.role === security.roles.admin</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection admin takeover via comment-out [critical] test/api/loginApiSpec.ts:171-171">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection admin takeover via comment-out (CWE-89) critical conf=0.95 test/api/loginApiSpec.ts:171-171">email: 'admin@' + config.get&lt;string&gt;('application.domain') + '\'--',
+email: 'admin@' + config.get&lt;string&gt;('application.domain') + '\'--',</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection login bypass as jim via comment-out [critical] test/api/loginApiSpec.ts:186-186">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection login bypass as jim via comment-out (CWE-89) critical conf=0.95 test/api/loginApiSpec.ts:186-186">email: 'jim@' + config.get&lt;string&gt;('application.domain') + '\'--',
+email: 'jim@' + config.get&lt;string&gt;('application.domain') + '\'--',</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection login bypass as bender via comment-out [critical] test/api/loginApiSpec.ts:201-201">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection login bypass as bender via comment-out (CWE-89) critical conf=0.95 test/api/loginApiSpec.ts:201-201">email: 'bender@' + config.get&lt;string&gt;('application.domain') + '\'--',
+email: 'bender@' + config.get&lt;string&gt;('application.domain') + '\'--',</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="UNION SELECT credential exfiltration via product search [critical] test/api/searchApiSpec.ts:86-86">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="UNION SELECT credential exfiltration via product search (CWE-89) critical conf=0.95 test/api/searchApiSpec.ts:86-86">return frisby.get(`${REST_URL}/products/search?q=')) union select id,'2','3',email,password,'6','7','8','9' from users--`)
+return frisby.get(`${REST_URL}/products/search?q=')) union select id,'2','3',email,password,'6','7','8','9' from users--`)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="UNION SELECT fabrication of accounting user at login [critical] test/api/loginApiSpec.ts:216-216">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.5" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="UNION SELECT fabrication of accounting user at login (CWE-89) critical conf=0.9 test/api/loginApiSpec.ts:216-216">email: `' UNION SELECT * FROM (SELECT 15 as 'id',
+email: `' UNION SELECT * FROM (SELECT 15 as 'id',</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Weak Password Storage with MD5 in User model setter [high] models/user.ts:77-77">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="0.99" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Weak Password Storage with MD5 in User model setter (CWE-327) high conf=0.99 models/user.ts:77-77">this.setDataValue('password', security.hash(clearTextPassword)) // vuln-code-snippet vuln-line weakPasswordChallenge
+this.setDataValue('password', security.hash(clearTextPassword)) // vuln-code-snippet vuln-line weakPasswordChallenge</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded CTF signing key committed in ctf.key [high] ctf.key:1-1">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded CTF signing key committed in ctf.key (CWE-798) high conf=0.95 ctf.key:1-1">ctf.key:1 committed CTF HMAC key used by lib/utils.ts ctfFlag; encryptionkeys/premium.key:1 committed premium content key
+CTF key file committed (value redacted: ***)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded default credentials in users.yml seed [high] data/static/users.yml:2-5">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded default credentials in users.yml seed (CWE-798) high conf=0.95 data/static/users.yml:2-5">email: admin
+  password: 'admin123'
+email: admin
+  password: 'admin123'</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded premium key committed in encryptionkeys/premium.key [high] encryptionkeys/premium.key:1-1">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded premium key committed in encryptionkeys/premium.key (CWE-798) high conf=0.95 encryptionkeys/premium.key:1-1">encryptionkeys/premium.key:1 committed secret (value redacted)
+Premium key file committed (value redacted: ***)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via bypassSecurityTrustHtml on feedback comment in AboutComponent [high] frontend/src/app/about/about.component.ts:119-122">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via bypassSecurityTrustHtml on feedback comment in AboutComponent (CWE-79) high conf=0.95 frontend/src/app/about/about.component.ts:119-122">feedbacks[i].comment = this.sanitizer.bypassSecurityTrustHtml(
+tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="XSS via bypassSecurityTrustHtml of JWT lastLoginIp [high] frontend/src/app/last-login-ip/last-login-ip.component.ts:39-39">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XSS via bypassSecurityTrustHtml of JWT lastLoginIp (CWE-79) high conf=0.95 frontend/src/app/last-login-ip/last-login-ip.component.ts:39-39">this.lastLoginIp = this.sanitizer.bypassSecurityTrustHtml(`&lt;small&gt;${payload.data.lastLoginIp}&lt;/small&gt;`)
+this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via searchValue innerHTML [high] frontend/src/app/search-result/search-result.component.html:13-13">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via searchValue innerHTML (CWE-79) high conf=0.95 frontend/src/app/search-result/search-result.component.html:13-13">&lt;span id="searchValue" [innerHTML]="searchValue"&gt;&lt;/span&gt;
+this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via bypassSecurityTrustHtml on product description [high] frontend/src/app/search-result/search-result.component.ts:129-133">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via bypassSecurityTrustHtml on product description (CWE-79) high conf=0.95 frontend/src/app/search-result/search-result.component.ts:129-133">tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description)
+tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via welcomeBanner message [innerHtml] [high] frontend/src/app/welcome-banner/welcome-banner.component.html:7-7">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via welcomeBanner message [innerHtml] (CWE-79) high conf=0.95 frontend/src/app/welcome-banner/welcome-banner.component.html:7-7">&lt;div class="text-justify" [innerHtml]="message"&gt;&lt;/div&gt;
+this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Broken Password Hashing with Unsalted MD5 in hash() [high] lib/insecurity.ts:43-43">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Password Hashing with Unsalted MD5 in hash() (CWE-327) high conf=0.95 lib/insecurity.ts:43-43">export const hash = (data: string) =&gt; crypto.createHash('md5').update(data).digest('hex')
+export const hash = (data: string) =&gt; crypto.createHash('md5').update(data).digest('hex')</failure>
+  </testcase>
+  <testcase classname="CWE-620" name="Authentication Bypass in changePassword without current password [high] routes/changePassword.ts:39-39">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authentication Bypass in changePassword without current password (CWE-620) high conf=0.95 routes/changePassword.ts:39-39">if (currentPassword &amp;&amp; security.hash(currentPassword) !== loggedInUser.data.password) {
+if (currentPassword &amp;&amp; security.hash(currentPassword) !== loggedInUser.data.password) {</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path Traversal and Poison Null Byte in servePublicFiles [high] routes/fileServer.ts:33-33">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path Traversal and Poison Null Byte in servePublicFiles (CWE-22) high conf=0.95 routes/fileServer.ts:33-33">res.sendFile(path.resolve('ftp/', file))
+res.sendFile(path.resolve('ftp/', file))</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE File Disclosure in handleXmlUpload via libxml noent [high] routes/fileUpload.ts:83-83">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE File Disclosure in handleXmlUpload via libxml noent (CWE-611) high conf=0.95 routes/fileUpload.ts:83-83">const xmlDoc = vm.runInContext('libxml.parseXml(data, { noblanks: true, noent: true, nocdata: true })', sandbox, { timeout: 2000 })
+const xmlDoc = vm.runInContext('libxml.parseXml(data, { noblanks: true, noent: true, nocdata: true })', sandbox, { timeout: 2000 })</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in profileImageUrlUpload via unsanitized imageUrl fetch [high] routes/profileImageUrlUpload.ts:24-24">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF in profileImageUrlUpload via unsanitized imageUrl fetch (CWE-918) high conf=0.95 routes/profileImageUrlUpload.ts:24-24">const response = await fetch(url)
+const response = await fetch(url)</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Command Injection in showProductReviews via $where [high] routes/showProductReviews.ts:37-37">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL Command Injection in showProductReviews via $where (CWE-943) high conf=0.95 routes/showProductReviews.ts:37-37">db.reviewsCollection.find({ $where: 'this.product == ' + id }).then((reviews: Review[]) =&gt; {
+db.reviewsCollection.find({ $where: 'this.product == ' + id }).then((reviews: Review[]) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL JS Injection in trackOrder via $where [high] routes/trackOrder.ts:14-14">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL JS Injection in trackOrder via $where (CWE-943) high conf=0.95 routes/trackOrder.ts:14-14">db.ordersCollection.find({ $where: `this.orderId === '${id}'` }).then((order: any) =&gt; {
+db.ordersCollection.find({ $where: `this.orderId === '${id}'` }).then((order: any) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Operator Injection and Mass Update in updateProductReviews [high] routes/updateProductReviews.ts:11-12">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL Operator Injection and Mass Update in updateProductReviews (CWE-943) high conf=0.95 routes/updateProductReviews.ts:11-12">db.reviewsCollection.update( // vuln-code-snippet neutral-line forgedReviewChallenge
+db.reviewsCollection.update( // vuln-code-snippet neutral-line forgedReviewChallenge</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Server-Side Template/Code Injection via username eval in getUserProfile [high] routes/userProfile.ts:62-62">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-Side Template/Code Injection via username eval in getUserProfile (CWE-94) high conf=0.95 routes/userProfile.ts:62-62">username = eval(code) // eslint-disable-line no-eval
+username = eval(code) // eslint-disable-line no-eval</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication on POST /file-upload allows unauthenticated XXE/Zip-Slip/YAML-bomb [high] server.ts:309-309">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on POST /file-upload allows unauthenticated XXE/Zip-Slip/YAML-bomb (CWE-862) high conf=0.95 server.ts:309-309">server.ts:309 registers POST /file-upload with only multer/validation middleware and no isAuthorized/appendUserId; routes/fileUpload.ts handlers handleZipFileUpload/handleXmlUpload/handleYamlUpload perform no authenticatedUsers/token check, unlike POST /profile/image/file which checks req.cookies.token
+app.post('/file-upload', uploadToMemory.single('file'), ensureFileIsPassed,</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on PUT /api/Products/:id (guard commented out) [high] server.ts:369-369">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on PUT /api/Products/:id (guard commented out) (CWE-862) high conf=0.95 server.ts:369-369">server.ts:368 protects POST /api/Products with isAuthorized(), server.ts:370 denies DELETE, but server.ts:369 PUT guard is commented out leaving finale PUT /api/Products/:id unauthenticated
+// app.put('/api/Products/:id', security.isAuthorized())</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR cross-user basket access (basket/2 as bjoern) [high] test/api/basketApiSpec.ts:116-116">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR cross-user basket access (basket/2 as bjoern) (CWE-639) high conf=0.95 test/api/basketApiSpec.ts:116-116">return frisby.get(REST_URL + '/basket/2', { headers: { Authorization: 'Bearer ' + json.authentication.token } })
+return frisby.get(REST_URL + '/basket/2', { headers: { Authorization: 'Bearer ' + json.authentication.token } })</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via recursive sanitization bypass in feedback [high] test/api/feedbackApiSpec.ts:55-55">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via recursive sanitization bypass in feedback (CWE-79) high conf=0.95 test/api/feedbackApiSpec.ts:55-55">comment: 'The sanitize-html module up to at least version 1.4.2 has this issue: &lt;&lt;script&gt;Foo&lt;/script&gt;iframe src="javascript:alert(`xss`)"&gt;',
+comment: 'The sanitize-html module up to at least version 1.4.2 has this issue: &lt;&lt;script&gt;Foo&lt;/script&gt;iframe src="javascript:alert(`xss`)"&gt;',</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Public exposure of premium content AES key [high] test/api/fileServingSpec.ts:129-129">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Public exposure of premium content AES key (CWE-200) high conf=0.95 test/api/fileServingSpec.ts:129-129">return frisby.get(URL + '/encryptionkeys/premium.key')
+return frisby.get(URL + '/encryptionkeys/premium.key')</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Password change without current password [high] test/api/passwordApiSpec.ts:98-98">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Password change without current password (CWE-287) high conf=0.95 test/api/passwordApiSpec.ts:98-98">return frisby.get(REST_URL + '/user/change-password?new=slurmCl4ssic&amp;repeat=slurmCl4ssic', {
+return frisby.get(REST_URL + '/user/change-password?new=slurmCl4ssic&amp;repeat=slurmCl4ssic', {</failure>
+  </testcase>
+  <testcase classname="CWE-640" name="Unauthenticated password reset via guessable security answer (Jim/Samuel) [high] test/api/passwordApiSpec.ts:112-112">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated password reset via guessable security answer (Jim/Samuel) (CWE-640) high conf=0.95 test/api/passwordApiSpec.ts:112-112">answer: 'Samuel',
+answer: 'Samuel',</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL comment-out bypass exposing logically deleted product [high] test/api/searchApiSpec.ts:152-152">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL comment-out bypass exposing logically deleted product (CWE-89) high conf=0.95 test/api/searchApiSpec.ts:152-152">return frisby.get(`${REST_URL}/products/search?q=${christmasProduct.name}'))--`)
+return frisby.get(`${REST_URL}/products/search?q=${christmasProduct.name}'))--`)</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection in track-order exfiltrates all orders [high] test/api/trackResultApiSpec.ts:25-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection in track-order exfiltrates all orders (CWE-943) high conf=0.95 test/api/trackResultApiSpec.ts:25-25">return frisby.get(REST_URL + '/track-order/%27%20%7C%7C%20true%20%7C%7C%20%27')
+return frisby.get(REST_URL + '/track-order/%27%20%7C%7C%20true%20%7C%7C%20%27')</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Unauthenticated admin-role mass assignment [high] test/api/userApiSpec.ts:64-64">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated admin-role mass assignment (CWE-915) high conf=0.95 test/api/userApiSpec.ts:64-64">role: 'admin'
+        role: 'admin'</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via user email iframe [high] test/api/userApiSpec.ts:201-201">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via user email iframe (CWE-79) high conf=0.95 test/api/userApiSpec.ts:201-201">email: '&lt;iframe src="javascript:alert(`xss`)"&gt;',
+email: '&lt;iframe src="javascript:alert(`xss`)"&gt;',</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="SSTI to RCE via profile username template injection [high] test/cypress/e2e/profile.spec.ts:55-55">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI to RCE via profile username template injection (CWE-94) high conf=0.95 test/cypress/e2e/profile.spec.ts:55-55">"#{global.process.mainModule.require('child_process').exec('wget -O malware
+"#{global.process.mainModule.require('child_process').exec('wget -O malware</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE Linux file disclosure payload (/etc/passwd) [high] test/files/xxeForLinux.xml:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE Linux file disclosure payload (/etc/passwd) (CWE-611) high conf=0.95 test/files/xxeForLinux.xml:9-9">&lt;!ENTITY xxe SYSTEM "file:///etc/passwd" &gt;]&gt;
+&lt;!ENTITY xxe SYSTEM "file:///etc/passwd" &gt;]&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="XXE Windows file disclosure payload (system.ini) [high] test/files/xxeForWindows.xml:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE Windows file disclosure payload (system.ini) (CWE-79) high conf=0.95 test/files/xxeForWindows.xml:9-9">&lt;!ENTITY xxe SYSTEM "file:///C:/Windows/system.ini" &gt;]&gt;
+&lt;!ENTITY xxe SYSTEM "file:///C:/Windows/system.ini" &gt;]&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via administration user email innerHTML [high] frontend/src/app/administration/administration.component.html:26-26">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via administration user email innerHTML (CWE-79) high conf=0.92 frontend/src/app/administration/administration.component.html:26-26">&lt;mat-cell *matCellDef="let user" [innerHTML]="user.email" class="cell-middle"&gt;&lt;/mat-cell&gt;
+&lt;mat-cell *matCellDef="let user" [innerHTML]="user.email"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via administration feedback comment innerHTML [high] frontend/src/app/administration/administration.component.html:60-60">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via administration feedback comment innerHTML (CWE-79) high conf=0.92 frontend/src/app/administration/administration.component.html:60-60">&lt;p [innerHTML]="feedback.comment" matTooltip="Click for more information" matTooltipPosition="above"&gt;&lt;/p&gt;
+&lt;p [innerHTML]="feedback.comment"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via bypassSecurityTrustHtml on feedback comment in AdministrationComponent.findAllFeedbacks [high] frontend/src/app/administration/administration.component.ts:78-78">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via bypassSecurityTrustHtml on feedback comment in AdministrationComponent.findAllFeedbacks (CWE-79) high conf=0.92 frontend/src/app/administration/administration.component.ts:78-78">feedback.comment = this.sanitizer.bypassSecurityTrustHtml(feedback.comment)
+feedback.comment = this.sanitizer.bypassSecurityTrustHtml(feedback.comment)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via bypassSecurityTrustHtml on search query param in SearchResultComponent.filterTable [high] frontend/src/app/search-result/search-result.component.ts:170-170">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via bypassSecurityTrustHtml on search query param in SearchResultComponent.filterTable (CWE-79) high conf=0.92 frontend/src/app/search-result/search-result.component.ts:170-170">this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)
+this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via track-result orderNo innerHtml [high] frontend/src/app/track-result/track-result.component.html:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via track-result orderNo innerHtml (CWE-79) high conf=0.92 frontend/src/app/track-result/track-result.component.html:9-9">&lt;h1&gt;&lt;span translate&gt;TITLE_SEARCH_RESULTS&lt;/span&gt; - &lt;span [innerHtml]="results.orderNo"&gt;&lt;/span&gt;&lt;/h1&gt;
+this.results.orderNo = this.sanitizer.bypassSecurityTrustHtml(`&lt;code&gt;${results.data[0].orderId}&lt;/code&gt;`)</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Zip Slip Arbitrary File Write in handleZipFileUpload [high] routes/fileUpload.ts:60-60">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Zip Slip Arbitrary File Write in handleZipFileUpload (CWE-22) high conf=0.92 routes/fileUpload.ts:60-60">entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))
+entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via bypassSecurityTrustHtml on user email in AdministrationComponent.findAllUsers [high] frontend/src/app/administration/administration.component.ts:60-60">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via bypassSecurityTrustHtml on user email in AdministrationComponent.findAllUsers (CWE-79) high conf=0.9 frontend/src/app/administration/administration.component.ts:60-60">user.email = this.sanitizer.bypassSecurityTrustHtml(`&lt;span class="${this.doesUserHaveAnActiveSession(user) ? 'confirmation' : 'error'}"&gt;${user.email}&lt;/span&gt;`)
+user.email = this.sanitizer.bypassSecurityTrustHtml(`&lt;span class="${this.doesUserHaveAnActiveSession(user) ? 'confirmation' : 'error'}"&gt;${user.email}&lt;/span&gt;`)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via feedback-details innerHTML [high] frontend/src/app/feedback-details/feedback-details.component.html:18-18">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via feedback-details innerHTML (CWE-79) high conf=0.9 frontend/src/app/feedback-details/feedback-details.component.html:18-18">&lt;cite [innerHTML]="feedback"&gt;&lt;/cite&gt;
+&lt;cite [innerHTML]="feedback"&gt;&lt;/cite&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via product description innerHTML [high] frontend/src/app/product-details/product-details.component.html:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via product description innerHTML (CWE-79) high conf=0.9 frontend/src/app/product-details/product-details.component.html:16-16">&lt;div [innerHTML]="data.productData.description"&gt;&lt;/div&gt;
+&lt;div [innerHTML]="data.productData.description"&gt;&lt;/div&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Insufficient XSS Sanitization in sanitizeLegacy [high] lib/insecurity.ts:61-61">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insufficient XSS Sanitization in sanitizeLegacy (CWE-79) high conf=0.9 lib/insecurity.ts:61-61">export const sanitizeLegacy = (input = '') =&gt; input.replace(/&lt;(?:\w+)\W+?[\w]/gi, '')
+export const sanitizeLegacy = (input = '') =&gt; input.replace(/&lt;(?:\w+)\W+?[\w]/gi, '')</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Remote Code Execution via notevil safeEval in b2bOrder [high] routes/b2bOrder.ts:23-23">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Remote Code Execution via notevil safeEval in b2bOrder (CWE-94) high conf=0.9 routes/b2bOrder.ts:23-23">vm.runInContext('safeEval(orderLinesData)', sandbox, { timeout: 2000 })
+vm.runInContext('safeEval(orderLinesData)', sandbox, { timeout: 2000 })</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Authorization Bypass via Parameter Pollution in addBasketItem [high] routes/basketItems.ts:45-45">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Authorization Bypass via Parameter Pollution in addBasketItem (CWE-639) high conf=0.9 routes/basketItems.ts:45-45">challengeUtils.solveIf(challenges.basketManipulateChallenge, () =&gt; { return user &amp;&amp; basketItem.BasketId &amp;&amp; basketItem.BasketId !== 'undefined' &amp;&amp; user.bid != basketItem.BasketId })
+challengeUtils.solveIf(challenges.basketManipulateChallenge, () =&gt; { return user &amp;&amp; basketItem.BasketId &amp;&amp; basketItem.BasketId !== 'undefined' &amp;&amp; user.bid != basketItem.BasketId })</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Local File Read via layout blocklist bypass in dataErasure POST [high] routes/dataErasure.ts:59-67">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Local File Read via layout blocklist bypass in dataErasure POST (CWE-22) high conf=0.9 routes/dataErasure.ts:59-67">const filePath: string = path.resolve(req.body.layout).toLowerCase()
+const filePath: string = path.resolve(req.body.layout).toLowerCase()</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR Free Deluxe Upgrade in upgradeToDeluxe [high] routes/deluxe.ts:43-43">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR Free Deluxe Upgrade in upgradeToDeluxe (CWE-639) high conf=0.9 routes/deluxe.ts:43-43">const updatedUser = await user.update({ role: security.roles.deluxe, deluxeToken: security.deluxeToken(user.email) })
+const updatedUser = await user.update({ role: security.roles.deluxe, deluxeToken: security.deluxeToken(user.email) })</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Sensitive Key Disclosure in serveKeyFiles without authentication [high] routes/keyServer.ts:14-14">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Sensitive Key Disclosure in serveKeyFiles without authentication (CWE-200) high conf=0.9 routes/keyServer.ts:14-14">res.sendFile(path.resolve('encryptionkeys/', file))
+res.sendFile(path.resolve('encryptionkeys/', file))</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR checkout in placeOrder allows operating on any basket [high] routes/order.ts:36-36">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR checkout in placeOrder allows operating on any basket (CWE-639) high conf=0.9 routes/order.ts:36-36">BasketModel.findOne({ where: { id }, include: [{ model: ProductModel, paranoid: false, as: 'Products' }] })
+BasketModel.findOne({ where: { id }, include: [{ model: ProductModel, paranoid: false, as: 'Products' }] })</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Cross-unit order invoice disclosure: checkout PDFs written to public FTP [high] routes/order.ts:45-45">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-unit order invoice disclosure: checkout PDFs written to public FTP (CWE-200) high conf=0.9 routes/order.ts:45-45">routes/order.ts:45 writes order PDFs to ftp/; server.ts:269 enables public ftp directory listing; server.ts:270 + routes/fileServer.ts:33 serve files unauthenticated
+const fileWriter = doc.pipe(fs.createWriteStream(path.join('ftp/', pdfFile)))</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization in restoreProgress allows forging solved challenges [high] routes/restoreProgress.ts:30-30">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization in restoreProgress allows forging solved challenges (CWE-862) high conf=0.9 routes/restoreProgress.ts:30-30">challengeUtils.solve(challenge, true)
+challengeUtils.solve(challenge, true)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization in restoreProgressFindIt [high] routes/restoreProgress.ts:51-51">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization in restoreProgressFindIt (CWE-862) high conf=0.9 routes/restoreProgress.ts:51-51">await challengeUtils.solveFindIt(challenge.key, true)
+await challengeUtils.solveFindIt(challenge.key, true)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization in restoreProgressFixIt [high] routes/restoreProgress.ts:72-72">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization in restoreProgressFixIt (CWE-862) high conf=0.9 routes/restoreProgress.ts:72-72">await challengeUtils.solveFixIt(challenge.key, true)
+await challengeUtils.solveFixIt(challenge.key, true)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Server-Side Template Injection and CSP Injection in getUserProfile [high] routes/userProfile.ts:87-88">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-Side Template Injection and CSP Injection in getUserProfile (CWE-79) high conf=0.9 routes/userProfile.ts:87-88">const fn = pug.compile(template)
+const fn = pug.compile(template)</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR Arbitrary Wallet Credit in addWalletBalance [high] routes/wallet.ts:27-27">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR Arbitrary Wallet Credit in addWalletBalance (CWE-639) high conf=0.9 routes/wallet.ts:27-27">await WalletModel.increment({ balance: req.body.balance }, { where: { UserId: req.body.UserId } })
+await WalletModel.increment({ balance: req.body.balance }, { where: { UserId: req.body.UserId } })</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing authorization on PUT /rest/basket/:id/coupon/:coupon allows unauthenticated basket coupon overwrite [high] server.ts:603-603">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on PUT /rest/basket/:id/coupon/:coupon allows unauthenticated basket coupon overwrite (CWE-639) high conf=0.9 server.ts:603-603">server.ts:603 PUT /rest/basket/:id/coupon/:coupon has no isAuthorized/appendUserId unlike /rest/basket/:id (398) and /rest/basket/:id/order; routes/coupon.ts:18 findByPk(id) with attacker id and update without ownership check
+app.put('/rest/basket/:id/coupon/:coupon', applyCoupon())</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Server-side JS code execution via B2B orderLinesData infinite loop [high] test/api/b2bOrderSpec.ts:22-22">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-side JS code execution via B2B orderLinesData infinite loop (CWE-94) high conf=0.9 test/api/b2bOrderSpec.ts:22-22">orderLinesData: '(function dos() { while(true); })()'
+orderLinesData: '(function dos() { while(true); })()'</failure>
+  </testcase>
+  <testcase classname="CWE-840" name="Negative quantity checkout abuse [high] test/api/basketApiSpec.ts:147-147">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Negative quantity checkout abuse (CWE-840) high conf=0.9 test/api/basketApiSpec.ts:147-147">body: { BasketId: 2, ProductId: 10, quantity: -100 }
+body: { BasketId: 2, ProductId: 10, quantity: -100 }</failure>
+  </testcase>
+  <testcase classname="CWE-290" name="Forged coupon 99 percent discount [high] test/api/basketApiSpec.ts:160-160">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Forged coupon 99 percent discount (CWE-290) high conf=0.9 test/api/basketApiSpec.ts:160-160">return frisby.put(REST_URL + '/basket/2/coupon/' + encodeURIComponent(forgedCoupon), { headers: authHeader })
+return frisby.put(REST_URL + '/basket/2/coupon/' + encodeURIComponent(forgedCoupon), { headers: authHeader })</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Privilege escalation via role admin in chatbot test registration [high] test/api/chatBotSpec.ts:396-396">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Privilege escalation via role admin in chatbot test registration (CWE-915) high conf=0.9 test/api/chatBotSpec.ts:396-396">role: 'admin'
+role: 'admin'</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Arbitrary file write via zip traversal upload [high] test/api/fileUploadSpec.ts:163-163">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Arbitrary file write via zip traversal upload (CWE-22) high conf=0.9 test/api/fileUploadSpec.ts:163-163">const file = path.resolve(__dirname, '../files/arbitraryFileWrite.zip')
+const file = path.resolve(__dirname, '../files/arbitraryFileWrite.zip')</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via product description iframe [high] test/api/productApiSpec.ts:55-55">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via product description iframe (CWE-79) high conf=0.9 test/api/productApiSpec.ts:55-55">description: '&lt;iframe src="javascript:alert(`xss`)"&gt;',
+description: '&lt;iframe src="javascript:alert(`xss`)"&gt;',</failure>
+  </testcase>
+  <testcase classname="CWE-285" name="Missing authorization on product update [high] test/api/productApiSpec.ts:92-92">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on product update (CWE-285) high conf=0.9 test/api/productApiSpec.ts:92-92">return frisby.put(API_URL + '/Products/' + tamperingProductId, {
+return frisby.put(API_URL + '/Products/' + tamperingProductId, {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL $ne mass-update of all reviews [high] test/api/productReviewApiSpec.ts:155-155">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL $ne mass-update of all reviews (CWE-943) high conf=0.9 test/api/productReviewApiSpec.ts:155-155">id: { $ne: -1 },
+id: { $ne: -1 },</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Privilege escalation via deluxe role mass assignment [high] test/api/userApiSpec.ts:140-140">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Privilege escalation via deluxe role mass assignment (CWE-915) high conf=0.9 test/api/userApiSpec.ts:140-140">role: 'deluxe'
+role: 'deluxe'</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Privilege escalation via accounting role mass assignment [high] test/api/userApiSpec.ts:162-162">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Privilege escalation via accounting role mass assignment (CWE-915) high conf=0.9 test/api/userApiSpec.ts:162-162">role: 'accounting'
+role: 'accounting'</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="XSS-powered CSRF password change without current password [high] test/cypress/e2e/changePassword.spec.ts:28-28">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XSS-powered CSRF password change without current password (CWE-352) high conf=0.9 test/cypress/e2e/changePassword.spec.ts:28-28">'/#/search?q=%3Ciframe%20src%3D%22javascript%3Axmlhttp%20%3D%20new%20XMLHttpRequest%28%29%3B
+'/#/search?q=%3Ciframe%20src%3D%22javascript%3Axmlhttp%20%3D%20new%20XMLHttpRequest%28%29%3B</failure>
+  </testcase>
+  <testcase classname="CWE-434" name="Dangerous file upload allowlist permits XML/YAML/ZIP enabling XXE and deserialization in ComplaintComponent [high] frontend/src/app/complaint/complaint.component.ts:45-46">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Dangerous file upload allowlist permits XML/YAML/ZIP enabling XXE and deserialization in ComplaintComponent (CWE-434) high conf=0.85 frontend/src/app/complaint/complaint.component.ts:45-46">allowedMimeType: ['application/pdf', 'application/xml', 'text/xml', 'application/zip', 'application/x-zip-compressed', 'multipart/x-zip', 'application/yaml', 'application/x-yaml', 'text/yaml', 'text/x-yaml'],
+allowedMimeType: ['application/pdf', 'application/xml', 'text/xml', 'application/zip', 'application/yaml', 'application/x-yaml', 'text/yaml', 'text/x-yaml'],</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Checkout trusts client-side sessionStorage IDs and coupon blob in OrderSummaryComponent.placeOrder [high] frontend/src/app/order-summary/order-summary.component.ts:79-79">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Checkout trusts client-side sessionStorage IDs and coupon blob in OrderSummaryComponent.placeOrder (CWE-639) high conf=0.85 frontend/src/app/order-summary/order-summary.component.ts:79-79">this.basketService.checkout(Number(sessionStorage.getItem('bid')), btoa(sessionStorage.getItem('couponDetails')), orderDetails).subscribe({
+this.basketService.checkout(Number(sessionStorage.getItem('bid')), btoa(sessionStorage.getItem('couponDetails')), orderDetails)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Forgeable deluxeToken using leaked privateKey as HMAC key [high] lib/insecurity.ts:152-153">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Forgeable deluxeToken using leaked privateKey as HMAC key (CWE-798) high conf=0.85 lib/insecurity.ts:152-153">const hmac = crypto.createHmac('sha256', privateKey)
+const hmac = crypto.createHmac('sha256', privateKey)</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Cross-unit wallet debit/credit via client-controlled UserId in checkout [high] routes/order.ts:140-144">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-unit wallet debit/credit via client-controlled UserId in checkout (CWE-639) high conf=0.85 routes/order.ts:140-144">routes/order.ts:140 branches on client req.body.UserId; routes/order.ts:142-144 decrements wallet where UserId=req.body.UserId; route server.ts:602 checkout does not bind basket or wallet to authenticated user (findOne where id only at order.ts:36)
+if (req.body.UserId) {</failure>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS via B2B orderLinesData evil regex [high] test/api/b2bOrderSpec.ts:33-33">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="ReDoS via B2B orderLinesData evil regex (CWE-400) high conf=0.85 test/api/b2bOrderSpec.ts:33-33">orderLinesData: '/((a+)+)b/.test("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
+orderLinesData: '/((a+)+)b/.test("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="LFI via data-erasure layout traversal [high] test/api/erasureRequestApiSpec.ts:148-148">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="LFI via data-erasure layout traversal (CWE-22) high conf=0.85 test/api/erasureRequestApiSpec.ts:148-148">layout: '../package.json'
+layout: '../package.json'</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection via product review sleep payload [high] test/api/productReviewApiSpec.ts:36-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection via product review sleep payload (CWE-943) high conf=0.85 test/api/productReviewApiSpec.ts:36-36">return frisby.get(`${REST_URL}/products/sleep(1)/reviews`)
+return frisby.get(`${REST_URL}/products/sleep(1)/reviews`)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded HMAC Secret in hmac() [medium] lib/insecurity.ts:44-44">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-601" name="Broken Redirect Allowlist via substring match in isRedirectAllowed [medium] lib/insecurity.ts:138-141">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Full server config disclosure in retrieveAppConfiguration [medium] routes/appConfiguration.ts:11-11">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR Basket Access in retrieveBasket [medium] routes/basket.ts:21-31">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="CAPTCHA answer disclosure in GET /rest/captcha enables bypass [medium] routes/captcha.ts:31-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Password Hash Disclosure via fields parameter in retrieveLoggedInUser [medium] routes/currentUser.ts:30-36">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="CAPTCHA answer disclosure in imageCaptchas [medium] routes/imageCaptcha.ts:31-31">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Access Log Disclosure in serveLogFiles [medium] routes/logfileServer.ts:14-14">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authorization in getMemories exposes all memories [medium] routes/memory.ts:22-22">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-601" name="Open Redirect in performRedirect via substring allowlist bypass [medium] routes/redirect.ts:19-19">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on admin configuration route [medium] server.ts:605-605">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated application-configuration disclosure [medium] test/api/administrationApiSpec.ts:26-26">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Anonymous feedback forgery via UserId [medium] test/api/feedbackApiSpec.ts:79-79">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated access-log file disclosure [medium] test/api/fileServingSpec.ts:176-176">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-285" name="Unauthenticated product review creation via PUT [medium] test/api/productReviewApiSpec.ts:48-48">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-601" name="Allowlist bypass open redirect [medium] test/api/redirectSpec.ts:76-76">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose SQL error disclosure in product search [medium] test/api/searchApiSpec.ts:38-38">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Password hash disclosure via whoami fields [medium] test/api/userApiSpec.ts:363-364">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Bulk user enumeration in retrieveUserList exposes emails/roles/tokens [medium] routes/authenticatedUsers.ts:24-30">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-598" name="Password change transmits credentials in URL query string via GET in UserService.changePassword [medium] frontend/src/app/Services/user.service.ts:53-55">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Forgeable Coupon via unauthenticated z85 encoding in discountFromCoupon [medium] lib/insecurity.ts:108-115">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Ethereum mnemonic in checkKeys [medium] routes/checkKeys.ts:8-8">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Forged Authorship in createProductReviews via author field [medium] routes/createProductReviews.ts:24-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-287" name="Missing Wallet Ownership Verification in walletNFTVerify [medium] routes/nftMint.ts:37-37">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Alchemy API key in contractExploitListener [medium] routes/web3Wallet.ts:18-18">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="Rate-limit bypass via spoofable X-Forwarded-For key [medium] server.ts:346-346">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Unauthenticated route exposure: GET /api/Recycles/:id [medium] server.ts:387-387">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing rate limiting on POST /rest/user/login enables brute-force [medium] server.ts:594-594">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication on PUT /rest/products/:id/reviews allows unauthenticated forged reviews [medium] server.ts:633-633">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-158" name="Poison null-byte FTP disclosure [medium] test/api/ftpFolderSpec.ts:65-65">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-158" name="Coupon backup disclosure via null byte [medium] test/api/ftpFolderSpec.ts:88-88">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-942" name="Overly permissive CORS allows any origin [medium] test/api/httpSpec.ts:15-15">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-598" name="Password change via GET exposes credentials in URL [medium] test/api/passwordApiSpec.ts:34-34">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF via profile image URL fetcher [medium] test/api/profileImageUploadSpec.ts:91-91">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Schema disclosure via sqlite_master UNION injection [medium] test/api/searchApiSpec.ts:122-122">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded demo/demo credentials for wallet access [medium] test/api/walletApiSpec.ts:17-17">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="XXE dev-random DoS payload [medium] test/files/xxeDevRandom.xml:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="XXE quadratic blowup DoS payload [medium] test/files/xxeQuadraticBlowup.xml:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-287" name="CAPTCHA bypass in verifyImageCaptcha when no captcha exists [medium] routes/imageCaptcha.ts:52-53">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.7" />
+      <property name="confidence" value="0.88" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Bearer token sent to arbitrary hosts without allowlist [medium] frontend/src/app/Services/request.interceptor.ts:13-27">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-837" name="Client-side coupon campaign validation using manipulable client date in PaymentComponent.applyCoupon [medium] frontend/src/app/payment/payment.component.ts:163-164">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Hashids salt in continueCode [medium] routes/continueCode.ts:13-13">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Hashids salt in continueCodeFindIt [medium] routes/continueCode.ts:25-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Hashids salt in continueCodeFixIt [medium] routes/continueCode.ts:38-38">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via JSONP callback in retrieveLoggedInUser [medium] routes/currentUser.ts:57-57">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection on cookie-authenticated POST /dataerasure and /profile/image routes [medium] routes/dataErasure.ts:53-53">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Operator Injection in likeProductReviews via id [medium] routes/likeProductReviews.ts:21-31">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-837" name="Expired campaign coupon replay in calculateApplicableDiscount [medium] routes/order.ts:193-193">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via true-client-ip in saveLoginIp [medium] routes/saveLoginIp.ts:29-29">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-290" name="IP-based control bypass via trust proxy + spoofable X-Forwarded-For (Quantitys allowlist/rate-limit) [medium] server.ts:430-430">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Persisted XSS via weak username sanitization in User model [medium] models/user.ts:50-52">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="YAML Bomb DoS in handleYamlUpload via unbounded yaml.load [medium] routes/fileUpload.ts:117-117">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF Username Overwrite in updateUserProfile [medium] routes/updateUserProfile.ts:36-42">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Version number disclosure enabled by default [low] config/default.yml:11-11">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated Prometheus metrics exposure in serveMetrics [low] routes/metrics.ts:74-74">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Alchemy API Key in nftMintListener [low] routes/nftMint.ts:10-10">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="User Enumeration via securityQuestion differential response [low] routes/securityQuestion.ts:19-19">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Missing authorization on GET /rest/admin/application-version [low] server.ts:604-604">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on GET /metrics route [low] server.ts:718-718">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Insecure Randomness in CAPTCHA generation via Math.random [low] routes/captcha.ts:14-19">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose error disclosure via errorhandler middleware [low] server.ts:676-676">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unbounded wallet set and spoofing in contractExploitListener [low] routes/web3Wallet.ts:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.1" />
+      <property name="confidence" value="0.70" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="13" errors="0" skipped="0" timestamp="2026-11-04T17:49:33Z" time="0.000" failures="7">
+  <testcase classname="CWE-915" name="Mass-assignment in registration allows unauthenticated admin account creation [critical] api_views/users.py:60-66">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass-assignment in registration allows unauthenticated admin account creation (CWE-915) critical conf=0.95 api_views/users.py:60-66">api_views/users.py:60 honors client admin flag; api_views/users.py:65-66 User created with admin=True; api_views/users.py:212 delete_user trusts user.admin
+if vuln and 'admin' in request_data:  # User is possible to define if she/he wants to be an admin !!
+                if request_data['admin']:
+                    admin = True
+                user = User(username=request_data['username'], password=request_data['password'],</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing authorization allows any authenticated user to overwrite any user's password [critical] api_views/users.py:186-190">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization allows any authenticated user to overwrite any user's password (CWE-639) critical conf=0.95 api_views/users.py:186-190">api_views/users.py:179 update_password(username) takes path username; api_views/users.py:187 victim selected by path param; api_views/users.py:189 attacker password written; safe branch api_views/users.py:194 would use resp['sub'] instead
+if vuln:  # Unauthorized update of password of another user
+                user = User.query.filter_by(username=username).first()
+                    user.password = request_data.get('password')
+                    db.session.commit()</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection in User.get_user [critical] models/user_model.py:72-73">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection in User.get_user (CWE-89) critical conf=0.95 models/user_model.py:72-73">user_query = f"SELECT * FROM users WHERE username = '{username}'"
+user_query = f"SELECT * FROM users WHERE username = '{username}'"</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Broken Object Level Authorization allows any user to read any book secret [high] api_views/books.py:50-56">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Object Level Authorization allows any user to read any book secret (CWE-639) high conf=0.95 api_views/books.py:50-56">api_views/books.py:46 token validated but identity not used in vuln branch; api_views/books.py:51 query by title only; api_views/books.py:55 secret disclosed; contrast safe branch api_views/books.py:62-63 filtering by user
+if vuln:  # Broken Object Level Authorization
+            book = Book.query.filter_by(book_title=str(book_title)).first()
+                'secret': book.secret_content,</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Unauthenticated database reset endpoint allows arbitrary DB wipe [high] api_views/main.py:6-9">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated database reset endpoint allows arbitrary DB wipe (CWE-306) high conf=0.95 api_views/main.py:6-9">api_views/main.py:6 populate_db() has no token_validator; openapi_specs/openapi3.yml:16 /createdb defines no security
+def populate_db():
+    db.drop_all()
+    db.create_all()
+    User.init_db_users()</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated debug endpoint exposes all user passwords and admin flags [high] api_views/users.py:24-26">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated debug endpoint exposes all user passwords and admin flags (CWE-200) high conf=0.95 api_views/users.py:24-26">api_views/users.py:24 debug() has no token_validator call; models/user_model.py:58 json_debug returns password+admin; models/user_model.py:66 get_all_users_debug aggregates all users; openapi_specs/openapi3.yml:88 /users/v1/_debug has no security scheme
+def debug():
+    return_value = jsonify({'users': User.get_all_users_debug()})
+    return return_value</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded default credentials with plaintext password storage [high] models/user_model.py:97-101">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded default credentials with plaintext password storage (CWE-798) high conf=0.85 models/user_model.py:97-101">models/user_model.py:97 init_db_users seeds default accounts; models/user_model.py:14 password column is plaintext String; api_views/main.py:9 /createdb invokes seeding unauthenticated
+def init_db_users():
+        User.register_user("name1", "***", "mail1@mail.com", False)
+        User.register_user("name2", "***", "mail2@mail.com", False)
+        User.register_user("admin", "***", "admin@mail.com", True)</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on book-list endpoint exposes inventory [medium] api_views/books.py:12-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on user-list endpoint exposes all users [medium] api_views/users.py:19-21">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on user lookup endpoint enables unauthenticated enumeration [medium] api_views/users.py:45-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-203" name="Login oracle enables username and password enumeration [medium] api_views/users.py:101-106">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-215" name="Flask debug mode enabled on public interface [medium] app.py:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1333" name="Regular expression denial of service in email update via nested-quantifier regex [medium] api_views/users.py:144-146">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

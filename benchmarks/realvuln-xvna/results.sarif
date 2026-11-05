@@ -1,0 +1,3168 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-94",
+              "name": "CWE-94",
+              "shortDescription": {
+                "text": "Server-side JavaScript injection (eval) RCE via /eval"
+              },
+              "properties": {
+                "security-severity": "8.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/94.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/94.html",
+                "markdown": "[MITRE CWE-94](https://cwe.mitre.org/data/definitions/94.html)"
+              }
+            },
+            {
+              "id": "CWE-943",
+              "name": "CWE-943",
+              "shortDescription": {
+                "text": "NoSQL injection login bypass"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/943.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/943.html",
+                "markdown": "[MITRE CWE-943](https://cwe.mitre.org/data/definitions/943.html)"
+              }
+            },
+            {
+              "id": "CWE-502",
+              "name": "CWE-502",
+              "shortDescription": {
+                "text": "Insecure deserialization RCE via node-serialize"
+              },
+              "properties": {
+                "security-severity": "8.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/502.html",
+                "markdown": "[MITRE CWE-502](https://cwe.mitre.org/data/definitions/502.html)"
+              }
+            },
+            {
+              "id": "CWE-306",
+              "name": "CWE-306",
+              "shortDescription": {
+                "text": "Missing authentication on GET /ping (pre-auth command execution)"
+              },
+              "properties": {
+                "security-severity": "7.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/306.html",
+                "markdown": "[MITRE CWE-306](https://cwe.mitre.org/data/definitions/306.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Default hardcoded admin credentials in seed data"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Sensitive data exposure (plaintext passwords) in GET /a3sensitive"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            },
+            {
+              "id": "CWE-639",
+              "name": "CWE-639",
+              "shortDescription": {
+                "text": "Missing authorization (IDOR) on POST /insecure_dor bank lookup"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/639.html",
+                "markdown": "[MITRE CWE-639](https://cwe.mitre.org/data/definitions/639.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Reflected XSS via /xss_r echoed search + explicit trustAsHtml bypass"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-400",
+              "name": "CWE-400",
+              "shortDescription": {
+                "text": "Denial of service via hanging GET /a4xxe handler (no response sent)"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/400.html",
+                "markdown": "[MITRE CWE-400](https://cwe.mitre.org/data/definitions/400.html)"
+              }
+            },
+            {
+              "id": "CWE-532",
+              "name": "CWE-532",
+              "shortDescription": {
+                "text": "Plaintext credentials written to logs in login handler"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/532.html",
+                "markdown": "[MITRE CWE-532](https://cwe.mitre.org/data/definitions/532.html)"
+              }
+            },
+            {
+              "id": "CWE-384",
+              "name": "CWE-384",
+              "shortDescription": {
+                "text": "Session fixation: no session regeneration after login"
+              },
+              "properties": {
+                "security-severity": "4.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/384.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/384.html",
+                "markdown": "[MITRE CWE-384](https://cwe.mitre.org/data/definitions/384.html)"
+              }
+            },
+            {
+              "id": "CWE-248",
+              "name": "CWE-248",
+              "shortDescription": {
+                "text": "Uncaught JSON.parse exception enables DoS in login handler"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/248.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/248.html",
+                "markdown": "[MITRE CWE-248](https://cwe.mitre.org/data/definitions/248.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing CSRF protection on session-authenticated POST endpoints"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-94",
+          "level": "error",
+          "message": {
+            "text": "Server-side JavaScript injection (eval) RCE via /eval (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 202,
+                  "endLine": 203,
+                  "snippet": {
+                    "text": "   result = eval(id + id2);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove /eval endpoint or replace eval(id+id2) with allowlisted parsing; never eval query input"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 202
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /eval query params id, id2 (unauthenticated)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/eval.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "userid,userid2 -> GET /eval"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 200
+                          }
+                        },
+                        "message": {
+                          "text": "var id=req.query['id']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 201
+                          }
+                        },
+                        "message": {
+                          "text": "var id2=req.query['id2']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 202
+                          }
+                        },
+                        "message": {
+                          "text": "eval(id+id2)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 203
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: eval() server-side JS execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL injection login bypass (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 44,
+                  "snippet": {
+                    "text": "dbase.collection(\"login\").find(searchstring).toArray(function (err, result) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enforce string-typed email/password, reject objects and keys starting with $/containing operators before Mongo find; never JSON.parse input into selector."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "index.js:31"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Mongo find"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL operator injection in GET /getdata via JSON.parse (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 83,
+                  "endLine": 87,
+                  "snippet": {
+                    "text": "    id = JSON.parse(id);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove JSON.parse of query input; validate id as scalar string/number and reject objects containing $ operators"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 83
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /getdata?id= unauthenticated query param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a1_injection_sql.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "GET /getdata?id="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 82
+                          }
+                        },
+                        "message": {
+                          "text": "var id=req.query['id']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 83
+                          }
+                        },
+                        "message": {
+                          "text": "JSON.parse(id)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 87
+                          }
+                        },
+                        "message": {
+                          "text": "find({id:id})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 87
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB find() selector with operator injection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-943",
+          "level": "error",
+          "message": {
+            "text": "NoSQL injection + verbose error disclosure in POST /a6_misconfig (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 179,
+                  "endLine": 186,
+                  "snippet": {
+                    "text": "    var accno = JSON.parse(req.body.accountno);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Stop JSON.parse into selector, type-validate accountno scalar and reject $ keys; do not return raw err to client"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 179
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /a6_misconfig body.accountno unauthenticated"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a6_misconfig.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "POST accountno"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 179
+                          }
+                        },
+                        "message": {
+                          "text": "JSON.parse(req.body.accountno)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 186
+                          }
+                        },
+                        "message": {
+                          "text": "find({accountno:accno})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 186
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB find selector + verbose error disclosure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-502",
+          "level": "error",
+          "message": {
+            "text": "Insecure deserialization RCE via node-serialize (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 218,
+                  "endLine": 218,
+                  "snippet": {
+                    "text": "serialize.unserialize(objS).say();"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove node-serialize; use JSON.parse/stringify only and never unserialize attacker-influenced strings."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 218
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /insecure_deserialization body.userid"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a8_insecure_deserialization.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "POST userid"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 208
+                          }
+                        },
+                        "message": {
+                          "text": "var id=req.body.userid.toString()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 216
+                          }
+                        },
+                        "message": {
+                          "text": "serialize.serialize(obj)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 218
+                          }
+                        },
+                        "message": {
+                          "text": "serialize.unserialize(objS)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 218
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: node-serialize unserialize code execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on GET /ping (pre-auth command execution) (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 152,
+                  "endLine": 152,
+                  "snippet": {
+                    "text": "app.get('/ping', function(req, res){"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require auth and replace exec string concat with execFile allowlist without shell"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 152
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /ping?id query parameter"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 153
+                          }
+                        },
+                        "message": {
+                          "text": "req.query id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 155
+                          }
+                        },
+                        "message": {
+                          "text": "exec"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 152
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: child_process.exec shell command"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on GET /eval (pre-auth code execution) (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 198,
+                  "endLine": 198,
+                  "snippet": {
+                    "text": "app.get('/eval', function(req, res){"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require auth and remove eval; same fix as XVNA-EVAL-RCE"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 198
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /eval?id&id2 query parameters"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 200
+                          }
+                        },
+                        "message": {
+                          "text": "req.query id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 201
+                          }
+                        },
+                        "message": {
+                          "text": "req.query id2"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 202
+                          }
+                        },
+                        "message": {
+                          "text": "eval"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 198
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: eval() server-side JS execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Default hardcoded admin credentials in seed data (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "collection/login.json"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 5,
+                  "snippet": {
+                    "text": "\"email\" : \"***\","
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove checked-in default credential, require unique passwords and store salted hashes, not plaintext seed"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "collection/login.json"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded seed credential"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "collection/login.json"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "default credential seed"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "find(searchstring) auth"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "collection/login.json"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: authentication with default password"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on GET /getdata user lookup (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 81,
+                  "endLine": 81,
+                  "snippet": {
+                    "text": "app.get('/getdata', function(req, res){"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Add session/auth middleware to /getdata and enforce authorization before Mongo find"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 81
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated network client GET /getdata?id="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a1_injection_sql.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "frontend GET /getdata?id="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 81
+                          }
+                        },
+                        "message": {
+                          "text": "route entry without session check"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 87
+                          }
+                        },
+                        "message": {
+                          "text": "dbase.collection(\"users\").find sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 81
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: MongoDB users find returning PII without authorization"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "error",
+          "message": {
+            "text": "Sensitive data exposure (plaintext passwords) in GET /a3sensitive (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 106,
+                  "endLine": 106,
+                  "snippet": {
+                    "text": "res.json({cmd: result, search: id});"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Add authentication/authorization and return only non-sensitive fields; never return password hashes/plaintext"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /a3sensitive?id= unauthenticated"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a3_sensitive.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "GET /a3sensitive?id="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 99
+                          }
+                        },
+                        "message": {
+                          "text": "var id=req.query['id']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 103
+                          }
+                        },
+                        "message": {
+                          "text": "find({id:parseInt(id)})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "res.json({cmd:result})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: HTTP response disclosing plaintext passwords/PII"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-639",
+          "level": "error",
+          "message": {
+            "text": "Missing authorization (IDOR) on POST /insecure_dor bank lookup (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 142,
+                  "endLine": 143,
+                  "snippet": {
+                    "text": "        dbase.collection(\"a5_insecure_dor\").find({ accountno: accno }).toArray(function(err, result) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require authenticated session and enforce ownership check that accno belongs to req.session.user before find"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 142
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /insecure_dor body.accountno unauthenticated"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a5_insecure_dor.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "accountno message"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 138
+                          }
+                        },
+                        "message": {
+                          "text": "var accno=req.body.accountno"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 142
+                          }
+                        },
+                        "message": {
+                          "text": "find({accountno:accno})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 143
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cross-user bank record read without authorization"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via /xss_r echoed search + explicit trustAsHtml bypass (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/js/controllers/a7_xss_reflected.js"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "$scope.trustedMessage =  $sce.trustAsHtml( response['data'].search );"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove $sce.trustAsHtml and ng-bind-html for search; output-encode with {{ }} interpolation"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a7_xss_reflected.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /xss_r?id= attacker input reflected as search"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 163
+                          }
+                        },
+                        "message": {
+                          "text": "var id=req.query['id']"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 170
+                          }
+                        },
+                        "message": {
+                          "text": "res.json({cmd:result, search:id})"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a7_xss_reflected.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "trustAsHtml(search)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/js/controllers/a7_xss_reflected.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: $sce.trustAsHtml + ng-bind-html DOM XSS sink"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on POST /insecure_deserialization (pre-auth deserialization) (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 207,
+                  "endLine": 207,
+                  "snippet": {
+                    "text": "app.post('/insecure_deserialization', function (req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require authenticated session (req.session.user) before /insecure_deserialization handler; deny unauthenticated POST."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 207
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated POST /insecure_deserialization userid body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 208
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.userid"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 216
+                          }
+                        },
+                        "message": {
+                          "text": "serialize.serialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 218
+                          }
+                        },
+                        "message": {
+                          "text": "unserialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 207
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: node-serialize unserialize deserialization"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "warning",
+          "message": {
+            "text": "Denial of service via hanging GET /a4xxe handler (no response sent) (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 119,
+                  "endLine": 120,
+                  "snippet": {
+                    "text": "app.get('/a4xxe', function(req, res){\n    var id = req.query['id'];"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Send HTTP response (res.json/res.send) on all paths of /a4xxe or remove stub endpoint"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 119
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /a4xxe request"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 119
+                          }
+                        },
+                        "message": {
+                          "text": "GET /a4xxe entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 133
+                          }
+                        },
+                        "message": {
+                          "text": "console.log only, no response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 120
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: missing HTTP response (hanging connection)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "warning",
+          "message": {
+            "text": "Plaintext credentials written to logs in login handler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 40,
+                  "endLine": 40,
+                  "snippet": {
+                    "text": "\tconsole.log(\"searchstring\", searchstring)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Remove logging of searchstring/password; log only non-sensitive metadata or redacted values"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 40
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /api/users JSON body email/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "POST /api/users req.body.email/password source"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "searchstring construction"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 40
+                          }
+                        },
+                        "message": {
+                          "text": "console.log sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 40
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log of object containing plaintext password"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-384",
+          "level": "warning",
+          "message": {
+            "text": "Session fixation: no session regeneration after login (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 48,
+                  "endLine": 50,
+                  "snippet": {
+                    "text": "\t\t\t\tif (result.length > 0) {\n\t\t\t\t\treq.session.user = cope;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Regenerate session ID on successful login (req.session.regenerate then set user) to invalidate fixated IDs."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "Source: login POST /api/users credentials + attacker-set session cookie"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "cope=req.body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 49
+                          }
+                        },
+                        "message": {
+                          "text": "req.session.user=cope"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "service_login trust"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: authenticated session without ID rotation"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-248",
+          "level": "note",
+          "message": {
+            "text": "Uncaught JSON.parse exception enables DoS in login handler (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 31,
+                  "snippet": {
+                    "text": "\t\t\t, password: JSON.parse(req.body.password)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Wrap JSON.parse in try/catch and return 400 on invalid input; validate password is string before indexOf/parse."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /api/users password field containing '{' with invalid JSON"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "POST /api/users req.body.password source"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "indexOf('{') branch gate"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "JSON.parse sink throwing on malformed input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: uncaught JSON.parse exception (DoS / error disclosure)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/bower_components/angular-count-to/demo/index.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-count-to/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-count-to/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/bower_components/angular-ui-mask/demo/index.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-ui-mask/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-ui-mask/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/bower_components/angular-ui-validate/demo/index.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-ui-validate/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/bower_components/angular-ui-validate/demo/index.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/partials/a1_injection.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a1_injection.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a1_injection.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/partials/a1_injection_sql.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a1_injection_sql.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a1_injection_sql.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/partials/a3_sensitive.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a3_sensitive.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a3_sensitive.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/partials/a4_xxe.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a4_xxe.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/a4_xxe.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "public/app/partials/ui-login.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/ui-login.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "public/app/partials/ui-login.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Request header/cookie disclosure in GET /a3sensitive_header (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 116,
+                  "endLine": 116,
+                  "snippet": {
+                    "text": "res.send(JSON.stringify(req.headers));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 116
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker request headers (become response)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 114
+                          }
+                        },
+                        "message": {
+                          "text": "GET /a3sensitive_header"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 116
+                          }
+                        },
+                        "message": {
+                          "text": "JSON.stringify(req.headers)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 116
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: header/cookie disclosure in response body"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "note",
+          "message": {
+            "text": "Hardcoded application secret in /eval handler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 199,
+                  "endLine": 199,
+                  "snippet": {
+                    "text": "secret = \"***\";"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 199
+                          }
+                        },
+                        "message": {
+                          "text": "Source: committed credential"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 199
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: hardcoded secret in source"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "Missing CSRF protection on session-authenticated POST endpoints (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "index.js"
+                },
+                "region": {
+                  "startLine": 72,
+                  "endLine": 72,
+                  "snippet": {
+                    "text": "app.post('/service_logout', function(req, res){"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site forged POST with victim session cookie"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "attacker-controlled cross-site page auto-POST"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "service_logout entry relying on cookie session"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 74
+                          }
+                        },
+                        "message": {
+                          "text": "req.session.destroy sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "index.js"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: session destroy + redirect without CSRF check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="26" errors="0" skipped="0" timestamp="2026-11-04T18:52:31Z" time="0.000" failures="10">
+  <testcase classname="CWE-798" name="Reflected XSS in unsafe_params view [critical] app/blueprints/sandboxes/views.py:13-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in unsafe_params view (CWE-798) critical conf=1.0 app/blueprints/sandboxes/views.py:13-14">name = request.args.get('name', 'world!')
+app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Reflected cookie XSS in unsafe_cookies handler [critical] app/blueprints/sandboxes/views.py:36-37">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected cookie XSS in unsafe_cookies handler (CWE-798) critical conf=1.0 app/blueprints/sandboxes/views.py:36-37">render_template('sandboxes/unsafe_cookies.html', name=name
+app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Flask SECRET_KEY enables session forgery [critical] app/flask_xss.py:23-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Flask SECRET_KEY enables session forgery (CWE-798) critical conf=1.0 app/flask_xss.py:23-23">app.config[SECRET_KEY] = Keep it secret
+app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication on API MessagesView.post [high] app/blueprints/api/views.py:43-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on API MessagesView.post (CWE-862) high conf=0.95 app/blueprints/api/views.py:43-43">Sibling methods MessagesView.index/get/delete/acknowledge at app/blueprints/api/views.py:14,24,34,59 all carry @admin_required, while post at :43 has no decorator and accepts request.get_json() from any client, storing Message at :52
+def post(self):</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password comparison in login [high] app/blueprints/login/views.py:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password comparison in login (CWE-256) high conf=0.95 app/blueprints/login/views.py:17-17">if user and user.password == password:
+if user and user.password == password:</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS sink in unsafe_cookies template [high] app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS sink in unsafe_cookies template (CWE-79) high conf=0.95 app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html:6-6">Hello name safe | safe }} renders cookie/form name from sandboxes/views.py:27-37 without encoding
+{{ name | safe }} in unsafe_cookies.html:6</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS sink in unsafe_params template [high] app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS sink in unsafe_params template (CWE-79) high conf=0.95 app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html:6-6">Hello name safe | safe }} renders view-controlled request.args name from sandboxes/views.py:13 without encoding
+{{ name | safe }} in unsafe_params.html:6</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via from_user safe [high] app/templates/admin/message.html:29-29">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via from_user safe (CWE-79) high conf=0.95 app/templates/admin/message.html:29-29">message from_user safe | safe }} renders attacker-spoofable from_user from api/views.py:52 unauthenticated store
+{{ message.from_user | safe }} in admin/message.html:29</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via message safe [high] app/templates/admin/message.html:30-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via message safe (CWE-79) high conf=0.95 app/templates/admin/message.html:30-30">message message safe | safe }} renders persistent feedback/Message from account_area/views.py:75 and api/views.py:52 to admin
+{{ message.message | safe }} in admin/message.html:30</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Default admin credential in manage [high] manage.py:14-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Default admin credential in manage (CWE-798) high conf=0.95 manage.py:14-14">def add_admin(password equals admin)
+def add_admin(password equals admin)</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage in change_password [medium] app/blueprints/account_area/views.py:34-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF on change_email enables email hijack [medium] app/blueprints/account_area/views.py:41-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS source in send_feedback [medium] app/blueprints/account_area/views.py:75-75">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-601" name="Open redirect in xss_protection index [medium] app/blueprints/xss_protection/views.py:12-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF on send_feedback enables forced stored XSS [medium] app/blueprints/account_area/views.py:61-63">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF-able session-state toggle via unauthenticated GET [medium] app/blueprints/xss_protection/views.py:6-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-489" name="DEBUG True enabled [medium] app/flask_xss.py:26-26">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF blind update in acknowledge_message [medium] app/blueprints/api/views.py:61-63">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing rate limiting on login enables brute force [medium] app/blueprints/login/views.py:9-10">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Login CSRF on POST auth login [medium] app/blueprints/login/views.py:9-10">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Session cookie missing Secure/SameSite flags [medium] app/flask_xss.py:22-26">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Missing Content-Security-Policy and clickjacking/sniffing headers [medium] app/flask_xss.py:71-77">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Unquoted attribute XSS via g.path [medium] app/templates/_base.html:67-67">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Logout CSRF via GET-accessible logout [low] app/blueprints/login/views.py:28-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure cookie flags on unsafe_cookies Set-Cookie [low] app/blueprints/sandboxes/views.py:38-38">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-668" name="World-writable SQLite path in tmp [low] app/flask_xss.py:24-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

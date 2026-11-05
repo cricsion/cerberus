@@ -1,0 +1,18 @@
+{
+  "total": 12,
+  "by_state": {
+    "succeeded": 12
+  },
+  "by_role": {
+    "threat:researcher": 1,
+    "threat:historian": 1,
+    "threat:synthesizer": 1,
+    "hunter": 1,
+    "validator": 6,
+    "system-pass": 1,
+    "triage:1": 1
+  },
+  "failed": [],
+  "running": [],
+  "run_id": "/Users/critical/llms/cyber/Real-Vuln-Benchmark/repos/realvuln-dvpwa"
+}

@@ -1,0 +1,18 @@
+{
+  "total": 39,
+  "by_state": {
+    "succeeded": 39
+  },
+  "by_role": {
+    "threat:researcher": 1,
+    "threat:historian": 1,
+    "threat:synthesizer": 1,
+    "hunter": 8,
+    "validator": 26,
+    "system-pass": 1,
+    "triage:1": 1
+  },
+  "failed": [],
+  "running": [],
+  "run_id": "/Users/critical/llms/cyber/Real-Vuln-Benchmark/repos/realvuln-juice-shop"
+}

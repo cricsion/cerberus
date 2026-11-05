@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="17" errors="0" skipped="0" timestamp="2026-11-04T19:42:14Z" time="0.000" failures="13">
+  <testcase classname="CWE-94" name="Server-side JavaScript injection (eval) RCE via /eval [critical] index.js:202-203">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-side JavaScript injection (eval) RCE via /eval (CWE-94) critical conf=0.98 index.js:202-203">Cross-unit: public/app/js/controllers/eval.js:9 builds GET /eval?id=+userid+&amp;id2=+userid2 -&gt; index.js:200-202 var id=req.query['id']; var id2=req.query['id2']; result=eval(id+id2) -&gt; index.js:203 res.json({cmd:result}); partial public/app/partials/eval.html renders via ng-bind-html
+   result = eval(id + id2);</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection login bypass [critical] index.js:44-44">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection login bypass (CWE-943) critical conf=0.95 index.js:44-44">dbase.collection("login").find(searchstring).toArray(function (err, result) {
+dbase.collection("login").find(searchstring).toArray(function (err, result) {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL operator injection in GET /getdata via JSON.parse [critical] index.js:83-87">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL operator injection in GET /getdata via JSON.parse (CWE-943) critical conf=0.95 index.js:83-87">Cross-unit: public/app/js/controllers/a1_injection_sql.js:7 $http.get("/getdata?id="+userid) -&gt; index.js:82-83 var id=req.query['id']; id=JSON.parse(id); -&gt; index.js:87 find({id:id}) on users collection; attacker can send {"$gt":0} or {"$ne":null} to match arbitrary docs
+    id = JSON.parse(id);</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL injection + verbose error disclosure in POST /a6_misconfig [critical] index.js:179-186">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL injection + verbose error disclosure in POST /a6_misconfig (CWE-943) critical conf=0.95 index.js:179-186">Cross-unit: public/app/js/controllers/a6_misconfig.js:11 posts accountno -&gt; index.js:179 JSON.parse(req.body.accountno) -&gt; index.js:186 find({accountno:accno}); errors echoed via res.json(err) at index.js:183,188 disclosing stack/query details
+    var accno = JSON.parse(req.body.accountno);</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Insecure deserialization RCE via node-serialize [critical] index.js:218-218">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.5" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure deserialization RCE via node-serialize (CWE-502) critical conf=0.9 index.js:218-218">index.js:207-218 POST /insecure_deserialization reads req.body.userid.toString(), embeds in object then serialize.serialize/unserialize (node-serialize 0.0.4 per package.json:18); classic _$$ND_FUNC$$_ RCE: attacker value survives serialize and executes on unserialize eval; followed by cart lookup echoing search:id
+serialize.unserialize(objS).say();</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on GET /ping (pre-auth command execution) [high] index.js:152-152">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on GET /ping (pre-auth command execution) (CWE-306) high conf=0.98 index.js:152-152">index.js:152 defines GET /ping with no session/auth check; handler at index.js:153-155 directly uses req.query id in exec; POST /service_login at index.js:60 is a separate endpoint never used as middleware
+app.get('/ping', function(req, res){</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on GET /eval (pre-auth code execution) [high] index.js:198-198">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.4" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on GET /eval (pre-auth code execution) (CWE-306) high conf=0.98 index.js:198-198">index.js:198 defines GET /eval with no session/auth check; handler at index.js:200-202 uses req.query id/id2 in eval(); no service_login middleware enforced
+app.get('/eval', function(req, res){</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Default hardcoded admin credentials in seed data [high] collection/login.json:3-5">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Default hardcoded admin credentials in seed data (CWE-798) high conf=0.95 collection/login.json:3-5">collection/login.json:1-5 seeds MongoDB login collection with plaintext default admin credential; used by POST /api/users auth check index.js:44
+"email" : "***",</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on GET /getdata user lookup [high] index.js:81-81">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on GET /getdata user lookup (CWE-306) high conf=0.95 index.js:81-81">index.js:81 route handler has no req.session/user check in body index.js:81-96; only gate is POST /service_login (index.js:60) which is client-side redirect and never enforced on data routes; frontend public/app/js/controllers/a1_injection_sql.js calls GET /getdata?id= with no token
+app.get('/getdata', function(req, res){</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Sensitive data exposure (plaintext passwords) in GET /a3sensitive [high] index.js:106-106">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Sensitive data exposure (plaintext passwords) in GET /a3sensitive (CWE-200) high conf=0.95 index.js:106-106">index.js:98-103 GET /a3sensitive takes req.query id, find({id:parseInt(id)}) and res.json({cmd:result}) returns full user documents including name,password,age per collection/users.json; no auth check; reachable via public/app/js/controllers/a3_sensitive.js:7
+res.json({cmd: result, search: id});</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing authorization (IDOR) on POST /insecure_dor bank lookup [high] index.js:142-143">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization (IDOR) on POST /insecure_dor bank lookup (CWE-639) high conf=0.95 index.js:142-143">Endpoint index.js:137 app.post('/insecure_dor') reads req.body.accountno at index.js:138 and uses verbatim as {accountno:accno} at index.js:142 with no session check, no ownership check; frontend public/app/js/controllers/a5_insecure_dor.js:7 posts arbitrary accountno; any account 1001-1010 in collection/a5_insecure_dor.json retrievable
+        dbase.collection("a5_insecure_dor").find({ accountno: accno }).toArray(function(err, result) {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via /xss_r echoed search + explicit trustAsHtml bypass [high] public/app/js/controllers/a7_xss_reflected.js:10-10">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via /xss_r echoed search + explicit trustAsHtml bypass (CWE-79) high conf=0.95 public/app/js/controllers/a7_xss_reflected.js:10-10">Cross-unit stored/reflected flow: index.js:162-170 GET /xss_r takes req.query['id'], echoes as search:id in JSON; public/app/js/controllers/a7_xss_reflected.js:10 passes response['data'].search to $sce.trustAsHtml; public/app/partials/a7_xss_reflected.html:34 renders via ng-bind-html=trustedMessage bypassing Angular sanitization
+$scope.trustedMessage =  $sce.trustAsHtml( response['data'].search );</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on POST /insecure_deserialization (pre-auth deserialization) [high] index.js:207-207">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on POST /insecure_deserialization (pre-auth deserialization) (CWE-306) high conf=0.9 index.js:207-207">index.js:207 defines POST /insecure_deserialization with no session/auth check; handler at index.js:208 uses req.body.userid in serialize/unserialize + Mongo lookup; reachable without login
+app.post('/insecure_deserialization', function (req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-400" name="Denial of service via hanging GET /a4xxe handler (no response sent) [medium] index.js:119-120">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Plaintext credentials written to logs in login handler [medium] index.js:40-40">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-384" name="Session fixation: no session regeneration after login [medium] index.js:48-50">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-248" name="Uncaught JSON.parse exception enables DoS in login handler [low] index.js:31-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

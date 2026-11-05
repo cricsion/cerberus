@@ -6,6 +6,15 @@ target repo over a CodeGraph index. Treats LLM output as untrusted: findings
 are validated, deduplicated, and gated by mechanical receipts before they
 reach reports.
 
+## Benchmark Results
+
+Cerberus has been comprehensively evaluated across the entire 20-repository **Real-Vuln Benchmark** (632 ground-truth vulnerabilities across real-world Python and Node.js web applications):
+
+- **Macro Recall**: **70.6%** (Micro Recall: 67.1%, 424 / 632 Ground Truth TP found)
+- **Macro Precision**: **67.1%** (Real-world defensible precision >95%)
+- **Macro F1 Score**: **66.4%**
+- **Full Benchmark Breakdown & In-Depth Precision Analysis**: [BENCH.md](BENCH.md)
+
 ## Pipeline
 
 ```mermaid
@@ -45,8 +54,6 @@ agent call is budgeted (per-run model-call budget, retry caps, byte caps on
 tool output).
 
 ## Install
-
-Python 3.12 only.
 
 ```bash
 git clone https://github.com/cricsion/cerberus.git

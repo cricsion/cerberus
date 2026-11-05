@@ -1,0 +1,3166 @@
+[
+  {
+    "id": "unit-public-10",
+    "title": "Unauthenticated remote code execution via eval",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "src/routers/user.js",
+    "start_line": 215,
+    "end_line": 215,
+    "snippet": "res.send('Welcome name ' + eval(req.query.name));",
+    "taint": {
+      "source": "req.query.name URL parameter",
+      "sink": "eval() code execution",
+      "path": [
+        "src/routers/user.js:215"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 215,
+        "note": "eval code execution sink"
+      }
+    ],
+    "evidence": "res.send('Welcome name ' + eval(req.query.name)); | validator: Unauth eval of query at src/routers/user.js:213-215 with no sanitizer; mounted via src/index.js:35-36 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker controls req.query.name. HOW: eval(req.query.name) executes as JS, result concatenated to response. WHAT: arbitrary server-side code execution, full host compromise, no auth.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to GET /api/v2/user?name="
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.send('Welcome name ' + eval(req.query.name));",
+    "hunter_snippet": "res.send('Welcome name ' + eval(req.query.name));",
+    "patch_summary": "Remove eval() at src/routers/user.js:215; treat req.query.name as string and encode on res.send",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-rce-eval",
+    "title": "Unauthenticated remote code execution via eval",
+    "cwe": "CWE-95",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "src/routers/user.js",
+    "start_line": 215,
+    "end_line": 215,
+    "snippet": "    res.send('Welcome name ' + eval(req.query.name));",
+    "taint": {
+      "source": "req.query.name unauthenticated query string",
+      "sink": "eval() code execution + res.send reflection",
+      "path": [
+        "src/routers/user.js:213 req.query.name entry (no auth)",
+        "src/routers/user.js:215 eval(req.query.name) sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 213,
+        "note": "GET /api/v2/user route with no auth middleware"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 215,
+        "note": "eval sink on attacker query param"
+      }
+    ],
+    "evidence": "Route src/routers/user.js:213 has no auth middleware; sink src/routers/user.js:215 passes req.query.name to eval() and reflects result | validator: src/routers/user.js:213 route GET /api/v2/user has no auth middleware and src/routers/user.js:215 eval(req.query.name) executes unauthenticated query input | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker controls req.query.name (GET /api/v2/user?name=). Value flows directly into eval() and result is sent in response, giving server-side JS code execution. Route has no auth middleware unlike /api/v2/* siblings.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/user.js:213 has no auth middleware; sink src/routers/user.js:215 passes req.query.name to eval() and reflects result",
+    "hunter_snippet": "    res.send('Welcome name ' + eval(req.query.name));",
+    "patch_summary": "Remove eval() entirely; treat req.query.name as plain string and never pass to code execution sink",
+    "control_type": "none",
+    "duplicate_of": "unit-public-10",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-hardcoded-jwt",
+    "title": "Hardcoded JWT signing secret enables token forgery",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "src/models/user.js",
+    "start_line": 71,
+    "end_line": 71,
+    "snippet": "    const token = jwt.sign({ _id: user._id.toString() }, '***')",
+    "taint": {
+      "source": "hardcoded application secret in source",
+      "sink": "authentication bypass via token forgery",
+      "path": [
+        "src/models/user.js:71 jwt.sign with committed secret",
+        "src/middleware/auth.js:8 jwt.verify with same secret",
+        "src/middleware/auth.js:9 User.findOne session lookup"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 71,
+        "note": "jwt.sign with hardcoded secret"
+      },
+      {
+        "file": "src/middleware/auth.js",
+        "line": 8,
+        "note": "jwt.verify with same hardcoded secret"
+      }
+    ],
+    "evidence": "JWT signing at src/models/user.js:71 uses hardcoded secret ***; verification at src/middleware/auth.js:8 uses same hardcoded secret *** enabling forgery | validator: src/models/user.js:71 jwt.sign with literal 'hardsecret' and src/middleware/auth.js:8 jwt.verify with same literal; plantable via src/routers/user.js:17 new User(req.body) tokens mass-assignment | consensus: 1/1 confirmed",
+    "rationale": "JWT integrity root is a hardcoded literal committed in source. Anyone reading repo can forge valid auth_token cookies for any _id, bypassing auth middleware which verifies with same literal and only checks tokens.token existence.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "JWT signing at src/models/user.js:71 uses hardcoded secret ***; verification at src/middleware/auth.js:8 uses same hardcoded secret *** enabling forgery",
+    "hunter_snippet": "    const token = jwt.sign({ _id: user._id.toString() }, '***')",
+    "patch_summary": "Load JWT secret from environment (required, no fallback), rotate tokens, reject tokens not issued server-side",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-14",
+    "title": "BOLA arbitrary user update via v1 patch",
+    "cwe": "CWE-639",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 291,
+    "end_line": 291,
+    "snippet": "const user = await User.findById(req.params.id)",
+    "taint": {
+      "source": "req.params.id authenticated but unauthorized",
+      "sink": "User.findById arbitrary ID write",
+      "path": [
+        "src/routers/user.js:281",
+        "src/routers/user.js:291"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 281,
+        "note": "route with only auth, no owner check"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 291,
+        "note": "arbitrary ID lookup"
+      }
+    ],
+    "evidence": "const user = await User.findById(req.params.id) | validator: auth-only PATCH src/routers/user.js:281 with unscoped User.findById(req.params.id) at src/routers/user.js:291 allows any-user overwrite | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated user controls :id. HOW: User.findById(req.params.id) ignores req.user identity/owner, then applies updates and saves. WHAT: horizontal privilege escalation (BOLA) - modify any user's name/email/password/age, account takeover.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated as any user"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = await User.findById(req.params.id)",
+    "hunter_snippet": "const user = await User.findById(req.params.id)",
+    "patch_summary": "Enforce owner check: only req.user._id may be updated; replace findById(id) with req.user at src/routers/user.js:291",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-15",
+    "title": "BOLA arbitrary user deletion via v1 delete",
+    "cwe": "CWE-639",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 308,
+    "end_line": 308,
+    "snippet": "const user = await User.findByIdAndDelete(req.params.id)",
+    "taint": {
+      "source": "req.params.id",
+      "sink": "findByIdAndDelete arbitrary ID",
+      "path": [
+        "src/routers/user.js:306",
+        "src/routers/user.js:308"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 306,
+        "note": "route definition"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 308,
+        "note": "arbitrary delete sink"
+      }
+    ],
+    "evidence": "const user = await User.findByIdAndDelete(req.params.id) | validator: auth-only DELETE src/routers/user.js:306 with User.findByIdAndDelete(req.params.id) at src/routers/user.js:308, no owner check | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated user controls :id. HOW: User.findByIdAndDelete(req.params.id) deletes arbitrary user without verifying ownership. WHAT: delete any account, destroy data, DoS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated as any user"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = await User.findByIdAndDelete(req.params.id)",
+    "hunter_snippet": "const user = await User.findByIdAndDelete(req.params.id)",
+    "patch_summary": "Restrict delete to self: delete req.user only instead of arbitrary id at src/routers/user.js:308",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-19",
+    "title": "Hardcoded JWT signing secret enables token forgery",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/models/user.js",
+    "start_line": 71,
+    "end_line": 71,
+    "snippet": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "taint": {
+      "source": "literal 'hardsecret'",
+      "sink": "jwt.sign with hardcoded secret",
+      "path": [
+        "src/models/user.js:71"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 71,
+        "note": "hardcoded signing secret"
+      }
+    ],
+    "evidence": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret') | validator: Hardcoded secret jwt.sign(..., 'hardsecret') at src/models/user.js:71 and jwt.verify(token,'hardsecret') at src/middleware/auth.js:7 enables forgery | consensus: 1/1 confirmed",
+    "rationale": "WHO: any remote attacker reading source. HOW: jwt.sign({_id},'hardsecret') uses literal low-entropy secret embedded in code. WHAT: attacker forges valid JWTs for any user, full auth bypass; secret cannot be rotated via env.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "anyone knowing secret (hardcoded, in repo)"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "hunter_snippet": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "patch_summary": "Load JWT secret from env, require strong random value, rotate tokens; replace literal at src/models/user.js:71 and src/middleware/auth.js:7",
+    "control_type": "none",
+    "duplicate_of": "sys-hardcoded-jwt",
+    "cvss": 8.8,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-1",
+    "title": "Missing authentication on v2 user endpoint",
+    "cwe": "CWE-306",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 213,
+    "end_line": 213,
+    "snippet": "router.get('/api/v2/user', function (req, res) {",
+    "taint": {
+      "source": "GET without auth",
+      "sink": "unauthenticated handler",
+      "path": [
+        "src/routers/user.js:213"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 213,
+        "note": "v2 route without auth"
+      }
+    ],
+    "evidence": "router.get('/api/v2/user', function (req, res) { | validator: src/routers/user.js:213 router.get('/api/v2/user') has no auth middleware and reaches eval(req.query.name) at src/routers/user.js:215 unauthenticated RCE | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated remote attacker. HOW router.get for api v2 user has no auth middleware unlike sibling v2 routes. WHAT missing authentication exposes handler anonymously.",
+    "status": "confirmed",
+    "conditions": [
+      "network access to endpoint"
+    ],
+    "unit": "public",
+    "hunter_evidence": "router.get('/api/v2/user', function (req, res) {",
+    "hunter_snippet": "router.get('/api/v2/user', function (req, res) {",
+    "patch_summary": "Remove eval() and require auth middleware on /api/v2/user; return static/safe response.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-23",
+    "title": "Hardcoded JWT verify secret in auth middleware",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/middleware/auth.js",
+    "start_line": 8,
+    "end_line": 8,
+    "snippet": "const decoded = jwt.verify(token, 'hardsecret')",
+    "taint": {
+      "source": "literal 'hardsecret'",
+      "sink": "jwt.verify hardcoded secret",
+      "path": [
+        "src/middleware/auth.js:8"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/middleware/auth.js",
+        "line": 8,
+        "note": "hardcoded verify secret"
+      }
+    ],
+    "evidence": "const decoded = jwt.verify(token, 'hardsecret') | validator: src/middleware/auth.js:8 jwt.verify(token,'hardsecret') hardcoded; src/models/user.js:71 jwt.sign({_id},'hardsecret') same literal | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated attacker. HOW: jwt.verify(token,'hardsecret') uses same literal as signing; token from req.cookies. WHAT: forge tokens for any _id, impersonate users, bypass auth middleware entirely.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "anyone knowing hardcoded secret"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const decoded = jwt.verify(token, 'hardsecret')",
+    "hunter_snippet": "const decoded = jwt.verify(token, 'hardsecret')",
+    "patch_summary": "Read JWT secret from env (e.g., process.env.JWT_SECRET), require strong value at startup, rotate existing tokens.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-ssrf-contact",
+    "title": "Unauthenticated SSRF with open redirect via contact url",
+    "cwe": "CWE-918",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 194,
+    "end_line": 194,
+    "snippet": "        needle.get(query.url, { timeout: 3000 }, function(error, response1) {",
+    "taint": {
+      "source": "req.url ?url= query parameter, unauthenticated",
+      "sink": "server-side fetch + client redirect to attacker URL",
+      "path": [
+        "src/routers/user.js:189 GET /contact entry",
+        "src/routers/user.js:191 query.url from url.parse",
+        "src/routers/user.js:194 needle.get sink",
+        "src/routers/user.js:197 res.redirect sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 189,
+        "note": "GET /contact route with no auth"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 194,
+        "note": "needle.get attacker URL SSRF sink"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 197,
+        "note": "redirect to attacker URL"
+      }
+    ],
+    "evidence": "Route src/routers/user.js:189 has no auth; src/routers/user.js:194 needle.get(query.url) server-side fetch; src/routers/user.js:197 res.redirect(query.url) open redirect to same attacker URL | validator: src/routers/user.js:189 GET /contact has no auth, src/routers/user.js:194 needle.get(query.url) fetches attacker URL and src/routers/user.js:197 res.redirect(query.url) open-redirects to same URL | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker controls ?url= parsed via url.parse(req.url). Value flows to needle.get() server-side request (SSRF to internal/metadata targets) and then to res.redirect() (open redirect). No allowlist, no auth, cross-unit flow route->HTTP client->redirect.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/user.js:189 has no auth; src/routers/user.js:194 needle.get(query.url) server-side fetch; src/routers/user.js:197 res.redirect(query.url) open redirect to same attacker URL",
+    "hunter_snippet": "        needle.get(query.url, { timeout: 3000 }, function(error, response1) {",
+    "patch_summary": "Remove server-side fetch of user URL; allowlist redirect targets and block internal/metadata addresses",
+    "control_type": "none",
+    "duplicate_of": "unit-public-7",
+    "cvss": 8.8,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-bola-user-patch",
+    "title": "BOLA arbitrary user update via v1 patch ignores owner",
+    "cwe": "CWE-639",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 291,
+    "end_line": 291,
+    "snippet": "        const user = await User.findById(req.params.id)",
+    "taint": {
+      "source": "req.params.id attacker-controlled ID",
+      "sink": "arbitrary user record update",
+      "path": [
+        "src/routers/user.js:281 :id path param entry",
+        "src/routers/user.js:291 findById sink without owner scope"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 281,
+        "note": "PATCH v1 route with auth but no owner check"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 291,
+        "note": "unscoped findById sink"
+      }
+    ],
+    "evidence": "Route src/routers/user.js:281 PATCH /api/v1/users/:id uses auth but sink src/routers/user.js:291 User.findById(req.params.id) ignores req.user, allowing update of arbitrary user by ID | validator: src/routers/user.js:281 PATCH /api/v1/users/:id uses auth but src/routers/user.js:291 User.findById(req.params.id) ignores req.user allowing update of any user including password | consensus: 1/1 confirmed",
+    "rationale": "Endpoint has authentication but missing object-level authorization. Any authenticated user can supply arbitrary :id and modify name/email/password/age of any account. Sibling /api/v2/users/me correctly scopes to req.user, proving consensus violation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/user.js:281 PATCH /api/v1/users/:id uses auth but sink src/routers/user.js:291 User.findById(req.params.id) ignores req.user, allowing update of arbitrary user by ID",
+    "hunter_snippet": "        const user = await User.findById(req.params.id)",
+    "patch_summary": "Scope lookup to req.user._id (or remove legacy route); reject :id not equal to authenticated user",
+    "control_type": "none",
+    "duplicate_of": "unit-public-14",
+    "cvss": 8.8,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-bola-user-delete",
+    "title": "BOLA arbitrary user deletion via v1 delete",
+    "cwe": "CWE-639",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 308,
+    "end_line": 308,
+    "snippet": "        const user = await User.findByIdAndDelete(req.params.id)",
+    "taint": {
+      "source": "req.params.id attacker-controlled ID",
+      "sink": "arbitrary account deletion",
+      "path": [
+        "src/routers/user.js:306 :id entry",
+        "src/routers/user.js:308 findByIdAndDelete sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 306,
+        "note": "DELETE v1 route with auth but no owner check"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 308,
+        "note": "unscoped delete sink"
+      }
+    ],
+    "evidence": "Route src/routers/user.js:306 DELETE /api/v1/users/:id uses auth but sink src/routers/user.js:308 User.findByIdAndDelete(req.params.id) deletes arbitrary account | validator: src/routers/user.js:306 DELETE /api/v1/users/:id uses auth but src/routers/user.js:308 User.findByIdAndDelete(req.params.id) deletes arbitrary account without owner check | consensus: 1/1 confirmed",
+    "rationale": "Authenticated caller can delete any user by ID with no ownership check. V2 sibling DELETE /api/v2/users/me deletes only req.user, confirming v1 lacks required authorization.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/user.js:306 DELETE /api/v1/users/:id uses auth but sink src/routers/user.js:308 User.findByIdAndDelete(req.params.id) deletes arbitrary account",
+    "hunter_snippet": "        const user = await User.findByIdAndDelete(req.params.id)",
+    "patch_summary": "Restrict delete to req.user._id via auth-owned lookup or remove legacy route",
+    "control_type": "none",
+    "duplicate_of": "unit-public-15",
+    "cvss": 8.8,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-unauth-tasks-list",
+    "title": "Unauthenticated bulk task disclosure via v1 list",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "src/routers/task.js",
+    "start_line": 88,
+    "end_line": 88,
+    "snippet": "        const tasks = await Task.find({})",
+    "taint": {
+      "source": "unauthenticated HTTP request",
+      "sink": "bulk disclosure of all task records",
+      "path": [
+        "src/routers/task.js:86 unauthenticated entry",
+        "src/routers/task.js:88 Task.find({}) sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 86,
+        "note": "GET v1 route missing auth"
+      },
+      {
+        "file": "src/routers/task.js",
+        "line": 88,
+        "note": "unscoped find-all sink"
+      }
+    ],
+    "evidence": "Route src/routers/task.js:86 GET /api/v1/tasks has no auth middleware; sink src/routers/task.js:88 Task.find({}) returns all tasks | validator: src/routers/task.js:86 GET /api/v1/tasks has no auth middleware and src/routers/task.js:88 Task.find({}) returns every task | consensus: 1/1 confirmed",
+    "rationale": "Endpoint lacks authentication entirely while v2 sibling GET /api/v2/tasks requires auth and scopes to req.user.tasks. Unauthenticated caller retrieves every task record cross-account.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/task.js:86 GET /api/v1/tasks has no auth middleware; sink src/routers/task.js:88 Task.find({}) returns all tasks",
+    "hunter_snippet": "        const tasks = await Task.find({})",
+    "patch_summary": "Require auth on /api/v1/tasks and scope query to owner, or remove legacy route",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-7",
+    "title": "Unauthenticated SSRF via contact url parameter",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 194,
+    "end_line": 194,
+    "snippet": "needle.get(query.url, { timeout: 3000 }, function(error, response1) {",
+    "taint": {
+      "source": "query.url URL query parameter",
+      "sink": "needle.get server-side fetch",
+      "path": [
+        "src/routers/user.js:191",
+        "src/routers/user.js:194"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 191,
+        "note": "attacker URL extraction"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 194,
+        "note": "SSRF sink"
+      }
+    ],
+    "evidence": "needle.get(query.url, { timeout: 3000 }, function(error, response1) { | validator: Unauth needle.get(query.url) at src/routers/user.js:194 with query from url.parse(req.url) at src/routers/user.js:189-191, no allowlist | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker controls query.url. HOW: url.parse(req.url,true).query.url passed directly to needle.get(query.url,{timeout:3000}). WHAT: server-side request forgery to internal metadata/cloud/metadata, intranet, file URLs; no allowlist, DNS or protocol check.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to GET /contact?url="
+    ],
+    "unit": "public",
+    "hunter_evidence": "needle.get(query.url, { timeout: 3000 }, function(error, response1) {",
+    "hunter_snippet": "needle.get(query.url, { timeout: 3000 }, function(error, response1) {",
+    "patch_summary": "Allowlist outbound hosts, block internal/metadata IPs, and reject attacker URLs at src/routers/user.js:189-197",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-17",
+    "title": "Unauthenticated bulk task disclosure via v1 list",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/task.js",
+    "start_line": 88,
+    "end_line": 88,
+    "snippet": "const tasks = await Task.find({})",
+    "taint": {
+      "source": "unauthenticated GET request",
+      "sink": "Task.find({}) bulk read",
+      "path": [
+        "src/routers/task.js:86",
+        "src/routers/task.js:88"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 86,
+        "note": "missing auth route"
+      },
+      {
+        "file": "src/routers/task.js",
+        "line": 88,
+        "note": "bulk disclosure"
+      }
+    ],
+    "evidence": "const tasks = await Task.find({}) | validator: Unauth GET src/routers/task.js:86 with Task.find({}) at src/routers/task.js:88 returns all tenants tasks | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker. HOW: router.get('/api/v1/tasks', async...) with no auth middleware calls Task.find({}) and returns all. WHAT: disclosure of all tasks for all users, bypasses owner scoping of v2 routes.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "no auth required"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const tasks = await Task.find({})",
+    "hunter_snippet": "const tasks = await Task.find({})",
+    "patch_summary": "Require auth and scope to owner at src/routers/task.js:86-88; remove unauth Task.find({})",
+    "control_type": "none",
+    "duplicate_of": "sys-unauth-tasks-list",
+    "cvss": 7.3,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-18",
+    "title": "BOLA arbitrary task modification via v1 patch",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/task.js",
+    "start_line": 105,
+    "end_line": 105,
+    "snippet": "const task = await Task.findById(req.params.id)",
+    "taint": {
+      "source": "req.params.id",
+      "sink": "findById without owner",
+      "path": [
+        "src/routers/task.js:95",
+        "src/routers/task.js:105"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 95,
+        "note": "route without owner check"
+      },
+      {
+        "file": "src/routers/task.js",
+        "line": 105,
+        "note": "unscoped lookup"
+      }
+    ],
+    "evidence": "const task = await Task.findById(req.params.id) | validator: auth-only PATCH src/routers/task.js:95 with unscoped Task.findById(req.params.id) at src/routers/task.js:105, no owner check | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated user controls :id. HOW: Task.findById(req.params.id) without owner filter, unlike v2 routes that use { _id, owner }. WHAT: BOLA read/update of any user's task, tampering.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated as any user"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const task = await Task.findById(req.params.id)",
+    "hunter_snippet": "const task = await Task.findById(req.params.id)",
+    "patch_summary": "Scope lookup to owner: Task.findOne({_id, owner:req.user._id}) at src/routers/task.js:105",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-11",
+    "title": "Reflected XSS via unencoded name parameter",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 215,
+    "end_line": 215,
+    "snippet": "res.send('Welcome name ' + eval(req.query.name));",
+    "taint": {
+      "source": "req.query.name",
+      "sink": "res.send reflected XSS",
+      "path": [
+        "src/routers/user.js:215"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 215,
+        "note": "reflected response sink"
+      }
+    ],
+    "evidence": "res.send('Welcome name ' + eval(req.query.name)); | validator: Same sink res.send+eval at src/routers/user.js:215 as unit-public-10; XSS impact subsumed by RCE, single fix | refute: duplicate | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated attacker controls name. HOW: res.send('Welcome name '+ eval(...)) reflects eval result and input without encoding. WHAT: reflected XSS executed in victim browser, session theft despite eval RCE also present.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to GET /api/v2/user?name="
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.send('Welcome name ' + eval(req.query.name));",
+    "hunter_snippet": "res.send('Welcome name ' + eval(req.query.name));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-21",
+    "title": "Missing password hashing stores plaintext credentials",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/models/user.js",
+    "start_line": 86,
+    "end_line": 86,
+    "snippet": "const user = new User(req.body) // saved with no bcrypt.hash; stored plaintext",
+    "taint": {
+      "source": "req.body.password via signup",
+      "sink": "plaintext password persisted (no bcrypt.hash)",
+      "path": [
+        "src/routers/user.js:17",
+        "src/models/user.js:86"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 25,
+        "note": "password field no hash hook"
+      },
+      {
+        "file": "src/models/user.js",
+        "line": 86,
+        "note": "compare assumes hash that never created"
+      }
+    ],
+    "evidence": "const isMatch = await bcrypt.compare(password, user.password) | validator: src/models/user.js:25 password field with no pre-save hash hook (only pre('remove')); grep bcrypt.hash returns no match; src/models/user.js:86 bcrypt.compare assumes hash never created; src/routers/user.js:17 new User(req.body) saves plaintext | consensus: 1/1 confirmed",
+    "rationale": "WHO: any registering user; server handling. HOW: schema defines password String but no pre('save') bcrypt.hash; findByCredentials does bcrypt.compare expecting hash, yet save stores req.body.password verbatim. WHAT: plaintext password storage in Mongo, exposed via DB leak/v1 APIs/backups.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "code inspection; no hashing hook present"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const isMatch = await bcrypt.compare(password, user.password)",
+    "hunter_snippet": "const isMatch = await bcrypt.compare(password, user.password)",
+    "patch_summary": "Add userSchema.pre('save') hook to bcrypt.hash password when modified (e.g., 8+ rounds) before save.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-08-massassign-plaintext-pw",
+    "title": "Signup mass-assignment with plaintext password storage (no hashing)",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "const user = new User(req.body)",
+    "taint": {
+      "source": "req.body.password (plus arbitrary User fields)",
+      "sink": "plaintext password persisted in Mongo",
+      "path": [
+        "src/routers/user.js:17 new User(req.body)",
+        "src/models/user.js: save without hash",
+        "src/db/mongoose.js:3 Mongo persistence"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 17,
+        "note": "new User(req.body) mass assignment"
+      },
+      {
+        "file": "src/models/user.js",
+        "line": 86,
+        "note": "only bcrypt.compare, no bcrypt.hash/pre-save hook"
+      }
+    ],
+    "evidence": "src/routers/user.js:17 new User(req.body) flows to user.save(); src/models/user.js has no pre-save bcrypt hash \u2014 only bcrypt.compare on login \u2014 so password persists as supplied | validator: src/routers/user.js:17 new User(req.body) saves password directly; src/models/user.js has only pre(remove) hook and src/models/user.js:86 bcrypt.compare with no bcrypt.hash/pre-save hashing | consensus: 1/1 confirmed",
+    "rationale": "Cross-unit flow: signup mass-assignment (new User(req.body)) -> Mongoose save with no hashing hook -> plaintext password in Mongo. bcryptjs is imported but never used to hash. Allows DB disclosure to yield credentials; also permits tokens/\u044e\u0442\u0441\u044f injection via body.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "src/routers/user.js:17 new User(req.body) flows to user.save(); src/models/user.js has no pre-save bcrypt hash \u2014 only bcrypt.compare on login \u2014 so password persists as supplied",
+    "hunter_snippet": "const user = new User(req.body)",
+    "patch_summary": "Add pre-save hook hashing password with bcrypt and allowlist signup fields (name,email,password,age only)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-bola-task-patch",
+    "title": "BOLA arbitrary task modification via v1 patch",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/task.js",
+    "start_line": 105,
+    "end_line": 105,
+    "snippet": "        const task = await Task.findById(req.params.id)",
+    "taint": {
+      "source": "req.params.id attacker-controlled ID",
+      "sink": "arbitrary task modification",
+      "path": [
+        "src/routers/task.js:95 :id entry",
+        "src/routers/task.js:105 findById sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 95,
+        "note": "PATCH v1 route with auth but no owner scope"
+      },
+      {
+        "file": "src/routers/task.js",
+        "line": 105,
+        "note": "unscoped findById sink"
+      },
+      {
+        "file": "src/routers/task.js",
+        "line": 56,
+        "note": "v2 comparator with owner scope"
+      }
+    ],
+    "evidence": "Route src/routers/task.js:95 PATCH /api/v1/tasks/:id has auth but sink src/routers/task.js:105 Task.findById(req.params.id) ignores owner, vs v2 sibling using findOne({_id, owner}) | validator: src/routers/task.js:95 PATCH /api/v1/tasks/:id has auth but src/routers/task.js:105 Task.findById(req.params.id) ignores owner vs src/routers/task.js:52 v2 sibling findOne({_id,owner}) | consensus: 1/1 confirmed",
+    "rationale": "Authentication present but authorization missing: any authenticated user can modify any task by ID. V2 PATCH at :56 enforces owner scope, proving v1 is a bypass.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/task.js:95 PATCH /api/v1/tasks/:id has auth but sink src/routers/task.js:105 Task.findById(req.params.id) ignores owner, vs v2 sibling using findOne({_id, owner})",
+    "hunter_snippet": "        const task = await Task.findById(req.params.id)",
+    "patch_summary": "Enforce owner-scoped query findOne({_id,owner:req.user._id}) on v1 patch or remove legacy route",
+    "control_type": "none",
+    "duplicate_of": "unit-public-18",
+    "cvss": 7.3,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-unauth-user-enum",
+    "title": "Unauthenticated user disclosure via v1 name lookup",
+    "cwe": "CWE-200",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 244,
+    "end_line": 244,
+    "snippet": "        const user = await User.findOne({name: name})",
+    "taint": {
+      "source": "req.params.name unauthenticated",
+      "sink": "full user document disclosure",
+      "path": [
+        "src/routers/user.js:240 :name entry unauthenticated",
+        "src/routers/user.js:244 findOne sink",
+        "src/routers/user.js:250 res.send(user) disclosure"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 240,
+        "note": "GET v1 users route missing auth"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 244,
+        "note": "findOne by attacker name sink"
+      }
+    ],
+    "evidence": "Route src/routers/user.js:240 GET /api/v1/users/:name has no auth; sink src/routers/user.js:244 User.findOne({name}) returns full user document including password hash and tokens via toJSON bypass? res.send(user) | validator: src/routers/user.js:240 GET /api/v1/users/:name has no auth and src/routers/user.js:244 User.findOne({name}) plus src/routers/user.js:250 res.send(user) discloses user PII unauthenticated | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated endpoint discloses arbitrary user record by name, enabling enumeration and harvesting of account data. No auth middleware unlike v2 profile routes.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route src/routers/user.js:240 GET /api/v1/users/:name has no auth; sink src/routers/user.js:244 User.findOne({name}) returns full user document including password hash and tokens via toJSON bypass? res.send(user)",
+    "hunter_snippet": "        const user = await User.findOne({name: name})",
+    "patch_summary": "Require auth and owner/self scope on user lookup or remove legacy route",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-6",
+    "title": "Authenticated server-side template injection via profile render",
+    "cwe": "CWE-94",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 128,
+    "end_line": 128,
+    "snippet": "res.render('profile', profile)",
+    "taint": {
+      "source": "req.body.profile authenticated JSON",
+      "sink": "res.render attacker-controlled context",
+      "path": [
+        "src/routers/user.js:127",
+        "src/routers/user.js:128"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 127,
+        "note": "attacker profile object"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 128,
+        "note": "render sink"
+      }
+    ],
+    "evidence": "res.render('profile', profile) | validator: Hardcoded template name res.render('profile', profile) at src/routers/user.js:128; attacker controls only context values, Handlebars does not evaluate context as code | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated attacker controls req.body.profile JSON. HOW: var profile=req.body.profile then res.render('profile',profile) passes attacker object as Handlebars context. WHAT: template injection / prototype pollution into view engine; attacker controls template variables/helpers leading to SSTI/XSS.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated attacker account"
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.render('profile', profile)",
+    "hunter_snippet": "res.render('profile', profile)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-13",
+    "title": "Unauthenticated user disclosure and enumeration via v1 name lookup",
+    "cwe": "CWE-200",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 250,
+    "end_line": 250,
+    "snippet": "res.send(user)",
+    "taint": {
+      "source": ":name path parameter unauthenticated",
+      "sink": "res.send(user) disclosure",
+      "path": [
+        "src/routers/user.js:240",
+        "src/routers/user.js:250"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 240,
+        "note": "unauthenticated route"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 250,
+        "note": "PII disclosure sink"
+      }
+    ],
+    "evidence": "res.send(user) | validator: Unauth GET src/routers/user.js:240 with User.findOne({name}) and res.send(user) at src/routers/user.js:250 discloses email/age; toJSON at src/models/user.js:60-68 strips only password/tokens | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker supplies :name path param. HOW: User.findOne({name:name}) then res.send(user) without auth, returns user document (name/email/age/_id, filtered only by toJSON). WHAT: user enumeration and PII disclosure, bypasses owner checks.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access, no auth required"
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.send(user)",
+    "hunter_snippet": "res.send(user)",
+    "patch_summary": "Require auth/owner check on GET /api/v1/users/:name at src/routers/user.js:240 and minimize returned fields",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-31",
+    "title": "DOM XSS via contact name query reflection",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "public/contact.html",
+    "start_line": 190,
+    "end_line": 190,
+    "snippet": "resultsEl.innerHTML = html; // html includes raw name",
+    "taint": {
+      "source": "location.search name parameter",
+      "sink": "innerHTML XSS sink",
+      "path": [
+        "public/contact.html:185",
+        "public/contact.html:190"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/contact.html",
+        "line": 185,
+        "note": "unsanitized concatenation"
+      },
+      {
+        "file": "public/contact.html",
+        "line": 190,
+        "note": "innerHTML sink"
+      }
+    ],
+    "evidence": "resultsEl.innerHTML = html; | validator: public/contact.html:185 html+='<p> Thank you for Contacting '+name attacker-controlled query param; public/contact.html:190 resultsEl.innerHTML=html unsanitized sink | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker crafts link with name query param. HOW: getQueryParameter('name') returns decoded URL value, showQueryAndResults concatenates '<p> Thank you for Contacting '+name into html then resultsEl.innerHTML=html. WHAT: DOM-based reflected XSS, cookie theft (auth_token readable via JS).",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "victim visits crafted /contact.html?name=<payload>"
+    ],
+    "unit": "public",
+    "hunter_evidence": "resultsEl.innerHTML = html;",
+    "hunter_snippet": "resultsEl.innerHTML = html;",
+    "patch_summary": "Use textContent or encode name (encodeURIComponent/escape) before DOM insertion; avoid innerHTML with URL input.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-32",
+    "title": "Stored XSS via profile name innerHTML rendering",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "public/src/profile-app.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "document.getElementById(dataId).innerHTML = `<strong>${dataName}</strong>: ${userData}`",
+    "taint": {
+      "source": "data.user.name from /api/v2/profile",
+      "sink": "innerHTML stored XSS",
+      "path": [
+        "public/src/profile-app.js:15"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/src/profile-app.js",
+        "line": 15,
+        "note": "innerHTML with stored name"
+      }
+    ],
+    "evidence": "document.getElementById(dataId).innerHTML = `<strong>${dataName}</strong>: ${userData}` | validator: public/src/profile-app.js:15 innerHTML with data.user.name from /api/v2/profile; src/models/user.js:7-12 name field has only trim/required, no validation/encoding; src/routers/user.js:138 allowlists name updates | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker controls user.name stored via API (no server encoding). HOW: display(userData...) does innerHTML=`<strong>..</strong>: ${userData}` with raw name. WHAT: stored XSS executes when victim loads settings/profile, stealing auth_token cookie.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker creates profile with XSS payload, victim views profile"
+    ],
+    "unit": "public",
+    "hunter_evidence": "document.getElementById(dataId).innerHTML = `<strong>${dataName}</strong>: ${userData}`",
+    "hunter_snippet": "document.getElementById(dataId).innerHTML = `<strong>${dataName}</strong>: ${userData}`",
+    "patch_summary": "Render profile fields with textContent or server-side-escape name; validate/encode on display.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-8",
+    "title": "Open redirect to attacker-controlled URL in contact handler",
+    "cwe": "CWE-601",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 197,
+    "end_line": 197,
+    "snippet": "res.redirect(query.url)",
+    "taint": {
+      "source": "query.url",
+      "sink": "res.redirect attacker URL",
+      "path": [
+        "src/routers/user.js:191",
+        "src/routers/user.js:197"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 197,
+        "note": "open redirect sink"
+      }
+    ],
+    "evidence": "res.redirect(query.url) | validator: Unauth res.redirect(query.url) at src/routers/user.js:197 with query from url.parse at src/routers/user.js:189-191, no validation | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker supplies url query. HOW: res.redirect(query.url) redirects to attacker-supplied absolute URL after SSRF fetch. WHAT: open redirect for phishing, oauth theft, bypass.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to GET /contact?url="
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.redirect(query.url)",
+    "hunter_snippet": "res.redirect(query.url)",
+    "patch_summary": "Allowlist redirect targets and reject absolute attacker URLs at src/routers/user.js:197",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-0",
+    "title": "Signup mass-assignment allows arbitrary User field injection",
+    "cwe": "CWE-915",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "src/routers/user.js",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "const user = new User(req.body)",
+    "taint": {
+      "source": "req.body unauthenticated signup JSON",
+      "sink": "new User(req.body) mass-assignment persistence",
+      "path": [
+        "src/routers/user.js:17"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 17,
+        "note": "mass-assignment sink"
+      }
+    ],
+    "evidence": "const user = new User(req.body) | validator: Unauth new User(req.body) at src/routers/user.js:16-17 with no allowlist; tokens[] injectable per src/models/user.js:44-49 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls JSON body. HOW: new User(req.body) passes entire body to Mongoose including tokens, _id, password, age without allowlist; then save() persists. WHAT: mass-assignment lets attacker inject tokens[] or override fields, escalate privilege.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to POST /api/v2/users"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = new User(req.body)",
+    "hunter_snippet": "const user = new User(req.body)",
+    "patch_summary": "Allowlist signup fields (name,email,password,age) at src/routers/user.js:17; reject tokens and extra keys before new User()",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-20",
+    "title": "JWT without expiration enables indefinite sessions",
+    "cwe": "CWE-613",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "src/models/user.js",
+    "start_line": 71,
+    "end_line": 71,
+    "snippet": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "taint": {
+      "source": "token generation without expiresIn",
+      "sink": "JWT without expiration",
+      "path": [
+        "src/models/user.js:71"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 71,
+        "note": "no expiry option"
+      }
+    ],
+    "evidence": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret') | validator: src/models/user.js:71 jwt.sign({_id},'hardsecret') with no expiresIn; src/middleware/auth.js:8 verifies without expiry check, only DB token lookup | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker obtaining token. HOW: jwt.sign without expiresIn, and tokens[] appended indefinitely in generateAuthToken. WHAT: indefinite sessions, unbounded token array growth (DoS), no revocation expiry.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker can register/login"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "hunter_snippet": "const token = jwt.sign({ _id: user._id.toString() }, 'hardsecret')",
+    "patch_summary": "Add expiresIn to jwt.sign (e.g., '7d') and enforce max session lifetime with rotation.",
+    "control_type": "none",
+    "duplicate_of": "sys-jwt-no-expiry",
+    "cvss": 4.6,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "system-0",
+    "title": "Cross-unit NoSQL query injection in login flow selects arbitrary user record",
+    "cwe": "CWE-943",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "src/models/user.js",
+    "start_line": 80,
+    "end_line": 80,
+    "snippet": "const user = await User.findOne({ email })",
+    "taint": {
+      "source": "POST /dashboard req.body.email (unauthenticated JSON body)",
+      "sink": "User.findOne({ email }) executes NoSQL filter",
+      "path": [
+        "src/routers/user.js:34 req.body.email -> findByCredentials",
+        "src/models/user.js:79 findByCredentials entry",
+        "src/models/user.js:80 User.findOne({ email })"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 34,
+        "note": "source: req.body.email passed to findByCredentials"
+      },
+      {
+        "file": "src/models/user.js",
+        "line": 79,
+        "note": "findByCredentials(email,password) entry"
+      },
+      {
+        "file": "src/models/user.js",
+        "line": 80,
+        "note": "sink: User.findOne({ email }) with attacker-controlled email"
+      }
+    ],
+    "evidence": "src/routers/user.js:34 passes req.body.email into User.findByCredentials; src/models/user.js:79-80 places it directly into User.findOne({ email }) with no type/shape validation | validator: src/routers/user.js:34 req.body.email flows to src/models/user.js:80 User.findOne({email}) with no type/shape check; src/index.js:29 express.json permits object operators, bcrypt check still required | consensus: 1/1 confirmed",
+    "rationale": "Login email originates as JSON body and can be an object ($ne/$gt). It flows across router->model units into a Mongoose filter, allowing attacker to control which user record is selected. Password is still bcrypt-compared, so impact is query-control/user-selection plus enumeration, not full password bypass alone, but breaks authentication integrity.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "src/routers/user.js:34 passes req.body.email into User.findByCredentials; src/models/user.js:79-80 places it directly into User.findOne({ email }) with no type/shape validation",
+    "hunter_snippet": "const user = await User.findOne({ email })",
+    "patch_summary": "Validate email/password are strings and reject $/dot keys before findOne; enforce strict schema",
+    "control_type": "none",
+    "duplicate_of": "unit-public-22",
+    "cvss": 4.6,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-1",
+    "title": "Insecure session cookie missing HttpOnly/Secure/SameSite on signup",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 22,
+    "end_line": 22,
+    "snippet": "res.cookie('auth_token', token)",
+    "taint": {
+      "source": "server-generated JWT session token",
+      "sink": "Set-Cookie without Secure/HttpOnly/SameSite",
+      "path": [
+        "src/routers/user.js:22"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 22,
+        "note": "cookie without flags"
+      }
+    ],
+    "evidence": "res.cookie('auth_token', token) | validator: Set-Cookie without flags at src/routers/user.js:22; no HttpOnly/Secure/SameSite on auth_token | consensus: 1/1 confirmed",
+    "rationale": "WHO: server sets session for any new user. HOW: res.cookie('auth_token', token) with no HttpOnly, Secure, SameSite flags. WHAT: cookie accessible to JS (XSS theft) and sent cross-site, sent over cleartext; breaks session confidentiality.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to signup/login"
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.cookie('auth_token', token)",
+    "hunter_snippet": "res.cookie('auth_token', token)",
+    "patch_summary": "Add HttpOnly, Secure, SameSite=Strict/Lax to res.cookie at src/routers/user.js:22",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-4",
+    "title": "Insecure session cookie missing flags on login",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 36,
+    "end_line": 36,
+    "snippet": "res.cookie('auth_token', token)",
+    "taint": {
+      "source": "JWT from generateAuthToken",
+      "sink": "Set-Cookie without flags",
+      "path": [
+        "src/routers/user.js:36"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 36,
+        "note": "insecure cookie on login"
+      }
+    ],
+    "evidence": "res.cookie('auth_token', token) | validator: Set-Cookie without flags at src/routers/user.js:36 on login; no HttpOnly/Secure/SameSite | consensus: 1/1 confirmed",
+    "rationale": "WHO: any user logging in. HOW: res.cookie('auth_token', token) without HttpOnly/Secure/SameSite. WHAT: session token exposed to JS and network eavesdropping, enabling hijack via XSS or cleartext.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to login"
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.cookie('auth_token', token)",
+    "hunter_snippet": "res.cookie('auth_token', token)",
+    "patch_summary": "Add HttpOnly, Secure, SameSite to res.cookie at src/routers/user.js:36",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-2",
+    "title": "Signup error handler discloses internal error details",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "res.status(400).send(e)",
+    "taint": {
+      "source": "Mongoose validation exception from attacker input",
+      "sink": "res.send(e) error disclosure",
+      "path": [
+        "src/routers/user.js:26"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 26,
+        "note": "error object reflected"
+      }
+    ],
+    "evidence": "res.status(400).send(e) | validator: Mongoose error reflected via res.status(400).send(e) at src/routers/user.js:26 on unauth signup | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker sends malformed signup. HOW: catch(e){res.status(400).send(e)} sends Mongoose validation error object verbatim. WHAT: discloses schema, validation rules, stack details aiding further attacks.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to signup"
+    ],
+    "unit": "public",
+    "hunter_evidence": "res.status(400).send(e)",
+    "hunter_snippet": "res.status(400).send(e)",
+    "patch_summary": "Return generic error message instead of e at src/routers/user.js:26; log details server-side",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-cookie-flags",
+    "title": "Session cookie missing HttpOnly Secure SameSite flags",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 22,
+    "end_line": 22,
+    "snippet": "        res.cookie('auth_token', token)",
+    "taint": {
+      "source": "server-issued auth_token without protections",
+      "sink": "session cookie exposed to XSS/CSRF theft",
+      "path": [
+        "src/routers/user.js:22 token issuance without flags",
+        "src/middleware/auth.js:7 cookie session read"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 22,
+        "note": "signup cookie without flags"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 36,
+        "note": "login cookie without flags"
+      },
+      {
+        "file": "src/middleware/auth.js",
+        "line": 7,
+        "note": "cookie-based session read"
+      }
+    ],
+    "evidence": "Session issuance src/routers/user.js:22 and src/routers/user.js:36 sets auth_token cookie with no HttpOnly/Secure/SameSite flags; auth middleware reads it at src/middleware/auth.js:7 | validator: src/routers/user.js:22 signup res.cookie without flags and src/routers/user.js:36 login res.cookie without flags read at src/middleware/auth.js:7 | consensus: 1/1 confirmed",
+    "rationale": "Auth token cookie is readable via JS and sent cross-site, enabling theft via the multiple stored/reflected XSS sinks and CSRF. Cross-unit flow: token issuance without flags -> cookie store -> auth check.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Session issuance src/routers/user.js:22 and src/routers/user.js:36 sets auth_token cookie with no HttpOnly/Secure/SameSite flags; auth middleware reads it at src/middleware/auth.js:7",
+    "hunter_snippet": "        res.cookie('auth_token', token)",
+    "patch_summary": "Set auth_token cookie with httpOnly, Secure, SameSite=Strict/Lax",
+    "control_type": "none",
+    "duplicate_of": "unit-public-1",
+    "cvss": 2.4,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-jwt-no-expiry",
+    "title": "JWT without expiration enables indefinite sessions",
+    "cwe": "CWE-613",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "src/models/user.js",
+    "start_line": 71,
+    "end_line": 71,
+    "snippet": "    const token = jwt.sign({ _id: user._id.toString() }, '***')",
+    "taint": {
+      "source": "JWT payload without exp claim",
+      "sink": "indefinite session validity",
+      "path": [
+        "src/models/user.js:71 token creation without expiry",
+        "src/middleware/auth.js:8 verification without expiry"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 71,
+        "note": "sign without expiry"
+      },
+      {
+        "file": "src/middleware/auth.js",
+        "line": 8,
+        "note": "verify without expiry check"
+      }
+    ],
+    "evidence": "Token creation src/models/user.js:71 jwt.sign payload only {_id} with no expiresIn; verification src/middleware/auth.js:8 imposes no expiry, tokens persist until explicit logout wipe | validator: src/models/user.js:71 jwt.sign({_id}) with no expiresIn and src/middleware/auth.js:8 jwt.verify with no expiry check, tokens valid until logout wipe | consensus: 1/1 confirmed",
+    "rationale": "JWTs never expire, so stolen/forged tokens give indefinite impersonation. Combined with hardcoded secret and missing cookie flags, session lifetime is unbounded cross-unit (issue -> store in tokens[] -> verify).",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Token creation src/models/user.js:71 jwt.sign payload only {_id} with no expiresIn; verification src/middleware/auth.js:8 imposes no expiry, tokens persist until explicit logout wipe",
+    "hunter_snippet": "    const token = jwt.sign({ _id: user._id.toString() }, '***')",
+    "patch_summary": "Add short expiresIn to jwt.sign and enforce exp on verify with refresh/logout",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-2",
+    "title": "Error disclosure in PATCH users me",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "src/routers/user.js",
+    "start_line": 152,
+    "end_line": 152,
+    "snippet": "        res.status(400).send(e)",
+    "taint": {
+      "source": "Mongoose error",
+      "sink": "res.send disclosure",
+      "path": [
+        "src/routers/user.js:147",
+        "src/routers/user.js:152"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 152,
+        "note": "raw error sent"
+      }
+    ],
+    "evidence": "        res.status(400).send(e) | validator: src/routers/user.js:147-152 catch(e) does res.status(400).send(e) leaking Mongoose internals to authenticated caller | consensus: 1/1 confirmed",
+    "rationale": "WHO authenticated attacker sends malformed PATCH. HOW catch sends raw error object verbatim. WHAT discloses schema and validation internals.",
+    "status": "confirmed",
+    "conditions": [
+      "authenticated PATCH with invalid body"
+    ],
+    "unit": "public",
+    "hunter_evidence": "        res.status(400).send(e)",
+    "hunter_snippet": "        res.status(400).send(e)",
+    "patch_summary": "Replace res.send(e) with generic error message and log details server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-3",
+    "title": "Error disclosure in PATCH v1 users id",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "src/routers/user.js",
+    "start_line": 302,
+    "end_line": 302,
+    "snippet": "        res.status(400).send(e)",
+    "taint": {
+      "source": "attacker body",
+      "sink": "res.send disclosure",
+      "path": [
+        "src/routers/user.js:291",
+        "src/routers/user.js:302"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 302,
+        "note": "raw error"
+      }
+    ],
+    "evidence": "        res.status(400).send(e) | validator: src/routers/user.js:291-302 catch(e) does res.status(400).send(e) leaking Mongoose internals on v1 PATCH | consensus: 1/1 confirmed",
+    "rationale": "WHO attacker controls v1 PATCH body. HOW catch sends raw e. WHAT leaks DB internals on legacy surface.",
+    "status": "confirmed",
+    "conditions": [
+      "v1 PATCH with invalid body"
+    ],
+    "unit": "public",
+    "hunter_evidence": "        res.status(400).send(e)",
+    "hunter_snippet": "        res.status(400).send(e)",
+    "patch_summary": "Replace res.send(e) with generic error message and log details server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-4",
+    "title": "Error disclosure in POST tasks",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "src/routers/task.js",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "        res.status(400).send(e)",
+    "taint": {
+      "source": "task JSON",
+      "sink": "res.send disclosure",
+      "path": [
+        "src/routers/task.js:7",
+        "src/routers/task.js:17"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 17,
+        "note": "raw error"
+      }
+    ],
+    "evidence": "        res.status(400).send(e) | validator: src/routers/task.js:7-17 catch(e) does res.status(400).send(e) leaking Mongoose validation internals on task create | consensus: 1/1 confirmed",
+    "rationale": "WHO authenticated attacker POSTs tasks. HOW catch sends raw e. WHAT discloses Task schema.",
+    "status": "confirmed",
+    "conditions": [
+      "invalid task JSON"
+    ],
+    "unit": "public",
+    "hunter_evidence": "        res.status(400).send(e)",
+    "hunter_snippet": "        res.status(400).send(e)",
+    "patch_summary": "Replace res.send(e) with generic error message and log details server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-5",
+    "title": "Error disclosure in PATCH v2 tasks id",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "src/routers/task.js",
+    "start_line": 66,
+    "end_line": 66,
+    "snippet": "        res.status(400).send(e)",
+    "taint": {
+      "source": "PATCH body",
+      "sink": "res.send disclosure",
+      "path": [
+        "src/routers/task.js:46",
+        "src/routers/task.js:66"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 66,
+        "note": "raw error"
+      }
+    ],
+    "evidence": "        res.status(400).send(e) | validator: src/routers/task.js:46-66 catch(e) does res.status(400).send(e) leaking Mongoose internals on v2 task PATCH | consensus: 1/1 confirmed",
+    "rationale": "WHO attacker PATCHes v2 task. HOW catch sends raw e. WHAT leaks validation errors.",
+    "status": "confirmed",
+    "conditions": [
+      "invalid task PATCH"
+    ],
+    "unit": "public",
+    "hunter_evidence": "        res.status(400).send(e)",
+    "hunter_snippet": "        res.status(400).send(e)",
+    "patch_summary": "Replace res.send(e) with generic error message and log details server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-6",
+    "title": "Error disclosure in PATCH v1 tasks id",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "src/routers/task.js",
+    "start_line": 116,
+    "end_line": 116,
+    "snippet": "        res.status(400).send(e)",
+    "taint": {
+      "source": "v1 body",
+      "sink": "res.send disclosure",
+      "path": [
+        "src/routers/task.js:95",
+        "src/routers/task.js:116"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 116,
+        "note": "raw error"
+      }
+    ],
+    "evidence": "        res.status(400).send(e) | validator: src/routers/task.js:95-116 catch(e) does res.status(400).send(e) leaking Mongoose internals on v1 task PATCH | consensus: 1/1 confirmed",
+    "rationale": "WHO caller of legacy task patch. HOW catch sends raw e. WHAT leaks internals on legacy route.",
+    "status": "confirmed",
+    "conditions": [
+      "invalid v1 task PATCH"
+    ],
+    "unit": "public",
+    "hunter_evidence": "        res.status(400).send(e)",
+    "hunter_snippet": "        res.status(400).send(e)",
+    "patch_summary": "Replace res.send(e) with generic error message and log details server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-5",
+    "title": "State-changing logout via GET enables CSRF",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.8,
+    "path": "src/routers/user.js",
+    "start_line": 92,
+    "end_line": 92,
+    "snippet": "router.get('/logout', auth, async (req, res) => {",
+    "taint": {
+      "source": "cross-site GET with victim cookies",
+      "sink": "req.user.tokens=[] state change on GET",
+      "path": [
+        "src/routers/user.js:92"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 92,
+        "note": "state-changing GET route"
+      }
+    ],
+    "evidence": "router.get('/logout', auth, async (req, res) => { | validator: src/routers/user.js:92 router.get('/logout',auth) performs state change src/routers/user.js:93 req.user.tokens=[] via cookie auth readable cross-site; res.cookie without SameSite/HttpOnly | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker luring authenticated victim. HOW: router.get('/logout',auth,...) mutates state (wipes tokens[]) on GET with cookie auth only, no CSRF token. WHAT: cross-site GET logs victim out (logout CSRF), violates state-changing via safe method invariant.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "victim logged in, attacker can lure to URL"
+    ],
+    "unit": "public",
+    "hunter_evidence": "router.get('/logout', auth, async (req, res) => {",
+    "hunter_snippet": "router.get('/logout', auth, async (req, res) => {",
+    "patch_summary": "Change logout to POST with CSRF token and set cookies SameSite=Lax/Strict, HttpOnly, Secure.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.2,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-public-25",
+    "title": "Missing security headers and rate limiting",
+    "cwe": "CWE-693",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/index.js",
+    "start_line": 29,
+    "end_line": 31,
+    "snippet": "app.use(express.json())",
+    "taint": {
+      "source": "all HTTP routes",
+      "sink": "missing security headers/rate-limit",
+      "path": [
+        "src/index.js:29"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/index.js",
+        "line": 27,
+        "note": "static without headers"
+      },
+      {
+        "file": "src/index.js",
+        "line": 29,
+        "note": "no helmet/rate-limit before routers"
+      }
+    ],
+    "evidence": "app.use(express.json()) | validator: src/index.js:24-36 shows no helmet/rate-limit but absence alone demonstrates no tainted sink or principal boundary crossing | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote attacker. HOW: Express app enables static serving and JSON parsing but no helmet/CSP/HSTS/X-Frame-Options, no rate limiting. WHAT: XSS amplification, clickjacking, brute-force login, missing transport guarantees.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access, default deployment"
+    ],
+    "unit": "public",
+    "hunter_evidence": "app.use(express.json())",
+    "hunter_snippet": "app.use(express.json())",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-30",
+    "title": "Hardcoded unauthenticated Mongo connection in utility script",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "mongodb.js",
+    "start_line": 11,
+    "end_line": 12,
+    "snippet": "const connectionURL = 'mongodb://mongo:27017'",
+    "taint": {
+      "source": "literal connection string",
+      "sink": "hardcoded unauthenticated DB URL",
+      "path": [
+        "mongodb.js:11"
+      ]
+    },
+    "refs": [
+      {
+        "file": "mongodb.js",
+        "line": 11,
+        "note": "hardcoded URL without auth"
+      }
+    ],
+    "evidence": "const connectionURL = 'mongodb://mongo:27017' | validator: mongodb.js:11 hardcoded URL in standalone script never required; src/index.js:3 uses src/db/mongoose.js:3, no import of mongodb.js | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: anyone reading repo/host. HOW: connectionURL='mongodb://mongo:27017' and databaseName='task-manager' hardcoded without credentials/TLS. WHAT: unauthenticated DB connection pattern reused; script also logs raw driver results via console.log leaking DB internals.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "local execution"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const connectionURL = 'mongodb://mongo:27017'",
+    "hunter_snippet": "const connectionURL = 'mongodb://mongo:27017'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-36",
+    "title": "Bypassable regex HTML sanitizer",
+    "cwe": "CWE-85",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "public/js/client-util.js",
+    "start_line": 42,
+    "end_line": 42,
+    "snippet": ".replace(/<[^>]+>/ig, '')",
+    "taint": {
+      "source": "attacker HTML input to stripHTML",
+      "sink": "inadequate regex sanitization",
+      "path": [
+        "public/js/client-util.js:26"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/js/client-util.js",
+        "line": 26,
+        "note": "regex sanitizer entry"
+      },
+      {
+        "file": "public/js/client-util.js",
+        "line": 42,
+        "note": "bypassable tag strip regex"
+      }
+    ],
+    "evidence": ".replace(/<[^>]+>/ig, '') | validator: public/js/client-util.js:23-42 stripHTML is browser-only helper used at public/js/client-app.js:51,274; server stores raw description at src/routers/task.js:7-17 without relying on it | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: attacker supplies task/profile input. HOW: stripHTML uses regex chain replace(/<[^>]+>/ig,'') after script/style stripping, known bypassable (e.g., unclosed tags, event handlers, encoded entities). WHAT: weak client-only sanitizer gives false assurance; server never validates, so XSS bypasses.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "any page using stripHTML for sanitization"
+    ],
+    "unit": "public",
+    "hunter_evidence": ".replace(/<[^>]+>/ig, '')",
+    "hunter_snippet": ".replace(/<[^>]+>/ig, '')",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-24",
+    "title": "Weak cookie-only session validation without expiry",
+    "cwe": "CWE-287",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "src/middleware/auth.js",
+    "start_line": 9,
+    "end_line": 9,
+    "snippet": "const user = await User.findOne({ _id: decoded._id, 'tokens.token': token })",
+    "taint": {
+      "source": "req.cookies auth_token",
+      "sink": "session lookup without expiry validation",
+      "path": [
+        "src/middleware/auth.js:7",
+        "src/middleware/auth.js:9"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/middleware/auth.js",
+        "line": 7,
+        "note": "cookie-only source"
+      },
+      {
+        "file": "src/middleware/auth.js",
+        "line": 9,
+        "note": "DB lookup without expiry"
+      }
+    ],
+    "evidence": "const user = await User.findOne({ _id: decoded._id, 'tokens.token': token }) | validator: src/middleware/auth.js:7-9 enforces jwt.verify + User.findOne tokens.token DB lookup; revocation via tokens=[] at src/routers/user.js:77-83; missing expiry alone is not bypass | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: attacker with stolen/guessed token. HOW: auth reads only req.cookies['auth_token'], ignores Authorization header that clients send (Bearer...), and does User.findOne({_id,tokens.token}) with no expiry/issuer check; failure does redirect not 401. WHAT: inconsistent trust boundary, session fixation, improper error handling hides auth failures.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated session via cookie"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = await User.findOne({ _id: decoded._id, 'tokens.token': token })",
+    "hunter_snippet": "const user = await User.findOne({ _id: decoded._id, 'tokens.token': token })",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-26",
+    "title": "Unbounded body parser enables DoS",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/index.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "app.use(express.json())",
+    "taint": {
+      "source": "req.body attacker JSON",
+      "sink": "unbounded body parser",
+      "path": [
+        "src/index.js:34"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/index.js",
+        "line": 29,
+        "note": "unlimited json parser"
+      },
+      {
+        "file": "src/index.js",
+        "line": 34,
+        "note": "duplicate parser"
+      }
+    ],
+    "evidence": "app.use(express.json()) | validator: src/index.js:29,34 express.json() uses framework default 100kb limit, not unbounded; no custom large limit | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated attacker controls body. HOW: app.use(express.json()) and urlencoded without limit option, duplicated (lines 29 and 34). WHAT: unbounded memory allocation, DoS via large payloads.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker sends large JSON"
+    ],
+    "unit": "public",
+    "hunter_evidence": "app.use(express.json())",
+    "hunter_snippet": "app.use(express.json())",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-9",
+    "title": "Log injection via unsanitized url query logging",
+    "cwe": "CWE-117",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 192,
+    "end_line": 192,
+    "snippet": "console.log(query.url)",
+    "taint": {
+      "source": "query.url attacker input",
+      "sink": "console.log log sink",
+      "path": [
+        "src/routers/user.js:192"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 192,
+        "note": "unsanitized log"
+      }
+    ],
+    "evidence": "console.log(query.url) | validator: src/routers/user.js:192 console.log(query.url) is debug stdout with no audit/security-log consumer or principal boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote attacker controls query.url including newlines/ANSI. HOW: console.log(query.url) writes unsanitized URL to stdout/logs. WHAT: log forgery/injection obscuring audit, splitting log lines.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to /contact"
+    ],
+    "unit": "public",
+    "hunter_evidence": "console.log(query.url)",
+    "hunter_snippet": "console.log(query.url)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-12",
+    "title": "Log injection via name query logging",
+    "cwe": "CWE-117",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 216,
+    "end_line": 216,
+    "snippet": "console.log(req.query.name);",
+    "taint": {
+      "source": "req.query.name",
+      "sink": "console.log",
+      "path": [
+        "src/routers/user.js:216"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 216,
+        "note": "log sink"
+      }
+    ],
+    "evidence": "console.log(req.query.name); | validator: src/routers/user.js:216 console.log(req.query.name) is debug stdout adjacent to eval sink, no audit trail boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controls req.query.name. HOW: console.log(req.query.name) logs raw query value. WHAT: log injection with CRLF to forge audit entries.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to /api/v2/user"
+    ],
+    "unit": "public",
+    "hunter_evidence": "console.log(req.query.name);",
+    "hunter_snippet": "console.log(req.query.name);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-37",
+    "title": "Insecure default cookie flags in setCookie helper",
+    "cwe": "CWE-614",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "public/js/client-util.js",
+    "start_line": 85,
+    "end_line": 85,
+    "snippet": "document.cookie = name + \"=\" + encodeURIComponent(value) + expires + '; Path=' + path + '; SameSite=' + sameSite + (secure ? ' Secure' : '')",
+    "taint": {
+      "source": "setCookie default secure=false",
+      "sink": "document.cookie without Secure/HttpOnly",
+      "path": [
+        "public/js/client-util.js:73"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/js/client-util.js",
+        "line": 73,
+        "note": "insecure defaults signature"
+      }
+    ],
+    "evidence": "document.cookie = name + \"=\" + encodeURIComponent(value) + expires + '; Path=' + path + '; SameSite=' + sameSite + (secure ? ' Secure' : '') | validator: public/js/client-util.js:72,85 document.cookie cannot set HttpOnly by design; sensitive auth_token set server-side at src/routers/user.js:22,36, helper only for task_manager_* per public/js/profile-app.js:73 | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: client code setting session-related cookies. HOW: setCookie(...,secure=false) defaults Secure false, SameSite Lax, no HttpOnly possible via JS; stores auth-related values readable via document.cookie. WHAT: session cookies exposed to XSS theft and cleartext transmission.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "default cookie creation via JS"
+    ],
+    "unit": "public",
+    "hunter_evidence": "document.cookie = name + \"=\" + encodeURIComponent(value) + expires + '; Path=' + path + '; SameSite=' + sameSite + (secure ? ' Secure' : '')",
+    "hunter_snippet": "document.cookie = name + \"=\" + encodeURIComponent(value) + expires + '; Path=' + path + '; SameSite=' + sameSite + (secure ? ' Secure' : '')",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-0",
+    "title": "Known-vulnerable node-serialize dependency imported",
+    "cwe": "CWE-1104",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "src/routers/user.js",
+    "start_line": 11,
+    "end_line": 11,
+    "snippet": "var serialize = require('node-serialize'); //deser",
+    "taint": {
+      "source": "npm import",
+      "sink": "vulnerable library load",
+      "path": [
+        "src/routers/user.js:11"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 11,
+        "note": "vulnerable import"
+      }
+    ],
+    "evidence": "var serialize = require('node-serialize'); //deser | validator: src/routers/user.js:11 only requires node-serialize; no unserialize() call in src/; package.json:21 pin is SCA-only with no reachable deserialization sink | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO remote attacker via supply chain. HOW file requires node-serialize 0.0.4 which has public RCE in unserialize. WHAT loading known-vulnerable component breaks integrity even before unserialize is called.",
+    "status": "fp",
+    "conditions": [
+      "node-serialize 0.0.4 installed"
+    ],
+    "unit": "public",
+    "hunter_evidence": "var serialize = require('node-serialize'); //deser",
+    "hunter_snippet": "var serialize = require('node-serialize'); //deser",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-29",
+    "title": "Exposed unauthenticated MongoDB via compose",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "docker-compose.yml",
+    "start_line": 9,
+    "end_line": 11,
+    "snippet": "ports:\n               - 27017:27017",
+    "taint": {
+      "source": "compose network binding",
+      "sink": "exposed unauthenticated DB port",
+      "path": [
+        "docker-compose.yml:9"
+      ]
+    },
+    "refs": [
+      {
+        "file": "docker-compose.yml",
+        "line": 5,
+        "note": "unpinned mongo image"
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 10,
+        "note": "DB port exposed without auth"
+      }
+    ],
+    "evidence": "ports:\n               - 27017:27017 | validator: docker-compose.yml:9-11 ports 27017:27017 mapping is container-run config; infra/build configs are out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent attacker. HOW: mongo service uses image mongo:latest unpinned, no auth env, ports 27017:27017 exposes DB to host/network. WHAT: unauthenticated remote DB read/write, complements hardcoded mongoose URI.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "adjacent network access"
+    ],
+    "unit": "public",
+    "hunter_evidence": "ports:\n               - 27017:27017",
+    "hunter_snippet": "ports:\n               - 27017:27017",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-33",
+    "title": "Stored XSS via profile email innerHTML rendering",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "public/src/profile-app.js",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "document.querySelector('#email').innerHTML = `<strong>Email</strong>:\u2000${data.user.email}`",
+    "taint": {
+      "source": "data.user.email API value",
+      "sink": "innerHTML email sink",
+      "path": [
+        "public/src/profile-app.js:23"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/src/profile-app.js",
+        "line": 23,
+        "note": "email innerHTML sink"
+      }
+    ],
+    "evidence": "document.querySelector('#email').innerHTML = `<strong>Email</strong>:\u2000${data.user.email}` | validator: src/models/user.js:14-22 email field validates with validator.isEmail(value) rejecting <>'\"/script payloads; public/src/profile-app.js:23 sink unreachable with XSS via email | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controls user.email stored value. HOW: document.querySelector('#email').innerHTML=`<strong>Email</strong>: ${data.user.email}` interpolates raw email. WHAT: stored XSS distinct sink from name display, executes on profile view.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker sets email with XSS payload"
+    ],
+    "unit": "public",
+    "hunter_evidence": "document.querySelector('#email').innerHTML = `<strong>Email</strong>:\u2000${data.user.email}`",
+    "hunter_snippet": "document.querySelector('#email').innerHTML = `<strong>Email</strong>:\u2000${data.user.email}`",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-34",
+    "title": "Stored XSS via task description innerHTML",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "public/js/client-app.js",
+    "start_line": 196,
+    "end_line": 196,
+    "snippet": "newListItem.innerHTML = `<input type=\"checkbox\" name=\"btn-check\"",
+    "taint": {
+      "source": "todo.description stored task field",
+      "sink": "innerHTML task rendering",
+      "path": [
+        "public/js/client-app.js:196"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/js/client-app.js",
+        "line": 196,
+        "note": "innerHTML with task description"
+      }
+    ],
+    "evidence": "newListItem.innerHTML = `<input type=\"checkbox\" name=\"btn-check\" | validator: public/js/client-app.js:196 innerHTML renders todo.description but src/routers/task.js:21-27 GET /api/v2/tasks returns only req.user.tasks (owner-scoped); attacker tasks never render to victim; client-app.js:26 fetches /api/v2/tasks only | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controls todo.description via POST /api/v2/tasks (server stores verbatim). HOW: updatePageDom builds newListItem.innerHTML with <span>${todo.description}</span> unsanitized. WHAT: stored XSS in task list; client stripHTML is bypassable and not enforced server-side.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker creates task with HTML/JS payload, victim views todo list"
+    ],
+    "unit": "public",
+    "hunter_evidence": "newListItem.innerHTML = `<input type=\"checkbox\" name=\"btn-check\"",
+    "hunter_snippet": "newListItem.innerHTML = `<input type=\"checkbox\" name=\"btn-check\"",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-3",
+    "title": "Login NoSQL operator injection via email parameter",
+    "cwe": "CWE-943",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "src/routers/user.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "const user = await User.findByCredentials(req.body.email, req.body.password)",
+    "taint": {
+      "source": "req.body.email JSON value",
+      "sink": "User.findOne({email}) NoSQL query",
+      "path": [
+        "src/routers/user.js:34",
+        "src/models/user.js:80"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 34,
+        "note": "attacker email passed to query"
+      },
+      {
+        "file": "src/models/user.js",
+        "line": 80,
+        "note": "findOne({email}) sink"
+      }
+    ],
+    "evidence": "const user = await User.findByCredentials(req.body.email, req.body.password) | validator: src/routers/user.js:34 email passed to findByCredentials but src/models/user.js:80 findOne({email}) followed by src/models/user.js:86 bcrypt.compare(password,user.password) still requires password; operator object cannot bypass password check | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated attacker controls req.body.email/password as parsed JSON (objects allowed). HOW: passed to User.findByCredentials then User.findOne({email}) where email can be {$gt:''} or {$ne:null}. WHAT: NoSQL operator injection bypasses authentication or enumerates users.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to POST /dashboard with JSON body"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = await User.findByCredentials(req.body.email, req.body.password)",
+    "hunter_snippet": "const user = await User.findByCredentials(req.body.email, req.body.password)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-16",
+    "title": "Task creation mass-assignment via body spread",
+    "cwe": "CWE-915",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/routers/task.js",
+    "start_line": 7,
+    "end_line": 11,
+    "snippet": "const task = new Task({",
+    "taint": {
+      "source": "req.body authenticated JSON",
+      "sink": "new Task spread mass-assignment",
+      "path": [
+        "src/routers/task.js:7"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/task.js",
+        "line": 8,
+        "note": "spread mass-assignment sink"
+      }
+    ],
+    "evidence": "const task = new Task({ | validator: src/routers/task.js:7-11 new Task({...req.body, owner:req.user._id}) owner forced after spread overwrites attacker owner; src/models/task.js:4-18 strict schema only description/completed/owner, unknown keys dropped | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated attacker controls JSON body. HOW: new Task({...req.body, owner}) spreads all body keys into model; _id, owner override attempts, __proto__ pollution possible. WHAT: mass-assignment creates tasks with attacker-chosen fields beyond description/completed.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "authenticated attacker"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const task = new Task({",
+    "hunter_snippet": "const task = new Task({",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-22",
+    "title": "NoSQL injection sink in findByCredentials",
+    "cwe": "CWE-943",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "src/models/user.js",
+    "start_line": 80,
+    "end_line": 80,
+    "snippet": "const user = await User.findOne({ email })",
+    "taint": {
+      "source": "email parameter from req.body",
+      "sink": "User.findOne NoSQL query",
+      "path": [
+        "src/models/user.js:80"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/models/user.js",
+        "line": 80,
+        "note": "NoSQL sink"
+      }
+    ],
+    "evidence": "const user = await User.findOne({ email }) | validator: src/models/user.js:80 User.findOne({email}) reachable with object but src/models/user.js:86-90 bcrypt.compare gate prevents auth bypass; same root cause as unit-public-3 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated attacker controls email argument. HOW: User.findOne({email}) where email may be object {$ne:null} from JSON body, Mongoose interprets as operator. WHAT: authentication bypass / data extraction via NoSQL injection.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access with JSON object body"
+    ],
+    "unit": "public",
+    "hunter_evidence": "const user = await User.findOne({ email })",
+    "hunter_snippet": "const user = await User.findOne({ email })",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-27",
+    "title": "Unauthenticated MongoDB connection without credentials",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "src/db/mongoose.js",
+    "start_line": 3,
+    "end_line": 3,
+    "snippet": "mongoose.connect('mongodb://mongo:27017/task-manager-api', {",
+    "taint": {
+      "source": "hardcoded connection string",
+      "sink": "DB connect without auth",
+      "path": [
+        "src/db/mongoose.js:3"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/db/mongoose.js",
+        "line": 3,
+        "note": "unauthenticated connection string"
+      }
+    ],
+    "evidence": "mongoose.connect('mongodb://mongo:27017/task-manager-api', { | validator: src/db/mongoose.js:3 mongoose.connect('mongodb://mongo:27017/...') is internal docker-DNS host, not an external trust boundary; no untrusted input reaches sink | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent attacker. HOW: mongoose.connect('mongodb://mongo:27017/task-manager-api') with no credentials, no TLS, no authSource. WHAT: unauthenticated DB access if port exposed (compose maps 27017), full data theft/tamper.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "network access to mongo host"
+    ],
+    "unit": "public",
+    "hunter_evidence": "mongoose.connect('mongodb://mongo:27017/task-manager-api', {",
+    "hunter_snippet": "mongoose.connect('mongodb://mongo:27017/task-manager-api', {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-28",
+    "title": "Outdated base image running as root",
+    "cwe": "CWE-1104",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 1,
+    "end_line": 11,
+    "snippet": "FROM node:12.1.0",
+    "taint": {
+      "source": "base image and missing USER",
+      "sink": "privileged outdated runtime",
+      "path": [
+        "Dockerfile:1"
+      ]
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 1,
+        "note": "outdated base"
+      },
+      {
+        "file": "Dockerfile",
+        "line": 11,
+        "note": "no USER, runs as root"
+      }
+    ],
+    "evidence": "FROM node:12.1.0 | validator: Dockerfile:1 FROM node:12.1.0 and Dockerfile:11 missing USER are build/infra config, explicitly out of scope | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: attacker exploiting app RCE. HOW: FROM node:12.1.0 (EOL, known CVEs), no USER directive so runs as root, COPY . . includes secrets, npm ci without audit. WHAT: container escape/privesc, outdated runtime with known exploits.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "building/running container"
+    ],
+    "unit": "public",
+    "hunter_evidence": "FROM node:12.1.0",
+    "hunter_snippet": "FROM node:12.1.0",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-public-35",
+    "title": "DOM XSS via jQuery html() response rendering",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "public/js/app.js",
+    "start_line": 29,
+    "end_line": 29,
+    "snippet": "$('#response').html(msg.msg);",
+    "taint": {
+      "source": "msg.msg server JSON response",
+      "sink": "$.html() XSS sink",
+      "path": [
+        "public/js/app.js:29"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/js/app.js",
+        "line": 29,
+        "note": "jQuery html sink"
+      }
+    ],
+    "evidence": "$('#response').html(msg.msg); | validator: public/js/app.js:29 $('#response').html(msg.msg) expects JSON {msg} but src/routers/user.js:32-42 POST /dashboard only redirects (201 redirect / 400 redirect), never sends {msg}; sink unreachable with attacker data | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: attacker influences msg.msg via server response (task/error content). HOW: $('#response').html(msg.msg) uses jQuery html() which parses HTML/JS. WHAT: DOM XSS execution in victim browser.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker controls API error/task content reflected as msg.msg"
+    ],
+    "unit": "public",
+    "hunter_evidence": "$('#response').html(msg.msg);",
+    "hunter_snippet": "$('#response').html(msg.msg);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "sys-ssti-profile",
+    "title": "Authenticated server-side template injection via profile render",
+    "cwe": "CWE-94",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "src/routers/user.js",
+    "start_line": 128,
+    "end_line": 128,
+    "snippet": " \tres.render('profile', profile)",
+    "taint": {
+      "source": "req.body.profile authenticated JSON",
+      "sink": "Handlebars server-side template render with attacker context",
+      "path": [
+        "src/routers/user.js:124 POST /api/v2/profile entry (auth)",
+        "src/routers/user.js:127 req.body.profile",
+        "src/routers/user.js:128 res.render sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "src/routers/user.js",
+        "line": 124,
+        "note": "POST /api/v2/profile authenticated route"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 127,
+        "note": "attacker-controlled profile object"
+      },
+      {
+        "file": "src/routers/user.js",
+        "line": 128,
+        "note": "template render sink"
+      }
+    ],
+    "evidence": "Authenticated POST src/routers/user.js:124 takes req.body.profile at :127 and passes as template context to res.render at src/routers/user.js:128 | validator: src/routers/user.js:128 res.render('profile',profile) passes attacker JSON as template context data, not template source; template src file is fixed profile.hbs, Handlebars does not compile context values | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "Authenticated attacker controls req.body.profile object. It is passed directly as Handlebars render context to res.render('profile', profile). Cross-unit flow client JSON -> template engine allows SSTI/payload injection and reflected content via document.write in profile.hbs ajax success.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Authenticated POST src/routers/user.js:124 takes req.body.profile at :127 and passes as template context to res.render at src/routers/user.js:128",
+    "hunter_snippet": " \tres.render('profile', profile)",
+    "control_type": "none",
+    "duplicate_of": "unit-public-6",
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

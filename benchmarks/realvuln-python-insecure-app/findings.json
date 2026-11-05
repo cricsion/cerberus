@@ -1,0 +1,1237 @@
+[
+  {
+    "id": "unit-app-0",
+    "title": "SSTI test",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/main.py",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "return Template(content).render()",
+    "taint": {
+      "source": "query param",
+      "sink": "Template render",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 38,
+        "note": "sink"
+      }
+    ],
+    "evidence": "return Template(content).render() | validator: Unauth ?name= at app/main.py:19 flows via f-string app/main.py:38 into Template().render() at app/main.py:41 with no sanitization; WAF disabled caddy/Caddyfile:12 SecRuleEngine Off | consensus: 2/2 confirmed",
+    "rationale": "test",
+    "status": "confirmed",
+    "conditions": [
+      "unauth GET"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return Template(content).render()",
+    "hunter_snippet": "return Template(content).render()",
+    "patch_summary": "Stop rendering user input as template source; use static Jinja file with autoescape and return HTMLResponse(content) with escaping.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Hardcoded SUPER_SECRET_NAME credential in config",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/config.py",
+    "start_line": 13,
+    "end_line": 13,
+    "snippet": "return Template(content).render()",
+    "taint": {
+      "source": "hardcoded literal in app/config.py",
+      "sink": "default query param and greeting body in app/main.py try_hack_me",
+      "path": [
+        "app/config.py:13",
+        "app/main.py:19"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 13,
+        "note": "hardcoded secret literal"
+      },
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "secret used as default query value"
+      }
+    ],
+    "evidence": "SUPER_SECRET_NAME = \"John Ripper\"  # FIXME: os.getenv(\"SUPER_SECRET_NAME\") | validator: Unauth ?name= at app/main.py:19 flows via f-string app/main.py:38 into Template().render() at app/main.py:41 with no sanitization; WAF disabled caddy/Caddyfile:12 SecRuleEngine Off | consensus: 2/2 confirmed",
+    "rationale": "WHO: remote unauthenticated client controls ?name= query param. HOW: default value is the hardcoded secret SUPER_SECRET_NAME; FastAPI exposes it as OpenAPI default and greeting fallback renders it into HTML. WHAT: hardcoded credential baked in source discloses sensitive value to anonymous requesters and via repo/image/OpenAPI.",
+    "status": "confirmed",
+    "conditions": [
+      "no authentication required",
+      "default config with baked-in value"
+    ],
+    "unit": "app",
+    "hunter_evidence": "SUPER_SECRET_NAME = \"John Ripper\"  # FIXME: os.getenv(\"SUPER_SECRET_NAME\")",
+    "hunter_snippet": "SUPER_SECRET_NAME = \"John Ripper\"  # FIXME: os.getenv(\"SUPER_SECRET_NAME\")",
+    "patch_summary": "Stop rendering user input as template source; use static Jinja file with autoescape and return HTMLResponse(content) with escaping.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "ssti-rce-greeting-template-render",
+    "title": "Critical SSTI/RCE: unauthenticated ?name= rendered as Jinja2 template source",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "app/main.py",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "    return Template(content).render()",
+    "taint": {
+      "source": "HTTP GET / ?name= unauthenticated query string (app/main.py:19)",
+      "sink": "jinja2 Template(content).render() server-side template execution (app/main.py:41)",
+      "path": [
+        "app/main.py:19 unauthenticated name param",
+        "app/main.py:37 name fallback to SUPER_SECRET_NAME",
+        "app/main.py:38 f-string builds template source from name+public_ip",
+        "app/main.py:41 Template(content).render() executes it"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "unauthenticated name query param entry point"
+      },
+      {
+        "file": "app/main.py",
+        "line": 38,
+        "note": "attacker input interpolated into template source via f-string"
+      },
+      {
+        "file": "app/main.py",
+        "line": 41,
+        "note": "unsandboxed Template(content).render() sink"
+      },
+      {
+        "file": "app/config.py",
+        "line": 13,
+        "note": "secret default backing the param"
+      }
+    ],
+    "evidence": "app/main.py:19 defines unauthenticated `name` query param defaulting to config.SUPER_SECRET_NAME; app/main.py:38 interpolates `name` and SSRF-derived `public_ip` into `content` via f-string; app/main.py:41 executes `Template(content).render()` where `content` is attacker-controlled template source | validator: app/main.py:19 ?name= unauthenticated input flows via app/main.py:38 f-string into template source executed at app/main.py:41 Template(content).render() with no sandbox/validation | consensus: 1/1 confirmed | triage: Unauth name into Template source enables RCE",
+    "rationale": "Remote unauthenticated attacker controls `?name=` which flows through f-string into jinja2 Template source and is rendered server-side, yielding SSTI to RCE. No sandbox, no validation, no allowlist. Coraza SecRuleEngine Off so no enforcement.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:19 defines unauthenticated `name` query param defaulting to config.SUPER_SECRET_NAME; app/main.py:38 interpolates `name` and SSRF-derived `public_ip` into `content` via f-string; app/main.py:41 executes `Template(content).render()` where `content` is attacker-controlled template source",
+    "hunter_snippet": "    return Template(content).render()",
+    "patch_summary": "Stop rendering user input as template source: return static HTMLResponse with autoescaped template/file and never interpolate name/public_ip into Template().",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "T1 critical SSTI with zero preconditions WAF off"
+    },
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "Hardcoded SUPER_SECRET_TOKEN credential in config",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/config.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "SUPER_SECRET_TOKEN = \"5u93R53Cr3tT0k3n\"",
+    "taint": {
+      "source": "hardcoded literal in app/config.py",
+      "sink": "source/image/container disclosure via repo leak",
+      "path": [
+        "app/config.py:14"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 14,
+        "note": "hardcoded token literal"
+      }
+    ],
+    "evidence": "SUPER_SECRET_TOKEN = \"5u93R53Cr3tT0k3n\"  # FIXME: os.getenv(\"SUPER_SECRET_TOKEN\") | validator: Hardcoded token literal at app/config.py:15 committed in repo and documented in README.md:84 | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with repo/image/env access; value baked into source and image layer. HOW: SUPER_SECRET_TOKEN assigned as plaintext literal with FIXME noting it should be os.getenv, never loaded from vault. WHAT: hardcoded credential persists in git history, image layers, and compose env passthrough.",
+    "status": "confirmed",
+    "conditions": [
+      "access to repo, image, or process env"
+    ],
+    "unit": "app",
+    "hunter_evidence": "SUPER_SECRET_TOKEN = \"5u93R53Cr3tT0k3n\"  # FIXME: os.getenv(\"SUPER_SECRET_TOKEN\")",
+    "hunter_snippet": "SUPER_SECRET_TOKEN = \"5u93R53Cr3tT0k3n\"  # FIXME: os.getenv(\"SUPER_SECRET_TOKEN\")",
+    "patch_summary": "Remove hardcoded token; load SUPER_SECRET_TOKEN from vault/mounted secret and rotate.",
+    "control_type": "none",
+    "duplicate_of": "system-0",
+    "cvss": 7.3,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "system-0",
+    "title": "Hardcoded application secrets baked into source defaults",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/config.py",
+    "start_line": 13,
+    "end_line": 15,
+    "snippet": "SUPER_SECRET_NAME = \"***\"  # FIXME: os.getenv(\"SUPER_SECRET_NAME\")",
+    "taint": {
+      "source": "hardcoded literal defaults in app/config.py",
+      "sink": "default greeting response and OpenAPI schema disclosure + repo/image leak",
+      "path": [
+        "app/config.py:13 hardcoded default",
+        "app/main.py:19 default query value",
+        "app/main.py:37 fallback or-branch"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 13,
+        "note": "hardcoded SUPER_SECRET_NAME default"
+      },
+      {
+        "file": "app/config.py",
+        "line": 15,
+        "note": "hardcoded SUPER_SECRET_TOKEN default"
+      },
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "imports SECRET_NAME as default query value"
+      },
+      {
+        "file": "README.md",
+        "line": 83,
+        "note": "same secret published in docs example"
+      }
+    ],
+    "evidence": "Hardcoded fallback credentials baked into source at app/config.py:13 and app/config.py:15; same values published as example config in README.md:83-84; imported as defaults by app/main.py:19 and app/main.py:37 so they ship in repo and image layers | validator: app/config.py:13 SUPER_SECRET_NAME=\"John Ripper\" and app/config.py:15 SUPER_SECRET_TOKEN hardcoded literals shipped in repo/image and published in README.md:83-84 | consensus: 1/1 confirmed",
+    "rationale": "Secrets committed as literal defaults with FIXME to use env but never wired to os.getenv; anyone with repo/image access or default greeting response learns them, and rotation requires code change. Type JWT_SECRET/password-like credential, value redacted as ***.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Hardcoded fallback credentials baked into source at app/config.py:13 and app/config.py:15; same values published as example config in README.md:83-84; imported as defaults by app/main.py:19 and app/main.py:37 so they ship in repo and image layers",
+    "hunter_snippet": "SUPER_SECRET_NAME = \"***\"  # FIXME: os.getenv(\"SUPER_SECRET_NAME\")",
+    "patch_summary": "Remove hardcoded defaults, load secrets only from vault/mounted env at runtime, rotate exposed values, add secret-scan gate.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "Reflected XSS via unescaped name interpolation into HTML",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\"",
+    "taint": {
+      "source": "query param name (app/main.py:19)",
+      "sink": "HTML body construction without escaping",
+      "path": [
+        "app/main.py:19",
+        "app/main.py:38"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "untrusted name source"
+      },
+      {
+        "file": "app/main.py",
+        "line": 38,
+        "note": "unsafe HTML interpolation"
+      }
+    ],
+    "evidence": "    content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\" | validator: Untrusted name at app/main.py:19 interpolated unescaped into HTML at app/main.py:38 with autoescape disabled via Template() at app/main.py:41 | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client supplies ?name=. HOW: name interpolated via f-string into HTML with no escaping, validation, or length limit, returned as HTMLResponse. WHAT: reflected XSS; attacker script executes in victim browser, distinct from template-source SSTI at line 41.",
+    "status": "confirmed",
+    "conditions": [
+      "unauthenticated GET /?name=<payload>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\"",
+    "hunter_snippet": "    content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\"",
+    "patch_summary": "HTML-escape name/ip, enable Jinja autoescape, and validate/length-limit name.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "system-1",
+    "title": "Unrestricted SSRF fetch of env-controlled PUBLIC_IP_SERVICE_URL without allowlist or validation",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "taint": {
+      "source": "env-controlled PUBLIC_IP_SERVICE_URL via app/config.py",
+      "sink": "requests.get outbound fetch + HTML render",
+      "path": [
+        "app/config.py:11 os.getenv PUBLIC_IP_SERVICE_URL",
+        "app/main.py:31 requests.get sink",
+        "app/main.py:36 public_ip_response.text",
+        "app/main.py:38 f-string HTML"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 11,
+        "note": "unvalidated env-sourced URL"
+      },
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "unrestricted requests.get sink, no timeout/allowlist"
+      },
+      {
+        "file": "app/main.py",
+        "line": 36,
+        "note": "external body flows into HTML without validation"
+      }
+    ],
+    "evidence": "Cross-unit flow: app/config.py:11 PUBLIC_IP_SERVICE_URL=os.getenv without validation -> app/main.py:31 requests.get(config.PUBLIC_IP_SERVICE_URL) with no allowlist, scheme/host check, or timeout; exception handler at app/main.py:33 only covers HTTPError/InvalidSchema | validator: app/config.py:11 URL from trusted operator os.getenv and app/main.py:31 sink takes fixed config value with no ?name= or other untrusted URL control reaching it | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "Attacker who can influence env/.env (dotenv find_dotenv auto-load) or DNS/redirect of the configured host pivots server-side fetch to internal metadata or attacker host; response body is then rendered into HTML at app/main.py:38, coupling SSRF to XSS/defacement and availability loss.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit flow: app/config.py:11 PUBLIC_IP_SERVICE_URL=os.getenv without validation -> app/main.py:31 requests.get(config.PUBLIC_IP_SERVICE_URL) with no allowlist, scheme/host check, or timeout; exception handler at app/main.py:33 only covers HTTPError/InvalidSchema",
+    "hunter_snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "control_type": "none",
+    "duplicate_of": "unit-app-2",
+    "cvss": 7.1,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "Outbound fetch without timeout enables worker exhaustion DoS",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 32,
+    "end_line": 32,
+    "snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "taint": {
+      "source": "unauth GET / triggers fetch",
+      "sink": "blocking network wait with no timeout",
+      "path": [
+        "app/main.py:19",
+        "app/main.py:31"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "no timeout argument"
+      }
+    ],
+    "evidence": "        public_ip_response.raise_for_status() | validator: Unauth GET / at app/main.py:18-19 triggers blocking requests.get at app/main.py:31 with no timeout argument | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated caller. HOW: every GET / performs synchronous requests.get with no timeout argument; slow upstream blocks handler indefinitely. WHAT: missing timeout breaks availability invariant and enables trivial DoS.",
+    "status": "confirmed",
+    "conditions": [
+      "unauthenticated requests",
+      "slow upstream"
+    ],
+    "unit": "app",
+    "hunter_evidence": "        public_ip_response.raise_for_status()",
+    "hunter_snippet": "        public_ip_response.raise_for_status()",
+    "patch_summary": "Add short timeout (e.g. timeout=5), size cap, and rate limiting to outbound fetch.",
+    "control_type": "none",
+    "duplicate_of": "SYS-TIMEOUT-DOS",
+    "cvss": 4.8,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "Production debug mode wired from env into FastAPI debug flag",
+    "cwe": "CWE-215",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "debug=config.DEBUG,",
+    "taint": {
+      "source": "DEBUG env via app/config.py:9",
+      "sink": "FastAPI(debug=config.DEBUG)",
+      "path": [
+        "app/config.py:9",
+        "app/main.py:14"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 9,
+        "note": "DEBUG from env"
+      },
+      {
+        "file": "app/main.py",
+        "line": 14,
+        "note": "debug flag enables tracebacks"
+      }
+    ],
+    "evidence": "    debug=config.DEBUG, | validator: Env-driven DEBUG at app/config.py:9 wired to FastAPI(debug=) at app/main.py:14 with DEBUG=True in .env_temp:3 and passthrough in docker-compose.yaml:8 | consensus: 1/1 confirmed",
+    "rationale": "WHO: operator env controls DEBUG; any remote client benefits. HOW: DEBUG parsed from env then wired into FastAPI(debug=config.DEBUG), enabling tracebacks. WHAT: debug disclosure leaks stack and secrets.",
+    "status": "confirmed",
+    "conditions": [
+      "DEBUG=true carried to deployment"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    debug=config.DEBUG,",
+    "hunter_snippet": "    debug=config.DEBUG,",
+    "patch_summary": "Do not wire env DEBUG to production; force debug=False in prod and remove DEBUG from compose passthrough.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-TIMEOUT-DOS",
+    "title": "Outbound fetch without timeout enables worker exhaustion DoS",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "taint": {
+      "source": "HTTP GET / triggers outbound fetch on every request",
+      "sink": "requests.get without timeout (availability sink)",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "requests.get without timeout"
+      },
+      {
+        "file": "app/config.py",
+        "line": 11,
+        "note": "URL from env, no default timeout config"
+      }
+    ],
+    "evidence": "app/main.py:31 calls requests.get(config.PUBLIC_IP_SERVICE_URL) with no timeout=; repo-wide grep for timeout finds zero hits, so slow/hung IP service blocks worker indefinitely | validator: app/main.py:31 requests.get(config.PUBLIC_IP_SERVICE_URL) has no timeout= and repo grep for timeout shows zero app-code hits so hung upstream blocks worker | consensus: 1/1 confirmed",
+    "rationale": "Synchronous outbound fetch on every GET / has no timeout, so attacker-induced slow external service or DNS stall holds worker/connection; combined with no rate limiting this enables worker exhaustion DoS. Distinct from SSRF allowlist gap: fix is timeout/size cap, not URL allowlist.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:31 calls requests.get(config.PUBLIC_IP_SERVICE_URL) with no timeout=; repo-wide grep for timeout finds zero hits, so slow/hung IP service blocks worker indefinitely",
+    "hunter_snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "patch_summary": "Add short timeout (e.g. timeout=3) plus size cap to outbound fetch and handle Timeout exception with fallback.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-WAF-DISABLED",
+    "title": "Coraza WAF engine disabled leaving SSTI/XSS rules non-enforcing",
+    "cwe": "CWE-693",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "caddy/Caddyfile",
+    "start_line": 13,
+    "end_line": 13,
+    "snippet": "SecRuleEngine Off",
+    "taint": {
+      "source": "internet -> Caddy :80/:443/:1337",
+      "sink": "reverse_proxy app:1337 without WAF enforcement",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "caddy/Caddyfile",
+        "line": 13,
+        "note": "engine disabled"
+      },
+      {
+        "file": "caddy/Caddyfile",
+        "line": 17,
+        "note": "SSTI rule never enforced"
+      }
+    ],
+    "evidence": "caddy/Caddyfile:13 SecRuleEngine Off with SSTI/XSS/SQLi/traversal SecRules at :17-20 present but non-enforcing; both localhost and :1337 routes import waf_rules so edge is unprotected | validator: caddy/Caddyfile:13 SecRuleEngine Off leaves SSTI/XSS/SQLi rules at caddy/Caddyfile:17-20 non-enforcing on both routes importing waf_rules | consensus: 1/1 confirmed",
+    "rationale": "Coraza rules meant to block SSTI ({{.*}}), XSS (<script), SQLi, traversal are dead code because engine is Off. Unauthenticated SSTI/XSS sinks in app/main.py are therefore reachable without edge mitigation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "caddy/Caddyfile:13 SecRuleEngine Off with SSTI/XSS/SQLi/traversal SecRules at :17-20 present but non-enforcing; both localhost and :1337 routes import waf_rules so edge is unprotected",
+    "hunter_snippet": "SecRuleEngine Off",
+    "patch_summary": "Set SecRuleEngine On with tested SSTI/XSS rules, or remove stub rules if Caddy is not the enforcement point.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "system-2",
+    "title": "Reflected XSS via unescaped name and external IP body interpolated into HTML",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\"",
+    "taint": {
+      "source": "?name= query parameter and external IP body",
+      "sink": "reflected HTML response executed in victim browser",
+      "path": [
+        "app/main.py:19 ?name= query input",
+        "app/main.py:38 f-string HTML interpolation",
+        "app/main.py:41 Template(content).render() return as HTML"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "unauthenticated ?name= source"
+      },
+      {
+        "file": "app/main.py",
+        "line": 36,
+        "note": "external body source public_ip_response.text"
+      },
+      {
+        "file": "app/main.py",
+        "line": 38,
+        "note": "unescaped f-string HTML sink"
+      }
+    ],
+    "evidence": "Source app/main.py:19 query param name plus app/main.py:36 external public_ip_response.text interpolated unescaped at app/main.py:38 into HTML served as HTMLResponse; uses jinja2 Template without autoescape so <script> payload passes through (distinct from template-code execution at line 41) | validator: app/main.py:19 ?name= plus app/main.py:36 public_ip_response.text interpolated unescaped at app/main.py:38 and returned via unsandboxed Template at app/main.py:41 as HTMLResponse | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated ?name=<script>alert(1)</script> is reflected verbatim in <h1> and attacker-influenced IP body in <code>; no escaping, validation, length limit, or CSP/headers, so victim browser executes script. External fetch body adds stored-reflected variant.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Source app/main.py:19 query param name plus app/main.py:36 external public_ip_response.text interpolated unescaped at app/main.py:38 into HTML served as HTMLResponse; uses jinja2 Template without autoescape so <script> payload passes through (distinct from template-code execution at line 41)",
+    "hunter_snippet": "content = f\"<h1>Hello, {name}!</h1><h2>Public IP: <code>{public_ip}</code></h2>\"",
+    "patch_summary": "HTML-escape name/public_ip, enable Jinja autoescape/static template, validate/length-limit name and set CSP.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-4",
+    "cvss": 4.8,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "system-3",
+    "title": "Sensitive default query value discloses baked-in secret in responses and OpenAPI",
+    "cwe": "CWE-200",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 19,
+    "end_line": 19,
+    "snippet": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "taint": {
+      "source": "SUPER_SECRET_NAME default query parameter",
+      "sink": "unauthenticated greeting body + OpenAPI default value",
+      "path": [
+        "app/config.py:13 hardcoded secret",
+        "app/main.py:19 default param",
+        "app/main.py:37 or-fallback",
+        "app/main.py:38 HTML response"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 13,
+        "note": "hardcoded secret source"
+      },
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "secret as default query value / OpenAPI default"
+      },
+      {
+        "file": "app/main.py",
+        "line": 37,
+        "note": "fallback re-disclosure on falsy input"
+      }
+    ],
+    "evidence": "app/main.py:19 default name=config.SUPER_SECRET_NAME exposes baked-in secret in OpenAPI schema and default GET / response; fallback at app/main.py:37 re-discloses it on empty input; test at tests/test_main.py:20 asserts default body contains it | validator: app/main.py:19 default name=config.SUPER_SECRET_NAME from app/config.py:13 plus app/main.py:37 or-fallback re-discloses secret in default GET / body and OpenAPI default | consensus: 1/1 confirmed",
+    "rationale": "Cross-unit secret-disclosure flow config->route->response: hardcoded secret becomes API default, so unauthenticated callers harvest it without attack, and docs/schema leak it to crawlers.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:19 default name=config.SUPER_SECRET_NAME exposes baked-in secret in OpenAPI schema and default GET / response; fallback at app/main.py:37 re-discloses it on empty input; test at tests/test_main.py:20 asserts default body contains it",
+    "hunter_snippet": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "patch_summary": "Remove secret as default query value; use non-sensitive default (e.g. World) and do not fall back to secrets.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Unescaped external IP-service body reflected into HTML enables XSS",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 36,
+    "end_line": 36,
+    "snippet": "public_ip = public_ip_response.text",
+    "taint": {
+      "source": "external HTTP response text",
+      "sink": "HTML interpolation without escaping or size cap",
+      "path": [
+        "app/main.py:31",
+        "app/main.py:36"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "untrusted upstream fetch"
+      },
+      {
+        "file": "app/main.py",
+        "line": 36,
+        "note": "unbounded unescaped assignment"
+      }
+    ],
+    "evidence": "        public_ip = public_ip_response.text | validator: External response text assigned unbounded at app/main.py:36 and interpolated unescaped into HTML at app/main.py:38 | consensus: 1/1 confirmed",
+    "rationale": "WHO: external IP service (attacker-influenced via SSRF URL/DNS/MITM) controls response body. HOW: public_ip_response.text assigned unbounded then interpolated into HTML without escaping or size cap. WHAT: second XSS sink independent of name; tampered upstream injects script into victims.",
+    "status": "confirmed",
+    "conditions": [
+      "attacker controls URL/DNS or MITMs upstream",
+      "victim views page"
+    ],
+    "unit": "app",
+    "hunter_evidence": "        public_ip = public_ip_response.text",
+    "hunter_snippet": "        public_ip = public_ip_response.text",
+    "patch_summary": "Escape/size-cap upstream body before HTML interpolation; treat external text as untrusted.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Sensitive default query value discloses secret in OpenAPI and responses",
+    "cwe": "CWE-200",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 19,
+    "end_line": 19,
+    "snippet": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "taint": {
+      "source": "hardcoded secret as default",
+      "sink": "query param default rendered to response and OpenAPI",
+      "path": [
+        "app/config.py:13",
+        "app/main.py:19"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "secret as default param"
+      }
+    ],
+    "evidence": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME): | validator: Secret default at app/main.py:19 exposes hardcoded value from app/config.py:13 in responses and OpenAPI/docs | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client supplies ?name=. HOW: signature uses attacker-influenced default SUPER_SECRET_NAME; OpenAPI advertises secret and empty values fall back to it. WHAT: sensitive default discloses credential on default requests and in openapi.json.",
+    "status": "confirmed",
+    "conditions": [
+      "docs routes enabled",
+      "anonymous GET / or /openapi.json"
+    ],
+    "unit": "app",
+    "hunter_evidence": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "hunter_snippet": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "patch_summary": "Remove secret as default param value; require explicit input or use non-sensitive default and hide docs.",
+    "control_type": "none",
+    "duplicate_of": "system-3",
+    "cvss": 4.6,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-NARROW-EXCEPT",
+    "title": "Narrow exception handling leaves outbound failures unhandled",
+    "cwe": "CWE-390",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "except (requests.HTTPError, requests.exceptions.InvalidSchema):",
+    "taint": {
+      "source": "requests.get failure modes not in except tuple",
+      "sink": "uncaught exception -> 500 error path",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 33,
+        "note": "narrow except clause"
+      },
+      {
+        "file": "app/config.py",
+        "line": 11,
+        "note": "env may be None, triggering uncaught exception"
+      }
+    ],
+    "evidence": "app/main.py:33 catches only (requests.HTTPError, requests.exceptions.InvalidSchema); ConnectionError, ConnectTimeout, ReadTimeout, TooManyRedirects, MissingSchema/URLRequired (when PUBLIC_IP_SERVICE_URL is None) all escape to unhandled 500 | validator: app/main.py:33 narrow except leaves generic robustness gap but attacker cannot force ConnectionError/Timeout/MissingSchema without controlling operator env URL at app/config.py:11 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "PUBLIC_IP_SERVICE_URL is optional env (config.py:11, None if unset). requests.get(None) raises MissingSchema/URLRequired and network faults raise ConnectionError/Timeout \u2014 none caught \u2014 so single request causes 500 exception instead of Unknown fallback, breaking availability and leaking stack in debug mode.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:33 catches only (requests.HTTPError, requests.exceptions.InvalidSchema); ConnectionError, ConnectTimeout, ReadTimeout, TooManyRedirects, MissingSchema/URLRequired (when PUBLIC_IP_SERVICE_URL is None) all escape to unhandled 500",
+    "hunter_snippet": "except (requests.HTTPError, requests.exceptions.InvalidSchema):",
+    "control_type": "none",
+    "duplicate_of": "unit-app-9",
+    "cvss": 4.6,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-BLOCKING-ASYNC",
+    "title": "Blocking synchronous requests call inside async handler starves event loop",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 29,
+    "end_line": 31,
+    "snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "taint": {
+      "source": "unauthenticated GET / handler try_hack_me",
+      "sink": "blocking socket I/O in async event loop",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "async handler entry"
+      },
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "blocking requests.get inside async handler"
+      }
+    ],
+    "evidence": "app/main.py:19 async def try_hack_me blocks event loop at app/main.py:31 with synchronous requests.get; no httpx/aiohttp/AsyncClient usage found in app/ | validator: app/main.py:19 async def try_hack_me blocks event loop at app/main.py:31 synchronous requests.get with no async client in app/ | consensus: 1/1 confirmed",
+    "rationale": "Async FastAPI handler performs blocking socket I/O via requests, starving the single event loop for all concurrent connections. Every unauthenticated GET / pays outbound latency while loop is blocked; slow external service amplifies to full service stall. Fix is async client or threadpool offload.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:19 async def try_hack_me blocks event loop at app/main.py:31 with synchronous requests.get; no httpx/aiohttp/AsyncClient usage found in app/",
+    "hunter_snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "patch_summary": "Use async HTTP client (httpx.AsyncClient) with timeout or run sync fetch in threadpool to avoid event-loop starvation.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-NO-RATELIMIT",
+    "title": "Unauthenticated greeting route has no rate limiting or request caps",
+    "cwe": "CWE-770",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "@app.get(\"/\", response_class=HTMLResponse)",
+    "taint": {
+      "source": "unauthenticated GET / with no throttle",
+      "sink": "per-request SSRF + template render cost",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 18,
+        "note": "unlimited public route"
+      },
+      {
+        "file": "caddy/Caddyfile",
+        "line": 25,
+        "note": "no rate-limit on proxy route"
+      }
+    ],
+    "evidence": "app/main.py:18 @app.get(\"/\") unauthenticated handler triggers SSRF fetch + Jinja render per request; repo grep for ratelimit/rate_limit/slowapi/throttle/limiter finds zero hits in py/Caddyfile/yaml, and Caddyfile has no rate_limit directive | validator: app/main.py:18 public GET / has no throttle and caddy/Caddyfile has no rate_limit, but absence alone shows no concrete exhaustible resource threshold beyond generic flood | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "Public GET / performs expensive outbound fetch and template render with no rate limiting, throttling, or request caps at app or Caddy layers, enabling request-flooding and amplification of timeout/blocking-sync DoS.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:18 @app.get(\"/\") unauthenticated handler triggers SSRF fetch + Jinja render per request; repo grep for ratelimit/rate_limit/slowapi/throttle/limiter finds zero hits in py/Caddyfile/yaml, and Caddyfile has no rate_limit directive",
+    "hunter_snippet": "@app.get(\"/\", response_class=HTMLResponse)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "system-4",
+    "title": "Production debug mode wired from env into FastAPI debug flag",
+    "cwe": "CWE-215",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "debug=config.DEBUG,",
+    "taint": {
+      "source": "DEBUG env flag",
+      "sink": "FastAPI debug error pages on unauthenticated edge",
+      "path": [
+        "app/config.py:9 os.getenv DEBUG",
+        "app/main.py:14 FastAPI(debug=)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 9,
+        "note": "permissive DEBUG env parsing"
+      },
+      {
+        "file": "app/main.py",
+        "line": 14,
+        "note": "DEBUG wired into FastAPI debug flag"
+      }
+    ],
+    "evidence": "app/config.py:9 DEBUG parsed permissively from env; wired into app/main.py:14 FastAPI(debug=); deployment template enables DEBUG=True so production serves tracebacks and interactive debugger data | validator: app/config.py:9 DEBUG from env wired at app/main.py:14 FastAPI(debug=) with template .env_temp:3 DEBUG=True carried via README cp to .env | consensus: 1/1 confirmed",
+    "rationale": "Debug mode on unauthenticated edge discloses stack traces, file paths, config values and secrets on errors (e.g., None URL, fetch failures), aiding SSTI/SSRF exploitation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/config.py:9 DEBUG parsed permissively from env; wired into app/main.py:14 FastAPI(debug=); deployment template enables DEBUG=True so production serves tracebacks and interactive debugger data",
+    "hunter_snippet": "debug=config.DEBUG,",
+    "patch_summary": "Do not wire env DEBUG to FastAPI(debug=True) in prod; default debug=False, gate True to local-only and strip tracebacks.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-6",
+    "cvss": 4.6,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-DOTENV-HIJACK",
+    "title": "Unpinned dotenv auto-load allows env hijack via nearest .env",
+    "cwe": "CWE-807",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/config.py",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "load_dotenv(find_dotenv())",
+    "taint": {
+      "source": "nearest .env file auto-loaded via find_dotenv",
+      "sink": "os.getenv DEBUG/PUBLIC_IP_SERVICE_URL configuration",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 7,
+        "note": "unpinned dotenv load"
+      }
+    ],
+    "evidence": "app/config.py:7 load_dotenv(find_dotenv()) auto-loads nearest .env up the directory tree into process env, controlling DEBUG/PUBLIC_IP_SERVICE_URL without pinned path | validator: app/config.py:7 load_dotenv(find_dotenv()) requires local .env file write up directory tree, not remotely reachable from GET / at app/main.py:19 | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "find_dotenv() resolves an unpinned .env by walking parents; a planted .env in repo checkout, volume, or parent dir silently overrides DEBUG and SSRF URL, enabling debug disclosure and SSRF redirection. Fix is explicit env file path or env-only config.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/config.py:7 load_dotenv(find_dotenv()) auto-loads nearest .env up the directory tree into process env, controlling DEBUG/PUBLIC_IP_SERVICE_URL without pinned path",
+    "hunter_snippet": "load_dotenv(find_dotenv())",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-DOCS-EXPOSED",
+    "title": "FastAPI interactive docs/OpenAPI left enabled on unauthenticated edge",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 10,
+    "end_line": 15,
+    "snippet": "app = FastAPI(",
+    "taint": {
+      "source": "default FastAPI docs enabled on public app",
+      "sink": "/docs /redoc /openapi.json exposure",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 10,
+        "note": "FastAPI init without docs disable"
+      }
+    ],
+    "evidence": "app/main.py:10 FastAPI(...) sets title/description/version/debug but never docs_url=None/redoc_url=None/openapi_url=None, so /docs /redoc /openapi.json are exposed on unauthenticated edge | validator: app/main.py:10 FastAPI(...) sets title/debug but never docs_url=None/redoc_url=None/openapi_url=None so /docs/openapi.json exposed with secret default | consensus: 1/1 confirmed",
+    "rationale": "Default FastAPI enables interactive Swagger/ReDoc and OpenAPI schema. On an unauthenticated SSTI/SSRF demo edge this expands attack surface (route/schema fingerprinting, try-it-out abuse). Distinct from secret-default-value disclosure: fix is disabling docs URLs, not changing default param.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/main.py:10 FastAPI(...) sets title/description/version/debug but never docs_url=None/redoc_url=None/openapi_url=None, so /docs /redoc /openapi.json are exposed on unauthenticated edge",
+    "hunter_snippet": "app = FastAPI(",
+    "patch_summary": "Disable docs/redoc/openapi on public deployment (docs_url=None etc.) or gate behind auth.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Unrestricted SSRF fetch of PUBLIC_IP_SERVICE_URL without allowlist or validation",
+    "cwe": "CWE-918",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/main.py",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "taint": {
+      "source": "env-controlled PUBLIC_IP_SERVICE_URL triggered by unauth GET /",
+      "sink": "requests.get outbound fetch",
+      "path": [
+        "app/config.py:11",
+        "app/main.py:19",
+        "app/main.py:31"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 11,
+        "note": "URL from env with no allowlist"
+      },
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "unvalidated outbound fetch"
+      }
+    ],
+    "evidence": "        public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL) | validator: Sink app/main.py:31 uses operator-env URL from app/config.py:11; ?name= at app/main.py:19 never flows into URL so remote attacker cannot control host/path | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated caller triggers fetch on every GET /; operator env controls PUBLIC_IP_SERVICE_URL. HOW: requests.get(config.PUBLIC_IP_SERVICE_URL) with no allowlist, scheme/host validation, timeout, or size cap; response text embedded in HTML. WHAT: unrestricted outbound fetch enables SSRF pivot to metadata/internal hosts.",
+    "status": "fp",
+    "conditions": [
+      "unauthenticated GET / triggers fetch",
+      "attacker influence over URL via env/DNS"
+    ],
+    "unit": "app",
+    "hunter_evidence": "        public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "hunter_snippet": "        public_ip_response = requests.get(config.PUBLIC_IP_SERVICE_URL)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "Narrow exception handling leaves outbound failures unhandled",
+    "cwe": "CWE-390",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "except (requests.HTTPError, requests.exceptions.InvalidSchema):",
+    "taint": {
+      "source": "network failure from requests.get",
+      "sink": "uncaught exception to FastAPI handler",
+      "path": [
+        "app/main.py:31",
+        "app/main.py:33"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "raising call"
+      },
+      {
+        "file": "app/main.py",
+        "line": 33,
+        "note": "narrow catch misses ConnectionError/Timeout"
+      }
+    ],
+    "evidence": "    except (requests.HTTPError, requests.exceptions.InvalidSchema): | validator: Narrow except at app/main.py:33 only affects HTTP status code path; unhandled errors return generic 500 via FastAPI with no auth/data boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network/attacker influences fetch failures. HOW: except only catches HTTPError and InvalidSchema; ConnectionError, Timeout, TooManyRedirects, MissingSchema bubble as 500. WHAT: incomplete handling causes unhandled-exception DoS and traceback disclosure when debug on.",
+    "status": "fp",
+    "conditions": [
+      "upstream failure, timeout, or None URL when env unset"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    except (requests.HTTPError, requests.exceptions.InvalidSchema):",
+    "hunter_snippet": "    except (requests.HTTPError, requests.exceptions.InvalidSchema):",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "Unvalidated PUBLIC_IP_SERVICE_URL env allows None crash and arbitrary URL",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/config.py",
+    "start_line": 11,
+    "end_line": 11,
+    "snippet": "PUBLIC_IP_SERVICE_URL = os.getenv(\"PUBLIC_IP_SERVICE_URL\")",
+    "taint": {
+      "source": "process env possibly None",
+      "sink": "requests.get without validation",
+      "path": [
+        "app/config.py:11",
+        "app/main.py:31"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 11,
+        "note": "no default or validation"
+      }
+    ],
+    "evidence": "PUBLIC_IP_SERVICE_URL = os.getenv(\"PUBLIC_IP_SERVICE_URL\") | validator: URL source app/config.py:11 is operator env (trusted by default); remote ?name= cannot set it, so arbitrary-URL requires operator/env compromise | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: operator/env supplier; None when unset. HOW: PUBLIC_IP_SERVICE_URL from os.getenv without default or validation; None flows into requests.get raising MissingSchema not in narrow except. WHAT: missing validation causes crash on misconfiguration and permits arbitrary-URL SSRF when set.",
+    "status": "fp",
+    "conditions": [
+      "env var unset or set to internal URL"
+    ],
+    "unit": "app",
+    "hunter_evidence": "PUBLIC_IP_SERVICE_URL = os.getenv(\"PUBLIC_IP_SERVICE_URL\")",
+    "hunter_snippet": "PUBLIC_IP_SERVICE_URL = os.getenv(\"PUBLIC_IP_SERVICE_URL\")",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Blocking synchronous requests call inside async handler starves event loop",
+    "cwe": "CWE-1088",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/main.py",
+    "start_line": 29,
+    "end_line": 29,
+    "snippet": "async def try_hack_me(name: str = config.SUPER_SECRET_NAME):",
+    "taint": {
+      "source": "unauth concurrent GET /",
+      "sink": "sync requests.get blocking async loop",
+      "path": [
+        "app/main.py:19",
+        "app/main.py:31"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 19,
+        "note": "async handler"
+      },
+      {
+        "file": "app/main.py",
+        "line": 31,
+        "note": "sync blocking fetch inside it"
+      }
+    ],
+    "evidence": "    try: | validator: Sync requests.get at app/main.py:31 inside async def at app/main.py:19 is performance anti-pattern; availability impact already covered as timeout issue with no distinct privilege/data boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: async handler calls blocking requests.get holding event loop; concurrent requests serialize and slow upstream stalls all handlers. WHAT: blocking call in async context amplifies DoS into event-loop starvation.",
+    "status": "fp",
+    "conditions": [
+      "concurrent anonymous requests",
+      "slow upstream"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    try:",
+    "hunter_snippet": "    try:",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "Unauthenticated unlimited greeting route exposes sensitive sinks",
+    "cwe": "CWE-306",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "app/main.py",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "@app.get(\"/\", response_class=HTMLResponse)",
+    "taint": {
+      "source": "unauth network GET /",
+      "sink": "handler rendering secrets and SSRF/XSS",
+      "path": [
+        "app/main.py:18",
+        "app/main.py:19"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 18,
+        "note": "public route with no auth or throttling"
+      }
+    ],
+    "evidence": "@app.get(\"/\", response_class=HTMLResponse) | validator: Public greeting route at app/main.py:18 is intentionally anonymous demo with no users/roles/object IDs in repo; no auth boundary exists to bypass | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: route GET / with HTMLResponse and no auth, session, or rate limit; handler discloses secret default and internal IP. WHAT: missing authentication/rate-limiting leaves SSTI/XSS/SSRF sinks anonymously reachable.",
+    "status": "fp",
+    "conditions": [
+      "network reachability to app:1337 or via Caddy"
+    ],
+    "unit": "app",
+    "hunter_evidence": "@app.get(\"/\", response_class=HTMLResponse)",
+    "hunter_snippet": "@app.get(\"/\", response_class=HTMLResponse)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "Missing validation and length limit on name with secret fallback",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "app/main.py",
+    "start_line": 37,
+    "end_line": 37,
+    "snippet": "name = name or config.SUPER_SECRET_NAME",
+    "taint": {
+      "source": "query param name",
+      "sink": "secret fallback then template/HTML sink",
+      "path": [
+        "app/main.py:19",
+        "app/main.py:37"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/main.py",
+        "line": 37,
+        "note": "secret fallback without validation"
+      }
+    ],
+    "evidence": "    name = name or config.SUPER_SECRET_NAME | validator: Flow app/main.py:19 via app/main.py:37 to same sinks app/main.py:38/41 already verdict as SSTI/XSS; no independent sink or boundary | refute: duplicate | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: fallback name = name or SUPER_SECRET_NAME re-discloses secret on empty string and prevents anonymous hardening; no length or charset limit enables payload smuggling for SSTI/XSS. WHAT: missing input validation on trust boundary.",
+    "status": "fp",
+    "conditions": [
+      "anonymous GET /?name= (empty)"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    name = name or config.SUPER_SECRET_NAME",
+    "hunter_snippet": "    name = name or config.SUPER_SECRET_NAME",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Unpinned dotenv auto-load allows env hijack via nearest .env",
+    "cwe": "CWE-807",
+    "severity": "info",
+    "confidence": 0.75,
+    "path": "app/config.py",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "load_dotenv(find_dotenv())",
+    "taint": {
+      "source": "nearest .env file on filesystem",
+      "sink": "process env driving DEBUG and SSRF URL",
+      "path": [
+        "app/config.py:7",
+        "app/config.py:9"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/config.py",
+        "line": 7,
+        "note": "unpinned dotenv load at import"
+      }
+    ],
+    "evidence": "load_dotenv(find_dotenv()) | validator: Dotenv load at app/config.py:7 requires local filesystem write to plant .env; not reachable from unauth network GET / at app/main.py:18 | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: operator filesystem placement; find_dotenv walks parents. HOW: load_dotenv(find_dotenv()) auto-loads nearest .env into process env at import with no path pin. WHAT: untrusted config-file injection lets lower-trust .env override DEBUG/URL and steer SSRF/debug.",
+    "status": "fp",
+    "conditions": [
+      "attacker can place .env in searched parents"
+    ],
+    "unit": "app",
+    "hunter_evidence": "load_dotenv(find_dotenv())",
+    "hunter_snippet": "load_dotenv(find_dotenv())",
+    "control_type": "none",
+    "duplicate_of": "SYS-DOTENV-HIJACK",
+    "cvss": 0.0,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

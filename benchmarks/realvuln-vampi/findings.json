@@ -1,0 +1,841 @@
+[
+  {
+    "id": "unit-openapi_specs-0",
+    "title": "SQL Injection in User.get_user",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "models/user_model.py",
+    "start_line": 72,
+    "end_line": 73,
+    "snippet": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\"",
+    "taint": {
+      "source": "username path param",
+      "sink": "db.session.execute(text(user_query))",
+      "path": [
+        "api_views/users.py:45 get_by_username",
+        "models/user_model.py:72 interpolated SQL"
+      ]
+    },
+    "refs": [
+      {
+        "file": "models/user_model.py",
+        "line": 72,
+        "note": "f-string SQL"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 73,
+        "note": "execute unsanitized"
+      }
+    ],
+    "evidence": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\" | alt: vuln_app.app.config['SECRET_KEY'] = 'random' | alt: return '{ \"status\": \"fail\", \"message\": \"' + msg['error'] + '\"}' | validator: models/user_model.py:72 f-string interpolates username into SQL executed at models/user_model.py:73 via db.session.execute(text(user_query)); reachable unauthenticated from api_views/users.py:45-46 get_by_username; default vulnerable=1 per Dockerfile:14 | consensus: 1/1 confirmed | triage: Unauthenticated SQLi f-string flows from path param to execute",
+    "rationale": "Unauthenticated attacker controls username path param; get_by_username passes to User.get_user which interpolates into SQL text without binding.",
+    "status": "confirmed",
+    "conditions": [
+      "vuln==1"
+    ],
+    "unit": "openapi_specs",
+    "hunter_evidence": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\" | alt: vuln_app.app.config['SECRET_KEY'] = 'random' | alt: return '{ \"status\": \"fail\", \"message\": \"' + msg['error'] + '\"}'",
+    "hunter_snippet": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\"",
+    "patch_summary": "Replace f-string SQL with parameterized query: db.session.execute(text(\"SELECT * FROM users WHERE username=:u\"), {\"u\": username}) or ORM filter_by.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /users/v1/{username}",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only with potential modification via SQL",
+      "blast": "platform",
+      "rationale": "Username interpolated into SELECT executed via db.session.execute, reachable from get_by_username with no sanitization"
+    },
+    "cvss": 8.8,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-idor-password-overwrite",
+    "title": "Missing authorization allows any authenticated user to overwrite any user's password",
+    "cwe": "CWE-639",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "api_views/users.py",
+    "start_line": 186,
+    "end_line": 190,
+    "snippet": "if vuln:  # Unauthorized update of password of another user\n                user = User.query.filter_by(username=username).first()\n                    user.password = request_data.get('password')\n                    db.session.commit()",
+    "taint": {
+      "source": "authenticated path param username + JSON password in PUT /users/v1/{username}/password",
+      "sink": "user.password overwrite + db.session.commit()",
+      "path": [
+        "openapi_specs/openapi3.yml:426 PUT /users/v1/{username}/password",
+        "api_views/users.py:179 update_password(username)",
+        "api_views/users.py:187 User.query.filter_by(username=username)",
+        "api_views/users.py:189 user.password assignment"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 179,
+        "note": "handler takes path username"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 187,
+        "note": "victim lookup by attacker-controlled username"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 189,
+        "note": "arbitrary password write + commit"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 426,
+        "note": "route PUT /users/v1/{username}/password"
+      }
+    ],
+    "evidence": "api_views/users.py:179 update_password(username) takes path username; api_views/users.py:187 victim selected by path param; api_views/users.py:189 attacker password written; safe branch api_views/users.py:194 would use resp['sub'] instead | validator: api_views/users.py:179 update_password validates token but vuln branch api_views/users.py:187 looks up victim by path username and api_views/users.py:189 overwrites user.password + commit; safe branch api_views/users.py:194 would use resp[sub] | consensus: 1/1 confirmed | triage: Authenticated IDOR allows overwriting any user's password and admin takeover",
+    "rationale": "PUT /users/v1/{username}/password validates that a token is present but then uses the attacker-controlled path parameter username to select the victim account, never comparing it to resp['sub'] and never requiring admin. Any valid token can reset any account (including admin) to an attacker-chosen password leading to full account takeover.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:179 update_password(username) takes path username; api_views/users.py:187 victim selected by path param; api_views/users.py:189 attacker password written; safe branch api_views/users.py:194 would use resp['sub'] instead",
+    "hunter_snippet": "if vuln:  # Unauthorized update of password of another user\n                user = User.query.filter_by(username=username).first()\n                    user.password = request_data.get('password')\n                    db.session.commit()",
+    "patch_summary": "Bind password update to authenticated identity resp[sub] only; reject path-username mismatches unless admin.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via authenticated PUT /users/v1/{username}/password",
+      "control": "none",
+      "preconditions": [
+        "valid authenticated session"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Vuln branch looks up victim by path username and commits attacker password, enabling full account takeover"
+    },
+    "cvss": 8.8,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-mass-assign-admin",
+    "title": "Mass-assignment in registration allows unauthenticated admin account creation",
+    "cwe": "CWE-915",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "api_views/users.py",
+    "start_line": 60,
+    "end_line": 66,
+    "snippet": "if vuln and 'admin' in request_data:  # User is possible to define if she/he wants to be an admin !!\n                if request_data['admin']:\n                    admin = True\n                user = User(username=request_data['username'], password=request_data['password'],",
+    "taint": {
+      "source": "unauthenticated JSON body admin in POST /users/v1/register",
+      "sink": "User(admin=True) persistence via db.session.add/commit",
+      "path": [
+        "openapi_specs/openapi3.yml:120 /users/v1/register",
+        "api_views/users.py:52 register_user()",
+        "api_views/users.py:60 admin branch",
+        "api_views/users.py:65 User(...,admin=...)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 52,
+        "note": "register_user entry, no auth"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 60,
+        "note": "client-controlled admin branch"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 21,
+        "note": "User stores admin flag"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 212,
+        "note": "admin flag gates delete_user"
+      }
+    ],
+    "evidence": "api_views/users.py:60 honors client admin flag; api_views/users.py:65-66 User created with admin=True; api_views/users.py:212 delete_user trusts user.admin | validator: api_views/users.py:60 honors client-controlled admin flag when vuln=1 and api_views/users.py:65 persists User(admin=True) via db.session.add/commit; api_views/json_schemas.py register schema omits admin allowlist | consensus: 1/1 confirmed | triage: Unauthenticated mass-assignment creates admin accounts via client flag",
+    "rationale": "POST /users/v1/register trusts the client-supplied admin field with no authorization check and constructs User(admin=True). An unauthenticated caller can self-provision an admin account, which then passes the user.admin gate in delete_user and gains full privileges.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:60 honors client admin flag; api_views/users.py:65-66 User created with admin=True; api_views/users.py:212 delete_user trusts user.admin",
+    "hunter_snippet": "if vuln and 'admin' in request_data:  # User is possible to define if she/he wants to be an admin !!\n                if request_data['admin']:\n                    admin = True\n                user = User(username=request_data['username'], password=request_data['password'],",
+    "patch_summary": "Remove admin from user-controlled input; force admin=False on registration and require separate privileged role-grant.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated POST /users/v1/register with admin:true",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "POST /users/v1/register honors client admin flag and persists User admin=True leading to privilege escalation"
+    },
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vampi-sqli-user-lookup-flow",
+    "title": "Cross-unit SQL Injection: user lookup path param flows into raw SQL in User.get_user",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "models/user_model.py",
+    "start_line": 72,
+    "end_line": 73,
+    "snippet": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\"\n            query = db.session.execute(text(user_query))",
+    "taint": {
+      "source": "path parameter username in GET /users/v1/{username} -> get_by_username",
+      "sink": "db.session.execute(text(f-string SQL)) in User.get_user",
+      "path": [
+        "api_views/users.py:45 get_by_username(username)",
+        "api_views/users.py:46 User.get_user(username)",
+        "models/user_model.py:72 f-string user_query",
+        "models/user_model.py:73 db.session.execute(text(user_query))"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 45,
+        "note": "route handler entry: get_by_username(username) receives path param"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 46,
+        "note": "passes tainted username to User.get_user twice without sanitization"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 72,
+        "note": "f-string SQL interpolation of username"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 73,
+        "note": "execution via db.session.execute(text(user_query))"
+      }
+    ],
+    "evidence": "Cross-unit taint: path param username at api_views/users.py:45 flows into User.get_user at api_views/users.py:46-47 and reaches raw SQL interpolation at models/user_model.py:72-73 executed via db.session.execute(text(...)) | validator: api_views/users.py:45 get_by_username passes path username to User.get_user at api_views/users.py:46 reaching models/user_model.py:72 f-string SQL executed at models/user_model.py:73; no sanitization on path | consensus: 1/1 confirmed | triage: Same f-string SQL sink at models/user_model.py:72-73 as unit-openapi_specs-0",
+    "rationale": "Unauthenticated path parameter flows across api_views into model layer where it is interpolated into SQL string and executed. ORM escaping is bypassed via text(f-string). Allows authentication bypass and data exfiltration via UNION/OR payloads.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit taint: path param username at api_views/users.py:45 flows into User.get_user at api_views/users.py:46-47 and reaches raw SQL interpolation at models/user_model.py:72-73 executed via db.session.execute(text(...))",
+    "hunter_snippet": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\"\n            query = db.session.execute(text(user_query))",
+    "patch_summary": "Use bound parameters/ORM filter_by for username lookup; never interpolate input into text().",
+    "control_type": "none",
+    "duplicate_of": "unit-openapi_specs-0",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /users/v1/{username}",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only with potential modification via SQL",
+      "blast": "platform",
+      "rationale": "Duplicate cross-unit description of identical sink call site; fixing one fixes the other"
+    },
+    "cvss": 8.8,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-debug-unauth-exposure",
+    "title": "Unauthenticated debug endpoint exposes all user passwords and admin flags",
+    "cwe": "CWE-200",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "api_views/users.py",
+    "start_line": 24,
+    "end_line": 26,
+    "snippet": "def debug():\n    return_value = jsonify({'users': User.get_all_users_debug()})\n    return return_value",
+    "taint": {
+      "source": "unauthenticated GET /users/v1/_debug",
+      "sink": "jsonify password/admin disclosure",
+      "path": [
+        "openapi_specs/openapi3.yml:88 /users/v1/_debug",
+        "api_views/users.py:24 debug()",
+        "models/user_model.py:66 get_all_users_debug()",
+        "models/user_model.py:58 json_debug()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 24,
+        "note": "debug handler entry, no auth check"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 58,
+        "note": "json_debug includes password and admin"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 66,
+        "note": "aggregates all users debug records"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 88,
+        "note": "route /users/v1/_debug with no security"
+      }
+    ],
+    "evidence": "api_views/users.py:24 debug() has no token_validator call; models/user_model.py:58 json_debug returns password+admin; models/user_model.py:66 get_all_users_debug aggregates all users; openapi_specs/openapi3.yml:88 /users/v1/_debug has no security scheme | validator: api_views/users.py:24 debug() has no token_validator call and returns User.get_all_users_debug(); models/user_model.py:58 json_debug returns password+admin aggregated at models/user_model.py:66; openapi_specs/openapi3.yml:88 /users/v1/_debug defines no security; app.py:8-10 notes debug stays vulnerable even when vuln=0 | consensus: 1/1 confirmed | triage: Unauthenticated _debug discloses all passwords and admin flags",
+    "rationale": "GET /users/v1/_debug handler calls User.get_all_users_debug() which returns json_debug() including password and admin for every user, with no token_validator check. Sibling handlers (me, delete_user, update_email) all enforce token validation; this one does not, and the OpenAPI spec defines no security for this path.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:24 debug() has no token_validator call; models/user_model.py:58 json_debug returns password+admin; models/user_model.py:66 get_all_users_debug aggregates all users; openapi_specs/openapi3.yml:88 /users/v1/_debug has no security scheme",
+    "hunter_snippet": "def debug():\n    return_value = jsonify({'users': User.get_all_users_debug()})\n    return return_value",
+    "patch_summary": "Require authentication/authorization on debug() or remove endpoint; never return password hashes/plaintexts in API responses.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /users/v1/_debug",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "platform",
+      "rationale": "No token_validator on GET /users/v1/_debug returns password+admin for all users"
+    },
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-createdb-unauth-wipe",
+    "title": "Unauthenticated database reset endpoint allows arbitrary DB wipe",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "api_views/main.py",
+    "start_line": 6,
+    "end_line": 9,
+    "snippet": "def populate_db():\n    db.drop_all()\n    db.create_all()\n    User.init_db_users()",
+    "taint": {
+      "source": "unauthenticated GET /createdb",
+      "sink": "db.drop_all()/create_all() destructive reset",
+      "path": [
+        "openapi_specs/openapi3.yml:16 /createdb",
+        "api_views/main.py:6 populate_db()",
+        "api_views/main.py:7 db.drop_all()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/main.py",
+        "line": 6,
+        "note": "populate_db entry without auth"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 16,
+        "note": "route /createdb with no security scheme"
+      }
+    ],
+    "evidence": "api_views/main.py:6 populate_db() has no token_validator; openapi_specs/openapi3.yml:16 /createdb defines no security | validator: api_views/main.py:6 populate_db() calls db.drop_all()/create_all() with no token_validator; openapi_specs/openapi3.yml:16 /createdb defines no security scheme | consensus: 1/1 confirmed | triage: Unauthenticated DB drop/create allows full wipe and reset to known creds",
+    "rationale": "GET /createdb maps to populate_db() which unconditionally drops, recreates and reseeds the database with no authentication or authorization check. Any unauthenticated remote caller can destroy all users/books (integrity + availability loss).",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/main.py:6 populate_db() has no token_validator; openapi_specs/openapi3.yml:16 /createdb defines no security",
+    "hunter_snippet": "def populate_db():\n    db.drop_all()\n    db.create_all()\n    User.init_db_users()",
+    "patch_summary": "Require admin authentication on /createdb and remove drop_all/create_all from unauthenticated path.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /createdb",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "GET /createdb calls drop_all/create_all/init_db_users with no auth, destroying data and reseeding defaults"
+    },
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-bola-book-secret",
+    "title": "Broken Object Level Authorization allows any user to read any book secret",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "api_views/books.py",
+    "start_line": 50,
+    "end_line": 56,
+    "snippet": "if vuln:  # Broken Object Level Authorization\n            book = Book.query.filter_by(book_title=str(book_title)).first()\n                'secret': book.secret_content,",
+    "taint": {
+      "source": "authenticated path param book_title in GET /books/v1/{book_title}",
+      "sink": "Book.secret_content disclosure without ownership check",
+      "path": [
+        "openapi_specs/openapi3.yml:585 /books/v1/{book_title}",
+        "api_views/books.py:45 get_by_title(book_title)",
+        "api_views/books.py:51 Book.query.filter_by(book_title=...)",
+        "api_views/books.py:55 secret_content in response"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/books.py",
+        "line": 45,
+        "note": "get_by_title entry, book_title from path"
+      },
+      {
+        "file": "api_views/books.py",
+        "line": 51,
+        "note": "query without owner check"
+      },
+      {
+        "file": "api_views/books.py",
+        "line": 55,
+        "note": "secret_content returned to non-owner"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 585,
+        "note": "route /books/v1/{book_title}"
+      }
+    ],
+    "evidence": "api_views/books.py:46 token validated but identity not used in vuln branch; api_views/books.py:51 query by title only; api_views/books.py:55 secret disclosed; contrast safe branch api_views/books.py:62-63 filtering by user | validator: api_views/books.py:45 get_by_title validates token at line 46 but vuln branch api_views/books.py:51 queries by book_title only and api_views/books.py:55 returns secret_content without ownership check; safe branch api_views/books.py:62-63 filters by user | consensus: 1/1 confirmed | triage: Authenticated BOLA discloses any book secret without ownership check",
+    "rationale": "GET /books/v1/{book_title} validates the JWT but then queries solely by attacker-controlled book_title without constraining to the authenticated owner (resp['sub']). The non-vuln branch correctly filters by user=user; the vuln branch omits it, disclosing secret_content and owner of any other user's book.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/books.py:46 token validated but identity not used in vuln branch; api_views/books.py:51 query by title only; api_views/books.py:55 secret disclosed; contrast safe branch api_views/books.py:62-63 filtering by user",
+    "hunter_snippet": "if vuln:  # Broken Object Level Authorization\n            book = Book.query.filter_by(book_title=str(book_title)).first()\n                'secret': book.secret_content,",
+    "patch_summary": "Enforce ownership check on all branches: query Book by (user, book_title) from resp[sub] and return 404/403 for non-owners.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via authenticated GET /books/v1/{book_title}",
+      "control": "none",
+      "preconditions": [
+        "valid authenticated session"
+      ],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "tenant",
+      "rationale": "Vuln branch queries by title only and returns secret_content, safe branch filters by user"
+    },
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-default-creds-plaintext",
+    "title": "Hardcoded default credentials with plaintext password storage",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "models/user_model.py",
+    "start_line": 97,
+    "end_line": 101,
+    "snippet": "def init_db_users():\n        User.register_user(\"name1\", \"***\", \"mail1@mail.com\", False)\n        User.register_user(\"name2\", \"***\", \"mail2@mail.com\", False)\n        User.register_user(\"admin\", \"***\", \"admin@mail.com\", True)",
+    "taint": {
+      "source": "hardcoded credentials in init_db_users",
+      "sink": "plaintext persistence + unauthenticated activation via /createdb",
+      "path": [
+        "models/user_model.py:97 init_db_users()",
+        "models/user_model.py:84 register_user()",
+        "api_views/main.py:9 User.init_db_users()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "models/user_model.py",
+        "line": 97,
+        "note": "seeding of default accounts including admin"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 14,
+        "note": "password stored as plaintext String column"
+      },
+      {
+        "file": "api_views/main.py",
+        "line": 9,
+        "note": "unauthenticated seeding trigger"
+      }
+    ],
+    "evidence": "models/user_model.py:97 init_db_users seeds default accounts; models/user_model.py:14 password column is plaintext String; api_views/main.py:9 /createdb invokes seeding unauthenticated | validator: models/user_model.py:97 init_db_users seeds name1/pass1, name2/pass2, admin/pass1; models/user_model.py:14 password is plaintext String with no hashing (no bcrypt/hash found); api_views/main.py:9 triggers seeding via unauthenticated /createdb | consensus: 1/1 confirmed | triage: Hardcoded plaintext defaults activated via unauthenticated reset",
+    "rationale": "init_db_users seeds three accounts including an admin with weak hardcoded passwords committed in source and invoked by the unauthenticated /createdb endpoint. Passwords are stored as plaintext String column and compared with direct equality, and are further disclosed via the debug endpoint, so compromise of one default credential yields persistent access.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "models/user_model.py:97 init_db_users seeds default accounts; models/user_model.py:14 password column is plaintext String; api_views/main.py:9 /createdb invokes seeding unauthenticated",
+    "hunter_snippet": "def init_db_users():\n        User.register_user(\"name1\", \"***\", \"mail1@mail.com\", False)\n        User.register_user(\"name2\", \"***\", \"mail2@mail.com\", False)\n        User.register_user(\"admin\", \"***\", \"admin@mail.com\", True)",
+    "patch_summary": "Remove hardcoded seeds, hash passwords with bcrypt/argon2, and gate DB seeding behind admin auth.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated /createdb then login with known passwords",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification (auth bypass to admin)",
+      "blast": "platform",
+      "rationale": "init_db_users seeds name1/pass1 admin/pass1 stored plaintext with no hashing, reachable via /createdb and login"
+    },
+    "cvss": 6.9,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-missing-auth-user-list",
+    "title": "Missing authentication on user-list endpoint exposes all users",
+    "cwe": "CWE-306",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "api_views/users.py",
+    "start_line": 19,
+    "end_line": 21,
+    "snippet": "def get_all_users():\n    return_value = jsonify({'users': User.get_all_users()})",
+    "taint": {
+      "source": "unauthenticated HTTP GET /users/v1",
+      "sink": "JSON disclosure of all usernames/emails",
+      "path": [
+        "api_views/users.py:19 unauthenticated GET /users/v1 entry",
+        "models/user_model.py:62 User.get_all_users DB read"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 19,
+        "note": "get_all_users with no auth check"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 20,
+        "note": "returns all users without validating token"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 0,
+        "note": "/users/v1 GET has no security scheme while /me requires bearerAuth"
+      }
+    ],
+    "evidence": "api_views/users.py:19 get_all_users has no token_validator call; openapi_specs/openapi3.yml /users/v1 get defines no security block while /me and other endpoints do | validator: api_views/users.py:19 get_all_users has no token_validator and returns User.get_all_users() at api_views/users.py:20; openapi_specs/openapi3.yml /users/v1 GET has no security while /me requires bearerAuth | consensus: 1/1 confirmed | triage: Unauthenticated user-list discloses all usernames and emails",
+    "rationale": "Any unauthenticated network client can list all usernames/emails. Sibling endpoints (/me, update_email, delete_user) require bearerAuth but this one performs no auth check before querying User.get_all_users.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:19 get_all_users has no token_validator call; openapi_specs/openapi3.yml /users/v1 get defines no security block while /me and other endpoints do",
+    "hunter_snippet": "def get_all_users():\n    return_value = jsonify({'users': User.get_all_users()})",
+    "patch_summary": "Require bearerAuth on GET /users/v1 or restrict to admin/minimal fields.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /users/v1",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "GET /users/v1 has no token_validator and returns all users unlike /me which requires bearerAuth"
+    },
+    "cvss": 4.8,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-auth-user-lookup",
+    "title": "Missing authentication on user lookup endpoint enables unauthenticated enumeration",
+    "cwe": "CWE-306",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "api_views/users.py",
+    "start_line": 45,
+    "end_line": 49,
+    "snippet": "def get_by_username(username):\n    if User.get_user(username):",
+    "taint": {
+      "source": "unauthenticated HTTP GET /users/v1/{username} path parameter",
+      "sink": "database lookup and response disclosure of user existence",
+      "path": [
+        "api_views/users.py:45 path param username entry",
+        "models/user_model.py:70 User.get_user"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 45,
+        "note": "route handler takes attacker path param with no auth"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 46,
+        "note": "passes unauthenticated input to User.get_user"
+      },
+      {
+        "file": "models/user_model.py",
+        "line": 70,
+        "note": "cross-unit sink entry reached without auth"
+      }
+    ],
+    "evidence": "api_views/users.py:45 get_by_username(username) never calls token_validator; openapi /users/v1/{username} GET has no security; path param flows into User.get_user -> raw SQL without any auth gate | validator: api_views/users.py:45 get_by_username takes path username with no token_validator and calls User.get_user at api_views/users.py:46; openapi /users/v1/{username} GET defines no security, enabling unauthenticated enumeration/SQLi trigger | consensus: 1/1 confirmed | triage: Unauthenticated user lookup enables enumeration, distinct auth gate from SQLi sink",
+    "rationale": "Unauthenticated attacker can probe arbitrary usernames (user enumeration) and reach the User.get_user database sink without a token. Cross-unit flow: route path param -> helper -> SQL execution, with no auth boundary in between.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:45 get_by_username(username) never calls token_validator; openapi /users/v1/{username} GET has no security; path param flows into User.get_user -> raw SQL without any auth gate",
+    "hunter_snippet": "def get_by_username(username):\n    if User.get_user(username):",
+    "patch_summary": "Require authentication on user lookup and use parameterized ORM query.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /users/v1/{username}",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "GET /users/v1/{username} has no auth and leaks existence; fixing auth does not fix SQLi sink line requiring separate fix"
+    },
+    "cvss": 4.8,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-auth-book-list",
+    "title": "Missing authentication on book-list endpoint exposes inventory",
+    "cwe": "CWE-306",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "api_views/books.py",
+    "start_line": 12,
+    "end_line": 14,
+    "snippet": "def get_all_books():\n    return_value = jsonify({'Books': Book.get_all_books()})",
+    "taint": {
+      "source": "unauthenticated HTTP GET /books/v1",
+      "sink": "JSON disclosure of all book titles and owners",
+      "path": [
+        "api_views/books.py:12 unauthenticated GET /books/v1 entry",
+        "models/books_model.py:27 Book.get_all_books DB read"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/books.py",
+        "line": 12,
+        "note": "get_all_books with no auth check"
+      },
+      {
+        "file": "api_views/books.py",
+        "line": 13,
+        "note": "returns all book titles/owners unauthenticated"
+      },
+      {
+        "file": "models/books_model.py",
+        "line": 27,
+        "note": "DB read reached without auth"
+      }
+    ],
+    "evidence": "api_views/books.py:12 get_all_books has no token_validator; openapi /books/v1 GET defines no security block, unlike POST /books/v1 which requires bearerAuth | validator: api_views/books.py:12 get_all_books has no token_validator and returns Book.get_all_books() at api_views/books.py:13; openapi /books/v1 GET has no security while POST /books/v1 requires bearerAuth | consensus: 1/1 confirmed | triage: Unauthenticated book inventory disclosure with no token check",
+    "rationale": "Any unauthenticated client can inventory all book titles and owners. Sibling route add_new_book enforces bearerAuth, proving the listing endpoint was left without the expected control.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/books.py:12 get_all_books has no token_validator; openapi /books/v1 GET defines no security block, unlike POST /books/v1 which requires bearerAuth",
+    "hunter_snippet": "def get_all_books():\n    return_value = jsonify({'Books': Book.get_all_books()})",
+    "patch_summary": "Require bearerAuth on GET /books/v1 or return only non-sensitive public fields.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated GET /books/v1",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "GET /books/v1 has no auth while POST requires bearerAuth, discloses titles and owners"
+    },
+    "cvss": 4.8,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-user-enumeration-oracle",
+    "title": "Login oracle enables username and password enumeration",
+    "cwe": "CWE-203",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "api_views/users.py",
+    "start_line": 101,
+    "end_line": 106,
+    "snippet": "if vuln:  # Password Enumeration\n            if user and request_data.get('password') != user.password:\n                return Response(error_message_helper(\"Password is not correct for the given username.\"), 200,\n            elif not user:  # User enumeration",
+    "taint": {
+      "source": "unauthenticated JSON username/password in POST /users/v1/login",
+      "sink": "distinguishable error responses revealing account existence",
+      "path": [
+        "openapi_specs/openapi3.yml:162 /users/v1/login",
+        "api_views/users.py:85 login_user()",
+        "api_views/users.py:101 enumeration branch"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 85,
+        "note": "login_user entry unauthenticated"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 101,
+        "note": "enumeration branch"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 162,
+        "note": "route POST /users/v1/login"
+      }
+    ],
+    "evidence": "api_views/users.py:101 vuln branch splits cases; api_views/users.py:103 distinct wrong-password message; api_views/users.py:106 distinct unknown-user message; contrast generic message api_views/users.py:108 | validator: api_views/users.py:101 vuln branch returns distinct messages at api_views/users.py:103 wrong-password vs api_views/users.py:106 unknown-user, vs generic message at api_views/users.py:108 in secure branch; reachable unauthenticated via api_views/users.py:85 login_user | consensus: 1/1 confirmed | triage: Unauthenticated login oracle distinguishes wrong-password vs unknown-user",
+    "rationale": "login_user returns distinguishable messages for wrong password versus unknown username, allowing unauthenticated attackers to enumerate valid usernames and then focus password guessing. The safe branch collapses both cases into a single generic message.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:101 vuln branch splits cases; api_views/users.py:103 distinct wrong-password message; api_views/users.py:106 distinct unknown-user message; contrast generic message api_views/users.py:108",
+    "hunter_snippet": "if vuln:  # Password Enumeration\n            if user and request_data.get('password') != user.password:\n                return Response(error_message_helper(\"Password is not correct for the given username.\"), 200,\n            elif not user:  # User enumeration",
+    "patch_summary": "Return single generic login-failure message for both unknown user and wrong password.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via unauthenticated POST /users/v1/login",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Vuln branch returns distinct messages enabling username/password enumeration for brute-force"
+    },
+    "cvss": 4.8,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-flask-debug-enabled",
+    "title": "Flask debug mode enabled on public interface",
+    "cwe": "CWE-215",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app.py",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "vuln_app.run(host='0.0.0.0', port=5000, debug=True)",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.py",
+        "line": 17,
+        "note": "production entrypoint runs with debug=True on 0.0.0.0"
+      }
+    ],
+    "evidence": "app.py:17 vuln_app.run(host='0.0.0.0', port=5000, debug=True) enables Werkzeug debugger in the shipped entrypoint | validator: app.py:17 vuln_app.run(host=0.0.0.0, port=5000, debug=True) under __main__ is the container entrypoint per Dockerfile:16-17 CMD app.py, exposing Werkzeug debugger/info leaks | consensus: 1/1 confirmed | triage: Shipped entrypoint runs Flask debug on 0.0.0.0:5000",
+    "rationale": "Flask debug mode enables the interactive debugger and verbose tracebacks on exceptions (e.g., unhandled None dereferences, malformed JSON). Bound to 0.0.0.0 it exposes debugger/internal paths to any network client.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.py:17 vuln_app.run(host='0.0.0.0', port=5000, debug=True) enables Werkzeug debugger in the shipped entrypoint",
+    "hunter_snippet": "vuln_app.run(host='0.0.0.0', port=5000, debug=True)",
+    "patch_summary": "Run with debug=False in production; bind to localhost behind WSGI server and disable debugger.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes if deployed via app.py CMD on 0.0.0.0:5000",
+      "control": "none",
+      "preconditions": [
+        "app run via __main__ CMD exposing debug server",
+        "attacker triggers exception to reach debugger/console"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only with potential modification if console reached",
+      "blast": "platform",
+      "rationale": "debug=True on public interface risks Werkzeug debugger and info leaks, needs exception + PIN bypass to get RCE"
+    },
+    "cvss": 4.8,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-redos-email",
+    "title": "Regular expression denial of service in email update via nested-quantifier regex",
+    "cwe": "CWE-1333",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "api_views/users.py",
+    "start_line": 144,
+    "end_line": 146,
+    "snippet": "match = re.search(\n                r\"^([0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*@{1}([0-9a-zA-Z][-\\w]*[0-9a-zA-Z]\\.)+[a-zA-Z]{2,9})$\",\n                str(request_data.get('email')))",
+    "taint": {
+      "source": "authenticated JSON email in PUT /users/v1/{username}/email",
+      "sink": "re.search with catastrophic-backtracking regex",
+      "path": [
+        "openapi_specs/openapi3.yml:366 PUT /users/v1/{username}/email",
+        "api_views/users.py:132 update_email()",
+        "api_views/users.py:144 re.search()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "api_views/users.py",
+        "line": 132,
+        "note": "email entry from JSON body"
+      },
+      {
+        "file": "api_views/users.py",
+        "line": 144,
+        "note": "vulnerable regex sink"
+      },
+      {
+        "file": "openapi_specs/openapi3.yml",
+        "line": 366,
+        "note": "route PUT /users/v1/{username}/email"
+      }
+    ],
+    "evidence": "api_views/users.py:132 update_email reads JSON email; api_views/users.py:144 re.search with evil pattern on attacker string | validator: api_views/users.py:132 update_email reads attacker email from JSON body; api_views/users.py:144 re.search with nested-quantifier regex ^([0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])@...) on unbounded str(request_data.get(email)) with no length/timeout guard | consensus: 1/1 confirmed | triage: Authenticated ReDoS in email regex with no length guard",
+    "rationale": "PUT /users/v1/{username}/email passes attacker-controlled email directly to re.search with a vulnerable nested-quantifier pattern ([-.\\w]* inside (...)* plus overlapping character classes). Crafted long emails cause catastrophic backtracking, blocking the worker (DoS). Cross-unit flow from authenticated request body to regex sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "api_views/users.py:132 update_email reads JSON email; api_views/users.py:144 re.search with evil pattern on attacker string",
+    "hunter_snippet": "match = re.search(\n                r\"^([0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*@{1}([0-9a-zA-Z][-\\w]*[0-9a-zA-Z]\\.)+[a-zA-Z]{2,9})$\",\n                str(request_data.get('email')))",
+    "patch_summary": "Replace custom regex with simple validator or email-validator library, enforce max length and avoid nested quantifiers.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes via authenticated PUT /users/v1/{username}/email",
+      "control": "none",
+      "preconditions": [
+        "valid authenticated session to PUT /users/v1/{username}/email"
+      ],
+      "auth": "logged-in",
+      "rw": "modification (availability/DoS)",
+      "blast": "all users",
+      "rationale": "Authenticated attacker controls email string into catastrophic nested-quantifier re.search causing CPU DoS"
+    },
+    "cvss": 4.5,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  }
+]

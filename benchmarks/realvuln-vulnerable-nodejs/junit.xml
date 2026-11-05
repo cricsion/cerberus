@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="22" errors="0" skipped="0" timestamp="2026-11-04T19:51:10Z" time="0.000" failures="16">
+  <testcase classname="CWE-78" name="OS command injection in ExecPHP parseFile [critical] execphp.js:22-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection in ExecPHP parseFile (CWE-78) critical conf=0.95 execphp.js:22-23">let cmd = this.phpPath + realFileName + arg1 + arg2;
+let cmd = this.phpPath + ' ' + realFileName + ' ' + arg1 + ' ' + arg2;</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on GET *.php code-execution bridge [critical] routes/php.js:28-28">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on GET *.php code-execution bridge (CWE-306) critical conf=0.95 routes/php.js:28-28">routes/php.js:28 registers GET *.php with no session check, no auth middleware; reaches execphp.js:22 child_process.exec and phpFiles/order.php XML parser
+router.get('*.php', function (request, response, next) {</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated bulk disclosure [critical] routes/users.js:10-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated bulk disclosure (CWE-200) critical conf=0.95 routes/users.js:10-11">routes/users.js:7 GET userlist no auth; find all docs; global.js:34 fetches it exposing passwords PII cards
+collection.find({}, {}, function (e, docs) {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL auth bypass in login [critical] routes/users.js:58-58">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.5" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL auth bypass in login (CWE-943) critical conf=0.9 routes/users.js:58-58">routes/users.js:58 findOne uses req.body verbatim; app.js:37 extended true enables operator objects; only empty-string check at routes/users.js:52
+var user = await collection.findOne({ username: req.body.username, password: req.body.password });</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE in PHP order bridge [high] phpFiles/order.php:21-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE in PHP order bridge (CWE-611) high conf=0.95 phpFiles/order.php:21-23">routes/php.js:30-34 item forwarded to PHP argv; phpFiles/order.php:12 urldecode argv interpolated; phpFiles/order.php:21-23 loadXML with LIBXML_NOENT DTDLOAD and entity loader enabled
+libxml_disable_entity_loader (false);</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authorization on GET admin [high] routes/admin.js:5-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on GET admin (CWE-306) high conf=0.95 routes/admin.js:5-6">routes/admin.js:5 GET admin renders UI with no check; mounted at app.js:47
+router.get('/admin', function(req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR on DELETE deleteuser [high] routes/users.js:38-38">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR on DELETE deleteuser (CWE-639) high conf=0.95 routes/users.js:38-38">routes/users.js:34 DELETE deleteuser id from URL no check; IDs enumerable via bulk userlist
+collection.remove({ '_id': userToDelete }, function (err) {</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password handling [high] views/login.jade:40-40">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password handling (CWE-256) high conf=0.95 views/login.jade:40-40">views/login.jade:40 type text password; routes/users.js:58 plaintext compare; bulk disclosure returns plaintext
+input#loginPassword(type='text', placeholder='Password')</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal / unrestricted file control in PHP bridge file parameter [high] execphp.js:18-18">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal / unrestricted file control in PHP bridge file parameter (CWE-22) high conf=0.9 execphp.js:18-18">routes/php.js:12 derives result.path directly from request.originalUrl; routes/php.js:30-31 passes queryParams.path to parseFile; execphp.js:18 concatenates without validation
+let realFileName = this.phpFolder + fileName;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via unescaped PHP echo [high] phpFiles/order.php:27-27">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via unescaped PHP echo (CWE-79) high conf=0.9 phpFiles/order.php:27-27">phpFiles/order.php:12 name from argv; phpFiles/order.php:27 unescaped echo; routes/php.js:32 sends PHP output verbatim
+echo You have ordered name with price;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS in admin table [high] public/javascripts/global.js:46-46">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS in admin table (CWE-79) high conf=0.9 public/javascripts/global.js:46-46">adduser stores username verbatim; userlist returns them; global.js:40 concat; global.js:46 html sink
+$('.userList table tbody').html(tableContent);</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication allows unauthenticated account creation via POST /users/adduser [high] routes/users.js:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication allows unauthenticated account creation via POST /users/adduser (CWE-306) high conf=0.9 routes/users.js:16-16">routes/users.js:16 POST /adduser handler has no req.session / role check, unlike PUT /modify at routes/users.js:104-107 which checks login; mounted in app.js:48 without auth middleware
+router.post('/adduser', async function (req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="Unsanitized insert in adduser [high] routes/users.js:25-25">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsanitized insert in adduser (CWE-943) high conf=0.9 routes/users.js:25-25">routes/users.js:16 POST adduser; routes/users.js:25 insert req.body verbatim
+collection.insert(req.body, function (err, result) {</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Mass-assignment in PUT modify [high] routes/users.js:113-113">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass-assignment in PUT modify (CWE-915) high conf=0.9 routes/users.js:113-113">routes/users.js:104 PUT modify; routes/users.js:111 req.body verbatim; routes/users.js:113 $set query
+collection.findOneAndUpdate({ username: req.session.user.username }, { $set: query },</failure>
+  </testcase>
+  <testcase classname="CWE-829" name="Active content loaded over plaintext HTTP without integrity [high] views/layout.jade:9-9">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Active content loaded over plaintext HTTP without integrity (CWE-829) high conf=0.9 views/layout.jade:9-9">views/layout.jade:9 loads jQuery 2.1.1 over plaintext http:// with no integrity/subresource-integrity hash; every view extends layout so every page executes the MITM-able script
+script(src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js')</failure>
+  </testcase>
+  <testcase classname="CWE-521" name="Weak default credential: new-user password set equal to username [high] public/javascripts/global.js:85-85">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Weak default credential: new-user password set equal to username (CWE-521) high conf=0.85 public/javascripts/global.js:85-85">public/javascripts/global.js:85 sets password from username field; routes/users.js:16-25 inserts req.body verbatim without password policy; routes/users.js:58 logs in with that password
+      'password': $('#addUser fieldset input#inputUserName').val()</failure>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing rate limiting on POST /users/session login [medium] routes/users.js:46-46">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Sensitive data exposure: GET /users returns full user object with password and credit-card [medium] routes/users.js:97-97">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection on PUT /users/modify [medium] routes/users.js:104-104">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Session cookie missing Secure/HttpOnly/SameSite hardening [low] app.js:30-32">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Stack-trace disclosure in development error handler [low] views/error.jade:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-117" name="Log injection via unsanitized PHP-bridge parameters [low] routes/php.js:23-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

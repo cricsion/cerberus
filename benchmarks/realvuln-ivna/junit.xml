@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="27" errors="0" skipped="0" timestamp="2026-11-04T20:46:01Z" time="0.000" failures="15">
+  <testcase classname="CWE-798" name="Hardcoded JWT signing secret enables token forgery [critical] src/models/user.js:71-71">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT signing secret enables token forgery (CWE-798) critical conf=1.0 src/models/user.js:71-71">JWT signing at src/models/user.js:71 uses hardcoded secret ***; verification at src/middleware/auth.js:8 uses same hardcoded secret *** enabling forgery
+    const token = jwt.sign({ _id: user._id.toString() }, '***')</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="Unauthenticated remote code execution via eval [critical] src/routers/user.js:215-215">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated remote code execution via eval (CWE-95) critical conf=1.0 src/routers/user.js:215-215">res.send('Welcome name ' + eval(req.query.name));
+res.send('Welcome name ' + eval(req.query.name));</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded JWT verify secret in auth middleware [critical] src/middleware/auth.js:8-8">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT verify secret in auth middleware (CWE-798) critical conf=0.95 src/middleware/auth.js:8-8">const decoded = jwt.verify(token, 'hardsecret')
+const decoded = jwt.verify(token, 'hardsecret')</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on v2 user endpoint [critical] src/routers/user.js:213-213">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on v2 user endpoint (CWE-306) critical conf=0.95 src/routers/user.js:213-213">router.get('/api/v2/user', function (req, res) {
+router.get('/api/v2/user', function (req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="BOLA arbitrary user update via v1 patch [critical] src/routers/user.js:291-291">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="BOLA arbitrary user update via v1 patch (CWE-639) critical conf=0.95 src/routers/user.js:291-291">const user = await User.findById(req.params.id)
+const user = await User.findById(req.params.id)</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="BOLA arbitrary user deletion via v1 delete [critical] src/routers/user.js:308-308">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="BOLA arbitrary user deletion via v1 delete (CWE-639) critical conf=0.95 src/routers/user.js:308-308">const user = await User.findByIdAndDelete(req.params.id)
+const user = await User.findByIdAndDelete(req.params.id)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Unauthenticated bulk task disclosure via v1 list [high] src/routers/task.js:88-88">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated bulk task disclosure via v1 list (CWE-862) high conf=1.0 src/routers/task.js:88-88">Route src/routers/task.js:86 GET /api/v1/tasks has no auth middleware; sink src/routers/task.js:88 Task.find({}) returns all tasks
+        const tasks = await Task.find({})</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Missing password hashing stores plaintext credentials [high] src/models/user.js:86-86">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing password hashing stores plaintext credentials (CWE-256) high conf=0.95 src/models/user.js:86-86">const isMatch = await bcrypt.compare(password, user.password)
+const user = new User(req.body) // saved with no bcrypt.hash; stored plaintext</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="BOLA arbitrary task modification via v1 patch [high] src/routers/task.js:105-105">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="BOLA arbitrary task modification via v1 patch (CWE-639) high conf=0.95 src/routers/task.js:105-105">const task = await Task.findById(req.params.id)
+const task = await Task.findById(req.params.id)</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Signup mass-assignment with plaintext password storage (no hashing) [high] src/routers/user.js:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Signup mass-assignment with plaintext password storage (no hashing) (CWE-256) high conf=0.95 src/routers/user.js:17-17">src/routers/user.js:17 new User(req.body) flows to user.save(); src/models/user.js has no pre-save bcrypt hash — only bcrypt.compare on login — so password persists as supplied
+const user = new User(req.body)</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="Unauthenticated SSRF via contact url parameter [high] src/routers/user.js:194-194">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated SSRF via contact url parameter (CWE-918) high conf=0.95 src/routers/user.js:194-194">needle.get(query.url, { timeout: 3000 }, function(error, response1) {
+needle.get(query.url, { timeout: 3000 }, function(error, response1) {</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated user disclosure via v1 name lookup [high] src/routers/user.js:244-244">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated user disclosure via v1 name lookup (CWE-200) high conf=0.95 src/routers/user.js:244-244">Route src/routers/user.js:240 GET /api/v1/users/:name has no auth; sink src/routers/user.js:244 User.findOne({name}) returns full user document including password hash and tokens via toJSON bypass? res.send(user)
+        const user = await User.findOne({name: name})</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="DOM XSS via contact name query reflection [high] public/contact.html:190-190">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="DOM XSS via contact name query reflection (CWE-79) high conf=0.9 public/contact.html:190-190">resultsEl.innerHTML = html;
+resultsEl.innerHTML = html; // html includes raw name</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via profile name innerHTML rendering [high] public/src/profile-app.js:15-15">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via profile name innerHTML rendering (CWE-79) high conf=0.9 public/src/profile-app.js:15-15">document.getElementById(dataId).innerHTML = `&lt;strong&gt;${dataName}&lt;/strong&gt;: ${userData}`
+document.getElementById(dataId).innerHTML = `&lt;strong&gt;${dataName}&lt;/strong&gt;: ${userData}`</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Unauthenticated user disclosure and enumeration via v1 name lookup [high] src/routers/user.js:250-250">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated user disclosure and enumeration via v1 name lookup (CWE-200) high conf=0.9 src/routers/user.js:250-250">res.send(user)
+res.send(user)</failure>
+  </testcase>
+  <testcase classname="CWE-601" name="Open redirect to attacker-controlled URL in contact handler [medium] src/routers/user.js:197-197">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-915" name="Signup mass-assignment allows arbitrary User field injection [medium] src/routers/user.js:17-17">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure session cookie missing HttpOnly/Secure/SameSite on signup [low] src/routers/user.js:22-22">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure session cookie missing flags on login [low] src/routers/user.js:36-36">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-613" name="JWT without expiration enables indefinite sessions [low] src/models/user.js:71-71">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Signup error handler discloses internal error details [low] src/routers/user.js:26-26">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error disclosure in POST tasks [low] src/routers/task.js:17-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error disclosure in PATCH v2 tasks id [low] src/routers/task.js:66-66">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error disclosure in PATCH v1 tasks id [low] src/routers/task.js:116-116">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error disclosure in PATCH users me [low] src/routers/user.js:152-152">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error disclosure in PATCH v1 users id [low] src/routers/user.js:302-302">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="State-changing logout via GET enables CSRF [low] src/routers/user.js:92-92">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

@@ -1,0 +1,1572 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-915",
+              "name": "CWE-915",
+              "shortDescription": {
+                "text": "Mass-assignment in registration allows unauthenticated admin account creation"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/915.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/915.html",
+                "markdown": "[MITRE CWE-915](https://cwe.mitre.org/data/definitions/915.html)"
+              }
+            },
+            {
+              "id": "CWE-639",
+              "name": "CWE-639",
+              "shortDescription": {
+                "text": "Missing authorization allows any authenticated user to overwrite any user's password"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/639.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/639.html",
+                "markdown": "[MITRE CWE-639](https://cwe.mitre.org/data/definitions/639.html)"
+              }
+            },
+            {
+              "id": "CWE-89",
+              "name": "CWE-89",
+              "shortDescription": {
+                "text": "SQL Injection in User.get_user"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/89.html",
+                "markdown": "[MITRE CWE-89](https://cwe.mitre.org/data/definitions/89.html)"
+              }
+            },
+            {
+              "id": "CWE-306",
+              "name": "CWE-306",
+              "shortDescription": {
+                "text": "Unauthenticated database reset endpoint allows arbitrary DB wipe"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/306.html",
+                "markdown": "[MITRE CWE-306](https://cwe.mitre.org/data/definitions/306.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Unauthenticated debug endpoint exposes all user passwords and admin flags"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Hardcoded default credentials with plaintext password storage"
+              },
+              "properties": {
+                "security-severity": "6.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-203",
+              "name": "CWE-203",
+              "shortDescription": {
+                "text": "Login oracle enables username and password enumeration"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/203.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/203.html",
+                "markdown": "[MITRE CWE-203](https://cwe.mitre.org/data/definitions/203.html)"
+              }
+            },
+            {
+              "id": "CWE-215",
+              "name": "CWE-215",
+              "shortDescription": {
+                "text": "Flask debug mode enabled on public interface"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/215.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/215.html",
+                "markdown": "[MITRE CWE-215](https://cwe.mitre.org/data/definitions/215.html)"
+              }
+            },
+            {
+              "id": "CWE-1333",
+              "name": "CWE-1333",
+              "shortDescription": {
+                "text": "Regular expression denial of service in email update via nested-quantifier regex"
+              },
+              "properties": {
+                "security-severity": "4.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1333.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/1333.html",
+                "markdown": "[MITRE CWE-1333](https://cwe.mitre.org/data/definitions/1333.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-915",
+          "level": "error",
+          "message": {
+            "text": "Mass-assignment in registration allows unauthenticated admin account creation (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 60,
+                  "endLine": 66,
+                  "snippet": {
+                    "text": "if vuln and 'admin' in request_data:  # User is possible to define if she/he wants to be an admin !!\n                if request_data['admin']:\n                    admin = True\n                user = User(username=request_data['username'], password=request_data['password'],"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove admin from user-controlled input; force admin=False on registration and require separate privileged role-grant."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 60
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated JSON body admin in POST /users/v1/register"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 120
+                          }
+                        },
+                        "message": {
+                          "text": "/users/v1/register"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "register_user()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 60
+                          }
+                        },
+                        "message": {
+                          "text": "admin branch"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 65
+                          }
+                        },
+                        "message": {
+                          "text": "User(...,admin=...)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 66
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: User(admin=True) persistence via db.session.add/commit"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-639",
+          "level": "error",
+          "message": {
+            "text": "Missing authorization allows any authenticated user to overwrite any user's password (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 186,
+                  "endLine": 190,
+                  "snippet": {
+                    "text": "if vuln:  # Unauthorized update of password of another user\n                user = User.query.filter_by(username=username).first()\n                    user.password = request_data.get('password')\n                    db.session.commit()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Bind password update to authenticated identity resp[sub] only; reject path-username mismatches unless admin."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 186
+                          }
+                        },
+                        "message": {
+                          "text": "Source: authenticated path param username + JSON password in PUT /users/v1/{username}/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 426
+                          }
+                        },
+                        "message": {
+                          "text": "PUT /users/v1/{username}/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 179
+                          }
+                        },
+                        "message": {
+                          "text": "update_password(username)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 187
+                          }
+                        },
+                        "message": {
+                          "text": "User.query.filter_by(username=username)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 189
+                          }
+                        },
+                        "message": {
+                          "text": "user.password assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 190
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: user.password overwrite + db.session.commit()"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection in User.get_user (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models/user_model.py"
+                },
+                "region": {
+                  "startLine": 72,
+                  "endLine": 73,
+                  "snippet": {
+                    "text": "user_query = f\"SELECT * FROM users WHERE username = '{username}'\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Replace f-string SQL with parameterized query: db.session.execute(text(\"SELECT * FROM users WHERE username=:u\"), {\"u\": username}) or ORM filter_by."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Source: username path param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "get_by_username"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "interpolated SQL"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 73
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: db.session.execute(text(user_query))"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-639",
+          "level": "error",
+          "message": {
+            "text": "Broken Object Level Authorization allows any user to read any book secret (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/books.py"
+                },
+                "region": {
+                  "startLine": 50,
+                  "endLine": 56,
+                  "snippet": {
+                    "text": "if vuln:  # Broken Object Level Authorization\n            book = Book.query.filter_by(book_title=str(book_title)).first()\n                'secret': book.secret_content,"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Enforce ownership check on all branches: query Book by (user, book_title) from resp[sub] and return 404/403 for non-owners."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 50
+                          }
+                        },
+                        "message": {
+                          "text": "Source: authenticated path param book_title in GET /books/v1/{book_title}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 585
+                          }
+                        },
+                        "message": {
+                          "text": "/books/v1/{book_title}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "get_by_title(book_title)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 51
+                          }
+                        },
+                        "message": {
+                          "text": "Book.query.filter_by(book_title=...)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 55
+                          }
+                        },
+                        "message": {
+                          "text": "secret_content in response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Book.secret_content disclosure without ownership check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "error",
+          "message": {
+            "text": "Unauthenticated database reset endpoint allows arbitrary DB wipe (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/main.py"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 9,
+                  "snippet": {
+                    "text": "def populate_db():\n    db.drop_all()\n    db.create_all()\n    User.init_db_users()"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require admin authentication on /createdb and remove drop_all/create_all from unauthenticated path."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/main.py"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /createdb"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "/createdb"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/main.py"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "populate_db()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/main.py"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "db.drop_all()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/main.py"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: db.drop_all()/create_all() destructive reset"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "error",
+          "message": {
+            "text": "Unauthenticated debug endpoint exposes all user passwords and admin flags (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "def debug():\n    return_value = jsonify({'users': User.get_all_users_debug()})\n    return return_value"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Require authentication/authorization on debug() or remove endpoint; never return password hashes/plaintexts in API responses."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /users/v1/_debug"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 88
+                          }
+                        },
+                        "message": {
+                          "text": "/users/v1/_debug"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "debug()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 66
+                          }
+                        },
+                        "message": {
+                          "text": "get_all_users_debug()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "json_debug()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: jsonify password/admin disclosure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded default credentials with plaintext password storage (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "models/user_model.py"
+                },
+                "region": {
+                  "startLine": 97,
+                  "endLine": 101,
+                  "snippet": {
+                    "text": "def init_db_users():\n        User.register_user(\"name1\", \"***\", \"mail1@mail.com\", False)\n        User.register_user(\"name2\", \"***\", \"mail2@mail.com\", False)\n        User.register_user(\"admin\", \"***\", \"admin@mail.com\", True)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "6.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove hardcoded seeds, hash passwords with bcrypt/argon2, and gate DB seeding behind admin auth."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded credentials in init_db_users"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "init_db_users()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 84
+                          }
+                        },
+                        "message": {
+                          "text": "register_user()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/main.py"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "User.init_db_users()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 101
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext persistence + unauthenticated activation via /createdb"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "warning",
+          "message": {
+            "text": "Missing authentication on book-list endpoint exposes inventory (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/books.py"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "def get_all_books():\n    return_value = jsonify({'Books': Book.get_all_books()})"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require bearerAuth on GET /books/v1 or return only non-sensitive public fields."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated HTTP GET /books/v1"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "unauthenticated GET /books/v1 entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/books_model.py"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "Book.get_all_books DB read"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/books.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: JSON disclosure of all book titles and owners"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "warning",
+          "message": {
+            "text": "Missing authentication on user-list endpoint exposes all users (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 21,
+                  "snippet": {
+                    "text": "def get_all_users():\n    return_value = jsonify({'users': User.get_all_users()})"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require bearerAuth on GET /users/v1 or restrict to admin/minimal fields."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated HTTP GET /users/v1"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "unauthenticated GET /users/v1 entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "User.get_all_users DB read"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: JSON disclosure of all usernames/emails"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "warning",
+          "message": {
+            "text": "Missing authentication on user lookup endpoint enables unauthenticated enumeration (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 45,
+                  "endLine": 49,
+                  "snippet": {
+                    "text": "def get_by_username(username):\n    if User.get_user(username):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require authentication on user lookup and use parameterized ORM query."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated HTTP GET /users/v1/{username} path parameter"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "path param username entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "models/user_model.py"
+                          },
+                          "region": {
+                            "startLine": 70
+                          }
+                        },
+                        "message": {
+                          "text": "User.get_user"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 49
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: database lookup and response disclosure of user existence"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-203",
+          "level": "warning",
+          "message": {
+            "text": "Login oracle enables username and password enumeration (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 101,
+                  "endLine": 106,
+                  "snippet": {
+                    "text": "if vuln:  # Password Enumeration\n            if user and request_data.get('password') != user.password:\n                return Response(error_message_helper(\"Password is not correct for the given username.\"), 200,\n            elif not user:  # User enumeration"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Return single generic login-failure message for both unknown user and wrong password."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 101
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated JSON username/password in POST /users/v1/login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 162
+                          }
+                        },
+                        "message": {
+                          "text": "/users/v1/login"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 85
+                          }
+                        },
+                        "message": {
+                          "text": "login_user()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 101
+                          }
+                        },
+                        "message": {
+                          "text": "enumeration branch"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: distinguishable error responses revealing account existence"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-215",
+          "level": "warning",
+          "message": {
+            "text": "Flask debug mode enabled on public interface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.py"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "vuln_app.run(host='0.0.0.0', port=5000, debug=True)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Run with debug=False in production; bind to localhost behind WSGI server and disable debugger."
+          }
+        },
+        {
+          "ruleId": "CWE-1333",
+          "level": "warning",
+          "message": {
+            "text": "Regular expression denial of service in email update via nested-quantifier regex (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "api_views/users.py"
+                },
+                "region": {
+                  "startLine": 144,
+                  "endLine": 146,
+                  "snippet": {
+                    "text": "match = re.search(\n                r\"^([0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*@{1}([0-9a-zA-Z][-\\w]*[0-9a-zA-Z]\\.)+[a-zA-Z]{2,9})$\",\n                str(request_data.get('email')))"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Replace custom regex with simple validator or email-validator library, enforce max length and avoid nested quantifiers."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 144
+                          }
+                        },
+                        "message": {
+                          "text": "Source: authenticated JSON email in PUT /users/v1/{username}/email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "openapi_specs/openapi3.yml"
+                          },
+                          "region": {
+                            "startLine": 366
+                          }
+                        },
+                        "message": {
+                          "text": "PUT /users/v1/{username}/email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 132
+                          }
+                        },
+                        "message": {
+                          "text": "update_email()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 144
+                          }
+                        },
+                        "message": {
+                          "text": "re.search()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "api_views/users.py"
+                          },
+                          "region": {
+                            "startLine": 146
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: re.search with catastrophic-backtracking regex"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

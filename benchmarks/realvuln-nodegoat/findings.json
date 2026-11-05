@@ -1,0 +1,3283 @@
+[
+  {
+    "id": "unit-app-0",
+    "title": "Server-Side JS Injection via eval(req.body.preTax) in handleContributionsUpdate",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/routes/contributions.js",
+    "start_line": 32,
+    "end_line": 32,
+    "snippet": "const preTax = eval(req.body.preTax);",
+    "taint": {
+      "source": "req.body.preTax (POST /contributions)",
+      "sink": "eval() server-side JS execution",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/contributions.js",
+        "line": 32,
+        "note": "eval(req.body.preTax) sink"
+      },
+      {
+        "file": "app/routes/index.js",
+        "line": 52,
+        "note": "POST /contributions reachable with only isLoggedIn"
+      }
+    ],
+    "evidence": "const preTax = eval(req.body.preTax); | validator: app/routes/contributions.js:32 eval(req.body.preTax) active with fix commented; reachable via POST /contributions app/routes/index.js:52 isLoggedIn only | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated low-priv user controls req.body.preTax. HOW: handleContributionsUpdate passes raw string directly to eval() at line 32 with no validation. WHAT: breaks code-injection invariant; attacker can execute arbitrary server-side JS in Node process (e.g. preTax=process.mainModule.require('child_process').execSync('id')). Fix commented out shows parseInt intended.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user can POST to /contributions"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const preTax = eval(req.body.preTax);",
+    "hunter_snippet": "const preTax = eval(req.body.preTax);",
+    "patch_summary": "Replace eval with parseInt/Number validation as in commented fix and reject non-numeric input",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "Server-Side JS Injection via eval(req.body.afterTax) in handleContributionsUpdate",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/routes/contributions.js",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "const afterTax = eval(req.body.afterTax);",
+    "taint": {
+      "source": "req.body.afterTax (POST /contributions)",
+      "sink": "eval() server-side JS execution",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/contributions.js",
+        "line": 33,
+        "note": "second eval sink"
+      },
+      {
+        "file": "app/routes/index.js",
+        "line": 52,
+        "note": "route exposure"
+      }
+    ],
+    "evidence": "const afterTax = eval(req.body.afterTax); | validator: app/routes/contributions.js:33 eval(req.body.afterTax) active; reachable via POST /contributions app/routes/index.js:52 isLoggedIn only | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated user controls req.body.afterTax. HOW: same handler second eval call site evaluates afterTax string. WHAT: independent sink; same RCE primitive as preTax but separate parameter/call site must be fixed separately.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user can POST to /contributions"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const afterTax = eval(req.body.afterTax);",
+    "hunter_snippet": "const afterTax = eval(req.body.afterTax);",
+    "patch_summary": "Replace eval with parseInt/Number validation and reject non-numeric input",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Server-Side JS Injection via eval(req.body.roth) in handleContributionsUpdate",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/routes/contributions.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "const roth = eval(req.body.roth);",
+    "taint": {
+      "source": "req.body.roth (POST /contributions)",
+      "sink": "eval() server-side JS execution",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/contributions.js",
+        "line": 34,
+        "note": "third eval sink"
+      }
+    ],
+    "evidence": "const roth = eval(req.body.roth); | validator: app/routes/contributions.js:34 eval(req.body.roth) active; reachable via POST /contributions app/routes/index.js:52 isLoggedIn only | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated user controls req.body.roth. HOW: third eval in same handler evaluates roth. WHAT: third independent RCE sink; blocking one param leaves others exploitable.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user can POST to /contributions"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const roth = eval(req.body.roth);",
+    "hunter_snippet": "const roth = eval(req.body.roth);",
+    "patch_summary": "Replace eval with parseInt/Number validation and reject non-numeric input",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "cvss": 9.0,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-31",
+    "title": "Default Administrative Credentials in db-reset.js",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "artifacts/db-reset.js",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "\"password\": \"Admin_123\",",
+    "taint": {
+      "source": "hardcoded default passwords",
+      "sink": "users collection seeded credentials",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "artifacts/db-reset.js",
+        "line": 12,
+        "note": "admin/Admin_123 default"
+      },
+      {
+        "file": "artifacts/db-reset.js",
+        "line": 20,
+        "note": "user1/User1_123 default"
+      }
+    ],
+    "evidence": "\"password\": \"Admin_123\", | validator: artifacts/db-reset.js:14 password Admin_123 and :20 User1_123 seeded with bcrypt hashes commented out; known default accounts | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote attacker. HOW: db-reset seeds admin/Admin_123, user1/User1_123, user2/User2_123 in plaintext with documented isAdmin:true for _id 1. WHAT: default administrative credentials + plaintext storage; immediate full compromise if seed run in prod.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Fresh DB reset; attacker knows defaults"
+    ],
+    "unit": "app",
+    "hunter_evidence": "\"password\": \"Admin_123\",",
+    "hunter_snippet": "\"password\": \"Admin_123\",",
+    "patch_summary": "Remove seeded default plaintext credentials; require generated passwords and hashed storage",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "NoSQL/JavaScript Injection via $where threshold interpolation in getByUserIdAndThreshold",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "app/data/allocations-dao.js",
+    "start_line": 78,
+    "end_line": 78,
+    "snippet": "$where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`",
+    "taint": {
+      "source": "req.query.threshold via displayAllocations",
+      "sink": "MongoDB $where JavaScript query",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/allocations-dao.js",
+        "line": 78,
+        "note": "$where string interpolation sink"
+      },
+      {
+        "file": "app/routes/allocations.js",
+        "line": 27,
+        "note": "threshold taken from req.query without validation"
+      }
+    ],
+    "evidence": "$where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'` | validator: app/data/allocations-dao.js:78 $where string interpolation of raw threshold with parseInt fix commented out; caller app/routes/allocations.js:27 passes req.query.threshold raw | consensus: 1/1 confirmed",
+    "rationale": "WHO: any logged-in user controls req.query.threshold. HOW: AllocationsHandler.displayAllocations passes threshold unsanitized to getByUserIdAndThreshold which interpolates it into $where JS string: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`. WHAT: breaks NoSQL query-code separation; attacker injects arbitrary MongoDB JS (e.g. threshold=1';return true;var x='1) for NoSQLi/JS execution. Fix using parseInt+range check is commented out.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user requests /allocations/<id>?threshold=<payload>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "$where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`",
+    "hunter_snippet": "$where: `this.userId == ${parsedUserId} && this.stocks > '${threshold}'`",
+    "patch_summary": "Enable commented parseInt threshold validation 0-99 and interpolate only parsedThreshold integer",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-15",
+    "title": "Plaintext Password Storage in UserDAO.addUser",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "app/data/user-dao.js",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "password //received from request param",
+    "taint": {
+      "source": "req.body.password",
+      "sink": "usersCol.insert() plaintext password persist",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/user-dao.js",
+        "line": 30,
+        "note": "plaintext password stored"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 220,
+        "note": "handleSignup passes req.body.password raw"
+      }
+    ],
+    "evidence": "password //received from request param | validator: app/data/user-dao.js:30 stores password raw with bcrypt.hashSync fix commented out; caller app/routes/session.js:220 passes req.body.password raw | consensus: 1/1 confirmed",
+    "rationale": "WHO: user supplies password on signup handled by UserDAO.addUser. HOW: addUser stores password verbatim (password //received from request param) with bcrypt.hashSync commented out. WHAT: plaintext credential storage; DB leak = full compromise, no brute-force needed.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker registers account; DB read exposes hashes"
+    ],
+    "unit": "app",
+    "hunter_evidence": "password //received from request param",
+    "hunter_snippet": "password //received from request param",
+    "patch_summary": "Hash passwords with bcrypt.hashSync before insert as in commented fix",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-16",
+    "title": "Plaintext Password Comparison in validateLogin",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "app/data/user-dao.js",
+    "start_line": 62,
+    "end_line": 62,
+    "snippet": "return fromDB === fromUser;",
+    "taint": {
+      "source": "req.body.password vs stored password",
+      "sink": "plaintext password comparison",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/user-dao.js",
+        "line": 62,
+        "note": "fromDB === fromUser plaintext compare"
+      }
+    ],
+    "evidence": "return fromDB === fromUser; | validator: app/data/user-dao.js:62 return fromDB === fromUser plaintext compare with bcrypt.compareSync fix commented out | consensus: 1/1 confirmed",
+    "rationale": "WHO: login caller supplies password. HOW: validateLogin comparePassword does fromDB===fromUser string equality with bcrypt.compareSync commented out. WHAT: confirms plaintext auth, no adaptive hashing, timing-attackable equality, cannot migrate to hashed passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker attempts login; DB contains plaintext"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return fromDB === fromUser;",
+    "hunter_snippet": "return fromDB === fromUser;",
+    "patch_summary": "Verify with bcrypt.compareSync against stored hash instead of === plaintext compare",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-23",
+    "title": "Hardcoded Session Secret and Crypto Key in default config",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "config/env/all.js",
+    "start_line": 8,
+    "end_line": 8,
+    "snippet": "cookieSecret: \"session_cookie_secret_key_here\",",
+    "taint": {
+      "source": "hardcoded config value",
+      "sink": "express-session secret",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "config/env/all.js",
+        "line": 8,
+        "note": "hardcoded cookieSecret"
+      },
+      {
+        "file": "server.js",
+        "line": 70,
+        "note": "secret: cookieSecret usage"
+      }
+    ],
+    "evidence": "cookieSecret: \"session_cookie_secret_key_here\", | validator: config/env/all.js:8 cookieSecret hardcoded session_cookie_secret_key_here and :9 cryptoKey hardcoded; used as session secret server.js:70 | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with repo/config read. HOW: cookieSecret hardcoded as session_cookie_secret_key_here used as express-session secret; cryptoKey hardcoded similarly. WHAT: session signing key compromised -> session forgery; crypto key reuse breaks encryption invariant. No env override.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Default deployment with config/env/all.js"
+    ],
+    "unit": "app",
+    "hunter_evidence": "cookieSecret: \"session_cookie_secret_key_here\",",
+    "hunter_snippet": "cookieSecret: \"session_cookie_secret_key_here\",",
+    "patch_summary": "Load cookieSecret/cryptoKey from environment/secret manager, remove hardcoded defaults",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-25",
+    "title": "Global Template Autoescape Disabled in server.js",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "server.js",
+    "start_line": 137,
+    "end_line": 137,
+    "snippet": "autoescape: false",
+    "taint": {
+      "source": "any stored/reflected user input",
+      "sink": "all swig template interpolations",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "autoescape:false sink"
+      }
+    ],
+    "evidence": "autoescape: false | validator: server.js:137 swig.setDefaults autoescape:false globally disables escaping with autoescape:true fix commented out | consensus: 1/1 confirmed",
+    "rationale": "WHO: any user supplying profile/memo/contribution data. HOW: swig.setDefaults({autoescape:false}) globally disables HTML escaping; correct autoescape:true commented out. WHAT: systemic XSS amplifier; every {{var}} in allocations/benefits/contributions/login/memos/profile becomes injection sink.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any user views rendered page"
+    ],
+    "unit": "app",
+    "hunter_evidence": "autoescape: false",
+    "hunter_snippet": "autoescape: false",
+    "patch_summary": "Set swig autoescape:true to escape all template interpolations by default",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "Insecure Direct Object Reference in displayAllocations uses URL userId",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/routes/allocations.js",
+    "start_line": 22,
+    "end_line": 24,
+    "snippet": "} = req.params;",
+    "taint": {
+      "source": "req.params.userId",
+      "sink": "allocationsDAO.getByUserIdAndThreshold arbitrary user read + render",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/allocations.js",
+        "line": 24,
+        "note": "userId from req.params"
+      },
+      {
+        "file": "app/routes/index.js",
+        "line": 63,
+        "note": "GET /allocations/:userId with only isLoggedIn"
+      }
+    ],
+    "evidence": "} = req.params; | validator: app/routes/allocations.js:22-24 userId taken from req.params without session ownership check; route app/routes/index.js:63 guarded only by isLoggedIn | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated non-admin controls URL param :userId. HOW: displayAllocations reads const {userId}=req.params instead of req.session.userId (secure alternative commented out) and queries/render arbitrary user's allocations. WHAT: IDOR / broken object-level authorization; any user can view any user's allocations by changing URL.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker has any valid session; victim userId enumerable"
+    ],
+    "unit": "app",
+    "hunter_evidence": "} = req.params;",
+    "hunter_snippet": "} = req.params;",
+    "patch_summary": "Take userId from req.session per commented fix and enforce ownership / isAdmin check",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Server-Side Request Forgery in displayResearch via url+symbol",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/routes/research.js",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "return needle.get(url, (error, newResponse, body) => {",
+    "taint": {
+      "source": "req.query.url + req.query.symbol",
+      "sink": "needle.get() server-side fetch",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/research.js",
+        "line": 15,
+        "note": "url concatenation"
+      },
+      {
+        "file": "app/routes/research.js",
+        "line": 16,
+        "note": "needle.get sink"
+      },
+      {
+        "file": "app/views/research.html",
+        "line": 17,
+        "note": "hidden url field client-controlled"
+      }
+    ],
+    "evidence": "return needle.get(url, (error, newResponse, body) => { | validator: app/routes/research.js:15 url=req.query.url+req.query.symbol with hidden url field app/views/research.html:17 client-controlled; sink app/routes/research.js:16 needle.get(url) no allowlist | consensus: 1/1 confirmed",
+    "rationale": "WHO: logged-in user (or attacker crafting link) controls req.query.url and req.query.symbol. HOW: displayResearch concatenates url+symbol and passes to needle.get(url). Hidden form field url=https://finance.yahoo.com/quote/ is client-controlled and trivially tampered. WHAT: full SSRF; attacker forces server to fetch internal metadata (169.254.169.254), intranet, file URLs depending on needle, exfiltrate via response.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user requests /research?url=<attacker>&symbol=<payload>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return needle.get(url, (error, newResponse, body) => {",
+    "hunter_snippet": "return needle.get(url, (error, newResponse, body) => {",
+    "patch_summary": "Allowlist base URL server-side and validate/encode symbol instead of concatenating req.query.url",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-26",
+    "title": "Missing CSRF Protection (csurf disabled) in server.js",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server.js",
+    "start_line": 108,
+    "end_line": 108,
+    "snippet": "// app.use(csrf());",
+    "taint": {
+      "source": "cross-site forged request",
+      "sink": "state-changing POST handlers without token check",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server.js",
+        "line": 108,
+        "note": "app.use(csrf()) commented out"
+      },
+      {
+        "file": "app/views/contributions.html",
+        "line": 95,
+        "note": "csrf token commented out"
+      }
+    ],
+    "evidence": "// app.use(csrf()); | validator: server.js:107 app.use(csrf()) commented inside /* block; POST routes in app/routes/index.js:34,38,48,52,56 lack token check and contributions.html token commented | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker crafts cross-site POST to /profile /contributions /benefits /memos. HOW: csurf middleware and csrftoken propagation commented out; forms lack verifiable tokens (profile has dummy _csrf never validated, contributions token commented). WHAT: full CSRF; attacker can change victim contributions/benefits/profile via forged requests.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim logged in visits attacker page"
+    ],
+    "unit": "app",
+    "hunter_evidence": "// app.use(csrf());",
+    "hunter_snippet": "// app.use(csrf());",
+    "patch_summary": "Uncomment csurf middleware and token injection in server.js:107-112 and enforce csrf token validation on all POST routes; uncomment _csrf inputs in templates.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Missing Function-Level Authorization on GET /benefits",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/routes/index.js",
+    "start_line": 55,
+    "end_line": 55,
+    "snippet": "app.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits);",
+    "taint": {
+      "source": "GET /benefits by non-admin",
+      "sink": "benefitsHandler.displayBenefits admin-only data exposure",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 55,
+        "note": "GET /benefits without isAdmin"
+      },
+      {
+        "file": "app/routes/benefits.js",
+        "line": 12,
+        "note": "displayBenefits returns all users"
+      }
+    ],
+    "evidence": "app.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits); | validator: app/routes/index.js:55 GET /benefits uses only isLoggedIn, isAdmin defined at :28 but unused; fix at :58 shows intended isAdmin; app/routes/benefits.js:12 leaks all non-admin users | consensus: 1/1 confirmed",
+    "rationale": "WHO: any logged-in non-admin. HOW: GET /benefits mounted with only isLoggedIn; isAdmin check commented out (Fix for A7). BenefitsHandler.displayBenefits returns all non-admin users + benefit dates with user:{isAdmin:true}. WHAT: missing function-level access control; vertical privilege escalation.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any authenticated non-admin user"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits);",
+    "hunter_snippet": "app.get(\"/benefits\", isLoggedIn, benefitsHandler.displayBenefits);",
+    "patch_summary": "Add isAdmin middleware to GET /benefits route: app.get(\"/benefits\", isLoggedIn, isAdmin, benefitsHandler.displayBenefits).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "Missing Function-Level Authorization on POST /benefits",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/routes/index.js",
+    "start_line": 56,
+    "end_line": 56,
+    "snippet": "app.post(\"/benefits\", isLoggedIn, benefitsHandler.updateBenefits);",
+    "taint": {
+      "source": "POST /benefits body userId",
+      "sink": "benefitsDAO.updateBenefits arbitrary write",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 56,
+        "note": "POST /benefits without isAdmin"
+      },
+      {
+        "file": "app/routes/benefits.js",
+        "line": 28,
+        "note": "updateBenefits writes arbitrary userId"
+      }
+    ],
+    "evidence": "app.post(\"/benefits\", isLoggedIn, benefitsHandler.updateBenefits); | validator: app/routes/index.js:56 POST /benefits uses only isLoggedIn; app/routes/benefits.js:28 updateBenefits writes arbitrary userId/benefitStartDate via req.body without role check | consensus: 1/1 confirmed",
+    "rationale": "WHO: any logged-in non-admin controls req.body.userId/benefitStartDate. HOW: POST /benefits mounted without isAdmin; updateBenefits blindly updates any user's benefitStartDate. WHAT: missing authorization allows privilege-adjacent write to arbitrary users; separate sink from GET handler.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any authenticated non-admin user"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.post(\"/benefits\", isLoggedIn, benefitsHandler.updateBenefits);",
+    "hunter_snippet": "app.post(\"/benefits\", isLoggedIn, benefitsHandler.updateBenefits);",
+    "patch_summary": "Add isAdmin middleware to POST /benefits route and authorize userId against session or admin role server-side.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-5",
+    "cvss": 7.3,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "committed-tls-private-key",
+    "title": "Committed TLS Private Key in artifacts/cert/server.key",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "artifacts/cert/server.key",
+    "start_line": 1,
+    "end_line": 1,
+    "snippet": "-----BEGIN RSA PRIVATE KEY-----",
+    "taint": {
+      "source": "checked-in credential",
+      "sink": "committed private key file",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "artifacts/cert/server.key",
+        "line": 1,
+        "note": "PEM header proving private key material is committed"
+      },
+      {
+        "file": "server.js",
+        "line": 22,
+        "note": "HTTPS fix loads ./artifacts/cert/server.key as TLS key"
+      }
+    ],
+    "evidence": "artifacts/cert/server.key:1 contains committed RSA private key header; server.js:19-25 references this key for HTTPS (commented fix) confirming it is a live TLS credential, not a placeholder | validator: artifacts/cert/server.key:1 committed -----BEGIN RSA PRIVATE KEY-----; referenced as TLS key in server.js:22 | consensus: 1/1 confirmed",
+    "rationale": "A valid PEM-encoded RSA private key is committed to the repo. Any actor with read access obtains the TLS private key, enabling traffic decryption and impersonation if the cert is used. No secret value is reproduced here.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "artifacts/cert/server.key:1 contains committed RSA private key header; server.js:19-25 references this key for HTTPS (commented fix) confirming it is a live TLS credential, not a placeholder",
+    "hunter_snippet": "-----BEGIN RSA PRIVATE KEY-----",
+    "patch_summary": "Remove private key from repo and git history, rotate certificate, load key at deploy time from secret manager/env.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-01-benefits-update-idor",
+    "title": "Horizontal IDOR / Missing Authorization in POST /benefits updateBenefits",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.92,
+    "path": "app/routes/benefits.js",
+    "start_line": 35,
+    "end_line": 35,
+    "snippet": "benefitsDAO.updateBenefits(userId, benefitStartDate, (error) => {",
+    "taint": {
+      "source": "POST /benefits req.body.userId (authenticated attacker)",
+      "sink": "usersCol.update by attacker-controlled _id (BOLA/IDOR write)",
+      "path": [
+        "app/routes/index.js:56 POST /benefits req.body",
+        "app/routes/benefits.js:32 const {userId,benefitStartDate}=req.body",
+        "app/routes/benefits.js:35 benefitsDAO.updateBenefits(userId,...)",
+        "app/data/benefits-dao.js:24 usersCol.update({_id:parseInt(userId)},$set:{benefitStartDate})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 56,
+        "note": "POST /benefits registered with only isLoggedIn, isAdmin commented out"
+      },
+      {
+        "file": "app/routes/benefits.js",
+        "line": 32,
+        "note": "userId taken directly from req.body"
+      },
+      {
+        "file": "app/routes/benefits.js",
+        "line": 35,
+        "note": "sink: passes attacker userId to DAO update"
+      },
+      {
+        "file": "app/data/benefits-dao.js",
+        "line": 24,
+        "note": "DAO updates users collection by attacker-supplied _id"
+      }
+    ],
+    "evidence": "app/routes/index.js:56 POST /benefits only requires isLoggedIn; app/routes/benefits.js:32 userId taken from req.body without ownership/admin check; app/data/benefits-dao.js:24-25 update({_id:parseInt(userId)},$set:{benefitStartDate}) modifies arbitrary user | validator: app/routes/index.js:56 POST /benefits only isLoggedIn (isAdmin commented out); app/routes/benefits.js:32 userId from req.body passed at :35 to app/data/benefits-dao.js:24 update({_id:parseInt(userId)}) modifying arbitrary user | consensus: 1/1 confirmed",
+    "rationale": "Any authenticated user can update any user's benefitStartDate by tampering hidden userId field. No session-ownership check and no isAdmin enforcement (admin check only in commented fix). Cross-unit: route -> handler -> DAO update -> users collection.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/index.js:56 POST /benefits only requires isLoggedIn; app/routes/benefits.js:32 userId taken from req.body without ownership/admin check; app/data/benefits-dao.js:24-25 update({_id:parseInt(userId)},$set:{benefitStartDate}) modifies arbitrary user",
+    "hunter_snippet": "benefitsDAO.updateBenefits(userId, benefitStartDate, (error) => {",
+    "patch_summary": "Enforce authorization in updateBenefits: derive userId from session for non-admins and require isAdmin middleware for arbitrary userId updates.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.2,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-05-research-ssrf-to-xss",
+    "title": "Cross-Unit SSRF-to-XSS Chain in displayResearch",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.92,
+    "path": "app/routes/research.js",
+    "start_line": 15,
+    "end_line": 16,
+    "snippet": "const url = req.query.url + req.query.symbol;",
+    "taint": {
+      "source": "GET /research?url=&symbol= (authenticated attacker)",
+      "sink": "server-side fetch of attacker URL + raw HTML reflection",
+      "path": [
+        "app/routes/research.js:15 req.query.url+req.query.symbol",
+        "app/routes/research.js:16 needle.get(url)",
+        "app/routes/research.js:25 res.write(body)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/research.js",
+        "line": 15,
+        "note": "attacker-controlled URL concatenation"
+      },
+      {
+        "file": "app/routes/research.js",
+        "line": 16,
+        "note": "sink: needle.get(url) SSRF"
+      },
+      {
+        "file": "app/routes/research.js",
+        "line": 25,
+        "note": "reflected XSS: res.write(body) as text/html"
+      }
+    ],
+    "evidence": "app/routes/research.js:15 url built as req.query.url+req.query.symbol with no allowlist; app/routes/research.js:16 needle.get(url) fetches attacker URL (internal metadata/cloud secrets reachable); app/routes/research.js:22-25 upstream body written raw with Content-Type text/html enabling XSS | validator: app/routes/research.js:15 url=req.query.url+req.query.symbol with no allowlist; :16 needle.get(url) SSRF then :22-25 res.write(body) as text/html enabling reflected XSS | consensus: 1/1 confirmed",
+    "rationale": "Full SSRF chain: attacker controls both url prefix and symbol suffix, server fetches arbitrary internal/external URL and reflects raw body as HTML. Combines SSRF (cloud metadata, intranet scan) with reflected XSS via upstream content. No URL validation, no response content-type enforcement.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/research.js:15 url built as req.query.url+req.query.symbol with no allowlist; app/routes/research.js:16 needle.get(url) fetches attacker URL (internal metadata/cloud secrets reachable); app/routes/research.js:22-25 upstream body written raw with Content-Type text/html enabling XSS",
+    "hunter_snippet": "const url = req.query.url + req.query.symbol;",
+    "patch_summary": "Validate/allowlist url and symbol, block private/metadata hosts, and render upstream body as text or escaped output not text/html.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-8",
+    "cvss": 7.2,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Stored XSS via memo Markdown rendering in MemosHandler",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/memos.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "memosDAO.insert(req.body.memo, (err, docs) => {",
+    "taint": {
+      "source": "req.body.memo",
+      "sink": "marked() + swig render unescaped",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/memos.js",
+        "line": 15,
+        "note": "insert(req.body.memo) no sanitization"
+      },
+      {
+        "file": "app/views/memos.html",
+        "line": 32,
+        "note": "{{ marked(doc.memo) }} unescaped"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "autoescape:false enables XSS"
+      }
+    ],
+    "evidence": "memosDAO.insert(req.body.memo, (err, docs) => { | validator: app/routes/memos.js:15 memosDAO.insert(req.body.memo) stored raw; rendered unescaped app/views/memos.html:32 marked(doc.memo) with autoescape:false server.js:137; marked sanitize:true bypassable via js URLs | consensus: 1/1 confirmed",
+    "rationale": "WHO: memo author controls req.body.memo. HOW: addMemos inserts raw memo (memos-dao insert) and displayMemos renders via {{ marked(doc.memo) }} with swig autoescape:false. marked sanitize:true is set but deprecated/bypassable and template disables escaping, so <script>/<img onerror> persists. WHAT: persistent stored XSS affecting all viewers of /memos.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any authenticated user posts memo; any user views /memos"
+    ],
+    "unit": "app",
+    "hunter_evidence": "memosDAO.insert(req.body.memo, (err, docs) => {",
+    "hunter_snippet": "memosDAO.insert(req.body.memo, (err, docs) => {",
+    "patch_summary": "Sanitize memo markdown on store/render with robust HTML sanitizer and enable autoescape, strip javascript: URLs",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "Reflected XSS via unsanitized SSRF body in displayResearch",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/research.js",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "res.write(body);",
+    "taint": {
+      "source": "needle response body from attacker URL",
+      "sink": "res.write() HTML response",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/research.js",
+        "line": 23,
+        "note": "res.write(body) unsanitized"
+      }
+    ],
+    "evidence": "res.write(body); | validator: app/routes/research.js:17 url built from req.query.url+symbol, :23 res.write(body) with text/html at :18-20 and no sanitization; swig autoescape false at server.js:137 | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker controls external URL body fetched via SSRF or Yahoo response. HOW: displayResearch does res.write(body) directly with Content-Type text/html and no encoding/sanitization. WHAT: reflected/stored XSS via malicious upstream; also enables response splitting content injection.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls SSRF target response body"
+    ],
+    "unit": "app",
+    "hunter_evidence": "res.write(body);",
+    "hunter_snippet": "res.write(body);",
+    "patch_summary": "Stop writing remote body as HTML; set Content-Type text/plain or sanitize with escaping, and validate/allowlist url param to block SSRF.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-21",
+    "title": "Session Fixation in handleLoginRequest (no session regeneration)",
+    "cwe": "CWE-384",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/session.js",
+    "start_line": 118,
+    "end_line": 118,
+    "snippet": "req.session.userId = user._id;",
+    "taint": {
+      "source": "pre-login session ID",
+      "sink": "authenticated session binding",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/session.js",
+        "line": 118,
+        "note": "req.session.userId assignment without regenerate"
+      }
+    ],
+    "evidence": "req.session.userId = user._id; | validator: app/routes/session.js:116 req.session.userId assignment without regenerate in handleLoginRequest; comments :106-115 prescribe regenerate, signup at :234 does regenerate | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker fixes session ID; victim authenticates. HOW: handleLoginRequest sets req.session.userId=user._id directly without req.session.regenerate() (fix described in comments but not applied; only signup regenerates). WHAT: session fixation; pre-login SID remains valid post-auth with escalated privileges.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker obtains pre-login session ID and tricks victim to login"
+    ],
+    "unit": "app",
+    "hunter_evidence": "req.session.userId = user._id;",
+    "hunter_snippet": "req.session.userId = user._id;",
+    "patch_summary": "Wrap login success in req.session.regenerate(()=>{req.session.userId=user._id; ...}) to issue new session ID on privilege change.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-28",
+    "title": "Cleartext HTTP Transport (HTTPS disabled) in server.js",
+    "cwe": "CWE-319",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server.js",
+    "start_line": 145,
+    "end_line": 145,
+    "snippet": "http.createServer(app).listen(port, () => {",
+    "taint": {
+      "source": "all requests including credentials/PII",
+      "sink": "cleartext HTTP transport",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server.js",
+        "line": 145,
+        "note": "http.createServer insecure"
+      },
+      {
+        "file": "server.js",
+        "line": 25,
+        "note": "httpsOptions commented out"
+      }
+    ],
+    "evidence": "http.createServer(app).listen(port, () => { | validator: server.js:145 http.createServer(app).listen active; httpsOptions+https.createServer commented at :17-28 and :149-154, so creds/PII traverse cleartext | consensus: 1/1 confirmed",
+    "rationale": "WHO: passive/active network attacker. HOW: app served via http.createServer only; HTTPS options/key/cert loading commented out; PII (ssn,dob,bankAcc) and session cookies traverse cleartext. WHAT: sensitive-data exposure via cleartext transmission.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network attacker on path"
+    ],
+    "unit": "app",
+    "hunter_evidence": "http.createServer(app).listen(port, () => {",
+    "hunter_snippet": "http.createServer(app).listen(port, () => {",
+    "patch_summary": "Serve via https.createServer(httpsOptions,app) and redirect HTTP to HTTPS; enable secure cookies.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-33",
+    "title": "Unencrypted Sensitive PII Storage in ProfileDAO.updateUser",
+    "cwe": "CWE-312",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/data/profile-dao.js",
+    "start_line": 86,
+    "end_line": 86,
+    "snippet": "user.ssn = ssn;",
+    "taint": {
+      "source": "req.body.ssn/dob/bankAcc",
+      "sink": "users.update $set plaintext PII",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/profile-dao.js",
+        "line": 86,
+        "note": "user.ssn = ssn plaintext store"
+      }
+    ],
+    "evidence": "user.ssn = ssn; | validator: app/data/profile-dao.js:86 user.ssn=ssn plaintext into $set at :68-70; encrypt/decrypt fix commented at :15-36 and :74-83 not active | consensus: 1/1 confirmed",
+    "rationale": "WHO: user submits SSN/DOB/bankAcc. HOW: ProfileDAO.updateUser stores ssn/dob/bankAcc/bankRouting in plaintext via $set; encrypt()/decrypt() with crypto+PBKDF2 commented out. Combined with cleartext HTTP and verbose errors. WHAT: sensitive PII exposure at rest; breach of encrypted-storage invariant.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any profile update with SSN/DOB"
+    ],
+    "unit": "app",
+    "hunter_evidence": "user.ssn = ssn;",
+    "hunter_snippet": "user.ssn = ssn;",
+    "patch_summary": "Encrypt ssn/dob before $set with crypto cipher as in commented fix and decrypt on read.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "Cross-Site Scripting via unescaped firstNameSafeString in handleProfileUpdate error path",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/profile.js",
+    "start_line": 60,
+    "end_line": 60,
+    "snippet": "const firstNameSafeString = firstName;",
+    "taint": {
+      "source": "req.body.firstName",
+      "sink": "profile.html value/href interpolation with autoescape false",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/profile.js",
+        "line": 60,
+        "note": "firstNameSafeString = firstName raw"
+      },
+      {
+        "file": "app/views/profile.html",
+        "line": 41,
+        "note": "value={{firstNameSafeString}}"
+      },
+      {
+        "file": "app/views/profile.html",
+        "line": 77,
+        "note": "href={{firstNameSafeString}} javascript: vector"
+      }
+    ],
+    "evidence": "const firstNameSafeString = firstName; | validator: app/routes/profile.js:64 firstNameSafeString=firstName raw reflected on bankRouting failure; app/views/profile.html:41 value and :77 href interpolate unescaped with server.js:137 autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "WHO: profile owner controls req.body.firstName etc. HOW: on bankRouting regex failure handleProfileUpdate sets firstNameSafeString=firstName raw and renders profile.html with autoescape:false; value=\"{{firstNameSafeString}}\" and <a href=\"{{firstNameSafeString}}\"> allow attribute breakout and javascript: URL execution. WHAT: reflected/stored XSS; variable name SafeString is misleading, no encoding applied.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker submits profile with malicious firstName; victim views profile"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const firstNameSafeString = firstName;",
+    "hunter_snippet": "const firstNameSafeString = firstName;",
+    "patch_summary": "Encode firstName for HTML/URL context (ESAPI) or enable autoescape and use URL-encoded variable for href.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Stored XSS via profile fields rendered unescaped on update success",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/profile.js",
+    "start_line": 95,
+    "end_line": 95,
+    "snippet": "return res.render(\"profile\", {",
+    "taint": {
+      "source": "stored profile fields firstName/lastName/ssn/address",
+      "sink": "swig render with autoescape false",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/profile.js",
+        "line": 95,
+        "note": "res.render profile with ...user raw"
+      },
+      {
+        "file": "app/views/layout.html",
+        "line": 73,
+        "note": "{{firstName}} {{lastName}} unescaped"
+      }
+    ],
+    "evidence": "return res.render(\"profile\", { | validator: app/routes/profile.js:95 res.render profile with ...user raw stored fields; layout.html:73 {{firstName}} {{lastName}} unescaped with server.js:137 autoescape:false persists across displayProfile | consensus: 1/1 confirmed",
+    "rationale": "WHO: user controls firstName/lastName/ssn/address etc stored via profile.updateUser. HOW: on success handler renders profile with ...user spread containing raw DB values into autoescape:false templates (profile.html, layout.html {{firstName}} {{lastName}}). No output encoding. WHAT: stored XSS across profile/dashboard/layout; second distinct sink from error-path render.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker saves profile with XSS payload; any view of profile/dashboard"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return res.render(\"profile\", {",
+    "hunter_snippet": "return res.render(\"profile\", {",
+    "patch_summary": "Enable swig autoescape:true and context-encode profile fields on render/storage.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Reflected XSS via userName in login.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/login.html",
+    "start_line": 110,
+    "end_line": 110,
+    "snippet": "<input type=\"text\" class=\"form-control\" id=\"userName\" name=\"userName\" value=\"{{userName}}\" placeholder=\"Enter User Name\">",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [],
+    "evidence": "<input type=\"text\" class=\"form-control\" id=\"userName\" name=\"userName\" value=\"{{userName}}\" placeholder=\"Enter User Name\"> | validator: app/routes/session.js:83 res.render login with raw userName; app/views/login.html:110 value=\"{{userName}}\" raw; server.js:133 autoescape:false disables escaping | consensus: 2/2 confirmed",
+    "rationale": "",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "<input type=\"text\" class=\"form-control\" id=\"userName\" name=\"userName\" value=\"{{userName}}\" placeholder=\"Enter User Name\">",
+    "hunter_snippet": "<input type=\"text\" class=\"form-control\" id=\"userName\" name=\"userName\" value=\"{{userName}}\" placeholder=\"Enter User Name\">",
+    "patch_summary": "Enable swig autoescape:true and HTML-attribute encode userName before render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Spoofed Admin Flag in BenefitsHandler.displayBenefits",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/routes/benefits.js",
+    "start_line": 19,
+    "end_line": 24,
+    "snippet": "return res.render(\"benefits\", {",
+    "taint": {
+      "source": "BenefitsHandler.displayBenefits hardcoded literal",
+      "sink": "template trust of spoofed isAdmin flag",
+      "path": [
+        "app/routes/benefits.js:21 user:{isAdmin:true}",
+        "app/views/layout.html:48 {% if user.isAdmin %}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/benefits.js",
+        "line": 19,
+        "note": "res.render benefits with spoofed admin flag"
+      },
+      {
+        "file": "app/views/layout.html",
+        "line": 48,
+        "note": "layout trusts user.isAdmin for nav branching"
+      }
+    ],
+    "evidence": "return res.render(\"benefits\", { | validator: app/routes/session.js:83 res.render login with raw userName; app/views/login.html:110 value=\"{{userName}}\" raw; server.js:133 autoescape:false disables escaping | consensus: 2/2 confirmed",
+    "rationale": "WHO: any authenticated non-admin user. HOW: displayBenefits renders benefits view with hardcoded literal user:{isAdmin:true} instead of deriving role from req.session via userDAO, and passes it to layout.html which branches on user.isAdmin for navigation. WHAT: breaks authorization-presentation invariant; non-admin receives admin UI, admin-only benefits data and links, enabling UI spoofing and facilitating vertical privilege abuse.",
+    "status": "confirmed",
+    "conditions": [
+      "Authenticated as any non-admin user"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return res.render(\"benefits\", {",
+    "hunter_snippet": "return res.render(\"benefits\", {",
+    "patch_summary": "Enable swig autoescape:true and HTML-attribute encode userName before render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Stored XSS via benefitStartDate in benefits.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/benefits.html",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>",
+    "taint": {
+      "source": "req.body.benefitStartDate (POST /benefits)",
+      "sink": "swig interpolation with autoescape false",
+      "path": [
+        "app/routes/benefits.js:32 req.body.benefitStartDate",
+        "app/data/benefits-dao.js:28 $set persistence",
+        "app/views/benefits.html:57 value interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/views/benefits.html",
+        "line": 57,
+        "note": "unescaped benefitStartDate in value attribute"
+      },
+      {
+        "file": "app/data/benefits-dao.js",
+        "line": 28,
+        "note": "raw persistence without encoding"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "autoescape false enables injection"
+      }
+    ],
+    "evidence": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input> | validator: app/routes/benefits.js:29-32 raw req.body.benefitStartDate; app/data/benefits-dao.js:28 $set persistence without encoding; app/views/benefits.html:57 value=\"{{user.benefitStartDate}}\" raw with server.js:133 autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker controlling benefitStartDate via POST /benefits (no validation in DAO). HOW: value stored verbatim via $set and later interpolated as value=\"{{user.benefitStartDate}}\" with swig autoescape:false globally disabled. WHAT: breaks output-encoding invariant; stored payload breaks out of date input value attribute and executes in victim browser on benefits list.",
+    "status": "confirmed",
+    "conditions": [
+      "Authenticated attacker submits POST /benefits with XSS payload in benefitStartDate; victim views GET /benefits"
+    ],
+    "unit": "app",
+    "hunter_evidence": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>",
+    "hunter_snippet": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>",
+    "patch_summary": "Enable autoescape:true, validate benefitStartDate format, and HTML-attribute encode on render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "Stored XSS via firstName in benefits.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/benefits.html",
+    "start_line": 51,
+    "end_line": 51,
+    "snippet": "<td>{{user.firstName}}</td>",
+    "taint": {
+      "source": "stored profile firstName",
+      "sink": "swig unescaped table cell",
+      "path": [
+        "app/routes/profile.js:82 profile.updateUser firstName",
+        "app/data/benefits-dao.js:15 getAllNonAdminUsers",
+        "app/views/benefits.html:51 interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/views/benefits.html",
+        "line": 51,
+        "note": "unescaped firstName table cell"
+      }
+    ],
+    "evidence": "<td>{{user.firstName}}</td> | validator: app/routes/profile.js:82 profile.updateUser stores raw firstName; app/data/benefits-dao.js:15 getAllNonAdminUsers returns stored names; app/views/benefits.html:51 <td>{{user.firstName}}</td> raw with autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "WHO: any user controlling profile firstName/lastName stored in users collection. HOW: getAllNonAdminUsers returns all users and benefits.html interpolates {{user.firstName}} inside table cell with autoescape disabled and no per-variable encoding. WHAT: stored XSS; payload submitted via /profile persists and executes for any viewer of /benefits, including admin.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker controls profile firstName; victim views /benefits"
+    ],
+    "unit": "app",
+    "hunter_evidence": "<td>{{user.firstName}}</td>",
+    "hunter_snippet": "<td>{{user.firstName}}</td>",
+    "patch_summary": "Enable autoescape:true and HTML-encode firstName/lastName on render; validate profile inputs.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Stored XSS via allocation owner name in allocations.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/allocations.html",
+    "start_line": 35,
+    "end_line": 35,
+    "snippet": "<strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong>",
+    "taint": {
+      "source": "stored profile firstName/lastName",
+      "sink": "swig unescaped heading",
+      "path": [
+        "app/routes/profile.js:82 stored firstName",
+        "app/data/allocations-dao.js:97 alloc.firstName assignment",
+        "app/views/allocations.html:35 render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/views/allocations.html",
+        "line": 35,
+        "note": "allocation owner name rendered unescaped"
+      }
+    ],
+    "evidence": "<strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong> | validator: app/data/allocations-dao.js:97 alloc.firstName assignment from stored user; app/views/allocations.html:35 {{allocation.firstName}} {{allocation.lastName}} raw heading with server.js:133 autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "WHO: user controlling firstName/lastName via /profile. HOW: getByUserIdAndThreshold enriches each allocation with userName/firstName/lastName from users collection and template renders {{allocation.firstName}} {{allocation.lastName}} unescaped. WHAT: stored XSS across trust boundary; any viewer of allocations page executes attacker profile payload.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker sets profile firstName to XSS payload; victim views /allocations/:userId"
+    ],
+    "unit": "app",
+    "hunter_evidence": "<strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong>",
+    "hunter_snippet": "<strong>Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}</strong>",
+    "patch_summary": "Enable autoescape:true and HTML-encode allocation owner names on render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "Reflected XSS via userName in signup.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/signup.html",
+    "start_line": 75,
+    "end_line": 75,
+    "snippet": "<input type=\"text\" class=\"form-control\" id=\"userName\" value=\"{{userName}}\" name=\"userName\" placeholder=\"Enter user name\">",
+    "taint": {
+      "source": "req.body.userName (POST /signup)",
+      "sink": "unescaped value attribute",
+      "path": [
+        "app/routes/session.js:191 req.body.userName",
+        "app/routes/session.js:214 res.render signup with errors",
+        "app/views/signup.html:75 value interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/views/signup.html",
+        "line": 75,
+        "note": "userName reflected into value attribute"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 201,
+        "note": "errors carry raw userName to render"
+      }
+    ],
+    "evidence": "<input type=\"text\" class=\"form-control\" id=\"userName\" value=\"{{userName}}\" name=\"userName\" placeholder=\"Enter user name\"> | validator: app/routes/session.js:202 errors.userName holds raw req.body.userName and 214-217/231 renders signup with ...errors; app/views/signup.html:75 value=\"{{userName}}\" raw with autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker controlling userName field on signup. HOW: handleSignup on duplicate-user and validation-failure paths renders signup view spreading errors containing raw userName, template emits value=\"{{userName}}\" with autoescape:false. WHAT: reflected XSS; quote breakout from value attribute executes script in victim browser.",
+    "status": "confirmed",
+    "conditions": [
+      "Attacker submits POST /signup with existing userName containing XSS; response rendered"
+    ],
+    "unit": "app",
+    "hunter_evidence": "<input type=\"text\" class=\"form-control\" id=\"userName\" value=\"{{userName}}\" name=\"userName\" placeholder=\"Enter user name\">",
+    "hunter_snippet": "<input type=\"text\" class=\"form-control\" id=\"userName\" value=\"{{userName}}\" name=\"userName\" placeholder=\"Enter user name\">",
+    "patch_summary": "Enable autoescape:true and HTML-attribute encode userName/firstName on signup render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-04-memos-stored-xss-chain",
+    "title": "Cross-Unit Stored XSS: POST /memos memo persistence to memos.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/memos.html",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "{{ marked(doc.memo) }}",
+    "taint": {
+      "source": "POST /memos req.body.memo (authenticated attacker)",
+      "sink": "unescaped template render of stored markdown/HTML",
+      "path": [
+        "app/routes/memos.js:13 req.body.memo",
+        "app/data/memos-dao.js:18 memos={memo}",
+        "app/data/memos-dao.js:23 memosCol.insert",
+        "app/routes/memos.js:25 getAllMemos",
+        "app/views/memos.html:30 marked(doc.memo)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/memos.js",
+        "line": 13,
+        "note": "source: raw req.body.memo inserted"
+      },
+      {
+        "file": "app/data/memos-dao.js",
+        "line": 18,
+        "note": "persists unsanitized memo to DB"
+      },
+      {
+        "file": "app/routes/memos.js",
+        "line": 25,
+        "note": "display path fetches all memos without scoping"
+      },
+      {
+        "file": "app/views/memos.html",
+        "line": 30,
+        "note": "sink: unescaped marked output"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "swig autoescape:false enables XSS"
+      }
+    ],
+    "evidence": "app/routes/memos.js:13 memosDAO.insert(req.body.memo) with no validation; app/data/memos-dao.js:18-23 persists raw memo to memos collection; app/routes/memos.js:25-31 getAllMemos returns all docs to any user; app/views/memos.html:30 {{ marked(doc.memo) }} with swig autoescape:false in server.js:137 renders attacker markdown/HTML unescaped | validator: app/routes/memos.js:13 raw req.body.memo via app/data/memos-dao.js:18-23 insert persisted and app/routes/memos.js:25 getAllMemos returned to all users; app/views/memos.html:30 {{marked(doc.memo)}} rendered with swig autoescape:false (server.js:137) \u2014 marked sanitize:true bypassable via javascript: URLs | consensus: 1/1 confirmed",
+    "rationale": "End-to-end stored XSS spanning 3 units: POST memo -> DAO insert -> Mongo -> GET display -> marked() + unescaped template. Any authenticated user persists JS that executes for all viewers of /memos. marked sanitize:true is bypassable and autoescape disabled ensures raw HTML.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/memos.js:13 memosDAO.insert(req.body.memo) with no validation; app/data/memos-dao.js:18-23 persists raw memo to memos collection; app/routes/memos.js:25-31 getAllMemos returns all docs to any user; app/views/memos.html:30 {{ marked(doc.memo) }} with swig autoescape:false in server.js:137 renders attacker markdown/HTML unescaped",
+    "hunter_snippet": "{{ marked(doc.memo) }}",
+    "patch_summary": "Enable swig autoescape:true, sanitize markdown output (strip javascript: URLs/HTML) and scope memos per user.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "xunit-stored-xss-profile-to-layout",
+    "title": "Cross-Unit Stored XSS: POST /profile names persist to layout.html top-nav",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/layout.html",
+    "start_line": 75,
+    "end_line": 75,
+    "snippet": "<a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\"><i class=\"fa fa-user\"></i> {{firstName}} {{lastName}} <b class=\"caret\"></b></a>",
+    "taint": {
+      "source": "POST /profile req.body.firstName/lastName",
+      "sink": "layout.html unescaped {{firstName}} {{lastName}} with autoescape:false",
+      "path": [
+        "app/routes/profile.js:43 req.body.firstName",
+        "app/data/profile-dao.js:47 user.firstName assignment",
+        "app/data/profile-dao.js:78 users.update $set persistence",
+        "app/routes/session.js:263 getUserById -> res.render dashboard",
+        "app/views/layout.html:75 {{firstName}} {{lastName}}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/profile.js",
+        "line": 43,
+        "note": "source: firstName destructured from req.body (attacker controlled)"
+      },
+      {
+        "file": "app/data/profile-dao.js",
+        "line": 47,
+        "note": "persistence: user.firstName = firstName without sanitization"
+      },
+      {
+        "file": "app/data/profile-dao.js",
+        "line": 78,
+        "note": "persistence: users.update({_id},{$set:user}) stores attacker value"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 263,
+        "note": "retrieval: displayWelcomePage reads user doc and renders dashboard which extends layout"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "enabler: swig autoescape disabled so {{firstName}} is unescaped"
+      },
+      {
+        "file": "app/views/layout.html",
+        "line": 75,
+        "note": "sink: unescaped interpolation of stored names in top-nav"
+      }
+    ],
+    "evidence": "POST /profile firstName/lastName persisted unsanitized via ProfileDAO.updateUser then rendered unescaped in layout.html top-nav on every authenticated page with autoescape disabled | validator: app/routes/profile.js:43 firstName/lastName from req.body stored via app/data/profile-dao.js:47-78 users.update $set without sanitization; retrieved in app/routes/session.js:263 and rendered unescaped at app/views/layout.html:75 {{firstName}} {{lastName}} with server.js:137 autoescape:false | consensus: 1/1 confirmed",
+    "rationale": "Attacker-controlled firstName/lastName from POST /profile are stored verbatim in Mongo via ProfileDAO $set update, later read back for dashboard/profile/contributions renders and interpolated into layout.html {{firstName}} {{lastName}} with swig autoescape:false, giving persistent XSS across all authenticated pages.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST /profile firstName/lastName persisted unsanitized via ProfileDAO.updateUser then rendered unescaped in layout.html top-nav on every authenticated page with autoescape disabled",
+    "hunter_snippet": "<a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\"><i class=\"fa fa-user\"></i> {{firstName}} {{lastName}} <b class=\"caret\"></b></a>",
+    "patch_summary": "Enable autoescape:true and HTML-escape firstName/lastName on store and render; validate profile fields.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-STORED-XSS-BENEFITS-DATE",
+    "title": "Cross-Unit Stored XSS: POST /benefits benefitStartDate persists to GET /benefits view",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app/views/benefits.html",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>",
+    "taint": {
+      "source": "POST /benefits req.body.benefitStartDate",
+      "sink": "unescaped render in benefits.html",
+      "path": [
+        "app/routes/benefits.js:32 benefitStartDate",
+        "app/data/benefits-dao.js:28 $set",
+        "app/views/benefits.html:57 value render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/benefits.js",
+        "line": 35,
+        "note": "passes raw benefitStartDate to DAO"
+      },
+      {
+        "file": "app/data/benefits-dao.js",
+        "line": 28,
+        "note": "persists verbatim via $set"
+      },
+      {
+        "file": "app/views/benefits.html",
+        "line": 57,
+        "note": "unescaped sink"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "autoescape false"
+      }
+    ],
+    "evidence": "POST /benefits persists raw benefitStartDate via $set then GET /benefits renders value=\"{{user.benefitStartDate}}\" with autoescape:false | validator: app/routes/benefits.js:32-35 raw benefitStartDate to app/data/benefits-dao.js:28 $set persisted verbatim; app/views/benefits.html:57 value=\"{{user.benefitStartDate}}\" rendered with server.js:137 autoescape:false allowing attribute-breakout, viewable by any user via getAllNonAdminUsers | consensus: 1/1 confirmed",
+    "rationale": "Untrusted benefitStartDate enters in benefits.js, persisted verbatim by benefits-dao, later rendered unescaped into HTML attribute with global autoescape disabled, giving persistent XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST /benefits persists raw benefitStartDate via $set then GET /benefits renders value=\"{{user.benefitStartDate}}\" with autoescape:false",
+    "hunter_snippet": "<input type=\"date\" class=\"form-control\" name=\"benefitStartDate\" value=\"{{user.benefitStartDate}}\"></input>",
+    "patch_summary": "Validate benefitStartDate as ISO date on input and HTML-attribute-escape on render; enable autoescape and require isAdmin for /benefits.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-2",
+    "cvss": 7.1,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-17",
+    "title": "NoSQL Operator Injection Authentication Bypass in validateLogin",
+    "cwe": "CWE-943",
+    "severity": "high",
+    "confidence": 0.8,
+    "path": "app/data/user-dao.js",
+    "start_line": 97,
+    "end_line": 98,
+    "snippet": "usersCol.findOne({",
+    "taint": {
+      "source": "req.body.userName (JSON object)",
+      "sink": "MongoDB findOne selector",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/user-dao.js",
+        "line": 98,
+        "note": "findOne userName unsanitized"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 54,
+        "note": "userName from req.body passed through"
+      }
+    ],
+    "evidence": "usersCol.findOne({ | validator: app/data/user-dao.js:97 usersCol.findOne({userName:userName}) with userName from app/routes/session.js:54 req.body and server.js:71 bodyParser.json allowing operator objects, no string type check | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated login attacker controls userName/password via bodyParser.json. HOW: validateLogin does usersCol.findOne({userName:userName}) with no type check; sending {\"userName\":{\"$ne\":null},\"password\":{\"$ne\":null}} or $gt injects Mongo operators bypassing auth. WHAT: NoSQL operator injection authentication bypass.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker POSTs JSON to /login with operator object"
+    ],
+    "unit": "app",
+    "hunter_evidence": "usersCol.findOne({",
+    "hunter_snippet": "usersCol.findOne({",
+    "patch_summary": "Validate typeof userName==='string' and reject objects/operators before findOne; cast/escape selector.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.8,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "Open Redirect in /learn via req.query.url",
+    "cwe": "CWE-601",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/routes/index.js",
+    "start_line": 72,
+    "end_line": 72,
+    "snippet": "return res.redirect(req.query.url);",
+    "taint": {
+      "source": "req.query.url (GET /learn)",
+      "sink": "res.redirect()",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 72,
+        "note": "unvalidated redirect sink"
+      }
+    ],
+    "evidence": "return res.redirect(req.query.url); | validator: app/routes/index.js:72 return res.redirect(req.query.url) with no allowlist validation on GET /learn | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker supplies ?url= query param; victim browser follows. HOW: /learn handler does return res.redirect(req.query.url) with no allowlist/validation. WHAT: open redirect enables phishing, OAuth token theft, open-redirect-to-XSS bypass.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim must click attacker link while logged in"
+    ],
+    "unit": "app",
+    "hunter_evidence": "return res.redirect(req.query.url);",
+    "hunter_snippet": "return res.redirect(req.query.url);",
+    "patch_summary": "Validate redirect against allowlisted relative paths instead of raw req.query.url",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.9,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-14",
+    "title": "Regular Expression DoS (ReDoS) in bankRouting validation",
+    "cwe": "CWE-1333",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/routes/profile.js",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "const regexPattern = /([0-9]+)+\\#;",
+    "taint": {
+      "source": "req.body.bankRouting",
+      "sink": "RegExp.test() catastrophic backtracking",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/profile.js",
+        "line": 57,
+        "note": "vulnerable regex definition"
+      },
+      {
+        "file": "app/routes/profile.js",
+        "line": 59,
+        "note": "regexPattern.test(bankRouting) sink"
+      }
+    ],
+    "evidence": "const regexPattern = /([0-9]+)+\\#; | validator: app/routes/profile.js:57 vulnerable /([0-9]+)+\\#/ with safe /([0-9]+)\\#/ fix commented; sink app/routes/profile.js:59 regexPattern.test(bankRouting) on req.body.bankRouting | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated user controls req.body.bankRouting. HOW: handleProfileUpdate tests regex /([0-9]+)+\\#/ with nested quantifiers (+ inside +) on attacker string; catastrophic backtracking is exponential. WHAT: single-threaded Node event loop blocked at 100% CPU (ReDoS DoS); secure pattern /([0-9]+)\\#/ commented out.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated user POSTs /profile with long crafted bankRouting"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const regexPattern = /([0-9]+)+\\#;",
+    "hunter_snippet": "const regexPattern = /([0-9]+)+\\#;",
+    "patch_summary": "Use fixed regex /([0-9]+)\\#/ without nested quantifier and add input length bound",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.9,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-22",
+    "title": "Weak Password Policy in validateSignup",
+    "cwe": "CWE-521",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/routes/session.js",
+    "start_line": 150,
+    "end_line": 150,
+    "snippet": "const PASS_RE = /^.{1,20}$/;",
+    "taint": {
+      "source": "req.body.password",
+      "sink": "password acceptance check",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/session.js",
+        "line": 150,
+        "note": "PASS_RE weak definition"
+      }
+    ],
+    "evidence": "const PASS_RE = /^.{1,20}$/; | validator: app/routes/session.js:144 PASS_RE=/^.{1,20}$/ allows 1-char password; strong regex commented at :148 | consensus: 1/1 confirmed",
+    "rationale": "WHO: any self-registering user. HOW: validateSignup uses USER_RE /^.{1,20}$/ and PASS_RE /^.{1,20}$/ allowing single-char passwords; strong regex requiring 8+ with digit/upper/lower commented out. WHAT: weak credential policy enables brute-force/account takeover.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker registers account with weak password"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const PASS_RE = /^.{1,20}$/;",
+    "hunter_snippet": "const PASS_RE = /^.{1,20}$/;",
+    "patch_summary": "Enforce strong PASS_RE /^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/ as in commented fix.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.9,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-19",
+    "title": "User Enumeration via Distinct Login Error Messages in handleLoginRequest",
+    "cwe": "CWE-204",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/routes/session.js",
+    "start_line": 65,
+    "end_line": 78,
+    "snippet": "loginError: invalidUserNameErrorMessage,",
+    "taint": {
+      "source": "login oracle (user existence)",
+      "sink": "distinct loginError render",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/session.js",
+        "line": 64,
+        "note": "invalidUserNameErrorMessage branch"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 78,
+        "note": "invalidPasswordErrorMessage branch"
+      }
+    ],
+    "evidence": "loginError: invalidUserNameErrorMessage, | validator: app/routes/session.js:60-61 defines distinct invalidUserNameErrorMessage vs invalidPasswordErrorMessage, rendered at :85 vs :93; fix comment at :86 proposes identical errorMessage | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated attacker controls userName/password. HOW: handleLoginRequest renders Invalid username vs Invalid password distinct messages (generic errorMessage commented out). WHAT: user enumeration oracle for credential stuffing; breaks identical-error invariant.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker probes login with valid/invalid names"
+    ],
+    "unit": "app",
+    "hunter_evidence": "loginError: invalidUserNameErrorMessage,",
+    "hunter_snippet": "loginError: invalidUserNameErrorMessage,",
+    "patch_summary": "Render identical generic loginError for both noSuchUser and invalidPassword branches.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-27",
+    "title": "Disabled Helmet Security Headers in server.js",
+    "cwe": "CWE-693",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "server.js",
+    "start_line": 90,
+    "end_line": 90,
+    "snippet": "// app.use(helmet.frameguard()); //xframe deprecated",
+    "taint": {
+      "source": "missing hardening middleware",
+      "sink": "HTTP response headers",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server.js",
+        "line": 90,
+        "note": "helmet block commented out"
+      }
+    ],
+    "evidence": "// app.use(helmet.frameguard()); //xframe deprecated | validator: server.js:45 helmet.frameguard/noCache/csp/hsts/nosniff block commented out starting at :33; no alternative headers set | consensus: 1/1 confirmed",
+    "rationale": "WHO: network attacker. HOW: helmet protections (frameguard,noCache,CSP,HSTS,x-powered-by,nosniff) all commented out; x-powered-by leaks Express, clickjacking/CSP/MIME-sniffing unmitigated. WHAT: security-misconfiguration broadens XSS/clickjacking/side-channel surface.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any deployment behind default config"
+    ],
+    "unit": "app",
+    "hunter_evidence": "// app.use(helmet.frameguard()); //xframe deprecated",
+    "hunter_snippet": "// app.use(helmet.frameguard()); //xframe deprecated",
+    "patch_summary": "Enable helmet (frameguard, hsts, csp, noCache, nosniff) and disable x-powered-by.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-29",
+    "title": "Verbose Error Disclosure and XSS in errorHandler",
+    "cwe": "CWE-209",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/routes/error.js",
+    "start_line": 11,
+    "end_line": 11,
+    "snippet": "res.render(\"error-template\", {",
+    "taint": {
+      "source": "err.message/stack + attacker-influenced threshold",
+      "sink": "error-template {{error}} render",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/error.js",
+        "line": 11,
+        "note": "res.render error-template with err"
+      },
+      {
+        "file": "app/views/error-template.html",
+        "line": 11,
+        "note": "{{error}} unescaped with autoescape false"
+      }
+    ],
+    "evidence": "res.render(\"error-template\", { | validator: app/routes/error.js:11 res.render error-template with {error:err}; app/views/error-template.html:11 {{error}} unescaped with server.js:137 autoescape:false leaks message+stack | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker triggers error (e.g. invalid threshold string causing throw, DB error). HOW: errorHandler logs err.message/stack and renders error-template with {{error}} and autoescape:false, exposing stack/message to client and enabling XSS via error content. WHAT: info disclosure + reflected XSS; breaks error-handling invariant.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any error triggered (DB failure, bad threshold)"
+    ],
+    "unit": "app",
+    "hunter_evidence": "res.render(\"error-template\", {",
+    "hunter_snippet": "res.render(\"error-template\", {",
+    "patch_summary": "Render generic message, log stack server-side only, and enable swig autoescape:true.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Secret Disclosure via Config Dump to Logs",
+    "cwe": "CWE-532",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "config/config.js",
+    "start_line": 13,
+    "end_line": 13,
+    "snippet": "console.log(util.inspect(config, false, null));",
+    "taint": {
+      "source": "hardcoded secrets in merged config",
+      "sink": "stdout/log secret disclosure",
+      "path": [
+        "config/config.js:7 allConf with cookieSecret/cryptoKey",
+        "config/config.js:8 envConf with zapApiKey",
+        "app/views/benefits.html:57 value interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "config/config.js",
+        "line": 13,
+        "note": "dumps merged secrets to logs"
+      }
+    ],
+    "evidence": "console.log(util.inspect(config, false, null)); | validator: config/config.js:12-13 console.log(util.inspect(config)) dumps merged secrets; config/env/all.js:7-9 defines cookieSecret/cryptoKey in dumped object | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with log access (developers, log aggregators, CI output). HOW: config module merges allConf containing cookieSecret/cryptoKey with envConf containing zapApiKey/environmentalScripts and then logs full object via util.inspect to stdout on every startup. WHAT: sensitive material exposure in logs; secrets that enable session forgery and crypto bypass are persisted outside intended secret store.",
+    "status": "confirmed",
+    "conditions": [
+      "Access to process stdout/logs"
+    ],
+    "unit": "app",
+    "hunter_evidence": "console.log(util.inspect(config, false, null));",
+    "hunter_snippet": "console.log(util.inspect(config, false, null));",
+    "patch_summary": "Remove config dump to stdout; gate debug logging behind env and redact secrets.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "Spoofed Admin Flag in BenefitsHandler.updateBenefits",
+    "cwe": "CWE-862",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/routes/benefits.js",
+    "start_line": 44,
+    "end_line": 48,
+    "snippet": "user: {\n                    isAdmin: true\n                },",
+    "taint": {
+      "source": "POST /benefits by non-admin",
+      "sink": "benefits render with forged admin context",
+      "path": [
+        "app/routes/benefits.js:30 req.body.userId/benefitStartDate",
+        "app/routes/benefits.js:44 hardcoded admin flag render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/benefits.js",
+        "line": 42,
+        "note": "data object construction for render"
+      },
+      {
+        "file": "app/routes/benefits.js",
+        "line": 44,
+        "note": "hardcoded isAdmin true in update path"
+      }
+    ],
+    "evidence": "user: {\n                    isAdmin: true\n                }, | validator: app/routes/benefits.js:29-48 updateBenefits writes arbitrary userId benefitStartDate with hardcoded user:{isAdmin:true}; app/routes/index.js:56 POST /benefits guarded only by isLoggedIn, isAdmin commented out | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated non-admin submitting POST /benefits. HOW: updateBenefits builds data object with hardcoded user:{isAdmin:true} and renders benefits view, independent of session role check. WHAT: breaks same authorization-presentation invariant in write path; attacker gets admin-context response confirming arbitrary benefitStartDate write to any userId.",
+    "status": "confirmed",
+    "conditions": [
+      "Authenticated as any non-admin user"
+    ],
+    "unit": "app",
+    "hunter_evidence": "user: {\n                    isAdmin: true\n                },",
+    "hunter_snippet": "user: {\n                    isAdmin: true\n                },",
+    "patch_summary": "Require isAdminUserMiddleware on POST /benefits and authorize userId against session; remove forged isAdmin context.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-02-login-no-ratelimit",
+    "title": "Missing Rate Limiting / Brute-Force Protection on POST /login",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/routes/index.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "app.post(\"/login\", sessionHandler.handleLoginRequest);",
+    "taint": {
+      "source": "network attacker POST /login userName/password",
+      "sink": "unthrottled authentication decision",
+      "path": [
+        "app/routes/index.js:34 POST /login",
+        "app/routes/session.js:58 userDAO.validateLogin(userName,password)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 34,
+        "note": "POST /login endpoint without rate-limit middleware"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 53,
+        "note": "handleLoginRequest performs validation with no attempt counting"
+      },
+      {
+        "file": "server.js",
+        "line": 70,
+        "note": "no express-rate-limit or equivalent registered"
+      }
+    ],
+    "evidence": "app/routes/index.js:34 POST /login has no rate-limit, throttle, lockout or CAPTCHA; app/routes/session.js:53-118 handleLoginRequest directly validates without counters; server.js:70-75 only bodyParser, no rate-limit middleware in repo | validator: app/routes/index.js:34 POST /login has no rate-limit middleware; app/routes/session.js:53-118 validates with distinct Invalid username/password messages and no counters; server.js:70-75 no rate-limit registered | consensus: 1/1 confirmed",
+    "rationale": "Login endpoint lacks brute-force protection. Attacker can issue unlimited credential-stuffing/password-spraying requests; distinct error messages (unit) make enumeration + guessing efficient. No upstream control in repo.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/index.js:34 POST /login has no rate-limit, throttle, lockout or CAPTCHA; app/routes/session.js:53-118 handleLoginRequest directly validates without counters; server.js:70-75 only bodyParser, no rate-limit middleware in repo",
+    "hunter_snippet": "app.post(\"/login\", sessionHandler.handleLoginRequest);",
+    "patch_summary": "Add rate-limiting/lockout on POST /login (e.g. express-rate-limit) and use generic auth failure message.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-06-error-page-xss-via-db-error",
+    "title": "Error-Handler Reflected XSS via Attacker-Influenced DB Error",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/routes/error.js",
+    "start_line": 10,
+    "end_line": 11,
+    "snippet": "res.render(\"error-template\", {",
+    "taint": {
+      "source": "GET /allocations/:userId?threshold= attacker string",
+      "sink": "unescaped error reflection in HTML",
+      "path": [
+        "app/routes/allocations.js:20 req.query.threshold",
+        "app/data/allocations-dao.js:78 $where interpolation error",
+        "app/routes/error.js:10 res.render error-template",
+        "app/views/error-template.html:11 {{error}}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/data/allocations-dao.js",
+        "line": 78,
+        "note": "threshold interpolated into $where; syntax error echoes payload"
+      },
+      {
+        "file": "app/routes/allocations.js",
+        "line": 24,
+        "note": "forwards DAO error to next(err)"
+      },
+      {
+        "file": "app/routes/error.js",
+        "line": 10,
+        "note": "sink: renders error-template with err object"
+      },
+      {
+        "file": "app/views/error-template.html",
+        "line": 11,
+        "note": "unescaped {{error}} with autoescape:false"
+      },
+      {
+        "file": "server.js",
+        "line": 137,
+        "note": "autoescape disabled"
+      }
+    ],
+    "evidence": "app/data/allocations-dao.js:78 $where string interpolation with threshold causes Mongo JS error containing payload; app/routes/allocations.js:24 forwards err via next(err); app/routes/error.js:10-11 res.render error-template {error:err}; app/views/error-template.html:11 {{error}} with autoescape:false renders attacker string as HTML | validator: app/data/allocations-dao.js:78 threshold interpolated into $where without sanitization; app/routes/allocations.js:24 forwards DAO err via next(err); app/routes/error.js:10-11 renders err object; app/views/error-template.html:11 {{error}} with server.js:135-137 autoescape:false renders attacker-influenced DB error unescaped | consensus: 1/1 confirmed",
+    "rationale": "Attacker-influenced DB error (e.g., malicious threshold breaking $where JS) flows into verbose error template rendered unescaped. Turns NoSQL injection / invalid input into reflected XSS + error disclosure. Distinct taint from generic verbose-error finding.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/data/allocations-dao.js:78 $where string interpolation with threshold causes Mongo JS error containing payload; app/routes/allocations.js:24 forwards err via next(err); app/routes/error.js:10-11 res.render error-template {error:err}; app/views/error-template.html:11 {{error}} with autoescape:false renders attacker string as HTML",
+    "hunter_snippet": "res.render(\"error-template\", {",
+    "patch_summary": "Enable swig autoescape:true and validate threshold with parseInt range check before $where, and escape/sanitize error output instead of rendering raw err object.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-18",
+    "title": "NoSQL Operator Injection in getUserByUserName",
+    "cwe": "CWE-943",
+    "severity": "medium",
+    "confidence": 0.75,
+    "path": "app/data/user-dao.js",
+    "start_line": 104,
+    "end_line": 105,
+    "snippet": "usersCol.findOne({",
+    "taint": {
+      "source": "req.body.userName via handleSignup",
+      "sink": "MongoDB findOne selector",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/data/user-dao.js",
+        "line": 105,
+        "note": "getUserByUserName findOne sink"
+      }
+    ],
+    "evidence": "usersCol.findOne({ | validator: app/data/user-dao.js:104 usersCol.findOne({userName:userName}) sink; app/routes/session.js:206-208 passes req.body.userName after USER_RE regex that coerces objects; server.js:62 bodyParser.json() allows object body | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated signup attacker. HOW: getUserByUserName does findOne({userName:userName}) with attacker object; same operator-injection shape as validateLogin but in duplicate-check path, enabling user-enumeration bypass/logic abuse. WHAT: second distinct NoSQL sink must be fixed independently.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker calls signup duplicate-check with operator object"
+    ],
+    "unit": "app",
+    "hunter_evidence": "usersCol.findOne({",
+    "hunter_snippet": "usersCol.findOne({",
+    "patch_summary": "Enforce typeof userName==='string' and strict allow-list match before query; reject/cast non-strings and escape query operators.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.4,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-24",
+    "title": "Insecure Session Cookie Configuration (missing HttpOnly/Secure) in server.js",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "server.js",
+    "start_line": 73,
+    "end_line": 75,
+    "snippet": "saveUninitialized: true,",
+    "taint": {
+      "source": "session middleware config",
+      "sink": "Set-Cookie session cookie",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server.js",
+        "line": 70,
+        "note": "session() insecure options"
+      }
+    ],
+    "evidence": "saveUninitialized: true, | validator: server.js:70 session() with saveUninitialized:true resave:true and no cookie flags; httpOnly/secure fix commented out | consensus: 1/1 confirmed",
+    "rationale": "WHO: network attacker. HOW: express-session configured with saveUninitialized:true,resave:true, default cookie name, no httpOnly/secure/maxAge; httpOnly+secure fix commented out. Combined with XSS, cookies trivially stolen via document.cookie. WHAT: missing Secure/HttpOnly/SameSite breaks session-cookie protection.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any deployment"
+    ],
+    "unit": "app",
+    "hunter_evidence": "saveUninitialized: true,",
+    "hunter_snippet": "saveUninitialized: true,",
+    "patch_summary": "Set cookie:{httpOnly:true,secure:true} with generic key/maxAge as in commented fix",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-20",
+    "title": "Log Forging via Unsanitized userName in handleLoginRequest",
+    "cwe": "CWE-117",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app/routes/session.js",
+    "start_line": 64,
+    "end_line": 64,
+    "snippet": "console.log(\"Error: attempt to login with invalid user: \", userName);",
+    "taint": {
+      "source": "req.body.userName",
+      "sink": "console.log log file",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/session.js",
+        "line": 64,
+        "note": "console.log with raw userName"
+      }
+    ],
+    "evidence": "console.log(\"Error: attempt to login with invalid user: \", userName); | validator: app/routes/session.js:64 console.log with raw userName; CRLF encode/replace fix commented at :66-78 not active | consensus: 1/1 confirmed | triage: unsanitized userName to console.log",
+    "rationale": "WHO: unauthenticated attacker controls userName. HOW: on noSuchUser, handler does console.log('Error: attempt to login with invalid user: ', userName) with raw CRLF; ESAPI/CRLF strip fix commented out. WHAT: log forging/injection; attacker injects fake log lines, obscures repudiation.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker submits login with CRLF in userName"
+    ],
+    "unit": "app",
+    "hunter_evidence": "console.log(\"Error: attempt to login with invalid user: \", userName);",
+    "hunter_snippet": "console.log(\"Error: attempt to login with invalid user: \", userName);",
+    "patch_summary": "Strip CRLF (userName.replace(/(\\r\\n|\\r|\\n)/g,'_')) or encode before logging.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "login input forges logs only"
+    },
+    "cvss": 2.3,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "Logout CSRF via State-Changing GET /logout",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app/routes/index.js",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "app.get(\"/logout\", sessionHandler.displayLogoutPage);",
+    "taint": {
+      "source": "cross-site forged request with victim cookies",
+      "sink": "req.session.destroy on cross-site GET",
+      "path": [
+        "app/routes/index.js:41 GET /logout"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 41,
+        "note": "state-changing GET logout route"
+      },
+      {
+        "file": "app/routes/session.js",
+        "line": 121,
+        "note": "destroys session on GET"
+      }
+    ],
+    "evidence": "app.get(\"/logout\", sessionHandler.displayLogoutPage); | validator: app/routes/index.js:41 GET /logout state-changing route; app/routes/session.js:121 req.session.destroy on GET; server.js:103 csrf protection commented out | consensus: 1/1 confirmed",
+    "rationale": "WHO: cross-site attacker. HOW: logout exposed as state-changing GET /logout with only session cookie, no CSRF token, no POST requirement, and csrf middleware disabled globally. Victim visit to attacker page with <img src=\"/logout\"> triggers displayLogoutPage destroying session. WHAT: login-CSRF counterpart (logout CSRF); breaks state-changing GET invariant and enables session disruption.",
+    "status": "confirmed",
+    "conditions": [
+      "Victim logged in; attacker lures to cross-site image/link"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.get(\"/logout\", sessionHandler.displayLogoutPage);",
+    "hunter_snippet": "app.get(\"/logout\", sessionHandler.displayLogoutPage);",
+    "patch_summary": "Change logout to POST with CSRF token validation.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-03-hardcoded-zap-test",
+    "title": "Hardcoded ZAP API Key in test config",
+    "cwe": "CWE-798",
+    "severity": "low",
+    "confidence": 0.75,
+    "path": "config/env/test.js",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "zapApiKey: \"***\",",
+    "taint": {
+      "source": "hardcoded credential in repo",
+      "sink": "secret committed in source and emitted to logs",
+      "path": [
+        "config/env/test.js:6 hardcoded key",
+        "config/config.js:9-13 merged and logged"
+      ]
+    },
+    "refs": [
+      {
+        "file": "config/env/test.js",
+        "line": 6,
+        "note": "hardcoded zapApiKey credential"
+      },
+      {
+        "file": "config/config.js",
+        "line": 13,
+        "note": "config (including key) dumped to logs via util.inspect"
+      }
+    ],
+    "evidence": "config/env/test.js:6 defines hardcoded zapApiKey; same key pattern as development.js; committed to repo, loaded via config/config.js into runtime config and logged | validator: config/env/test.js:6 hardcoded zapApiKey committed; loaded via config/config.js:8-13 merged and logged with util.inspect | consensus: 1/1 confirmed",
+    "rationale": "Hardcoded API key committed in test config enables ZAP API abuse if test harness exposed. Distinct file from development.js unit finding. Value redacted per policy.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "config/env/test.js:6 defines hardcoded zapApiKey; same key pattern as development.js; committed to repo, loaded via config/config.js into runtime config and logged",
+    "hunter_snippet": "zapApiKey: \"***\",",
+    "patch_summary": "Remove hardcoded zapApiKey from config/env/test.js and development.js; load from env var, exclude from logs, rotate exposed key.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.2,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "Incorrect Output Encoding (HTML vs URL context) for website link",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/routes/profile.js",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "doc.website = ESAPI.encoder().encodeForHTML(doc.website);",
+    "taint": {
+      "source": "stored website / firstName",
+      "sink": "href/URL rendering",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/profile.js",
+        "line": 26,
+        "note": "encodeForHTML in URL context (wrong encoder)"
+      },
+      {
+        "file": "app/views/profile.html",
+        "line": 77,
+        "note": "href context needs encodeForURL"
+      }
+    ],
+    "evidence": "doc.website = ESAPI.encoder().encodeForHTML(doc.website); | validator: app/views/profile.html:78 href uses firstNameSafeString not website; app/routes/profile.js:43-52 handleProfileUpdate never reads website; app/data/profile-dao.js:37-61 updateUser never persists website | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: user controls stored website field. HOW: displayProfile encodes website with encodeForHTML while template uses it in URL/href context; HTML encoding does not neutralize javascript: or data: URLs, and firstNameSafeString href uses no URL encoding. WHAT: URL-context XSS bypass; wrong-encoder invariant break noted in code TODO.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "User saves website javascript:alert(1)"
+    ],
+    "unit": "app",
+    "hunter_evidence": "doc.website = ESAPI.encoder().encodeForHTML(doc.website);",
+    "hunter_snippet": "doc.website = ESAPI.encoder().encodeForHTML(doc.website);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-30",
+    "title": "Hardcoded ZAP API Key and LiveReload Script Injection in development config",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "config/env/development.js",
+    "start_line": 6,
+    "end_line": 12,
+    "snippet": "zapApiKey: \"v9dn0balpqas1pcc281tn5ood1\",",
+    "taint": {
+      "source": "hardcoded value + environmentalScripts render",
+      "sink": "config secret + script injection",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "config/env/development.js",
+        "line": 6,
+        "note": "hardcoded zapApiKey"
+      },
+      {
+        "file": "app/views/layout.html",
+        "line": 124,
+        "note": "{{script}} unescaped loop"
+      }
+    ],
+    "evidence": "zapApiKey: \"v9dn0balpqas1pcc281tn5ood1\", | validator: config/env/development.js:6 test zapApiKey used only by test/security/profile-test.js:28 local ZAP harness; config/env/development.js:9-12 environmentalScripts is static livereload literal; config/env/all.js:13 prod value is empty array | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: anyone reading repo or intercepting dev traffic. HOW: zapApiKey v9dn0balpqas1pcc281tn5ood1 hardcoded in development.js and test.js; environmentalScripts injects <script src='http://...:35729/livereload.js'> rendered unescaped via {% for script in environmentalScripts %}{{script}}{% endfor %} in layout/login. WHAT: secret exposure + mixed-content script injection vector.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Repo/config checked out; dev livereload enabled"
+    ],
+    "unit": "app",
+    "hunter_evidence": "zapApiKey: \"v9dn0balpqas1pcc281tn5ood1\",",
+    "hunter_snippet": "zapApiKey: \"v9dn0balpqas1pcc281tn5ood1\",",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-32",
+    "title": "Insecure Randomness (Math.random) for Allocations in prepareUserData",
+    "cwe": "CWE-338",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/routes/session.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "const stocks = Math.floor((Math.random() * 40) + 1);",
+    "taint": {
+      "source": "Math.random PRNG",
+      "sink": "predictable allocations/dates",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/session.js",
+        "line": 15,
+        "note": "Math.random allocations"
+      },
+      {
+        "file": "app/data/user-dao.js",
+        "line": 52,
+        "note": "Math.random future date"
+      }
+    ],
+    "evidence": "const stocks = Math.floor((Math.random() * 40) + 1); | validator: app/routes/session.js:14-16 Math.random only for stock/fund percentages; app/data/user-dao.js:50-55 Math.random only for display benefitStartDate; no session/crypto/token use | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: system generates allocations/security-relevant values. HOW: prepareUserData and UserDAO.getRandomFutureDate use Math.random() (predictable PRNG) for stocks/funds/bonds and benefitStartDate. WHAT: weak randomness; predictable values violate secure-random invariant for any security decision.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any authenticated user; allocations generated on login/signup"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const stocks = Math.floor((Math.random() * 40) + 1);",
+    "hunter_snippet": "const stocks = Math.floor((Math.random() * 40) + 1);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-34",
+    "title": "Unescaped environmentalScripts XSS Sink in layout.html",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/layout.html",
+    "start_line": 126,
+    "end_line": 126,
+    "snippet": "{{script}}",
+    "taint": {
+      "source": "environmentalScripts config",
+      "sink": "raw <script> emission",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/views/layout.html",
+        "line": 126,
+        "note": "{{script}} unescaped"
+      },
+      {
+        "file": "config/env/development.js",
+        "line": 9,
+        "note": "livereload script source"
+      }
+    ],
+    "evidence": "{{script}} | validator: app/views/layout.html:125-127 {{script}} loop source is config/env/all.js:13 [] and config/env/development.js:9-12 static livereload literal; no untrusted inflow, local config trusted by default | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: build/dev config or attacker influencing config supplies script strings. HOW: layout.html and login.html loop {% for script in environmentalScripts %}{{script}}{% endfor %} with autoescape:false, emitting raw <script>document.write livereload\u2026</script>. WHAT: stored/config XSS + mixed-content http: script load; breaks script-integrity invariant.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Development mode or attacker controls environmentalScripts"
+    ],
+    "unit": "app",
+    "hunter_evidence": "{{script}}",
+    "hunter_snippet": "{{script}}",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Excessive Data Exposure in MemosHandler.displayMemos",
+    "cwe": "CWE-200",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/routes/memos.js",
+    "start_line": 25,
+    "end_line": 32,
+    "snippet": "memosDAO.getAllMemos((err, docs) => {",
+    "taint": {
+      "source": "memos collection (other users' memos)",
+      "sink": "render of all memos to any user",
+      "path": [
+        "app/data/memos-dao.js:28 find({})",
+        "app/routes/memos.js:27 res.render memosList"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/memos.js",
+        "line": 25,
+        "note": "unscoped getAllMemos call"
+      },
+      {
+        "file": "app/data/memos-dao.js",
+        "line": 28,
+        "note": "find({}) returns all documents"
+      }
+    ],
+    "evidence": "memosDAO.getAllMemos((err, docs) => { | validator: app/data/memos-dao.js:16-24 insert stores memo+timestamp with no owner; app/data/memos-dao.js:28 find({}) global board by design; app/routes/memos.js:25-32 renders global list to any logged-in user | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any authenticated low-privilege user. HOW: displayMemos calls getAllMemos which executes find({}) with no owner filter and renders memosList containing every user's memos to the requester. WHAT: breaks object-level authorization / excessive data exposure; any user reads all memos, no ownership check or scoping by session userId which is fetched but never used for filtering.",
+    "status": "fp",
+    "conditions": [
+      "Authenticated as any low-privilege user"
+    ],
+    "unit": "app",
+    "hunter_evidence": "memosDAO.getAllMemos((err, docs) => {",
+    "hunter_snippet": "memosDAO.getAllMemos((err, docs) => {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/allocations.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/allocations.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/routes/allocations.js:18-21 userId from req.params and threshold only to DAO $where (app/data/allocations-dao.js:60-66) never rendered; allocations.html:17 {{userId}} is URL param not form-input reflection \u2014 heuristic misreads source/sink | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/benefits.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/benefits.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/views/benefits.html:57 value=\"{{user.benefitStartDate}}\" same sink as SYS-STORED-XSS-BENEFITS-DATE chain (app/routes/benefits.js:32, app/data/benefits-dao.js:28) \u2014 generic form+{{}} duplicates specific confirmed flow | refute: duplicate | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/contributions.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/contributions.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/routes/contributions.js:48-53 isNaN and range/30% validation rejects non-numeric HTML before render; app/views/contributions.html:52 {{preTax|default(0)}} cannot carry attacker HTML \u2014 neutralized | refute: sanitized | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/login.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/views/login.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/views/login.html:112 value=\"{{userName}}\" heuristic alone proves no sink; POST /login reflection (app/routes/session.js:78-88) returns only to submitter with static loginError, no persistence/cross-principal flow demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/memos.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/memos.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/views/memos.html:30 {{marked(doc.memo)}} same sink as SYS-04-memos-stored-xss-chain (app/routes/memos.js:13, app/data/memos-dao.js:18) \u2014 generic form+{{}} duplicates specific chain | refute: duplicate | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 59,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/profile.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/views/profile.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/views/profile.html:46 value=\"{{lastName}}\" and :75 href=\"{{firstNameSafeString}}\" same sinks as xunit-stored-xss-profile-to-layout chain (app/routes/profile.js:43, app/data/profile-dao.js:47) \u2014 generic duplicates specific chain | refute: duplicate | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 60,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/views/signup.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "app/views/signup.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: app/views/signup.html:62 value=\"{{userName}}\" heuristic alone proves no sink; POST /signup render (app/routes/session.js:201-216) reflects only to submitter on validation failure with no persistence/cross-principal flow demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 61,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "SYS-07-memos-missing-validation",
+    "title": "Missing Input Validation and Size Limit on POST /memos",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/routes/index.js",
+    "start_line": 67,
+    "end_line": 67,
+    "snippet": "app.post(\"/memos\", isLoggedIn, memosHandler.addMemos);",
+    "taint": {
+      "source": "POST /memos req.body.memo (authenticated attacker)",
+      "sink": "unvalidated persistence + unbounded read",
+      "path": [
+        "app/routes/index.js:67 POST /memos",
+        "app/routes/memos.js:13 memosDAO.insert(req.body.memo)",
+        "app/data/memos-dao.js:23 insert + :28 unbounded find"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 67,
+        "note": "POST /memos endpoint lacking validation/rate-limit"
+      },
+      {
+        "file": "app/routes/memos.js",
+        "line": 13,
+        "note": "direct insert of unvalidated memo"
+      },
+      {
+        "file": "app/data/memos-dao.js",
+        "line": 28,
+        "note": "unbounded retrieval amplifies impact"
+      }
+    ],
+    "evidence": "app/routes/index.js:67 POST /memos registered with only isLoggedIn; app/routes/memos.js:11-13 inserts req.body.memo with no type/length/allowlist check; app/data/memos-dao.js:26-30 getAllMemos unbounded find({}).sort().toArray enables storage + retrieval exhaustion | validator: app/routes/index.js:67 POST /memos requires isLoggedIn; app/routes/memos.js:13 insert is intended authenticated feature; server.js:126-127 marked sanitize:true neutralizes stored HTML and bodyParser defaults bound request size; unbounded find alone with no injection payload is robustness hardening, no security boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "State-changing endpoint lacks expected input validation and resource limits: arbitrary-size/type memo persisted, then all memos returned to every user. Enables stored XSS, HPP type-confusion (array/object memo breaking marked()), and DB/DOM DoS.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/index.js:67 POST /memos registered with only isLoggedIn; app/routes/memos.js:11-13 inserts req.body.memo with no type/length/allowlist check; app/data/memos-dao.js:26-30 getAllMemos unbounded find({}).sort().toArray enables storage + retrieval exhaustion",
+    "hunter_snippet": "app.post(\"/memos\", isLoggedIn, memosHandler.addMemos);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 62,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "missing-rate-limit-signup",
+    "title": "Missing Rate Limiting on POST /signup enables mass account creation",
+    "cwe": "CWE-307",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app/routes/index.js",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "app.post(\"/signup\", sessionHandler.handleSignup);",
+    "taint": {
+      "source": "unauthenticated POST /signup",
+      "sink": "unbounded user creation via UserDAO.addUser",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/routes/index.js",
+        "line": 38,
+        "note": "unprotected endpoint: POST /signup with no rate-limit middleware"
+      },
+      {
+        "file": "server.js",
+        "line": 69,
+        "note": "no global rate-limit middleware registered alongside body-parser/session"
+      }
+    ],
+    "evidence": "app/routes/index.js:38 POST /signup has no rate-limit, throttle, or CAPTCHA middleware; server.js registers no global rate limiter (no express-rate-limit), enabling unlimited account creation | validator: app/routes/index.js:38 POST /signup intentionally unauthenticated with app/routes/session.js:140 validateSignup format checks plus duplicate-username gate; absence of rate-limit/CAPTCHA alone shows no auth bypass, takeover, or resource-exhaustion payload, only hardening recommendation | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "Unlike authenticated routes that at least require isLoggedIn, POST /signup is unauthenticated and unbounded. Attacker can automate mass account creation, user-enumeration via duplicate-user oracle, and credential-stuffing preparation / DB resource exhaustion. Prior pass covered POST /login only; this is a distinct endpoint.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/routes/index.js:38 POST /signup has no rate-limit, throttle, or CAPTCHA middleware; server.js registers no global rate limiter (no express-rate-limit), enabling unlimited account creation",
+    "hunter_snippet": "app.post(\"/signup\", sessionHandler.handleSignup);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 63,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

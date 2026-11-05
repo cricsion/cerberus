@@ -1,0 +1,1491 @@
+[
+  {
+    "id": "XVNA-EVAL-RCE",
+    "title": "Server-side JavaScript injection (eval) RCE via /eval",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "index.js",
+    "start_line": 202,
+    "end_line": 203,
+    "snippet": "   result = eval(id + id2);",
+    "taint": {
+      "source": "GET /eval query params id, id2 (unauthenticated)",
+      "sink": "eval() server-side JS execution",
+      "path": [
+        "public/app/js/controllers/eval.js:9 userid,userid2 -> GET /eval",
+        "index.js:200 var id=req.query['id']",
+        "index.js:201 var id2=req.query['id2']",
+        "index.js:202 eval(id+id2)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 200,
+        "note": "untrusted source req.query id"
+      },
+      {
+        "file": "index.js",
+        "line": 202,
+        "note": "sink eval(id+id2)"
+      },
+      {
+        "file": "public/app/js/controllers/eval.js",
+        "line": 9,
+        "note": "client builds /eval?id=+userid+&id2="
+      },
+      {
+        "file": "public/app/partials/eval.html",
+        "line": 30,
+        "note": "ng-bind-html renders eval result"
+      }
+    ],
+    "evidence": "Cross-unit: public/app/js/controllers/eval.js:9 builds GET /eval?id=+userid+&id2=+userid2 -> index.js:200-202 var id=req.query['id']; var id2=req.query['id2']; result=eval(id+id2) -> index.js:203 res.json({cmd:result}); partial public/app/partials/eval.html renders via ng-bind-html | validator: index.js:200-202 var id=req.query['id']; var id2=req.query['id2']; result=eval(id+id2) with no auth/sanitizer; route index.js:198 has no session check | consensus: 1/1 confirmed | triage: Unauthenticated eval(id+id2) server-side JS execution",
+    "rationale": "Unauthenticated network input from two query params is concatenated and passed directly to eval(). No validation, sanitization, sandbox, auth, or rate-limit. Achieves full Node.js process compromise.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit: public/app/js/controllers/eval.js:9 builds GET /eval?id=+userid+&id2=+userid2 -> index.js:200-202 var id=req.query['id']; var id2=req.query['id2']; result=eval(id+id2) -> index.js:203 res.json({cmd:result}); partial public/app/partials/eval.html renders via ng-bind-html",
+    "hunter_snippet": "   result = eval(id + id2);",
+    "patch_summary": "Remove /eval endpoint or replace eval(id+id2) with allowlisted parsing; never eval query input",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Query id/id2 concatenated into eval with no auth or sanitizer"
+    },
+    "cvss": 8.9,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-public-0",
+    "title": "NoSQL injection login bypass",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 44,
+    "end_line": 44,
+    "snippet": "dbase.collection(\"login\").find(searchstring).toArray(function (err, result) {",
+    "taint": {
+      "source": "POST body",
+      "sink": "Mongo find",
+      "path": [
+        "index.js:31"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 31,
+        "note": "parse"
+      }
+    ],
+    "evidence": "dbase.collection(\"login\").find(searchstring).toArray(function (err, result) { | alt: exec('ping ' + id, function (err, stdout, stderr) { | alt: secret: \"Your secret key\" | validator: index.js:27-31 branches on password indexOf('{') then JSON.parse(req.body.password) into selector, reaching index.js:44 find(searchstring) with no $/operator rejection allowing {\"$gt\":\"\"} auth bypass | consensus: 1/1 confirmed | triage: JSON.parse password into selector allows $gt auth bypass",
+    "rationale": "WHO unauthenticated controls password HOW JSON.parse then find WHAT auth bypass",
+    "status": "confirmed",
+    "conditions": [
+      "unauthenticated POST"
+    ],
+    "unit": "public",
+    "hunter_evidence": "dbase.collection(\"login\").find(searchstring).toArray(function (err, result) { | alt: exec('ping ' + id, function (err, stdout, stderr) { | alt: secret: \"Your secret key\"",
+    "hunter_snippet": "dbase.collection(\"login\").find(searchstring).toArray(function (err, result) {",
+    "patch_summary": "Enforce string-typed email/password, reject objects and keys starting with $/containing operators before Mongo find; never JSON.parse input into selector.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "all users",
+      "rationale": "Password with '{' parsed to object reaching find(searchstring) with no operator rejection"
+    },
+    "cvss": 8.8,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-NOSQL-GETDATA",
+    "title": "NoSQL operator injection in GET /getdata via JSON.parse",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 83,
+    "end_line": 87,
+    "snippet": "    id = JSON.parse(id);",
+    "taint": {
+      "source": "GET /getdata?id= unauthenticated query param",
+      "sink": "MongoDB find() selector with operator injection",
+      "path": [
+        "public/app/js/controllers/a1_injection_sql.js:7 GET /getdata?id=",
+        "index.js:82 var id=req.query['id']",
+        "index.js:83 JSON.parse(id)",
+        "index.js:87 find({id:id})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 82,
+        "note": "source req.query id"
+      },
+      {
+        "file": "index.js",
+        "line": 83,
+        "note": "JSON.parse attacker JSON into object"
+      },
+      {
+        "file": "index.js",
+        "line": 87,
+        "note": "sink find({id:id}) Mongo selector"
+      },
+      {
+        "file": "public/app/js/controllers/a1_injection_sql.js",
+        "line": 7,
+        "note": "client entry /getdata?id="
+      }
+    ],
+    "evidence": "Cross-unit: public/app/js/controllers/a1_injection_sql.js:7 $http.get(\"/getdata?id=\"+userid) -> index.js:82-83 var id=req.query['id']; id=JSON.parse(id); -> index.js:87 find({id:id}) on users collection; attacker can send {\"$gt\":0} or {\"$ne\":null} to match arbitrary docs | validator: index.js:82-83 var id=req.query['id']; id=JSON.parse(id) then index.js:87 find({id:id}) allows operator object e.g. {\"$gt\":0} to match arbitrary docs | consensus: 1/1 confirmed | triage: JSON.parse id into find({id}) allows $gt/$ne match-all",
+    "rationale": "JSON.parse of raw query string allows attacker to inject MongoDB query operators. Object flows unsanitized into find selector, bypassing intended numeric id lookup and dumping PII.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit: public/app/js/controllers/a1_injection_sql.js:7 $http.get(\"/getdata?id=\"+userid) -> index.js:82-83 var id=req.query['id']; id=JSON.parse(id); -> index.js:87 find({id:id}) on users collection; attacker can send {\"$gt\":0} or {\"$ne\":null} to match arbitrary docs",
+    "hunter_snippet": "    id = JSON.parse(id);",
+    "patch_summary": "Remove JSON.parse of query input; validate id as scalar string/number and reject objects containing $ operators",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Attacker sends operator object e.g. {$gt:0} to match arbitrary docs"
+    },
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-NOSQL-A6MISCONFIG",
+    "title": "NoSQL injection + verbose error disclosure in POST /a6_misconfig",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 179,
+    "end_line": 186,
+    "snippet": "    var accno = JSON.parse(req.body.accountno);",
+    "taint": {
+      "source": "POST /a6_misconfig body.accountno unauthenticated",
+      "sink": "MongoDB find selector + verbose error disclosure",
+      "path": [
+        "public/app/js/controllers/a6_misconfig.js:11 POST accountno",
+        "index.js:179 JSON.parse(req.body.accountno)",
+        "index.js:186 find({accountno:accno})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 179,
+        "note": "JSON.parse attacker input"
+      },
+      {
+        "file": "index.js",
+        "line": 186,
+        "note": "sink find({accountno:accno})"
+      },
+      {
+        "file": "index.js",
+        "line": 183,
+        "note": "verbose error res.json(err)"
+      },
+      {
+        "file": "public/app/js/controllers/a6_misconfig.js",
+        "line": 11,
+        "note": "client entry POST /a6_misconfig"
+      }
+    ],
+    "evidence": "Cross-unit: public/app/js/controllers/a6_misconfig.js:11 posts accountno -> index.js:179 JSON.parse(req.body.accountno) -> index.js:186 find({accountno:accno}); errors echoed via res.json(err) at index.js:183,188 disclosing stack/query details | validator: index.js:179 var accno=JSON.parse(req.body.accountno) then index.js:186 find({accountno:accno}); index.js:183,188 res.json(err) echoes DB errors | consensus: 1/1 confirmed | triage: JSON.parse accountno into selector plus verbose error disclosure",
+    "rationale": "JSON.parse enables NoSQL operator injection (e.g. {\"$gt\":\"\"}) to dump all bank records; verbose error responses leak driver details aiding further exploitation. No auth or validation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit: public/app/js/controllers/a6_misconfig.js:11 posts accountno -> index.js:179 JSON.parse(req.body.accountno) -> index.js:186 find({accountno:accno}); errors echoed via res.json(err) at index.js:183,188 disclosing stack/query details",
+    "hunter_snippet": "    var accno = JSON.parse(req.body.accountno);",
+    "patch_summary": "Stop JSON.parse into selector, type-validate accountno scalar and reject $ keys; do not return raw err to client",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Operator injection via find({accountno}) with res.json(err) stack disclosure"
+    },
+    "cvss": 8.8,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-DESER-RCE",
+    "title": "Insecure deserialization RCE via node-serialize",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 0.9,
+    "path": "index.js",
+    "start_line": 218,
+    "end_line": 218,
+    "snippet": "serialize.unserialize(objS).say();",
+    "taint": {
+      "source": "POST /insecure_deserialization body.userid",
+      "sink": "node-serialize unserialize code execution",
+      "path": [
+        "public/app/js/controllers/a8_insecure_deserialization.js:5 POST userid",
+        "index.js:208 var id=req.body.userid.toString()",
+        "index.js:216 serialize.serialize(obj)",
+        "index.js:218 serialize.unserialize(objS)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 208,
+        "note": "source req.body.userid"
+      },
+      {
+        "file": "index.js",
+        "line": 216,
+        "note": "serialize.serialize(obj with tainted name)"
+      },
+      {
+        "file": "index.js",
+        "line": 218,
+        "note": "sink serialize.unserialize(objS)"
+      },
+      {
+        "file": "public/app/js/controllers/a8_insecure_deserialization.js",
+        "line": 5,
+        "note": "client entry POST /insecure_deserialization"
+      }
+    ],
+    "evidence": "index.js:207-218 POST /insecure_deserialization reads req.body.userid.toString(), embeds in object then serialize.serialize/unserialize (node-serialize 0.0.4 per package.json:18); classic _$$ND_FUNC$$_ RCE: attacker value survives serialize and executes on unserialize eval; followed by cart lookup echoing search:id | validator: index.js:208 id=req.body.userid.toString() embedded at index.js:216 serialize.serialize then index.js:218 serialize.unserialize(objS) evals _$$ND_FUNC$$_ prefix (node_modules/node-serialize/lib/serialize.js:63 eval); package.json:18 pins node-serialize 0.0.4 | consensus: 1/1 confirmed | triage: Unauthenticated node-serialize _$$ND_FUNC$$_ RCE",
+    "rationale": "node-serialize 0.0.4 unserialize() evaluates serialized JS. User-controlled userid is embedded pre-serialize, allowing function-injection payloads to achieve Node RCE. No auth, no validation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:207-218 POST /insecure_deserialization reads req.body.userid.toString(), embeds in object then serialize.serialize/unserialize (node-serialize 0.0.4 per package.json:18); classic _$$ND_FUNC$$_ RCE: attacker value survives serialize and executes on unserialize eval; followed by cart lookup echoing search:id",
+    "hunter_snippet": "serialize.unserialize(objS).say();",
+    "patch_summary": "Remove node-serialize; use JSON.parse/stringify only and never unserialize attacker-influenced strings.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "userid survives serialize then unserialize evals function payload in 0.0.4"
+    },
+    "cvss": 8.5,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-MISSING-AUTH-PING",
+    "title": "Missing authentication on GET /ping (pre-auth command execution)",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.98,
+    "path": "index.js",
+    "start_line": 152,
+    "end_line": 152,
+    "snippet": "app.get('/ping', function(req, res){",
+    "taint": {
+      "source": "unauthenticated GET /ping?id query parameter",
+      "sink": "child_process.exec shell command",
+      "path": [
+        "index.js:153 req.query id",
+        "index.js:155 exec"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 152,
+        "note": "GET /ping route with no auth guard"
+      },
+      {
+        "file": "index.js",
+        "line": 153,
+        "note": "untrusted source req.query id"
+      },
+      {
+        "file": "index.js",
+        "line": 155,
+        "note": "sink exec ping+id"
+      }
+    ],
+    "evidence": "index.js:152 defines GET /ping with no session/auth check; handler at index.js:153-155 directly uses req.query id in exec; POST /service_login at index.js:60 is a separate endpoint never used as middleware | validator: index.js:152 app.get('/ping') has no session check; index.js:153-155 exec('ping '+id) executes unauthenticated query input in shell | consensus: 1/1 confirmed | triage: No auth on /ping exposes shell exec pre-auth",
+    "rationale": "GET /ping reaches OS command execution (exec ping+id) without any authentication. Prior pass only flagged missing auth on /getdata; this is a different endpoint exposing pre-auth RCE primitive.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:152 defines GET /ping with no session/auth check; handler at index.js:153-155 directly uses req.query id in exec; POST /service_login at index.js:60 is a separate endpoint never used as middleware",
+    "hunter_snippet": "app.get('/ping', function(req, res){",
+    "patch_summary": "Require auth and replace exec string concat with execFile allowlist without shell",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "GET /ping has no session check and reaches exec('ping '+id)"
+    },
+    "cvss": 7.4,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-MISSING-AUTH-EVAL",
+    "title": "Missing authentication on GET /eval (pre-auth code execution)",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.98,
+    "path": "index.js",
+    "start_line": 198,
+    "end_line": 198,
+    "snippet": "app.get('/eval', function(req, res){",
+    "taint": {
+      "source": "unauthenticated GET /eval?id&id2 query parameters",
+      "sink": "eval() server-side JS execution",
+      "path": [
+        "index.js:200 req.query id",
+        "index.js:201 req.query id2",
+        "index.js:202 eval"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 198,
+        "note": "GET /eval route with no auth guard"
+      },
+      {
+        "file": "index.js",
+        "line": 200,
+        "note": "untrusted source req.query id"
+      },
+      {
+        "file": "index.js",
+        "line": 202,
+        "note": "sink eval(id+id2)"
+      }
+    ],
+    "evidence": "index.js:198 defines GET /eval with no session/auth check; handler at index.js:200-202 uses req.query id/id2 in eval(); no service_login middleware enforced | validator: index.js:198 app.get('/eval') has no session check; index.js:200-202 eval(id+id2) reachable pre-auth with no service_login middleware | consensus: 1/1 confirmed | triage: No auth on /eval exposes eval() pre-auth",
+    "rationale": "GET /eval reaches eval(id+id2) without authentication, enabling unauthenticated server-side JS execution. Distinct endpoint from prior /getdata missing-auth finding.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:198 defines GET /eval with no session/auth check; handler at index.js:200-202 uses req.query id/id2 in eval(); no service_login middleware enforced",
+    "hunter_snippet": "app.get('/eval', function(req, res){",
+    "patch_summary": "Require auth and remove eval; same fix as XVNA-EVAL-RCE",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "GET /eval has no session check and reaches eval(id+id2)"
+    },
+    "cvss": 7.4,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-IDOR-DOR",
+    "title": "Missing authorization (IDOR) on POST /insecure_dor bank lookup",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 142,
+    "end_line": 143,
+    "snippet": "        dbase.collection(\"a5_insecure_dor\").find({ accountno: accno }).toArray(function(err, result) {",
+    "taint": {
+      "source": "POST /insecure_dor body.accountno unauthenticated",
+      "sink": "cross-user bank record read without authorization",
+      "path": [
+        "public/app/js/controllers/a5_insecure_dor.js:7 accountno message",
+        "index.js:138 var accno=req.body.accountno",
+        "index.js:142 find({accountno:accno})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 137,
+        "note": "route POST /insecure_dor with no auth middleware"
+      },
+      {
+        "file": "index.js",
+        "line": 138,
+        "note": "source req.body.accountno"
+      },
+      {
+        "file": "index.js",
+        "line": 142,
+        "note": "sink find({accountno:accno}) without ownership check"
+      }
+    ],
+    "evidence": "Endpoint index.js:137 app.post('/insecure_dor') reads req.body.accountno at index.js:138 and uses verbatim as {accountno:accno} at index.js:142 with no session check, no ownership check; frontend public/app/js/controllers/a5_insecure_dor.js:7 posts arbitrary accountno; any account 1001-1010 in collection/a5_insecure_dor.json retrievable | validator: index.js:137-142 app.post('/insecure_dor') reads req.body.accountno at index.js:138 and find({accountno:accno}) at index.js:142 with no req.session/user or ownership check | consensus: 1/1 confirmed | triage: Unauthenticated arbitrary accountno lookup with no ownership check",
+    "rationale": "Missing authentication and authorization: any unauthenticated client can enumerate arbitrary bank accounts by changing accountno. No binding between req.session.user and requested accountno.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Endpoint index.js:137 app.post('/insecure_dor') reads req.body.accountno at index.js:138 and uses verbatim as {accountno:accno} at index.js:142 with no session check, no ownership check; frontend public/app/js/controllers/a5_insecure_dor.js:7 posts arbitrary accountno; any account 1001-1010 in collection/a5_insecure_dor.json retrievable",
+    "hunter_snippet": "        dbase.collection(\"a5_insecure_dor\").find({ accountno: accno }).toArray(function(err, result) {",
+    "patch_summary": "Require authenticated session and enforce ownership check that accno belongs to req.session.user before find",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "find({accountno:accno}) verbatim with no session or ownership check"
+    },
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-DEFAULT-CREDS",
+    "title": "Default hardcoded admin credentials in seed data",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "collection/login.json",
+    "start_line": 3,
+    "end_line": 5,
+    "snippet": "\"email\" : \"***\",",
+    "taint": {
+      "source": "hardcoded seed credential",
+      "sink": "authentication with default password",
+      "path": [
+        "collection/login.json:1 default credential seed",
+        "index.js:44 find(searchstring) auth"
+      ]
+    },
+    "refs": [
+      {
+        "file": "collection/login.json",
+        "line": 1,
+        "note": "checked-in default admin credential"
+      },
+      {
+        "file": "index.js",
+        "line": 44,
+        "note": "auth query against login collection"
+      }
+    ],
+    "evidence": "collection/login.json:1-5 seeds MongoDB login collection with plaintext default admin credential; used by POST /api/users auth check index.js:44 | validator: collection/login.json:1-5 seeds email admin@xvna.com password password in plaintext; used as auth selector at index.js:44 dbase.collection(\"login\").find(searchstring) | consensus: 1/1 confirmed | triage: Plaintext default admin@xvna.com/password seeds auth bypass",
+    "rationale": "Default administrative credentials stored in plaintext in checked-in seed file and used for authentication. Enables spoofing/auth bypass if DB seeded as documented.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "collection/login.json:1-5 seeds MongoDB login collection with plaintext default admin credential; used by POST /api/users auth check index.js:44",
+    "hunter_snippet": "\"email\" : \"***\",",
+    "patch_summary": "Remove checked-in default credential, require unique passwords and store salted hashes, not plaintext seed",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "all users",
+      "rationale": "Seed credential used as auth selector at find(searchstring) enables login"
+    },
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-MISSING-AUTH-GETDATA",
+    "title": "Missing authentication on GET /getdata user lookup",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 81,
+    "end_line": 81,
+    "snippet": "app.get('/getdata', function(req, res){",
+    "taint": {
+      "source": "unauthenticated network client GET /getdata?id=",
+      "sink": "MongoDB users find returning PII without authorization",
+      "path": [
+        "public/app/js/controllers/a1_injection_sql.js:7 frontend GET /getdata?id=",
+        "index.js:81 route entry without session check",
+        "index.js:87 dbase.collection(\"users\").find sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 81,
+        "note": "unauthenticated route definition with no auth guard"
+      },
+      {
+        "file": "index.js",
+        "line": 87,
+        "note": "Mongo users find sink reachable without auth"
+      },
+      {
+        "file": "public/app/js/controllers/a1_injection_sql.js",
+        "line": 7,
+        "note": "frontend calls /getdata with raw userid, no auth token"
+      }
+    ],
+    "evidence": "index.js:81 route handler has no req.session/user check in body index.js:81-96; only gate is POST /service_login (index.js:60) which is client-side redirect and never enforced on data routes; frontend public/app/js/controllers/a1_injection_sql.js calls GET /getdata?id= with no token | validator: index.js:81-87 app.get('/getdata') has no req.session check and reaches dbase.collection(\"users\").find at index.js:87; service_login at index.js:60 is separate POST never used as middleware | consensus: 1/1 confirmed | triage: No session check on /getdata exposes users PII pre-auth",
+    "rationale": "GET /getdata queries users collection and returns records with no session/auth check. Any unauthenticated client can read PII. No global auth middleware exists; service_login check is not enforced on this route.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:81 route handler has no req.session/user check in body index.js:81-96; only gate is POST /service_login (index.js:60) which is client-side redirect and never enforced on data routes; frontend public/app/js/controllers/a1_injection_sql.js calls GET /getdata?id= with no token",
+    "hunter_snippet": "app.get('/getdata', function(req, res){",
+    "patch_summary": "Add session/auth middleware to /getdata and enforce authorization before Mongo find",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Route has no req.session check and reaches users find directly"
+    },
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-XSS-TRUSTASHTML",
+    "title": "Reflected XSS via /xss_r echoed search + explicit trustAsHtml bypass",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "public/app/js/controllers/a7_xss_reflected.js",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "$scope.trustedMessage =  $sce.trustAsHtml( response['data'].search );",
+    "taint": {
+      "source": "GET /xss_r?id= attacker input reflected as search",
+      "sink": "$sce.trustAsHtml + ng-bind-html DOM XSS sink",
+      "path": [
+        "index.js:163 var id=req.query['id']",
+        "index.js:170 res.json({cmd:result, search:id})",
+        "public/app/js/controllers/a7_xss_reflected.js:10 trustAsHtml(search)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 163,
+        "note": "source req.query id"
+      },
+      {
+        "file": "index.js",
+        "line": 170,
+        "note": "echo search:id in JSON response"
+      },
+      {
+        "file": "public/app/js/controllers/a7_xss_reflected.js",
+        "line": 10,
+        "note": "sink trustAsHtml(response search)"
+      },
+      {
+        "file": "public/app/partials/a7_xss_reflected.html",
+        "line": 34,
+        "note": "ng-bind-html trustedMessage render"
+      }
+    ],
+    "evidence": "Cross-unit stored/reflected flow: index.js:162-170 GET /xss_r takes req.query['id'], echoes as search:id in JSON; public/app/js/controllers/a7_xss_reflected.js:10 passes response['data'].search to $sce.trustAsHtml; public/app/partials/a7_xss_reflected.html:34 renders via ng-bind-html=trustedMessage bypassing Angular sanitization | validator: index.js:163 var id=req.query['id']; index.js:170 res.json({cmd:result,search:id}) echoes input; public/app/js/controllers/a7_xss_reflected.js:10 $sce.trustAsHtml(response['data'].search) with ng-bind-html at public/app/partials/a7_xss_reflected.html:34 bypasses escaping | consensus: 1/1 confirmed | triage: Reflected id echoed as search then trustAsHtml + ng-bind-html",
+    "rationale": "Server reflects attacker-controlled id verbatim; client explicitly marks it trusted HTML, disabling Angular SCE escaping. Any script payload in ?id= executes in victim browser, enabling session theft.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit stored/reflected flow: index.js:162-170 GET /xss_r takes req.query['id'], echoes as search:id in JSON; public/app/js/controllers/a7_xss_reflected.js:10 passes response['data'].search to $sce.trustAsHtml; public/app/partials/a7_xss_reflected.html:34 renders via ng-bind-html=trustedMessage bypassing Angular sanitization",
+    "hunter_snippet": "$scope.trustedMessage =  $sce.trustAsHtml( response['data'].search );",
+    "patch_summary": "Remove $sce.trustAsHtml and ng-bind-html for search; output-encode with {{ }} interpolation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted /xss_r link"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Server echoes id as search, client bypasses escaping via trustAsHtml"
+    },
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XVNA-SENSITIVE-EXPOSURE",
+    "title": "Sensitive data exposure (plaintext passwords) in GET /a3sensitive",
+    "cwe": "CWE-200",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 106,
+    "end_line": 106,
+    "snippet": "res.json({cmd: result, search: id});",
+    "taint": {
+      "source": "GET /a3sensitive?id= unauthenticated",
+      "sink": "HTTP response disclosing plaintext passwords/PII",
+      "path": [
+        "public/app/js/controllers/a3_sensitive.js:7 GET /a3sensitive?id=",
+        "index.js:99 var id=req.query['id']",
+        "index.js:103 find({id:parseInt(id)})",
+        "index.js:106 res.json({cmd:result})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 98,
+        "note": "route GET /a3sensitive no auth"
+      },
+      {
+        "file": "index.js",
+        "line": 103,
+        "note": "find returns full docs incl password"
+      },
+      {
+        "file": "index.js",
+        "line": 106,
+        "note": "res.json exposes passwords"
+      },
+      {
+        "file": "public/app/js/controllers/a3_sensitive.js",
+        "line": 7,
+        "note": "client entry"
+      }
+    ],
+    "evidence": "index.js:98-103 GET /a3sensitive takes req.query id, find({id:parseInt(id)}) and res.json({cmd:result}) returns full user documents including name,password,age per collection/users.json; no auth check; reachable via public/app/js/controllers/a3_sensitive.js:7 | validator: index.js:98-106 GET /a3sensitive find({id:parseInt(id)}) then res.json({cmd:result}) returns full user docs including password per collection/users.json; no auth at index.js:98 | consensus: 1/1 confirmed | triage: Unauthenticated PII/password disclosure via /a3sensitive",
+    "rationale": "Endpoint discloses plaintext passwords and PII to any unauthenticated caller. Missing authentication/authorization and missing data minimization (full document returned).",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:98-103 GET /a3sensitive takes req.query id, find({id:parseInt(id)}) and res.json({cmd:result}) returns full user documents including name,password,age per collection/users.json; no auth check; reachable via public/app/js/controllers/a3_sensitive.js:7",
+    "hunter_snippet": "res.json({cmd: result, search: id});",
+    "patch_summary": "Add authentication/authorization and return only non-sensitive fields; never return password hashes/plaintext",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Unauthenticated GET returns full user docs including plaintext password with no auth check"
+    },
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-MISSING-AUTH-DESER",
+    "title": "Missing authentication on POST /insecure_deserialization (pre-auth deserialization)",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "index.js",
+    "start_line": 207,
+    "end_line": 207,
+    "snippet": "app.post('/insecure_deserialization', function (req, res) {",
+    "taint": {
+      "source": "unauthenticated POST /insecure_deserialization userid body",
+      "sink": "node-serialize unserialize deserialization",
+      "path": [
+        "index.js:208 req.body.userid",
+        "index.js:216 serialize.serialize",
+        "index.js:218 unserialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 207,
+        "note": "POST /insecure_deserialization route with no auth guard"
+      },
+      {
+        "file": "index.js",
+        "line": 208,
+        "note": "untrusted source req.body.userid"
+      },
+      {
+        "file": "index.js",
+        "line": 218,
+        "note": "sink serialize.unserialize"
+      }
+    ],
+    "evidence": "index.js:207 defines POST /insecure_deserialization with no session/auth check; handler at index.js:208 uses req.body.userid in serialize/unserialize + Mongo lookup; reachable without login | validator: index.js:207 app.post('/insecure_deserialization') has no req.session.user/auth guard unlike index.js:57-66 service_login gate, exposing node-serialize sink at index.js:218 pre-auth | consensus: 1/1 confirmed | triage: No auth on /insecure_deserialization exposes unserialize pre-auth",
+    "rationale": "Deserialization endpoint using node-serialize unserialize() is reachable without authentication, giving pre-auth RCE. Different endpoint from prior missing-auth and IDOR findings.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:207 defines POST /insecure_deserialization with no session/auth check; handler at index.js:208 uses req.body.userid in serialize/unserialize + Mongo lookup; reachable without login",
+    "hunter_snippet": "app.post('/insecure_deserialization', function (req, res) {",
+    "patch_summary": "Require authenticated session (req.session.user) before /insecure_deserialization handler; deny unauthenticated POST.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "POST deserialization has no auth guard and reaches node-serialize sink"
+    },
+    "cvss": 7.1,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-HANGING-A4XXE-DOS",
+    "title": "Denial of service via hanging GET /a4xxe handler (no response sent)",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "index.js",
+    "start_line": 119,
+    "end_line": 120,
+    "snippet": "app.get('/a4xxe', function(req, res){\n    var id = req.query['id'];",
+    "taint": {
+      "source": "unauthenticated GET /a4xxe request",
+      "sink": "missing HTTP response (hanging connection)",
+      "path": [
+        "index.js:119 GET /a4xxe entry",
+        "index.js:133 console.log only, no response"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 119,
+        "note": "GET /a4xxe route entry"
+      },
+      {
+        "file": "index.js",
+        "line": 120,
+        "note": "query id accepted but unused"
+      },
+      {
+        "file": "index.js",
+        "line": 133,
+        "note": "only console.log, no res.* terminates response in 119-135"
+      }
+    ],
+    "evidence": "index.js:119-135 handler for GET /a4xxe never calls res.send/res.json/res.end; only console.log(orderIds) at index.js:133. Every request holds connection open until timeout. | validator: index.js:119-133 app.get('/a4xxe') never calls res.send/res.json/res.end; only console.log(orderIds) at index.js:133, holding connection until timeout | consensus: 1/1 confirmed | triage: GET /a4xxe never sends response, holds connection until timeout",
+    "rationale": "Handler never terminates HTTP response, causing connection exhaustion / DoS. Distinct from stubbed-XXE parser concern; this is availability failure in route implementation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:119-135 handler for GET /a4xxe never calls res.send/res.json/res.end; only console.log(orderIds) at index.js:133. Every request holds connection open until timeout.",
+    "hunter_snippet": "app.get('/a4xxe', function(req, res){\n    var id = req.query['id'];",
+    "patch_summary": "Send HTTP response (res.json/res.send) on all paths of /a4xxe or remove stub endpoint",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "platform",
+      "rationale": "Handler only console.log, no res.send/json/end enables connection exhaustion"
+    },
+    "cvss": 4.9,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-SENSITIVE-LOG",
+    "title": "Plaintext credentials written to logs in login handler",
+    "cwe": "CWE-532",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "index.js",
+    "start_line": 40,
+    "end_line": 40,
+    "snippet": "\tconsole.log(\"searchstring\", searchstring)",
+    "taint": {
+      "source": "POST /api/users JSON body email/password",
+      "sink": "console.log of object containing plaintext password",
+      "path": [
+        "index.js:25 POST /api/users req.body.email/password source",
+        "index.js:29 searchstring construction",
+        "index.js:40 console.log sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 26,
+        "note": "cope = req.body attacker-controlled credentials entry"
+      },
+      {
+        "file": "index.js",
+        "line": 29,
+        "note": "searchstring built with email/password"
+      },
+      {
+        "file": "index.js",
+        "line": 40,
+        "note": "console.log of object containing plaintext password"
+      }
+    ],
+    "evidence": "index.js:40 logs searchstring built from req.body.email/password at index.js:29-38; plaintext credential material written to stdout/logs; also logged via req.session.user at index.js:61/73 | validator: index.js:29-38 searchstring built from req.body.email/password; index.js:40 console.log(\"searchstring\",searchstring) writes plaintext password to stdout/logs | consensus: 1/1 confirmed | triage: Plaintext email/password written to stdout via console.log",
+    "rationale": "Login handler logs object containing user-supplied email and password in plaintext to console. Any log collector/file exposes credentials. Distinct from hardcoded-secret findings; this is runtime insertion of sensitive data into logs.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:40 logs searchstring built from req.body.email/password at index.js:29-38; plaintext credential material written to stdout/logs; also logged via req.session.user at index.js:61/73",
+    "hunter_snippet": "\tconsole.log(\"searchstring\", searchstring)",
+    "patch_summary": "Remove logging of searchstring/password; log only non-sensitive metadata or redacted values",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "log read access"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "searchstring built from req.body credentials logged at index.js:40"
+    },
+    "cvss": 4.8,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-SESSION-FIXATION",
+    "title": "Session fixation: no session regeneration after login",
+    "cwe": "CWE-384",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "index.js",
+    "start_line": 48,
+    "end_line": 50,
+    "snippet": "\t\t\t\tif (result.length > 0) {\n\t\t\t\t\treq.session.user = cope;",
+    "taint": {
+      "source": "login POST /api/users credentials + attacker-set session cookie",
+      "sink": "authenticated session without ID rotation",
+      "path": [
+        "index.js:26 cope=req.body",
+        "index.js:49 req.session.user=cope",
+        "index.js:62 service_login trust"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 26,
+        "note": "cope = req.body attacker-controlled object"
+      },
+      {
+        "file": "index.js",
+        "line": 49,
+        "note": "session assignment without regeneration"
+      },
+      {
+        "file": "index.js",
+        "line": 60,
+        "note": "service_login trusts req.session.user without revalidation"
+      }
+    ],
+    "evidence": "index.js:48-50 assigns req.session.user=cope on successful login with no req.session.regenerate(); attacker-fixated connect.sid is retained after privilege change | validator: index.js:48-50 sets req.session.user=cope on login with no req.session.regenerate(); repo grep shows regenerate only in node_modules, never in index.js, so pre-login session ID is retained | consensus: 1/1 confirmed | triage: No session regeneration after login retains fixated ID",
+    "rationale": "Login does not rotate session ID, allowing session fixation: attacker sets victim session cookie pre-login, victim authenticates, attacker reuses same ID. Distinct from hardcoded secret finding which covers secret value only.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:48-50 assigns req.session.user=cope on successful login with no req.session.regenerate(); attacker-fixated connect.sid is retained after privilege change",
+    "hunter_snippet": "\t\t\t\tif (result.length > 0) {\n\t\t\t\t\treq.session.user = cope;",
+    "patch_summary": "Regenerate session ID on successful login (req.session.regenerate then set user) to invalidate fixated IDs.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "attacker can fixate connect.sid pre-login"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "req.session.user assigned with no regenerate(), pre-login ID retained"
+    },
+    "cvss": 4.5,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/bower_components/angular-count-to/demo/index.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.98,
+    "path": "public/bower_components/angular-count-to/demo/index.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/bower_components/angular-count-to/demo/index.html:1-43 vendored third-party demo (bower_components) excluded per SCA/vendored rule; static demo with no server sink (index.js:5 static only) | refute: exclusion_rule | consensus: 1/1 fp | triage: Vendored demo excluded, no server sink",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "bower_components third-party demo excluded per vendored rule"
+    },
+    "cvss": 2.5,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.98,
+    "path": "public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/bower_components/angular-count-to/scripts/node_modules/karma/node_modules/istanbul/test/browser/support/index.html:21-30 vendored istanbul test harness (nested node_modules) excluded; handlebars-style {{#if demo}} not project server template (index.js has no view engine) | refute: exclusion_rule | consensus: 1/1 fp | triage: Vendored nested test harness excluded",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Nested node_modules istanbul harness excluded; no view engine"
+    },
+    "cvss": 2.5,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/bower_components/angular-ui-mask/demo/index.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.98,
+    "path": "public/bower_components/angular-ui-mask/demo/index.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/bower_components/angular-ui-mask/demo/index.html:32-40 vendored angular-ui-mask demo excluded; {{y}}/{{vm.x}} client-side bindings, no server template sink (index.js:5 static only) | refute: exclusion_rule | consensus: 1/1 fp | triage: Vendored demo excluded, client bindings only",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Vendored angular-ui-mask demo excluded; no server template sink"
+    },
+    "cvss": 2.5,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/bower_components/angular-ui-validate/demo/index.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.98,
+    "path": "public/bower_components/angular-ui-validate/demo/index.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/bower_components/angular-ui-validate/demo/index.html:40-50 vendored angular-ui-validate demo excluded; {{form.$valid}} client-side validation display, no server template sink (index.js:5 static only) | refute: exclusion_rule | consensus: 1/1 fp | triage: Vendored demo excluded, client validation display only",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Vendored demo excluded; {{form.$valid}} client-side only"
+    },
+    "cvss": 2.5,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/app/partials/a1_injection.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "public/app/partials/a1_injection.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/app/partials/a1_injection.html:24 {{alldata}} is client-side Angular interpolation; index.js:5 serves public/ via express.static with no view engine/res.render, so no server-side template sink | refute: misread_code | consensus: 1/1 fp | triage: Client-side Angular interpolation only, no server template sink",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "{{alldata}} is client binding; static serving with no res.render/view engine"
+    },
+    "cvss": 2.4,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/app/partials/a1_injection_sql.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "public/app/partials/a1_injection_sql.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/app/partials/a1_injection_sql.html:34-36 {{data.id}}/{{data.name}}/{{data.age}} are client-side Angular bindings; index.js:5 static-only serving, no res.render/view engine, so no server template reflection | refute: misread_code | consensus: 1/1 fp | triage: Client-side bindings only, no server template render",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "{{data.*}} client-side only; static-only serving no view engine"
+    },
+    "cvss": 2.4,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/app/partials/a3_sensitive.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "public/app/partials/a3_sensitive.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/app/partials/a3_sensitive.html:34-36 {{data.*}} client-side Angular only; index.js:5 express.static and no server template engine, so heuristic form+{{}} is not a sink | refute: misread_code | consensus: 1/1 fp | triage: Client-side bindings only, heuristic false positive",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "{{data.*}} Angular only; no server template engine"
+    },
+    "cvss": 2.4,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/app/partials/a4_xxe.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "public/app/partials/a4_xxe.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/app/partials/a4_xxe.html:34-36 {{data.*}} client-side Angular interpolation; index.js:114-130 /a4xxe uses hardcoded XML string, ignores id, no server template render | refute: misread_code | consensus: 1/1 fp | triage: Hardcoded XML, no server template sink",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Client interpolation only; /a4xxe uses hardcoded XML and ignores id"
+    },
+    "cvss": 2.4,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@public/app/partials/ui-login.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "public/app/partials/ui-login.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: public/app/partials/ui-login.html:12 {{authError}} is client-side Angular binding of controller scope var; index.js:5 static serving only, no server-side view rendering of user input | refute: misread_code | consensus: 1/1 fp | triage: Client scope var only, no server view rendering",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "{{authError}} controller var; static serving only"
+    },
+    "cvss": 2.4,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XVNA-HEADER-DISCLOSURE",
+    "title": "Request header/cookie disclosure in GET /a3sensitive_header",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "index.js",
+    "start_line": 116,
+    "end_line": 116,
+    "snippet": "res.send(JSON.stringify(req.headers));",
+    "taint": {
+      "source": "attacker request headers (become response)",
+      "sink": "header/cookie disclosure in response body",
+      "path": [
+        "index.js:114 GET /a3sensitive_header",
+        "index.js:116 JSON.stringify(req.headers)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 114,
+        "note": "route GET /a3sensitive_header no auth"
+      },
+      {
+        "file": "index.js",
+        "line": 116,
+        "note": "sink res.send(JSON.stringify(req.headers))"
+      }
+    ],
+    "evidence": "index.js:114-116 app.get('/a3sensitive_header') does res.send(JSON.stringify(req.headers)) with no auth; reflects cookies, authorization headers, session IDs to any caller | validator: index.js:116 res.send(JSON.stringify(req.headers)) only echoes caller's own request headers; no cross-principal or server secret disclosed | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Only echoes caller's own headers, no cross-principal secret",
+    "rationale": "Unauthenticated endpoint serializes entire request header set including Cookie/session tokens. Enables session hijacking and information disclosure; no legitimate need to echo headers.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:114-116 app.get('/a3sensitive_header') does res.send(JSON.stringify(req.headers)) with no auth; reflects cookies, authorization headers, session IDs to any caller",
+    "hunter_snippet": "res.send(JSON.stringify(req.headers));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "res.send(JSON.stringify(req.headers)) discloses only caller's own headers, not a vulnerability"
+    },
+    "cvss": 2.4,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XVNA-HARDCODED-EVAL-SECRET",
+    "title": "Hardcoded application secret in /eval handler",
+    "cwe": "CWE-798",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "index.js",
+    "start_line": 199,
+    "end_line": 199,
+    "snippet": "secret = \"***\";",
+    "taint": {
+      "source": "committed credential",
+      "sink": "hardcoded secret in source",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 198,
+        "note": "route GET /eval"
+      },
+      {
+        "file": "index.js",
+        "line": 199,
+        "note": "hardcoded secret assignment"
+      }
+    ],
+    "evidence": "index.js:199 declares function-scope secret assigned string literal in GET /eval handler; reachable and visible in source; combined with eval RCE allows secret theft | validator: index.js:199 secret=\"impraveensingh\" is function-local demo string with no auth/crypto/session use; real flaw is eval RCE at index.js:202 already covered | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Function-local demo string with no auth/crypto use",
+    "rationale": "Hardcoded application secret committed in source. Exposed to any code-execution or source-disclosure and reused as implicit global.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:199 declares function-scope secret assigned string literal in GET /eval handler; reachable and visible in source; combined with eval RCE allows secret theft",
+    "hunter_snippet": "secret = \"***\";",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "secret is demo var; real flaw is eval RCE already covered separately"
+    },
+    "cvss": 2.4,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-CSRF-LOGOUT",
+    "title": "Missing CSRF protection on session-authenticated POST endpoints",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "index.js",
+    "start_line": 72,
+    "end_line": 72,
+    "snippet": "app.post('/service_logout', function(req, res){",
+    "taint": {
+      "source": "cross-site forged POST with victim session cookie",
+      "sink": "session destroy + redirect without CSRF check",
+      "path": [
+        "attacker-controlled cross-site page auto-POST",
+        "index.js:72 service_logout entry relying on cookie session",
+        "index.js:74 req.session.destroy sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 13,
+        "note": "session middleware with cookie auth, no SameSite/secure flags"
+      },
+      {
+        "file": "index.js",
+        "line": 72,
+        "note": "state-changing POST without CSRF token validation"
+      },
+      {
+        "file": "index.js",
+        "line": 74,
+        "note": "session destroy sink reachable cross-site"
+      }
+    ],
+    "evidence": "index.js:1-22 shows no csurf/csrf middleware, no SameSite/secure cookie flags; index.js:72 handler destroys session on cross-site cookie-authenticated POST with no token check; login sets req.session.user cookie at index.js:49 | validator: index.js:72-77 service_logout only destroys session; all data POSTs index.js:25,137,178 are unauthenticated so no cookie-privileged transaction exists to forge beyond logout annoyance | refute: not_a_vulnerability | consensus: 1/1 fp | triage: No privileged cookie transaction to forge beyond logout annoyance",
+    "rationale": "App uses cookie session (express-session) for auth but no POST route validates CSRF token. Attacker site can forge POST /service_logout (and other POSTs) with victim cookies, causing logout/state change. No SameSite or token mitigation in code.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:1-22 shows no csurf/csrf middleware, no SameSite/secure cookie flags; index.js:72 handler destroys session on cross-site cookie-authenticated POST with no token check; login sets req.session.user cookie at index.js:49",
+    "hunter_snippet": "app.post('/service_logout', function(req, res){",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim visit to attacker page"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "service_logout only destroys session; data POSTs are unauthenticated so no CSRF impact"
+    },
+    "cvss": 2.3,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-UNCAUGHT-JSONPARSE-LOGIN",
+    "title": "Uncaught JSON.parse exception enables DoS in login handler",
+    "cwe": "CWE-248",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "index.js",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "\t\t\t, password: JSON.parse(req.body.password)",
+    "taint": {
+      "source": "POST /api/users password field containing '{' with invalid JSON",
+      "sink": "uncaught JSON.parse exception (DoS / error disclosure)",
+      "path": [
+        "index.js:25 POST /api/users req.body.password source",
+        "index.js:28 indexOf('{') branch gate",
+        "index.js:31 JSON.parse sink throwing on malformed input"
+      ]
+    },
+    "refs": [
+      {
+        "file": "index.js",
+        "line": 27,
+        "note": "unsanitized password indexOf check, throws if non-string/missing"
+      },
+      {
+        "file": "index.js",
+        "line": 31,
+        "note": "uncaught JSON.parse on attacker input without try/catch"
+      }
+    ],
+    "evidence": "index.js:28 checks password contains '{' then index.js:31 JSON.parse without try/catch; malformed value triggers synchronous SyntaxError uncaught by Express, returning 500 and allowing error probing/DoS | validator: index.js:28-31 JSON.parse(req.body.password) on attacker password containing '{' with no try/catch; malformed JSON throws sync SyntaxError yielding 500/error disclosure | consensus: 1/1 confirmed | triage: Uncaught JSON.parse on password containing '{' causes 500/DoS",
+    "rationale": "Attacker controls password string. Sending value containing '{' but invalid JSON enters JSON.parse branch which throws synchronously with no validation or try/catch, causing unhandled exception / 500. Same pattern recurs at GET /getdata JSON.parse, showing missing input validation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "index.js:28 checks password contains '{' then index.js:31 JSON.parse without try/catch; malformed value triggers synchronous SyntaxError uncaught by Express, returning 500 and allowing error probing/DoS",
+    "hunter_snippet": "\t\t\t, password: JSON.parse(req.body.password)",
+    "patch_summary": "Wrap JSON.parse in try/catch and return 400 on invalid input; validate password is string before indexOf/parse.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "malformed JSON with '{'"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "platform",
+      "rationale": "Synchronous SyntaxError uncaught by Express yields 500 and error probing"
+    },
+    "cvss": 2.3,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  }
+]

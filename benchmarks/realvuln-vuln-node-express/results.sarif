@@ -1,0 +1,5606 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-89",
+              "name": "CWE-89",
+              "shortDescription": {
+                "text": "SQL Injection entry via POST /search searchText"
+              },
+              "properties": {
+                "security-severity": "8.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/89.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/89.html",
+                "markdown": "[MITRE CWE-89](https://cwe.mitre.org/data/definitions/89.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Hardcoded seed credentials including admin password"
+              },
+              "properties": {
+                "security-severity": "8.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-256",
+              "name": "CWE-256",
+              "shortDescription": {
+                "text": "Plaintext password storage without hashing"
+              },
+              "properties": {
+                "security-severity": "8.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/256.html",
+                "markdown": "[MITRE CWE-256](https://cwe.mitre.org/data/definitions/256.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Reflected XSS render via POST /search searchResult"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-209",
+              "name": "CWE-209",
+              "shortDescription": {
+                "text": "Verbose SQLite error disclosure in GET /api/search"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/209.html",
+                "markdown": "[MITRE CWE-209](https://cwe.mitre.org/data/definitions/209.html)"
+              }
+            },
+            {
+              "id": "CWE-117",
+              "name": "CWE-117",
+              "shortDescription": {
+                "text": "Log injection via unsanitized req.query logging"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/117.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/117.html",
+                "markdown": "[MITRE CWE-117](https://cwe.mitre.org/data/definitions/117.html)"
+              }
+            },
+            {
+              "id": "CWE-693",
+              "name": "CWE-693",
+              "shortDescription": {
+                "text": "Missing security headers and CSP baseline amplifies XSS"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/693.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/693.html",
+                "markdown": "[MITRE CWE-693](https://cwe.mitre.org/data/definitions/693.html)"
+              }
+            },
+            {
+              "id": "CWE-532",
+              "name": "CWE-532",
+              "shortDescription": {
+                "text": "Sensitive SQL errors and DB rows logged to stdout in shared search service"
+              },
+              "properties": {
+                "security-severity": "2.2"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/532.html",
+                "markdown": "[MITRE CWE-532](https://cwe.mitre.org/data/definitions/532.html)"
+              }
+            },
+            {
+              "id": "CWE-494",
+              "name": "CWE-494",
+              "shortDescription": {
+                "text": "Unverified version fetch piped to shell environment in CI"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/494.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/494.html",
+                "markdown": "[MITRE CWE-494](https://cwe.mitre.org/data/definitions/494.html)"
+              }
+            },
+            {
+              "id": "CWE-829",
+              "name": "CWE-829",
+              "shortDescription": {
+                "text": "Unpinned latest scanner install in Azure pipeline"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/829.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/829.html",
+                "markdown": "[MITRE CWE-829](https://cwe.mitre.org/data/definitions/829.html)"
+              }
+            },
+            {
+              "id": "CWE-426",
+              "name": "CWE-426",
+              "shortDescription": {
+                "text": "Unvalidated PATH mutation on self-hosted Windows agent"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/426.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/426.html",
+                "markdown": "[MITRE CWE-426](https://cwe.mitre.org/data/definitions/426.html)"
+              }
+            },
+            {
+              "id": "CWE-248",
+              "name": "CWE-248",
+              "shortDescription": {
+                "text": "Uncaught throw on non-listen errors crashes server"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/248.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/248.html",
+                "markdown": "[MITRE CWE-248](https://cwe.mitre.org/data/definitions/248.html)"
+              }
+            },
+            {
+              "id": "CWE-203",
+              "name": "CWE-203",
+              "shortDescription": {
+                "text": "Blind SQLi oracle via error-vs-render discrepancy in POST /search"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/203.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/203.html",
+                "markdown": "[MITRE CWE-203](https://cwe.mitre.org/data/definitions/203.html)"
+              }
+            },
+            {
+              "id": "CWE-732",
+              "name": "CWE-732",
+              "shortDescription": {
+                "text": "SQLite open with relative path, verbose mode, and insecure defaults"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/732.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/732.html",
+                "markdown": "[MITRE CWE-732](https://cwe.mitre.org/data/definitions/732.html)"
+              }
+            },
+            {
+              "id": "CWE-400",
+              "name": "CWE-400",
+              "shortDescription": {
+                "text": "Unbounded DB result passthrough without LIMIT in search service"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/400.html",
+                "markdown": "[MITRE CWE-400](https://cwe.mitre.org/data/definitions/400.html)"
+              }
+            },
+            {
+              "id": "CWE-1104",
+              "name": "CWE-1104",
+              "shortDescription": {
+                "text": "EOL base image running as root"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1104.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/1104.html",
+                "markdown": "[MITRE CWE-1104](https://cwe.mitre.org/data/definitions/1104.html)"
+              }
+            },
+            {
+              "id": "CWE-404",
+              "name": "CWE-404",
+              "shortDescription": {
+                "text": "Double database close causing seed race and partial DB"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/404.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/404.html",
+                "markdown": "[MITRE CWE-404](https://cwe.mitre.org/data/definitions/404.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Inconsistent output filtering between API and HTML search handlers"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            },
+            {
+              "id": "CWE-754",
+              "name": "CWE-754",
+              "shortDescription": {
+                "text": "Background server start without readiness check in CI"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/754.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/754.html",
+                "markdown": "[MITRE CWE-754](https://cwe.mitre.org/data/definitions/754.html)"
+              }
+            },
+            {
+              "id": "CWE-215",
+              "name": "CWE-215",
+              "shortDescription": {
+                "text": "Debug enabled and secrets baked into image"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/215.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/215.html",
+                "markdown": "[MITRE CWE-215](https://cwe.mitre.org/data/definitions/215.html)"
+              }
+            },
+            {
+              "id": "CWE-668",
+              "name": "CWE-668",
+              "shortDescription": {
+                "text": "Wildcard network listen without localhost pinning"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/668.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/668.html",
+                "markdown": "[MITRE CWE-668](https://cwe.mitre.org/data/definitions/668.html)"
+              }
+            },
+            {
+              "id": "CWE-20",
+              "name": "CWE-20",
+              "shortDescription": {
+                "text": "Unvalidated PORT env allows named-pipe binding"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/20.html",
+                "markdown": "[MITRE CWE-20](https://cwe.mitre.org/data/definitions/20.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing CSRF protection on POST /search"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "name": "CWE-614",
+              "shortDescription": {
+                "text": "Insecure cookie configuration without signing or flags"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/614.html",
+                "markdown": "[MITRE CWE-614](https://cwe.mitre.org/data/definitions/614.html)"
+              }
+            },
+            {
+              "id": "CWE-862",
+              "name": "CWE-862",
+              "shortDescription": {
+                "text": "Unauthenticated mount of /search router without access controls"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/862.html",
+                "markdown": "[MITRE CWE-862](https://cwe.mitre.org/data/definitions/862.html)"
+              }
+            },
+            {
+              "id": "CWE-319",
+              "name": "CWE-319",
+              "shortDescription": {
+                "text": "Cleartext HTTP server without TLS"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/319.html",
+                "markdown": "[MITRE CWE-319](https://cwe.mitre.org/data/definitions/319.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection entry via POST /search searchText (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/search.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "const searchText = req.body.searchText; searchService.searchByName(searchText,...)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s -X POST --data-urlencode \"searchText=' UNION ALL SELECT id,username,password FROM user-- \" http://localhost:3000/search | head",
+            "patchSummary": "Use parameterized query: db.all(\"select ... where name like ?\", ['%'+searchText+'%']) and validate searchText type/length."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /search body param searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "searchByName(searchText)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all concatenation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sqlite db.all with concatenated LIKE query"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "Intrinsic SQL concatenation sink in searchByName (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], ...)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "node -e \"require('./service/search').searchByName(\\\"' OR '1'='1\\\",(e,r)=>console.log(e||r))\"",
+            "patchSummary": "Replace string concat with placeholder: db.all(\"select id,name,description from item where name like ?\", ['%'+searchText+'%'],...)."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Source: searchText argument from route handlers"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "searchText param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "string concat into db.all"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sqlite3 db.all dynamic SQL"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "test (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "const searchText = req.body.searchText; searchService.searchByName(searchText,...)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Use parameterized query: db.all(\"select ... where name like ?\", ['%'+searchText+'%']) and validate searchText type/length."
+          }
+        },
+        {
+          "ruleId": "CWE-89",
+          "level": "error",
+          "message": {
+            "text": "SQL Injection entry via GET /api/search query searchText (conf 0.97)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "const searchText = req.query.searchText !== undefined ? req.query.searchText : '';"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s \"http://localhost:3000/api/search?searchText=%27%20UNION%20ALL%20SELECT%20id,username,password%20FROM%20user--%20\" | head",
+            "patchSummary": "Use parameterized LIKE query and validate/coerce req.query.searchText to string with length limit."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /api/search query searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "searchByName(searchText)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all concatenation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sqlite db.all concatenated query"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded seed credentials including admin password (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bootstrapdb.js"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 46,
+                  "snippet": {
+                    "text": "userTbl.run('admin', 'S3cr37P@$$w0rD!');"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -rn S3cr37 --include=*.js .; ls -l db/vulny.db",
+            "patchSummary": "Remove hardcoded passwords; seed via env secrets and store bcrypt hashes, keep seed DB out of image."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Source: static strings in seed script"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: hardcoded credentials into user table/image"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password storage without hashing (conf 0.92)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bootstrapdb.js"
+                },
+                "region": {
+                  "startLine": 34,
+                  "endLine": 34,
+                  "snippet": {
+                    "text": "CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s -X POST --data-urlencode \"searchText=item%' union all select * from user; -- \" http://localhost:3000/search | head",
+            "patchSummary": "Hash passwords with bcrypt/scrypt before INSERT and never persist plaintext."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Source: seed design without hashing"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "password TEXT schema"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "plaintext insert"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext credential persistence in sqlite file"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS render via POST /search searchResult (conf 0.96)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/search.js"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "h1!= 'Search Results for: ' + searchText"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s -X POST --data-urlencode \"searchText=<script>alert(1)</script>\" http://localhost:3000/search | grep -i script",
+            "patchSummary": "Change views/searchResult.pug:4 h1!= to h1= for auto-escaping and validate searchText."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /search body searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "ret.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "res.render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "views/searchResult.pug"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "h1!= searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Pug unescaped h1!= render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password storage without hashing (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bootstrapdb.js"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 34,
+                  "snippet": {
+                    "text": "db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Hash passwords with bcrypt/scrypt before INSERT in bootstrapdb.js:43 and change schema to store hash, never plaintext; remove seed secrets from repo"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: seed inserts"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext password storage in SQLite user table"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS via unescaped Pug render of searchText (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "views/searchResult.pug"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "h1!= 'Search Results for: ' + searchText"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.1",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Change views/searchResult.pug:4 h1!= to escaped h1= and add CSP/helmet plus output-encoding validation"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "views/searchResult.pug"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /search body field searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "ret.searchText assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "res.render('searchResult', ret)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "views/searchResult.pug"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "h1!= render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "views/searchResult.pug"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Pug unescaped output h1!="
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-209",
+          "level": "warning",
+          "message": {
+            "text": "Verbose SQLite error disclosure in GET /api/search (conf 0.92)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "if (err) { res.json(err);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s \"http://localhost:3000/api/search?searchText=%27\" | head",
+            "patchSummary": "Return generic error message and log details server-side instead of res.json(err)."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query searchText inducing DB error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "attacker searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "cb(err)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "res.json(err)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: JSON error response disclosing internals"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-117",
+          "level": "warning",
+          "message": {
+            "text": "Log injection via unsanitized req.query logging (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 8,
+                  "endLine": 9,
+                  "snippet": {
+                    "text": "console.log(req.query); console.log('search text: ' + searchText);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -s \"http://localhost:3000/api/search?searchText=foo%0d%0aFORGED\" ",
+            "patchSummary": "Remove raw query logging or sanitize with structured logger stripping CR/LF/control chars."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET /api/search query string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "console.log(req.query)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log unsanitized attacker input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "note",
+          "message": {
+            "text": "Missing security headers and CSP baseline amplifies XSS (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 27,
+                  "snippet": {
+                    "text": "app.use(logger('dev'));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add helmet() with CSP/HSTS/X-Frame-Options in app.js:23 and CSP meta in views/layout.pug"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: missing hardening baseline"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "app=express()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "middleware without security headers"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "views/searchResult.pug"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "unescaped render"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: responses without CSP/HSTS/X-Frame-Options"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "note",
+          "message": {
+            "text": "Sensitive SQL errors and DB rows logged to stdout in shared search service (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "console.log('error ' + err);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.2",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Remove verbose console.log of err/rows in service/search.js:9,14-15; log generic message with structured logger and redact PII/secrets"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Source: untrusted searchText plus DB-derived err/rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all(...) -> err/rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "console.log('error '+err)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "console.log('rows? '+rows)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log of err and rows in shared service"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-494",
+          "level": "error",
+          "message": {
+            "text": "Unverified version fetch piped to shell environment in CI (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".circleci/config.yml"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 13,
+                  "snippet": {
+                    "text": "            echo 'export HAWK_VERSION=$(curl -o- https://api.stackhawk.com/hawkscan/version)' >> \"$BASH_ENV\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Source: remote version endpoint response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "curl version"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: shell-evaluated BASH_ENV export"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "warning",
+          "message": {
+            "text": "Unpinned latest scanner install in Azure pipeline (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines.yml"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20,
+                  "snippet": {
+                    "text": "      version: latest"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Source: floating latest task version"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "HawkScanInstall"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "version latest"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: code execution on self-hosted agent"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "warning",
+          "message": {
+            "text": "Unpinned latest scanner run in Azure pipeline (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines.yml"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 24,
+                  "snippet": {
+                    "text": "      version: \"latest\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Source: floating latest task version"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "RunHawkScan"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "version latest"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: scan execution with secrets on agent"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-426",
+          "level": "warning",
+          "message": {
+            "text": "Unvalidated PATH mutation on self-hosted Windows agent (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines.yml"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "      $Env:PATH = \"C:\\Program Files\\Docker\\Docker\\resources\\bin;$Env:PATH\""
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Source: host filesystem Docker path"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "PATH prepend"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "docker run"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: PATH used to resolve docker/scan binaries"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-248",
+          "level": "warning",
+          "message": {
+            "text": "Uncaught throw on non-listen errors crashes server (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bin/www"
+                },
+                "region": {
+                  "startLine": 58,
+                  "endLine": 58,
+                  "snippet": {
+                    "text": "    throw error;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "Source: runtime syscall error outside listen"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "onError(error)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "throw error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 58
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: uncaught throw killing process"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-248",
+          "level": "warning",
+          "message": {
+            "text": "Uncaught throw on unexpected listen error code (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bin/www"
+                },
+                "region": {
+                  "startLine": 76,
+                  "endLine": 76,
+                  "snippet": {
+                    "text": "      throw error;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unexpected listen error code"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 66
+                          }
+                        },
+                        "message": {
+                          "text": "switch error.code"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "default throw"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: uncaught throw in onError default"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-203",
+          "level": "warning",
+          "message": {
+            "text": "Blind SQLi oracle via error-vs-render discrepancy in POST /search (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/search.js"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "      res.redirect('/search')"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST /search body searchText causing SQL error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "cb(err)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "res.redirect on err"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: 302 redirect vs 200 render differential oracle"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-732",
+          "level": "warning",
+          "message": {
+            "text": "SQLite open with relative path, verbose mode, and insecure defaults (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2,
+                  "snippet": {
+                    "text": "const db = new sqlite3.Database('./db/vulny.db');"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Source: filesystem DB file with default permissions"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Database open"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: process-wide shared DB handle via relative path"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "warning",
+          "message": {
+            "text": "Unbounded DB result passthrough without LIMIT in search service (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 20,
+                  "endLine": 20,
+                  "snippet": {
+                    "text": "      cb(null, ret);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker ''/% searchText matching all items"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "LIKE without LIMIT"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "cb(null,ret)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "res.json"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: callback with unbounded rows to JSON/render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-732",
+          "level": "warning",
+          "message": {
+            "text": "Seed DB file created without restrictive permissions (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bootstrapdb.js"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2,
+                  "snippet": {
+                    "text": "const db = new sqlite3.Database('./db/vulny.db');"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Source: default file mode DB creation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Database create"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "plaintext inserts"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "COPY . ."
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: readable credential DB baked into image"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-1104",
+          "level": "note",
+          "message": {
+            "text": "EOL base image running as root (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "FROM node:14.16.1-buster"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n FROM Dockerfile; docker run --rm stackhawk/nodeexpressvulny whoami"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: container build configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: EOL base image running as root"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Compose service without user, read-only, or resource limits (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5,
+                  "snippet": {
+                    "text": "    build: ."
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "docker-compose.yml"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Source: compose deployment config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "docker-compose.yml"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "build service"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "docker-compose.yml"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unconfined container without limits"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-404",
+          "level": "note",
+          "message": {
+            "text": "Double database close causing seed race and partial DB (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bootstrapdb.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "          db.close(function (err) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: concurrent serialize branches closing shared handle"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "first db.close"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 51
+                          }
+                        },
+                        "message": {
+                          "text": "second db.close"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: second close on closed DB / partial seed"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Inconsistent output filtering between API and HTML search handlers (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "      delete ret.searchText;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Source: tainted searchText + DB rows in ret"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "ret with searchText+rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "delete ret.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "res.json(ret)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: partial field deletion that does not sanitize DB sink"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "note",
+          "message": {
+            "text": "Database row content logged without redaction (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "      console.log('rows? ' + rows);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Source: DB rows returned for attacker query"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "log rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log of row data"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-494",
+          "level": "note",
+          "message": {
+            "text": "CI unverified download-and-execute of scanner (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".circleci/config.yml"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "      - run: curl -v https://download.stackhawk.com/hawk/cli/hawk-\"${HAWK_VERSION}\".zip -o hawk.zip\n      - run: unzip hawk.zip"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n curl .circleci/config.yml; grep -n unzip .circleci/config.yml"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: remote HTTPS hosts without pin"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "curl version"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "curl zip"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "unzip exec"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unauthenticated download-and-execute in CI"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-754",
+          "level": "note",
+          "message": {
+            "text": "Background server start without readiness check in CI (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".circleci/config.yml"
+                },
+                "region": {
+                  "startLine": 18,
+                  "endLine": 18,
+                  "snippet": {
+                    "text": "      - run: nohup npm run start &"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "Source: CI job startup race"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "nohup start"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "hawk scan"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: scan against not-ready server"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "note",
+          "message": {
+            "text": "CI secret exposed via debug logging (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".circleci/config.yml"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 19,
+                  "snippet": {
+                    "text": "      - run: hawk --api-key=\"${HAWK_API_KEY}\" scan --env CIRCLE_SHA1=\"$CIRCLE_SHA1\" --env CIRCLE_BRANCH=\"$CIRCLE_BRANCH\" --debug stackhawk.yml"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n \"HAWK_API_KEY\\| --debug\\|curl -v\" .circleci/config.yml"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Source: HAWK_API_KEY pipeline secret"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".circleci/config.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: secret passed alongside debug logging"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "note",
+          "message": {
+            "text": "Overbroad COPY bakes credential DB into image (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "COPY . ."
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Source: build context with vulny.db and secrets"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bootstrapdb.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "DB file"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "COPY . ."
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: image layer via COPY"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-215",
+          "level": "note",
+          "message": {
+            "text": "Debug enabled and secrets baked into image (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "Dockerfile"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "ENV DEBUG=myapp:*"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n DEBUG Dockerfile; docker history stackhawk/nodeexpressvulny | head"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: Docker build configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "Dockerfile"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: debug exposure plus credential DB in image"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "note",
+          "message": {
+            "text": "Azure pipeline unpinned image on self-hosted agent (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines.yml"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "      docker run --rm --publish 3000:3000 --detach --name nodeexpressvulny stackhawk/nodeexpressvulny"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n \"self-hosted\\|publish\\|latest\" azure-pipelines.yml"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: pipeline configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unpinned image plus host-exposed daemon on agent"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-668",
+          "level": "note",
+          "message": {
+            "text": "Wildcard network listen without localhost pinning (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bin/www"
+                },
+                "region": {
+                  "startLine": 28,
+                  "endLine": 28,
+                  "snippet": {
+                    "text": "server.listen(port);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n \"listen\\|normalizePort\\|PORT\" bin/www; ss -ltnp | grep 3000"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "Source: environment plus default 3000"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "process.env.PORT"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "server.listen(port)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: wildcard network listen"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Unvalidated PORT env allows named-pipe binding (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bin/www"
+                },
+                "region": {
+                  "startLine": 39,
+                  "endLine": 42,
+                  "snippet": {
+                    "text": "  if (isNaN(port)) {\n    // named pipe\n    return val;\n  }"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "PORT=/tmp/evil.sock node ./bin/www & sleep 1; ls -l /tmp/evil.sock; kill %1"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Source: PORT environment variable"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "process.env.PORT"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "isNaN branch return val"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 42
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: named-pipe bind from env"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-668",
+          "level": "note",
+          "message": {
+            "text": "Compose wildcard port publish without controls (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docker-compose.yml"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "    ports:\n      - 3000:3000"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "cat docker-compose.yml; docker compose config | grep -A2 ports"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "docker-compose.yml"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: compose deployment config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "docker-compose.yml"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: wildcard host port exposure without limits"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "Missing CSRF protection on POST /search (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/search.js"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "router.post('/', function (req, res, next) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST to /search from victim browser"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "router.post('/')"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "req.body.searchText"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all concatenation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: state-changing/DB-query handler without CSRF token"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "note",
+          "message": {
+            "text": "Missing security headers and hardening baseline (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "var app = express();"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "curl -sI http://localhost:3000/ | grep -i -E \"content-security|x-frame|strict-transport\""
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Source: global app configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: missing helmet/CSP/HSTS/rate-limit baseline"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Unbounded body parsing and verbose logging enable DoS (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 25,
+                  "snippet": {
+                    "text": "app.use(logger('dev'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: false }));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "python3 -c \"print('a'*2000000)\" | curl -s -X POST -H 'Content-Type: application/json' --data-binary @- http://localhost:3000/search -o /dev/null -w '%{http_code}'"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker-controlled request body"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unbounded request parsing plus verbose logging"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "note",
+          "message": {
+            "text": "Insecure cookie configuration without signing or flags (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 26,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "app.use(cookieParser());"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n cookieParser app.js; curl -sI http://localhost:3000/ | grep -i cookie"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Source: global middleware config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unsigned/insecure cookie handling"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-862",
+          "level": "note",
+          "message": {
+            "text": "Unauthenticated mount of /search router without access controls (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "app.use('/search', searchRouter);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated network request to /search"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "mount /search"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/search.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "POST handler"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "SQL sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: search router with SQLi/XSS sinks, no guard"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-209",
+          "level": "note",
+          "message": {
+            "text": "Error message disclosure unconditional in production error handler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app.js"
+                },
+                "region": {
+                  "startLine": 41,
+                  "endLine": 41,
+                  "snippet": {
+                    "text": "  res.locals.message = err.message;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Source: server-side exception including DB errors"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "err.message into locals"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "res.render('error')"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app.js"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: error view message rendered in all envs"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-319",
+          "level": "note",
+          "message": {
+            "text": "Cleartext HTTP server without TLS (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "bin/www"
+                },
+                "region": {
+                  "startLine": 22,
+                  "endLine": 22,
+                  "snippet": {
+                    "text": "var server = http.createServer(app);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "Source: network client request/response with creds"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "http.createServer"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "server.listen"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "bin/www"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cleartext HTTP transport"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-862",
+          "level": "note",
+          "message": {
+            "text": "Unauthenticated API exposure of SQL query endpoint GET /api/search (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 5,
+                  "snippet": {
+                    "text": "router.get('/search', function (req, res, next) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /api/search?searchText="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "route without guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "searchByName(searchText)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "db.all"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: SQLite query + JSON dump without auth check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Unbounded JSON result set without pagination in GET /api/search (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "      res.json(ret);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker searchText '' or '%'"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "default '' query"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "LIKE without LIMIT"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "res.json(ret)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unbounded res.json of all rows"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Sensitive SQL error logging to stdout in search service (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "service/search.js"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 9,
+                  "snippet": {
+                    "text": "      console.log('error ' + err);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker searchText causing sqlite error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "tainted SQL"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "log err"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log of full err with SQL text"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-319",
+          "level": "note",
+          "message": {
+            "text": "Scanner target uses cleartext HTTP in Development (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "stackhawk.yml"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "  env: Development\n  host: http://localhost:3000"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "pocStatus": "planned",
+            "reproduced": false,
+            "pocCommand": "grep -n \"host:\\|env:\" stackhawk.yml"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "Source: scanner configuration"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cleartext HTTP scan target in Development"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Aggressive scanner polling without backoff in waitForAppTarget (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "stackhawk.yml"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "    waitTimeoutMillis: 300000"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: scanner poll config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "path /"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "waitTimeoutMillis"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "stackhawk.yml"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: rapid GET / polling load on dev server"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Unauthenticated unbounded search without rate limiting or pagination enables DoS/scraping (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "routes/api.js"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "router.get('/search', function (req, res, next) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated query/body input with no size or rate limits"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.searchText (default '')"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "service/search.js"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "LIKE '%'+searchText+'%' full scan"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "res.json(ret) all rows"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "routes/api.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unbounded JSON response / HTML render of all matching rows"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

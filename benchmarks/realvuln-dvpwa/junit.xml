@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="35" errors="0" skipped="0" timestamp="2026-11-04T18:48:44Z" time="0.000" failures="27">
+  <testcase classname="CWE-89" name="Global Jinja2 autoescape disabled [critical] sqli/app.py:33-35">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="0.99" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Global Jinja2 autoescape disabled (CWE-89) critical conf=0.99 sqli/app.py:33-35">setup_jinja(app, loader=PackageLoader('sqli', 'templates'),
+setup_jinja(app, loader=PackageLoader('sqli', 'templates'),</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in Student.create [critical] sqli/dao/student.py:41-45">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="0.99" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in Student.create (CWE-89) critical conf=0.99 sqli/dao/student.py:41-45">VALUES interpolation with percent formatting
+VALUES interpolation with percent formatting</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF middleware disabled [high] sqli/app.py:27-28">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="CSRF middleware disabled (CWE-352) high conf=0.95 sqli/app.py:27-28"># csrf_middleware,
+# csrf_middleware,</failure>
+  </testcase>
+  <testcase classname="CWE-327" name="Unsalted fast MD5 password hashing with weak fixture passwords [high] sqli/dao/user.py:40-41">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsalted fast MD5 password hashing with weak fixture passwords (CWE-327) high conf=0.95 sqli/dao/user.py:40-41">sqli/dao/user.py:1 from hashlib import md5 + sqli/dao/user.py:41 unsalted MD5 compare; migrations/001-fixtures.sql:12 weak passwords (superadmin/***, password, spidey) stored as md5() — crackable in seconds with rainbow tables
+return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()</failure>
+  </testcase>
+  <testcase classname="CWE-328" name="Unsalted MD5 password hashing [high] sqli/dao/user.py:40-41">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsalted MD5 password hashing (CWE-328) high conf=0.95 sqli/dao/user.py:40-41">return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()
+return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [high] sqli/templates/course.jinja2:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="template reflection surface (CWE-79) high conf=0.95 sqli/templates/course.jinja2:0-0">heuristic: form + {{ }} co-occurrence
+form + {{ }} in template (verify server-side reflection)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via course review_text [high] sqli/templates/course.jinja2:22-22">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via course review_text (CWE-79) high conf=0.95 sqli/templates/course.jinja2:22-22">{{ review.review_text }}
+{{ review.review_text }}</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on POST /students/ allows unauthenticated student creation [high] sqli/views.py:54-57">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on POST /students/ allows unauthenticated student creation (CWE-306) high conf=0.95 sqli/views.py:54-57">POST /students/ handler at sqli/views.py:54-57 writes to DB with no @authorize, no get_auth_user check, unlike logout at sqli/views.py:156 which requires @authorize(); routes at sqli/routes.py:9 expose POST /students/ unauthenticated
+    if request.method == 'POST':
+        data = await request.post()
+        async with app['db'].acquire() as conn:
+            await Student.create(conn, data['name'])</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on student creation [high] sqli/views.py:57-57">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on student creation (CWE-862) high conf=0.95 sqli/views.py:57-57">await Student.create(conn, data['name'])
+await Student.create(conn, data['name'])</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on course creation [high] sqli/views.py:89-90">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on course creation (CWE-862) high conf=0.95 sqli/views.py:89-90">await Course.create(conn, data['title'],
+await Course.create(conn, data['title'],</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication on POST /courses/{course_id}/review [high] sqli/views.py:129-129">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on POST /courses/{course_id}/review (CWE-306) high conf=0.95 sqli/views.py:129-129">Routes sqli/routes.py:24 POST review -&gt; handler sqli/views.py:112 review() performs no get_auth_user/authorize check; allows anonymous spam that feeds stored-XSS sink SYS-XSS-01
+await Review.create(conn, course_id, review_text)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on POST /students/{student_id}/evaluate/{course_id} allows unauthenticated grade forgery [high] sqli/views.py:135-135">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on POST /students/{student_id}/evaluate/{course_id} allows unauthenticated grade forgery (CWE-862) high conf=0.95 sqli/views.py:135-135">Handler sqli/views.py:135 evaluate has no @authorize and no is_admin check; route sqli/routes.py:21-23 exposes POST /students/{student_id}/evaluate/{course_id} unauthenticated; UI-only gate {% if auth_user.is_admin %} sqli/templates/course.jinja2:41 is not enforced server-side; sink Mark.create sqli/views.py:151
+async def evaluate(request: Request):</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on grade evaluation [high] sqli/views.py:151-152">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on grade evaluation (CWE-862) high conf=0.95 sqli/views.py:151-152">await Mark.create(conn, student_id, course_id,
+await Mark.create(conn, student_id, course_id,</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authorization on POST /courses/ allows unauthenticated course creation [high] sqli/views.py:84-84">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authorization on POST /courses/ allows unauthenticated course creation (CWE-862) high conf=0.92 sqli/views.py:84-84">Handler sqli/views.py:84 courses handles POST data['title']/data['description'] -&gt; Course.create with no @authorize; routes sqli/routes.py:18 exposes POST /courses/ to unauthenticated clients
+async def courses(request: Request):</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded database credentials in config/dev.yaml [high] config/dev.yaml:1-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded database credentials in config/dev.yaml (CWE-798) high conf=0.9 config/dev.yaml:1-6">config/dev.yaml:1-6 contains cleartext db user/password=***, database=***; wired into DSN via sqli/services/db.py:16 format(**conf); published postgres:5432 in compose
+db:
+  user: ***
+  password: ***</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via course title in breadcrumb [high] sqli/templates/course.jinja2:9-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via course title in breadcrumb (CWE-79) high conf=0.9 sqli/templates/course.jinja2:9-9">&lt;a href="/courses/{{ course.id }}" class="breadcrumb"&gt;{{ course.title }}&lt;/a&gt;
+&lt;a href="/courses/{{ course.id }}" class="breadcrumb"&gt;{{ course.title }}&lt;/a&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via course title/description [high] sqli/templates/course.jinja2:14-15">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via course title/description (CWE-79) high conf=0.9 sqli/templates/course.jinja2:14-15">&lt;h2&gt;{{ course.title }}&lt;/h2&gt;
+&lt;h2&gt;{{ course.title }}&lt;/h2&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via student name in evaluate sidebar [high] sqli/templates/course.jinja2:49-49">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via student name in evaluate sidebar (CWE-79) high conf=0.9 sqli/templates/course.jinja2:49-49">&lt;a href="/students/{{ student.id }}"&gt;{{ student.name }}&lt;/a&gt;
+&lt;a href="/students/{{ student.id }}"&gt;{{ student.name }}&lt;/a&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [high] sqli/templates/courses.jinja2:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="template reflection surface (CWE-79) high conf=0.9 sqli/templates/courses.jinja2:0-0">heuristic: form + {{ }} co-occurrence
+form + {{ }} in template (verify server-side reflection)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS in courses list [high] sqli/templates/courses.jinja2:17-18">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS in courses list (CWE-79) high conf=0.9 sqli/templates/courses.jinja2:17-18">{{ course.title }}
+{{ course.title }}</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via course title on review page (card title) [high] sqli/templates/review.jinja2:32-32">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via course title on review page (card title) (CWE-79) high conf=0.9 sqli/templates/review.jinja2:32-32">&lt;span class="card-title"&gt;Write review to {{ course.title }}&lt;/span&gt;
+&lt;span class="card-title"&gt;Write review to {{ course.title }}&lt;/span&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via course fields on student page [high] sqli/templates/student.jinja2:19-20">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via course fields on student page (CWE-79) high conf=0.9 sqli/templates/student.jinja2:19-20">&lt;span class="card-title"&gt;{{ course.title }}&lt;/span&gt;
+&lt;span class="card-title"&gt;{{ course.title }}&lt;/span&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [high] sqli/templates/students.jinja2:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="template reflection surface (CWE-79) high conf=0.9 sqli/templates/students.jinja2:0-0">heuristic: form + {{ }} co-occurrence
+form + {{ }} in template (verify server-side reflection)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via student name list [high] sqli/templates/students.jinja2:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via student name list (CWE-79) high conf=0.9 sqli/templates/students.jinja2:16-16">&lt;a class="collection-item" href="/students/{{ id }}"&gt;{{ name }}&lt;/a&gt;
+&lt;a class="collection-item" href="/students/{{ id }}"&gt;{{ name }}&lt;/a&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-307" name="No rate-limiting or lockout on login enables brute-force [high] sqli/views.py:40-41">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="No rate-limiting or lockout on login enables brute-force (CWE-307) high conf=0.9 sqli/views.py:40-41">user = await User.get_by_username(conn, username)
+user = await User.get_by_username(conn, username)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing authentication on review submission [high] sqli/views.py:129-129">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on review submission (CWE-862) high conf=0.9 sqli/views.py:129-129">await Review.create(conn, course_id, review_text)
+await Review.create(conn, course_id, review_text)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="template reflection surface [high] sqli/templates/review.jinja2:0-0">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="template reflection surface (CWE-79) high conf=0.85 sqli/templates/review.jinja2:0-0">heuristic: form + {{ }} co-occurrence | e }})
+form + {{ }} in template (verify server-side reflection)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="XSS via student name on evaluate error page [medium] sqli/templates/evaluate.jinja2:25-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="No rate-limiting or lockout on login enables credential brute-force [medium] sqli/views.py:33-42">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-384" name="Session fixation on login [medium] sqli/views.py:42-42">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-489" name="aiohttp debug mode enabled [low] sqli/app.py:23-25">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1004" name="Session cookie without HttpOnly flag [low] sqli/middlewares.py:20-20">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Internal error details disclosed in 50x page [low] sqli/templates/errors/50x.jinja2:6-6">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Error middleware only handles HTTPException, leaking debug tracebacks [low] sqli/middlewares.py:51-52">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via evaluate validation errors [medium] sqli/templates/evaluate.jinja2:17-17">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="3.8" />
+      <property name="confidence" value="0.50" />
+      <property name="has_patch" value="false" />
+    </properties>
+  </testcase>
+</testsuite>

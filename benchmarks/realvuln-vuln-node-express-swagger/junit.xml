@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="49" errors="0" skipped="0" timestamp="2026-11-04T19:55:26Z" time="0.000" failures="39">
+  <testcase classname="CWE-89" name="SQL Injection in GET /v1/search/:filter/:query [critical] src/router/routes/order.js:65-65">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection in GET /v1/search/:filter/:query (CWE-89) critical conf=0.98 src/router/routes/order.js:65-65">const sql = "SELECT * FROM beers WHERE "+filter+" = '"+query+"';
+const sql = "SELECT * FROM beers WHERE "+filter+" = '"+query+"';</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on GET /v1/status/:brand Enables Unauthenticated RCE [critical] src/router/routes/system.js:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on GET /v1/status/:brand Enables Unauthenticated RCE (CWE-862) critical conf=0.98 src/router/routes/system.js:13-13">src/router/routes/system.js:13 route has no verifyToken/isAdmin/session check before execSync sink at line 17; prior missing-auth list covers init/test/upload-pic/new-beer-xml only
+app.get('/v1/status/:brand', (req,res) =&gt;{</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS Command Injection in GET /v1/status/:brand [critical] src/router/routes/system.js:17-17">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS Command Injection in GET /v1/status/:brand (CWE-78) critical conf=0.98 src/router/routes/system.js:17-17">const test = execSync("curl https://letmegooglethat.com/?q="+ req.params.brand)
+const test = execSync("curl https://letmegooglethat.com/?q="+ req.params.brand)</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Unauthenticated Vertical Privilege Escalation in PUT /v1/admin/promote/:id [critical] src/router/routes/user.js:356-356">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated Vertical Privilege Escalation in PUT /v1/admin/promote/:id (CWE-862) critical conf=0.97 src/router/routes/user.js:356-356">const user = db.user.update({role:'admin'}, {
+const user = db.user.update({role:'admin'}, {</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE via libxmljs noent:true in POST /v1/admin/new-beer-xml [critical] src/router/routes/admin.js:93-93">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE via libxmljs noent:true in POST /v1/admin/new-beer-xml (CWE-611) critical conf=0.96 src/router/routes/admin.js:93-93">const doc = libxmljs.parseXml(xml, {noent: true});
+const doc = libxmljs.parseXml(xml, {noent: true});</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="SSTI in GET / via nunjucks.renderString [critical] src/router/routes/frontend.js:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI in GET / via nunjucks.renderString (CWE-94) critical conf=0.96 src/router/routes/frontend.js:16-16">rendered = nunjucks.renderString(message);
+rendered = nunjucks.renderString(message);</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="SSTI in GET /register via nunjucks.renderString [critical] src/router/routes/frontend.js:39-39">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI in GET /register via nunjucks.renderString (CWE-94) critical conf=0.96 src/router/routes/frontend.js:39-39">rendered = nunjucks.renderString(message);
+rendered = nunjucks.renderString(message);</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path Traversal Arbitrary File Read in GET /v1/beer-pic [critical] src/router/routes/order.js:33-33">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path Traversal Arbitrary File Read in GET /v1/beer-pic (CWE-22) critical conf=0.96 src/router/routes/order.js:33-33">fs.readFile(path.join(__dirname, filePath),function(err,data){
+fs.readFile(path.join(__dirname, filePath),function(err,data){</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Insecure Deserialization RCE in POST /v1/init [critical] src/router/routes/system.js:64-64">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure Deserialization RCE in POST /v1/init (CWE-502) critical conf=0.96 src/router/routes/system.js:64-64">var deser = serialize.unserialize(body)
+var deser = serialize.unserialize(body)</failure>
+  </testcase>
+  <testcase classname="CWE-434" name="Unrestricted File Upload in POST /v1/admin/upload-pic [critical] src/router/routes/admin.js:50-51">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unrestricted File Upload in POST /v1/admin/upload-pic (CWE-434) critical conf=0.95 src/router/routes/admin.js:50-51">const uploadImage = multer({ dest: './uploads/', })
+const uploadImage = multer({ dest: './uploads/', })</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on POST /v1/init Deserialization Endpoint [critical] src/router/routes/system.js:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on POST /v1/init Deserialization Endpoint (CWE-862) critical conf=0.95 src/router/routes/system.js:61-61">src/router/routes/system.js:61 POST /v1/init performs node-serialize unserialize with no auth middleware; grep shows no route imports authJwt/verifySignup
+app.post('/v1/init', (req,res) =&gt;{</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Mass Assignment to Admin Role and Plaintext Password in POST /v1/user [critical] src/router/routes/user.js:86-86">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass Assignment to Admin Role and Plaintext Password in POST /v1/user (CWE-915) critical conf=0.95 src/router/routes/user.js:86-86">const userRole = req.body.role
+const userRole = req.body.role</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Secret and Broken Password Check in POST /v1/user/token [critical] src/router/routes/user.js:251-251">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Secret and Broken Password Check in POST /v1/user/token (CWE-798) critical conf=0.95 src/router/routes/user.js:251-251">const jwtTokenSecret = "SuperSecret"
+const jwtTokenSecret = "SuperSecret"</failure>
+  </testcase>
+  <testcase classname="CWE-915" name="Mass Assignment BOLA in PUT /v1/user/:id [critical] src/router/routes/user.js:328-328">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Mass Assignment BOLA in PUT /v1/user/:id (CWE-915) critical conf=0.95 src/router/routes/user.js:328-328">const user = db.user.update(req.body, {
+const user = db.user.update(req.body, {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authorization on POST /v1/admin/new-beer [high] src/router/routes/admin.js:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authorization on POST /v1/admin/new-beer (CWE-862) high conf=0.96 src/router/routes/admin.js:16-16">app.post('/v1/admin/new-beer/', (req,
+app.post('/v1/admin/new-beer/', (req,</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR in GET /v1/user/:id [high] src/router/routes/user.js:52-52">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR in GET /v1/user/:id (CWE-639) high conf=0.96 src/router/routes/user.js:52-52">db.user.findOne({include: 'beers',where: { id : req.params.id}})
+db.user.findOne({include: 'beers',where: { id : req.params.id}})</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Broken Function-Level Authorization in DELETE /v1/user/:id [high] src/router/routes/user.js:65-65">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Function-Level Authorization in DELETE /v1/user/:id (CWE-862) high conf=0.96 src/router/routes/user.js:65-65">db.user.destroy({where: { id : req.params.id}})
+db.user.destroy({where: { id : req.params.id}})</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on POST /v1/admin/upload-pic [high] src/router/routes/admin.js:51-51">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on POST /v1/admin/upload-pic (CWE-862) high conf=0.95 src/router/routes/admin.js:51-51">src/router/routes/admin.js:51 defines POST /v1/admin/upload-pic/ with only multer middleware; no authJwt.verifyToken/isAdmin imported or used in file (requires only os/multer/hoek); sibling GET /v1/admin/users/ in user.js:15 does a JWT check but this admin upload route has none
+app.post('/v1/admin/upload-pic/', uploadImage.single('file'), async function (req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on POST /v1/admin/new-beer-xml [high] src/router/routes/admin.js:83-83">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on POST /v1/admin/new-beer-xml (CWE-862) high conf=0.95 src/router/routes/admin.js:83-83">src/router/routes/admin.js:83 defines POST /v1/admin/new-beer-xml/ with only multer memoryStorage; no authentication/authorization check before libxmljs.parseXml noent:true and db.beer.create
+app.post('/v1/admin/new-beer-xml/', upload.single('file'), async function (req, res) {</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on GET /v1/order Exposes All Users and Beers [high] src/router/routes/order.js:12-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on GET /v1/order Exposes All Users and Beers (CWE-862) high conf=0.95 src/router/routes/order.js:12-12">src/router/routes/order.js:12 route calls db.beer.findAll({include: users}) with no auth check; prior missing-auth list does not include this endpoint
+app.get('/v1/order', (req,res) =&gt;{</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in GET /v1/test [high] src/router/routes/system.js:81-81">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF in GET /v1/test (CWE-918) high conf=0.95 src/router/routes/system.js:81-81">requests.get(url)
+requests.get(url)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded JWT Secret in GET /v1/admin/users [high] src/router/routes/user.js:18-18">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded JWT Secret in GET /v1/admin/users (CWE-798) high conf=0.95 src/router/routes/user.js:18-18">const user_object = jwt.verify(req.headers.authorization.split(' ')[1],"SuperSecret")
+const user_object = jwt.verify(req.headers.authorization.split(' ')[1],"SuperSecret")</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded OTP Seed Default Enables OTP Prediction [high] src/router/routes/user.js:395-395">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded OTP Seed Default Enables OTP Prediction (CWE-798) high conf=0.95 src/router/routes/user.js:395-395">src/router/routes/user.js:395 hardcoded OTP seed fallback; companion hardcoded JWT secret at line 404 uses same weak value (masked)
+const seed = req.query.seed || "***";</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via |safe in user-register.html [high] src/templates/user-register.html:139-139">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via |safe in user-register.html (CWE-79) high conf=0.95 src/templates/user-register.html:139-139">&lt;p class="mb-4"&gt;{{message | safe}}&lt;/p&gt;
+&lt;p class="mb-4"&gt;{{message | safe}}&lt;/p&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via |safe in user.html [high] src/templates/user.html:139-139">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via |safe in user.html (CWE-79) high conf=0.95 src/templates/user.html:139-139">&lt;p class="mb-4"&gt;{{message | safe}}&lt;/p&gt;
+&lt;p class="mb-4"&gt;{{message | safe}}&lt;/p&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Authentication on GET /v1/test SSRF Endpoint [high] src/router/routes/system.js:75-75">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Authentication on GET /v1/test SSRF Endpoint (CWE-862) high conf=0.92 src/router/routes/system.js:75-75">src/router/routes/system.js:75 GET /v1/test SSRF via axios with no auth, no allowlist, no rate limit; no route uses auth middleware
+app.get('/v1/test/', (req,res) =&gt;{</failure>
+  </testcase>
+  <testcase classname="CWE-523" name="Credentials in URL and Weak MD5 Storage in GET /registerform [high] src/router/routes/frontend.js:68-68">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Credentials in URL and Weak MD5 Storage in GET /registerform (CWE-523) high conf=0.9 src/router/routes/frontend.js:68-68">const userPassword = req.query.password;
+const userPassword = req.query.password;</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Broken Authentication Bypass in GET /login [high] src/router/routes/frontend.js:122-122">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Authentication Bypass in GET /login (CWE-287) high conf=0.9 src/router/routes/frontend.js:122-122">if((user[0].password == userPassword) || (md5(user[0].password) == userPassword)){
+if((user[0].password == userPassword) || (md5(user[0].password) == userPassword)){</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR in GET /profile [high] src/router/routes/frontend.js:148-148">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR in GET /profile (CWE-639) high conf=0.9 src/router/routes/frontend.js:148-148">id: req.query.id
+id: req.query.id</failure>
+  </testcase>
+  <testcase classname="CWE-200" name="Excessive Data Exposure in GET /v1/order [high] src/router/routes/order.js:13-13">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Excessive Data Exposure in GET /v1/order (CWE-200) high conf=0.9 src/router/routes/order.js:13-13">db.beer.findAll({include: "users"})
+db.beer.findAll({include: "users"})</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-Unit Stored XSS: POST /v1/user/ address to GET /profile |safe [high] src/router/routes/user.js:87-88">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Stored XSS: POST /v1/user/ address to GET /profile |safe (CWE-79) high conf=0.9 src/router/routes/user.js:87-88">src/router/routes/user.js:87 req.body.address stored via db.user.create; src/router/routes/frontend.js:144 GET /profile renders user[0] without output encoding; src/templates/profile.html:136 renders {{ user.address |safe }} unescaped
+const userAddress = req.body.address</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Broken Authorization Binding in POST /v1/love/:beer_id [high] src/router/routes/user.js:182-182">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Authorization Binding in POST /v1/love/:beer_id (CWE-287) high conf=0.9 src/router/routes/user.js:182-182">current_user_id = jwt.decode(req.headers.authorization.split(' ')[1]).id
+current_user_id = jwt.decode(req.headers.authorization.split(' ')[1]).id</failure>
+  </testcase>
+  <testcase classname="CWE-287" name="Broken Login and User Enumeration in POST /v1/user/login [high] src/router/routes/user.js:299-299">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken Login and User Enumeration in POST /v1/user/login (CWE-287) high conf=0.9 src/router/routes/user.js:299-299">if((user[0].password == userPassword) || (md5(user[0].password) == userPassword)){
+if((user[0].password == userPassword) || (md5(user[0].password) == userPassword)){</failure>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing Rate Limiting on OTP Validation Enables Brute-Force [high] src/router/routes/user.js:381-381">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Rate Limiting on OTP Validation Enables Brute-Force (CWE-307) high conf=0.9 src/router/routes/user.js:381-381">src/router/routes/user.js:381 POST /v1/user/:id/validate-otp has no throttle, attacker controls seed and token; jsdoc admits lack of rate limiting
+app.post('/v1/user/:id/validate-otp', (req,res) =&gt;{</failure>
+  </testcase>
+  <testcase classname="CWE-308" name="Broken OTP Validation with Seed Control and Token Leak [high] src/router/routes/user.js:393-404">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Broken OTP Validation with Seed Control and Token Leak (CWE-308) high conf=0.9 src/router/routes/user.js:393-404">const seed = req.query.seed || 'SUPERSECUREOTP';
+const seed = req.query.seed || 'SUPERSECUREOTP';</failure>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure Session Configuration with Hardcoded Secret [high] src/server.js:57-57">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure Session Configuration with Hardcoded Secret (CWE-614) high conf=0.9 src/server.js:57-57">secret: 'SuperSecret',
+secret: 'SuperSecret',</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via |safe in beer.html [high] src/templates/beer.html:136-136">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via |safe in beer.html (CWE-79) high conf=0.9 src/templates/beer.html:136-136">&lt;span class="align-middle"&gt;Address: {{ user.address |safe }}&lt;/span&gt;
+&lt;span class="align-middle"&gt;Address: {{ user.address |safe }}&lt;/span&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via |safe in profile.html [high] src/templates/profile.html:136-136">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via |safe in profile.html (CWE-79) high conf=0.9 src/templates/profile.html:136-136">&lt;span class="align-middle"&gt;Address: {{ user.address |safe }}&lt;/span&gt;
+&lt;span class="align-middle"&gt;Address: {{ user.address |safe }}&lt;/span&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="IDOR and Reflected XSS in GET /beer via relationship [high] src/router/routes/frontend.js:212-212">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.9" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="IDOR and Reflected XSS in GET /beer via relationship (CWE-639) high conf=0.85 src/router/routes/frontend.js:212-212">love_message = req.query.relationship
+love_message = req.query.relationship</failure>
+  </testcase>
+  <testcase classname="CWE-601" name="Open Redirect in GET /v1/redirect [medium] src/router/routes/system.js:37-37">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-598" name="Credentials in URL Query in GET /login [medium] src/router/routes/frontend.js:110-112">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-248" name="Unhandled Exception Hanging Response DoS in GET /v1/status/:brand [medium] src/router/routes/system.js:20-22">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-248" name="Missing Response Hanging Request in POST /v1/init [medium] src/router/routes/system.js:61-64">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="CSRF and IDOR in GET /v1/love/:beer_id [medium] src/router/routes/user.js:118-118">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-384" name="Session Fixation in GET /login: No Session Regeneration on Authentication [medium] src/router/routes/frontend.js:126-126">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1333" name="ReDoS via Nested-Quantifier Email Regex on Unauthenticated Endpoints [medium] src/router/routes/user.js:89-89">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.4" />
+      <property name="confidence" value="0.75" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose Database Error Disclosure in Search Endpoint [low] src/router/routes/order.js:71-71">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Missing Security Headers (CSP/HSTS/X-Frame) Disabled in Server [low] src/server.js:19-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Sensitive Error Disclosure in GET /v1/test SSRF Handler [low] src/router/routes/system.js:89-89">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

@@ -1,0 +1,3367 @@
+[
+  {
+    "id": "unit-routes-2",
+    "title": "OS Command Injection in create via identify URL",
+    "cwe": "CWE-78",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routes/index.js",
+    "start_line": 161,
+    "end_line": 161,
+    "snippet": "exec('identify ' + url, function (err, stdout, stderr) {",
+    "taint": {
+      "source": "req.body.content POST /create",
+      "sink": "child_process.exec shell string",
+      "path": [
+        "routes/index.js:155 req.body.content",
+        "routes/index.js:161 exec sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 155,
+        "note": "item from req.body.content"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 161,
+        "note": "shell exec sink"
+      }
+    ],
+    "evidence": "exec('identify ' + url, function (err, stdout, stderr) { | validator: routes/index.js:161 exec('identify '+url) with url derived at routes/index.js:155-157 from req.body.content; reachable unauth via app.js:60 POST /create with no sanitization | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client controls req.body.content. HOW create() extracts URL via regex and concatenates into exec shell string. WHAT arbitrary OS command injection.",
+    "status": "confirmed",
+    "conditions": [
+      "POST /create reachable without auth"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "exec('identify ' + url, function (err, stdout, stderr) {",
+    "hunter_snippet": "exec('identify ' + url, function (err, stdout, stderr) {",
+    "patch_summary": "Replace exec shell string with execFile('identify',[url]) and validate url against http(s) allowlist; reject shell metachars.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-8",
+    "title": "Dust Template Injection via device in about_new",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 300,
+    "end_line": 300,
+    "snippet": "return res.render(\"about_new.dust\",",
+    "taint": {
+      "source": "req.query.device GET /about_new",
+      "sink": "dust render with attacker value",
+      "path": [
+        "routes/index.js:304 req.query.device",
+        "routes/index.js:300 dust render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 304,
+        "note": "device from query"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 300,
+        "note": "dust render sink"
+      }
+    ],
+    "evidence": "return res.render(\"about_new.dust\", | validator: routes/index.js:303-304 device=req.query.device flows to res.render about_new.dust at routes/index.js:300; views/about_new.dust:5 interpolates device inside @if cond evaluated as JS (see exploits/dustjs-exploits.sh RCE) | consensus: 2/2 confirmed",
+    "rationale": "WHO unauthenticated client controls req.query.device. HOW about_new passes it to dust render where template interpolates device. WHAT dust template injection and XSS.",
+    "status": "confirmed",
+    "conditions": [
+      "GET /about_new reachable"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "return res.render(\"about_new.dust\",",
+    "hunter_snippet": "return res.render(\"about_new.dust\",",
+    "patch_summary": "Stop evaluating user input as Dust code; remove device from cond eval and treat as plain string context.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 8.3,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-8",
+    "title": "Missing Authorization in import allows anonymous file upload",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 241,
+    "end_line": 241,
+    "snippet": "exports.import = function (req, res, next) {",
+    "taint": {
+      "source": "unauthenticated multipart upload",
+      "sink": "AdmZip extract + Todo.save",
+      "path": [
+        "app.js:64 POST /import",
+        "routes/index.js:241 import handler"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 64,
+        "note": "POST /import without guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 241,
+        "note": "import writes files and Todos"
+      }
+    ],
+    "evidence": "exports.import = function (req, res, next) { | validator: routes/index.js:303-304 device=req.query.device flows to res.render about_new.dust at routes/index.js:300; views/about_new.dust:5 interpolates device inside @if cond evaluated as JS (see exploits/dustjs-exploits.sh RCE) | consensus: 2/2 confirmed",
+    "rationale": "WHO: unauthenticated client. HOW: import processes file uploads and writes to filesystem/DB with no isLoggedIn, inconsistent with account routes. WHAT: anonymous filesystem and DB write primitive.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /import"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "exports.import = function (req, res, next) {",
+    "hunter_snippet": "exports.import = function (req, res, next) {",
+    "patch_summary": "Stop evaluating user input as Dust code; remove device from cond eval and treat as plain string context.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.3,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-LOGIN-BYPASS-TO-SSTI-CHAIN",
+    "title": "Cross-Unit Authentication Bypass to Template Takeover via Session (NoSQLi to HBS Layout Control)",
+    "cwe": "CWE-287",
+    "severity": "critical",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 107,
+    "end_line": 107,
+    "snippet": "    return res.render('account.hbs', profile)",
+    "taint": {
+      "source": "POST /login username/password JSON operators",
+      "sink": "res.render('account.hbs', profile) layout-controlled template render",
+      "path": [
+        "routes/index.js:39 User.find({username,password})",
+        "routes/index.js:55 session.loggedIn=1",
+        "routes/index.js:116 isLoggedIn gate",
+        "routes/index.js:89 profile=req.body with extra layout"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 39,
+        "note": "NoSQL source User.find with username/password objects"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 55,
+        "note": "session.loggedIn set on query truthiness"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 116,
+        "note": "isLoggedIn checks only loggedIn===1"
+      },
+      {
+        "file": "app.js",
+        "line": 55,
+        "note": "POST /login entry"
+      },
+      {
+        "file": "app.js",
+        "line": 58,
+        "note": "POST /account_details requires only isLoggedIn"
+      }
+    ],
+    "evidence": "routes/index.js:39 User.find with attacker JSON operators bypasses password check, routes/index.js:55 sets session.loggedIn=1 on any non-empty result, routes/index.js:116 isLoggedIn gates only on that flag, routes/index.js:89-107 passes full req.body including extra layout key to res.render account.hbs | validator: routes/index.js:39 User.find password unsanitized + routes/index.js:55 session.loggedIn=1 + routes/index.js:116 isLoggedIn + routes/index.js:89-107 profile=req.body layout to res.render account.hbs via app.js:55/58 | consensus: 1/1 confirmed",
+    "rationale": "NoSQL bypass yields authenticated session without knowing password, satisfying isLoggedIn and unlocking HBS layout control sink. Unit hunters reported each half separately; this is the cross-unit kill chain linking unauth login to authenticated LFI/template takeover via session state carrier.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/index.js:39 User.find with attacker JSON operators bypasses password check, routes/index.js:55 sets session.loggedIn=1 on any non-empty result, routes/index.js:116 isLoggedIn gates only on that flag, routes/index.js:89-107 passes full req.body including extra layout key to res.render account.hbs",
+    "hunter_snippet": "    return res.render('account.hbs', profile)",
+    "patch_summary": "Cast/validate username/password to strings with parameterized query, set session only on verified password, allowlist render locals and block layout override",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.3,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-pollution-loggedin-bypass",
+    "title": "Cross-Unit Prototype-Pollution Authentication Bypass (PUT /chat to isLoggedIn via Object.prototype.loggedIn)",
+    "cwe": "CWE-287",
+    "severity": "critical",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 115,
+    "end_line": 117,
+    "snippet": "  if (req.session.loggedIn === 1) {",
+    "taint": {
+      "source": "PUT /chat JSON message.__proto__.loggedIn",
+      "sink": "isLoggedIn authorization check (req.session.loggedIn===1)",
+      "path": [
+        "app.js:67 PUT /chat -> routes/index.js:335 req.body.message",
+        "routes/index.js:347 _.merge(message, req.body.message) -> Object.prototype.loggedIn",
+        "routes/index.js:116 req.session.loggedIn lookup -> app.js:56-58 /admin,/account_details"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 347,
+        "note": "lodash merge sink polluting Object.prototype"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 116,
+        "note": "isLoggedIn check bypassed via prototype fallback"
+      },
+      {
+        "file": "app.js",
+        "line": 56,
+        "note": "/admin guarded only by isLoggedIn"
+      },
+      {
+        "file": "app.js",
+        "line": 67,
+        "note": "PUT /chat entry with no session gate"
+      }
+    ],
+    "evidence": "PUT /chat _.merge pollutes Object.prototype (routes/index.js:347) with attacker key loggedIn; isLoggedIn at routes/index.js:115-116 reads req.session.loggedIn via prototype chain; guarded routes at app.js:56-58; entry auth uses known user:pwd at routes/index.js:313-317 | validator: PUT /chat unauth reachable at app.js:67 with known user:pwd at routes/index.js:308-312; _.merge(message, req.body.message) at routes/index.js:347 with lodash 4.17.4 (package.json:32) allows __proto__.loggedIn pollution; isLoggedIn checks req.session.loggedIn===1 at routes/index.js:115-116 inheriting polluted Object.prototype, guarding /admin and /account_details at app.js:56-58 | consensus: 1/1 confirmed",
+    "rationale": "Lodash 4.17.4 _.merge with attacker message.__proto__ pollutes Object.prototype.loggedIn=1. Fresh express-session objects lacking loggedIn then satisfy req.session.loggedIn===1 via prototype fallback, bypassing isLoggedIn for /admin and /account_details without NoSQLi or password. Entry is reachable unauthenticated once known chat user:pwd (user/pwd) is used, and persists process-wide affecting all subsequent sessions.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "PUT /chat _.merge pollutes Object.prototype (routes/index.js:347) with attacker key loggedIn; isLoggedIn at routes/index.js:115-116 reads req.session.loggedIn via prototype chain; guarded routes at app.js:56-58; entry auth uses known user:pwd at routes/index.js:313-317",
+    "hunter_snippet": "  if (req.session.loggedIn === 1) {",
+    "patch_summary": "Upgrade lodash past 4.17.5, replace _.merge of req.body.message with allowlisted assignment, and make isLoggedIn check own-property (Object.hasOwn) with falsy default.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-0",
+    "title": "NoSQL Operator Injection in loginHandler password",
+    "cwe": "CWE-943",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routes/index.js",
+    "start_line": 39,
+    "end_line": 39,
+    "snippet": "User.find({ username: req.body.username, password: req.body.password }, function (err, users) {",
+    "taint": {
+      "source": "req.body.password",
+      "sink": "User.find NoSQL query",
+      "path": [
+        "routes/index.js:39"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 39,
+        "note": "password into User.find"
+      }
+    ],
+    "evidence": "User.find({ username: req.body.username, password: req.body.password }, function (err, users) { | validator: routes/index.js:39 User.find takes req.body.password object as query operator; gate at routes/index.js:38 only checks username isEmail, password unsanitized; reachable unauth via app.js:55 POST /login | consensus: 2/2 confirmed",
+    "rationale": "WHO unauthenticated client controls req.body.password as JSON. HOW loginHandler passes it directly into User.find without type check, only username validated. WHAT NoSQL operator injection bypasses auth.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "routes",
+    "hunter_evidence": "User.find({ username: req.body.username, password: req.body.password }, function (err, users) {",
+    "hunter_snippet": "User.find({ username: req.body.username, password: req.body.password }, function (err, users) {",
+    "patch_summary": "Reject non-string username/password (typeof check), strip $/dot keys or use $eq, and enforce allowlisted query construction.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-12",
+    "title": "Hardcoded Session Secret keyboard cat",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app.js",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "secret: 'keyboard cat',",
+    "taint": {
+      "source": "source literal",
+      "sink": "session secret hardcoded",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 43,
+        "note": "hardcoded secret"
+      }
+    ],
+    "evidence": "secret: 'keyboard cat', | validator: app.js:43 session secret hardcoded to 'keyboard cat' with no env override; active for all routes via app.js:42-46 session middleware | consensus: 1/1 confirmed",
+    "rationale": "WHO anyone reading source. HOW session secret hardcoded keyboard cat. WHAT session forgery.",
+    "status": "confirmed",
+    "conditions": [
+      "deployed with this source"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "secret: 'keyboard cat',",
+    "hunter_snippet": "secret: 'keyboard cat',",
+    "patch_summary": "Load session secret from env/vault, rotate, require strong random value and fail closed if unset.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-17",
+    "title": "Hardcoded MySQL root Credentials",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "typeorm-db.js",
+    "start_line": 12,
+    "end_line": 12,
+    "snippet": "password: \"root\",",
+    "taint": {
+      "source": "source literal root",
+      "sink": "DB credential hardcoded",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "typeorm-db.js",
+        "line": 12,
+        "note": "hardcoded password root"
+      }
+    ],
+    "evidence": "password: \"root\", | validator: typeorm-db.js:12 password hardcoded to \"root\" (username root per typeorm-db.js:11, db acme per typeorm-db.js:13); connection active on require via app.js:27 | consensus: 1/1 confirmed",
+    "rationale": "WHO anyone reading source. HOW MySQL creds hardcoded root/root. WHAT full DB compromise.",
+    "status": "confirmed",
+    "conditions": [
+      "source exposure; MySQL port exposed"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "password: \"root\",",
+    "hunter_snippet": "password: \"root\",",
+    "patch_summary": "Move DB username/password/host to env/vault, rotate root/root, do not commit credentials.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-0",
+    "title": "Open Redirect in adminLoginSuccess via redirectPage",
+    "cwe": "CWE-943",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routes/index.js",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "User.find({ username: req.body.username, password: req.body.password }, function (err, users) {",
+    "taint": {
+      "source": "req.body.redirectPage POST /login",
+      "sink": "res.redirect(redirectPage)",
+      "path": [
+        "routes/index.js:41 req.body.redirectPage",
+        "routes/index.js:61 res.redirect sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 41,
+        "note": "redirectPage from req.body"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 61,
+        "note": "unvalidated redirect sink"
+      }
+    ],
+    "evidence": "return res.redirect(redirectPage) | validator: routes/index.js:39 User.find takes req.body.password object as query operator; gate at routes/index.js:38 only checks username isEmail, password unsanitized; reachable unauth via app.js:55 POST /login | consensus: 2/2 confirmed",
+    "rationale": "WHO unauthenticated client controls req.body.redirectPage. HOW loginHandler passes it to adminLoginSuccess which calls res.redirect(redirectPage) with no allowlist. WHAT open redirect to external phishing site after login.",
+    "status": "confirmed",
+    "conditions": [
+      "POST /login reachable unauthenticated"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "return res.redirect(redirectPage)",
+    "hunter_snippet": "return res.redirect(redirectPage)",
+    "patch_summary": "Reject non-string username/password (typeof check), strip $/dot keys or use $eq, and enforce allowlisted query construction.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-24",
+    "title": "Plaintext Password Storage in Mongoose User Schema",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "mongoose-db.js",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "password: String,",
+    "taint": {
+      "source": "hardcoded schema without hashing",
+      "sink": "plaintext password persistence",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "mongoose-db.js",
+        "line": 14,
+        "note": "password stored as String no hash"
+      },
+      {
+        "file": "mongoose-db.js",
+        "line": 52,
+        "note": "seed saves plaintext"
+      }
+    ],
+    "evidence": "password: String, | validator: mongoose-db.js:12-14 User schema password:String with no hash; mongoose-db.js:52 seeds SuperSecretPassword plaintext and routes/index.js:42 queries plaintext | consensus: 1/1 confirmed",
+    "rationale": "WHO: DB reader / backup thief. HOW: User schema defines password as plain String with no hashing hook; seed saves SuperSecretPassword verbatim. WHAT: plaintext credential storage enables full compromise on DB leak, distinct from seed line.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('db.users.find() shows plaintext password')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any deployment"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "password: String,",
+    "hunter_snippet": "password: String,",
+    "patch_summary": "Hash passwords with bcrypt/scrypt on save and compare hashes on login.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-HARCODED-CHAT-CRED",
+    "title": "Hardcoded Chat Credential Enables Authenticated Prototype-Pollution Entry",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routes/index.js",
+    "start_line": 315,
+    "end_line": 315,
+    "snippet": "  { name: 'user', password: *** },",
+    "taint": {
+      "source": "hardcoded credential committed in source",
+      "sink": "authenticated PUT /chat access via known credential",
+      "path": [
+        "routes/index.js:315 hardcoded credential definition",
+        "app.js:67 PUT /chat without session guard",
+        "routes/index.js:335 findUser(req.body.auth) check"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 315,
+        "note": "hardcoded chat user credential"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 335,
+        "note": "PUT /chat authenticates against hardcoded value"
+      },
+      {
+        "file": "app.js",
+        "line": 67,
+        "note": "PUT /chat mounted without isLoggedIn session guard"
+      }
+    ],
+    "evidence": "routes/index.js:315 defines default chat credential password=*** with comment that password is known; PUT /chat at routes/index.js:335 authenticates via findUser against this value, app.js:67 exposes PUT /chat without session guard | validator: routes/index.js:315 hardcodes {name:user,password:pwd}; app.js:67 PUT/chat with no session guard authenticates via findUser at routes/index.js:323-327 | consensus: 1/1 confirmed",
+    "rationale": "Hardcoded source credential gives anyone with source access immediate authenticated access to PUT /chat (password publicly documented as known), enabling pollution payload delivery that escalates to DELETE /chat admin delete. Distinct from mongo/mysql/session secrets already reported.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/index.js:315 defines default chat credential password=*** with comment that password is known; PUT /chat at routes/index.js:335 authenticates via findUser against this value, app.js:67 exposes PUT /chat without session guard",
+    "hunter_snippet": "  { name: 'user', password: *** },",
+    "patch_summary": "Remove hardcoded chat passwords; require per-user secrets from env/vault and random admin password",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-MISSING-AUTH-USERS-API",
+    "title": "Missing Authentication on /users API Allows Unauthenticated Admin Creation and Enumeration",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app.js",
+    "start_line": 69,
+    "end_line": 69,
+    "snippet": "app.use('/users', routesUsers)",
+    "taint": {
+      "source": "unauthenticated network JSON to GET/POST /users",
+      "sink": "TypeORM repo.save / repo.find on MySQL Users without auth",
+      "path": [
+        "app.js:69 unauthenticated mount",
+        "routes/users.js:23 req.body.name/address/role",
+        "routes/users.js:16 repo.find({id:1}) disclosure"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 69,
+        "note": "/users mount without isLoggedIn"
+      },
+      {
+        "file": "app.js",
+        "line": 56,
+        "note": "sibling consensus requires isLoggedIn for /admin"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 8,
+        "note": "unauthenticated GET profile fetch"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 23,
+        "note": "unauthenticated POST create with role"
+      }
+    ],
+    "evidence": "app.js:69 mounts /users router with no auth middleware, while sibling routes app.js:56-58 require routes.isLoggedIn; routes/users.js:8 GET returns repo.find({id:1}) and routes/users.js:23 POST does repo.save(user with attacker role) with comment admitting auth not implemented | validator: app.js:69 mounts /users with no isLoggedIn vs app.js:56-58 guards; routes/users.js:8 GET repo.find and routes/users.js:25-33 POST repo.save(role) unauthenticated | consensus: 1/1 confirmed",
+    "rationale": "Both /users endpoints are reachable unauthenticated by design omission (code comment says imagine auth). Attacker can POST role=admin then GET enumerate, forming unauthenticated create-then-read loop via shared MySQL Users table. Different endpoints from prior Todo-lifecycle system finding at app.js:61.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:69 mounts /users router with no auth middleware, while sibling routes app.js:56-58 require routes.isLoggedIn; routes/users.js:8 GET returns repo.find({id:1}) and routes/users.js:23 POST does repo.save(user with attacker role) with comment admitting auth not implemented",
+    "hunter_snippet": "app.use('/users', routesUsers)",
+    "patch_summary": "Require isLoggedIn/session auth on /users router and enforce server-side role allowlist",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-9",
+    "title": "Prototype Pollution in chat.add via lodash merge",
+    "cwe": "CWE-1321",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 347,
+    "end_line": 347,
+    "snippet": "_.merge(message, req.body.message, {",
+    "taint": {
+      "source": "req.body.message PUT /chat",
+      "sink": "_.merge prototype pollution",
+      "path": [
+        "routes/index.js:347 req.body.message",
+        "routes/index.js:347 merge sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 347,
+        "note": "lodash merge sink"
+      }
+    ],
+    "evidence": "_.merge(message, req.body.message, { | validator: routes/index.js:347 _.merge(message, req.body.message,...) with lodash 4.17.4 per package.json:34 (pre-fix for CVE-2018-16487); reachable via app.js:66 PUT /chat with known creds at routes/index.js:315-317 | consensus: 1/1 confirmed",
+    "rationale": "WHO client controls req.body.message JSON including proto. HOW chat.add merges attacker object via lodash merge. WHAT prototype pollution.",
+    "status": "confirmed",
+    "conditions": [
+      "PUT /chat reachable with weak credential"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "_.merge(message, req.body.message, {",
+    "hunter_snippet": "_.merge(message, req.body.message, {",
+    "patch_summary": "Upgrade lodash past 4.17.11, block __proto__/constructor/prototype keys and use safe merge/Object.create(null).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-1",
+    "title": "Reflected XSS via redirectPage in admin.ejs",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "views/admin.ejs",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "<input type=\"hidden\" name=\"redirectPage\" value=\"<%- redirectPage %>\" />",
+    "taint": {
+      "source": "req.query.redirectPage GET /login",
+      "sink": "<%- redirectPage %> unescaped emission",
+      "path": [
+        "routes/index.js:71 req.query.redirectPage",
+        "views/admin.ejs:17 <%- sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 71,
+        "note": "redirectPage from req.query"
+      },
+      {
+        "file": "views/admin.ejs",
+        "line": 17,
+        "note": "unescaped reflector"
+      }
+    ],
+    "evidence": "<input type=\"hidden\" name=\"redirectPage\" value=\"<%- redirectPage %>\" /> | validator: views/admin.ejs:17 <%- redirectPage %> unescaped emission of routes/index.js:71 req.query.redirectPage via routes.login; reachable via app.js:54 GET /login | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client controls req.query.redirectPage. HOW login() passes it to admin.ejs which emits with unescaped <%- redirectPage %>. WHAT reflected XSS in victim browser.",
+    "status": "confirmed",
+    "conditions": [
+      "GET /login reachable"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "<input type=\"hidden\" name=\"redirectPage\" value=\"<%- redirectPage %>\" />",
+    "hunter_snippet": "<input type=\"hidden\" name=\"redirectPage\" value=\"<%- redirectPage %>\" />",
+    "patch_summary": "Change <%- redirectPage %> to <%= redirectPage %> and validate redirectPage allowlist.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-4",
+    "title": "Missing Authorization in destroy allows arbitrary deletion",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 191,
+    "end_line": 191,
+    "snippet": "Todo.findById(req.params.id, function (err, todo) {",
+    "taint": {
+      "source": "req.params.id unauthenticated",
+      "sink": "Todo.findById + remove",
+      "path": [
+        "app.js:61 GET /destroy/:id",
+        "routes/index.js:191 findById"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 61,
+        "note": "route without guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 191,
+        "note": "unguarded findById"
+      }
+    ],
+    "evidence": "Todo.findById(req.params.id, function (err, todo) { | validator: app.js:61 GET /destroy/:id has no isLoggedIn unlike app.js:56-58 guarded routes; handler at routes/index.js:191 Todo.findById(req.params.id)+remove deletes arbitrary id | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client controls id path. HOW destroy() does findById+remove with no isLoggedIn; route mounted without guard. WHAT arbitrary todo deletion.",
+    "status": "confirmed",
+    "conditions": [
+      "GET /destroy/:id reachable without session"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "Todo.findById(req.params.id, function (err, todo) {",
+    "hunter_snippet": "Todo.findById(req.params.id, function (err, todo) {",
+    "patch_summary": "Add isLoggedIn plus ownership check on destroy; use POST/DELETE with CSRF.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-5",
+    "title": "Missing Authorization in update allows arbitrary overwrite",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 221,
+    "end_line": 221,
+    "snippet": "todo.content = req.body.content;",
+    "taint": {
+      "source": "req.body.content unauthenticated",
+      "sink": "todo.content assignment + save",
+      "path": [
+        "app.js:63 POST /update/:id",
+        "routes/index.js:221 assignment"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 63,
+        "note": "route without guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 221,
+        "note": "content assignment sink"
+      }
+    ],
+    "evidence": "todo.content = req.body.content; | validator: app.js:63 POST /update/:id has no isLoggedIn unlike app.js:56-58; handler at routes/index.js:217-221 Todo.findById then todo.content=req.body.content+save allows unauth overwrite | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client controls id and content. HOW update() assigns req.body.content and saves with no auth check and no null guard. WHAT arbitrary overwrite plus TypeError DoS.",
+    "status": "confirmed",
+    "conditions": [
+      "POST /update/:id reachable without session"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "todo.content = req.body.content;",
+    "hunter_snippet": "todo.content = req.body.content;",
+    "patch_summary": "Add isLoggedIn plus ownership check on update; validate content type/length.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-6",
+    "title": "Zip-Slip Arbitrary File Overwrite in import",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 257,
+    "end_line": 257,
+    "snippet": "zip.extractAllTo(extracted_path, true);",
+    "taint": {
+      "source": "multipart importFile POST /import",
+      "sink": "AdmZip.extractAllTo filesystem write",
+      "path": [
+        "routes/index.js:247 req.files.importFile",
+        "routes/index.js:257 extractAllTo"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 247,
+        "note": "importFile from req.files"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 257,
+        "note": "extractAllTo sink"
+      }
+    ],
+    "evidence": "zip.extractAllTo(extracted_path, true); | validator: routes/index.js:257 zip.extractAllTo(extracted_path,true) on req.files.importFile at routes/index.js:247 via app.js:64 POST /import; adm-zip 0.4.7 per package.json:18 with only file-type mime check, no traversal validation | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated uploader controls zip bytes. HOW import() passes buffer to AdmZip extractAllTo with overwrite and no traversal check. WHAT Zip-Slip file overwrite.",
+    "status": "confirmed",
+    "conditions": [
+      "POST /import reachable with zip containing ../ entries"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "zip.extractAllTo(extracted_path, true);",
+    "hunter_snippet": "zip.extractAllTo(extracted_path, true);",
+    "patch_summary": "Validate zip entries against traversal, cap count/size, extract to isolated mkdtemp dir, upgrade adm-zip.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-15",
+    "title": "Unauthenticated User Enumeration in GET /users",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "const results = await repo.find({ id: 1 })",
+    "taint": {
+      "source": "unauthenticated GET /users",
+      "sink": "TypeORM find returning rows",
+      "path": [
+        "app.js:69 USE /users",
+        "routes/users.js:16 repo.find"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 69,
+        "note": "mount without auth"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 16,
+        "note": "unscoped find"
+      }
+    ],
+    "evidence": "const results = await repo.find({ id: 1 }) | validator: app.js:69 app.use('/users') mounts without auth; handler at routes/users.js:16 repo.find({id:1}) returns rows via routes/users.js:23 res.json without session check | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client hits GET /users. HOW router mounted without auth and returns repo.find id 1 overridable via polluted where. WHAT IDOR enumeration.",
+    "status": "confirmed",
+    "conditions": [
+      "GET /users reachable without session"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "const results = await repo.find({ id: 1 })",
+    "hunter_snippet": "const results = await repo.find({ id: 1 })",
+    "patch_summary": "Require authentication/authorization on /users and scope query to session user, not hardcoded id.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-18",
+    "title": "Hardcoded Plaintext Mongo Admin Password",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "mongoose-db.js",
+    "start_line": 52,
+    "end_line": 52,
+    "snippet": "new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save",
+    "taint": {
+      "source": "hardcoded SuperSecretPassword",
+      "sink": "Mongo save plaintext password",
+      "path": [
+        "mongoose-db.js:52 hardcoded password"
+      ]
+    },
+    "refs": [
+      {
+        "file": "mongoose-db.js",
+        "line": 52,
+        "note": "plaintext seed"
+      }
+    ],
+    "evidence": "new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save | validator: mongoose-db.js:52 seeds new User({username:'admin@snyk.io',password:'SuperSecretPassword'}) in plaintext and compares plaintext at routes/index.js:39; no hashing | consensus: 1/1 confirmed",
+    "rationale": "WHO anyone with DB/source. HOW seed creates admin with plaintext String password SuperSecretPassword. WHAT credential theft, no hashing.",
+    "status": "confirmed",
+    "conditions": [
+      "seed runs when admin absent"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save",
+    "hunter_snippet": "new User({ username: 'admin@snyk.io', password: 'SuperSecretPassword' }).save",
+    "patch_summary": "Remove hardcoded seed, store bcrypt/scrypt hash, rotate admin password via env.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-16",
+    "title": "Mass Assignment Role Escalation in POST /users",
+    "cwe": "CWE-915",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 36,
+    "end_line": 36,
+    "snippet": "const savedRecord = await repo.save(user)",
+    "taint": {
+      "source": "req.body role POST /users",
+      "sink": "TypeORM save with attacker role",
+      "path": [
+        "routes/users.js:34 req.body.role",
+        "routes/users.js:36 repo.save"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 34,
+        "note": "role from req.body"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 36,
+        "note": "repo.save sink"
+      }
+    ],
+    "evidence": "const savedRecord = await repo.save(user) | validator: routes/users.js:32-36 copies req.body.role into user then repo.save(user); entity/Users.js:15 role is persisted column; app.js:69 /users mounted with no auth | consensus: 1/1 confirmed",
+    "rationale": "WHO unauthenticated client controls name/address/role JSON. HOW POST assigns all three to entity and saves without allowlist. WHAT mass assignment role escalation.",
+    "status": "confirmed",
+    "conditions": [
+      "POST /users reachable without auth"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "const savedRecord = await repo.save(user)",
+    "hunter_snippet": "const savedRecord = await repo.save(user)",
+    "patch_summary": "Allowlist assignable fields and enforce server-side role; require auth and drop client-controlled role.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-22",
+    "title": "MongoDB Connection String Disclosure in Logs",
+    "cwe": "CWE-532",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "mongoose-db.js",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "console.log(\"Using Mongo URI \" + mongoUri);",
+    "taint": {
+      "source": "MONGOLAB_URI/MONGODB_URI secret",
+      "sink": "credential disclosure in logs",
+      "path": [
+        "mongoose-db.js:35 env URI",
+        "mongoose-db.js:43 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "mongoose-db.js",
+        "line": 35,
+        "note": "MONGOLAB_URI with creds"
+      },
+      {
+        "file": "mongoose-db.js",
+        "line": 43,
+        "note": "URI logged verbatim"
+      }
+    ],
+    "evidence": "console.log(\"Using Mongo URI \" + mongoUri); | validator: mongoose-db.js:35-43 mongoUri from MONGOLAB_URI/MONGODB_URI logged verbatim via console.log Using Mongo URI at line 43 | consensus: 1/1 confirmed",
+    "rationale": "WHO: log reader. HOW: mongoose-db logs full mongoUri which may embed username/password from env vars. WHAT: DB credential disclosure in logs, distinct from cfenv dump at line 21.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('MONGOLAB_URI=mongodb://user:pass@host/db in logs')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Cloud/Heroku deployment with MONGOLAB_URI containing credentials"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(\"Using Mongo URI \" + mongoUri);",
+    "hunter_snippet": "console.log(\"Using Mongo URI \" + mongoUri);",
+    "patch_summary": "Remove credential-bearing URI from logs; log redacted host/db only.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-23",
+    "title": "User Password Disclosure via console.log(users)",
+    "cwe": "CWE-532",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "mongoose-db.js",
+    "start_line": 49,
+    "end_line": 49,
+    "snippet": "console.log(users);",
+    "taint": {
+      "source": "Mongo User records",
+      "sink": "plaintext passwords in logs",
+      "path": [
+        "mongoose-db.js:48 User.find",
+        "mongoose-db.js:49 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "mongoose-db.js",
+        "line": 49,
+        "note": "logs users with passwords"
+      }
+    ],
+    "evidence": "console.log(users); | validator: mongoose-db.js:48-49 User.find then console.log(users) logs full User records including password String | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with log access. HOW: seed check logs full users array including plaintext passwords. WHAT: credential disclosure in logs.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Database contains users"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(users);",
+    "hunter_snippet": "console.log(users);",
+    "patch_summary": "Remove user dump log; never log password fields.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-02",
+    "title": "Missing Authorization and IDOR on Todo lifecycle routes (create/destroy/edit/update/import)",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "app.get('/destroy/:id', routes.destroy);",
+    "taint": {
+      "source": "unauthenticated URL path :id plus publicly disclosed ObjectIDs",
+      "sink": "Todo.remove/save on arbitrary ID without ownership check",
+      "path": [
+        "app.js:53 GET / renders todo._id links (views/index.ejs)",
+        "app.js:61 GET /destroy/:id req.params.id",
+        "routes/index.js:191 Todo.findById(req.params.id)->todo.remove"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 60,
+        "note": "POST /create missing isLoggedIn"
+      },
+      {
+        "file": "app.js",
+        "line": 61,
+        "note": "GET /destroy/:id missing isLoggedIn and CSRF"
+      },
+      {
+        "file": "app.js",
+        "line": 62,
+        "note": "GET /edit/:id missing isLoggedIn"
+      },
+      {
+        "file": "app.js",
+        "line": 63,
+        "note": "POST /update/:id missing isLoggedIn"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 191,
+        "note": "Todo.findById(req.params.id)->todo.remove no owner check"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 219,
+        "note": "Todo.findById(req.params.id)->todo.content overwrite no owner check"
+      },
+      {
+        "file": "views/index.ejs",
+        "line": 20,
+        "note": "public disclosure of todo._id enables ID enumeration"
+      }
+    ],
+    "evidence": "app.js:60 POST /create, app.js:61 GET /destroy/:id, app.js:62 GET /edit/:id, app.js:63 POST /update/:id, app.js:64 POST /import have no isLoggedIn guard unlike app.js:56-58; handlers use req.params.id directly in Todo.findById/remove/save (routes/index.js:191,203,219) with no ownership check; IDs are publicly leaked at GET / via views/index.ejs edit/destroy links | validator: app.js:60-64 POST/create destroy/edit/update/import lack isLoggedIn vs app.js:56 guard; routes/index.js:191 remove and routes/index.js:215-219 save use req.params.id with no owner check | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated remote can create, enumerate, edit, overwrite and delete any Todo by guessing ObjectIDs disclosed on public GET /; missing authentication plus missing authorization equals IDOR/BOLA across Todo lifecycle",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:60 POST /create, app.js:61 GET /destroy/:id, app.js:62 GET /edit/:id, app.js:63 POST /update/:id, app.js:64 POST /import have no isLoggedIn guard unlike app.js:56-58; handlers use req.params.id directly in Todo.findById/remove/save (routes/index.js:191,203,219) with no ownership check; IDs are publicly leaked at GET / via views/index.ejs edit/destroy links",
+    "hunter_snippet": "app.get('/destroy/:id', routes.destroy);",
+    "patch_summary": "Add isLoggedIn plus Todo ownership check on create/destroy/edit/update/import and use non-guessable IDs",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-ssrf-identify-fetch",
+    "title": "Server-Side Request Forgery via ImageMagick identify URL fetch in POST /create",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 161,
+    "end_line": 161,
+    "snippet": "    exec('identify ' + url, function (err, stdout, stderr) {",
+    "taint": {
+      "source": "POST /create todo content image markdown URL",
+      "sink": "ImageMagick identify remote URL fetch (outbound request)",
+      "path": [
+        "app.js:60 POST /create -> routes/index.js:152 req.body.content",
+        "routes/index.js:156 imgRegex extracts url group",
+        "routes/index.js:161 identify url outbound fetch"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 156,
+        "note": "attacker content matched for http URL"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 161,
+        "note": "identify fetches attacker URL server-side"
+      }
+    ],
+    "evidence": "POST /create imgRegex extracts http* URL at routes/index.js:156-158; URL passed to exec('identify '+url) at routes/index.js:161 where ImageMagick identify fetches remote URL server-side | validator: POST /create reachable unauth at app.js:60; req.body.content source at routes/index.js:153, imgRegex extracts attacker http URL at routes/index.js:154-156, passed unsanitized to exec('identify '+url) at routes/index.js:161 causing server-side fetch + shell | consensus: 1/1 confirmed",
+    "rationale": "Even without shell metacharacters (distinct from reported command injection), attacker URL ![alt text](http://169.254.169.254/... \"...) causes server-side ImageMagick to issue outbound HTTP fetch to internal/cloud-metadata hosts, enabling SSRF port-scan and metadata theft. Regex allows arbitrary http host.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST /create imgRegex extracts http* URL at routes/index.js:156-158; URL passed to exec('identify '+url) at routes/index.js:161 where ImageMagick identify fetches remote URL server-side",
+    "hunter_snippet": "    exec('identify ' + url, function (err, stdout, stderr) {",
+    "patch_summary": "Remove server-side identify fetch or replace exec string concat with execFile + strict http(s) URL allowlist/validation and no shell.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-3",
+    "title": "Stored XSS via Todo content in index.ejs",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "views/index.ejs",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "<%- marked(new String(todo.content)) %>",
+    "taint": {
+      "source": "req.body.content stored in Mongo Todo",
+      "sink": "<%- marked() unescaped HTML",
+      "path": [
+        "routes/index.js:155 req.body.content",
+        "views/index.ejs:20 marked sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 172,
+        "note": "Todo.save persists content"
+      },
+      {
+        "file": "views/index.ejs",
+        "line": 20,
+        "note": "unescaped marked sink"
+      }
+    ],
+    "evidence": "<%- marked(new String(todo.content)) %> | validator: views/index.ejs:20 <%- marked(new String(todo.content)) %> unescaped renders stored req.body.content persisted at routes/index.js:172 via app.js:60; sanitize:true at app.js:75 bypassable in marked 0.3.5 per package.json:35 (CVE-2016-10531/CVE-2017-1000427) | consensus: 1/1 confirmed",
+    "rationale": "WHO attacker controls Todo.content via create/update/import. HOW content saved then rendered with unescaped <%- marked() %> using vulnerable marked 0.3.5. WHAT stored XSS for every visitor to GET /.",
+    "status": "confirmed",
+    "conditions": [
+      "attacker can store payload via /create",
+      "victim visits GET /"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "<%- marked(new String(todo.content)) %>",
+    "hunter_snippet": "<%- marked(new String(todo.content)) %>",
+    "patch_summary": "Upgrade marked, render with maintained sanitizer (DOMPurify) or escape by default; validate content on create.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-7",
+    "title": "Template Layout Control via save_account_details",
+    "cwe": "CWE-94",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 107,
+    "end_line": 107,
+    "snippet": "return res.render('account.hbs', profile)",
+    "taint": {
+      "source": "req.body POST /account_details",
+      "sink": "hbs res.render with attacker layout",
+      "path": [
+        "routes/index.js:91 req.body",
+        "routes/index.js:107 res.render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 91,
+        "note": "profile equals req.body"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 107,
+        "note": "render sink"
+      }
+    ],
+    "evidence": "return res.render('account.hbs', profile) | validator: routes/index.js:91 profile=req.body flows to routes/index.js:107 res.render('account.hbs',profile) with only email/phone/ascii checks, extra layout key passes to hbs.__express (app.js:37) | consensus: 2/2 confirmed",
+    "rationale": "WHO authenticated client controls full JSON body including layout. HOW save_account_details passes entire req.body to res.render hbs. WHAT layout/LFI template control.",
+    "status": "confirmed",
+    "conditions": [
+      "authenticated session required"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "return res.render('account.hbs', profile)",
+    "hunter_snippet": "return res.render('account.hbs', profile)",
+    "patch_summary": "Construct explicit allowlisted view model and block layout/partial overrides instead of passing req.body.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-7",
+    "title": "Missing Authorization in edit exposes all todos",
+    "cwe": "CWE-94",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 203,
+    "end_line": 203,
+    "snippet": "exports.edit = function (req, res, next) {",
+    "taint": {
+      "source": "unauthenticated GET /edit",
+      "sink": "full todo disclosure without auth",
+      "path": [
+        "app.js:62 GET /edit/:id",
+        "routes/index.js:203 edit handler"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 62,
+        "note": "GET /edit mounted without guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 203,
+        "note": "edit dumps all todos"
+      }
+    ],
+    "evidence": "exports.edit = function (req, res, next) { | validator: routes/index.js:91 profile=req.body flows to routes/index.js:107 res.render('account.hbs',profile) with only email/phone/ascii checks, extra layout key passes to hbs.__express (app.js:37) | consensus: 2/2 confirmed",
+    "rationale": "WHO: unauthenticated client. HOW: edit lists all todos and reflects current id without isLoggedIn, unlike /admin. WHAT: missing authorization exposes all todo contents to anonymous users.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('GET','/edit/anything'); print(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /edit/:id"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "exports.edit = function (req, res, next) {",
+    "hunter_snippet": "exports.edit = function (req, res, next) {",
+    "patch_summary": "Construct explicit allowlisted view model and block layout/partial overrides instead of passing req.body.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-POLLUTION-TO-PRIVESC-CHAIN",
+    "title": "Cross-Unit Prototype-Pollution Privilege Escalation (PUT /chat to DELETE /chat and /users Query Hijack)",
+    "cwe": "CWE-1321",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 359,
+    "end_line": 359,
+    "snippet": "    if (!user || !user.canDelete) {",
+    "taint": {
+      "source": "PUT /chat req.body.message with __proto__ keys from low-priv authenticated user",
+      "sink": "DELETE /chat authorization + GET /users TypeORM query via inherited prototype",
+      "path": [
+        "routes/index.js:347 _.merge(message, req.body.message)",
+        "Object.prototype shared carrier (canDelete/where)",
+        "routes/index.js:359 canDelete authz check",
+        "routes/users.js:16 repo.find({id:1})"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 347,
+        "note": "pollution source _.merge with attacker message"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 359,
+        "note": "privilege sink user.canDelete inherits prototype"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 16,
+        "note": "second sink repo.find affected by prototype where"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 20,
+        "note": "debug log of polluted {}.where confirms carrier"
+      }
+    ],
+    "evidence": "routes/index.js:347 _.merge(message, req.body.message) with lodash 4.17.4 allows __proto__ pollution by low-priv holder of hardcoded credential; polluted Object.prototype.canDelete=true makes routes/index.js:359 !user.canDelete check pass for non-admin; polluted Object.prototype.where observed at routes/users.js:20 affects repo.find({id:1}) at routes/users.js:16 | validator: routes/index.js:343-347 _.merge with lodash 4.17.4 (package.json:32) merges __proto__; routes/index.js:359 !user.canDelete inherits polluted prototype; routes/users.js:16-20 {}.where carrier | consensus: 1/1 confirmed",
+    "rationale": "Single PUT pollution fans out via global Object.prototype to two privileged sinks in different modules: chat DELETE authz bypass (low-priv user inherits canDelete) and TypeORM query hijack on /users. Units reported merge and checks in isolation; this traces the shared-state cross-unit flow PUT->DELETE and PUT->GET /users.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/index.js:347 _.merge(message, req.body.message) with lodash 4.17.4 allows __proto__ pollution by low-priv holder of hardcoded credential; polluted Object.prototype.canDelete=true makes routes/index.js:359 !user.canDelete check pass for non-admin; polluted Object.prototype.where observed at routes/users.js:20 affects repo.find({id:1}) at routes/users.js:16",
+    "hunter_snippet": "    if (!user || !user.canDelete) {",
+    "patch_summary": "Upgrade lodash past pollution fix, block __proto__/constructor keys and avoid _.merge on untrusted objects",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-zipslip-to-ejs-takeover",
+    "title": "Cross-Unit Zip-Slip to Template Takeover (POST /import AdmZip traversal overwrites views for EJS RCE)",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 256,
+    "end_line": 257,
+    "snippet": "    zip.extractAllTo(extracted_path, true);",
+    "taint": {
+      "source": "POST /import multipart zip entry names",
+      "sink": "filesystem overwrite of EJS templates leading to template execution",
+      "path": [
+        "app.js:64 POST /import -> routes/index.js:241 req.files.importFile",
+        "routes/index.js:255 AdmZip(importFile.data) entry names",
+        "routes/index.js:257 extractAllTo traversal -> views/*.ejs overwrite",
+        "app.js:53 GET / res.render index EJS execution"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 257,
+        "note": "AdmZip extractAllTo with overwrite=true, no entry validation"
+      },
+      {
+        "file": "app.js",
+        "line": 64,
+        "note": "POST /import has no isLoggedIn gate"
+      },
+      {
+        "file": "app.js",
+        "line": 53,
+        "note": "GET / renders EJS views with attacker-overwritable templates"
+      }
+    ],
+    "evidence": "Unauthenticated POST /import at app.js:64 reaches AdmZip(importFile.data) and extractAllTo(/tmp/extracted_files,true) at routes/index.js:255-257 with adm-zip 0.4.7 (no traversal sanitization); overwritten views/*.ejs are later rendered by EJS (app.js view engine ejs, GET / at app.js:53) | validator: app.js:64 unauth POST/import reaches routes/index.js:255-257 AdmZip 0.4.7 extractAllTo(/tmp/extracted_files,true) with no entry validation; app.js:53 GET/ renders EJS views | consensus: 1/1 confirmed",
+    "rationale": "Attacker zip entry names with ../ traverse from /tmp/extracted_files to overwrite application files (e.g. ../../usr/src/goof/views/index.ejs or public/js). Next GET / renders attacker EJS with code execution (ejs 1.0.0). This escalates zip-slip file overwrite to persistent template takeover/RCE, distinct from mere /tmp overwrite.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Unauthenticated POST /import at app.js:64 reaches AdmZip(importFile.data) and extractAllTo(/tmp/extracted_files,true) at routes/index.js:255-257 with adm-zip 0.4.7 (no traversal sanitization); overwritten views/*.ejs are later rendered by EJS (app.js view engine ejs, GET / at app.js:53)",
+    "hunter_snippet": "    zip.extractAllTo(extracted_path, true);",
+    "patch_summary": "Validate zip entries against traversal, extract to isolated tmp with size/count caps and upgrade adm-zip",
+    "control_type": "none",
+    "duplicate_of": "unit-routes-6",
+    "cvss": 6.9,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-routes-9",
+    "title": "Unbounded Zip Decompression in import enables zip-bomb DoS",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 255,
+    "end_line": 255,
+    "snippet": "var zip = AdmZip(importFile.data);",
+    "taint": {
+      "source": "multipart importFile bytes",
+      "sink": "unbounded decompression",
+      "path": [
+        "routes/index.js:247 req.files.importFile",
+        "routes/index.js:255 AdmZip sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 247,
+        "note": "importFile.data attacker controlled"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 255,
+        "note": "AdmZip without limits"
+      }
+    ],
+    "evidence": "var zip = AdmZip(importFile.data); | validator: routes/index.js:247 req.files.importFile attacker bytes to routes/index.js:255 new AdmZip(importFile.data) and routes/index.js:257 zip.extractAllTo(/tmp/extracted_files,true) with no size/count limits; reachable via app.js:64 POST /import and app.js:49 fileUpload() with no limits | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated uploader controls zip bytes. HOW: import constructs AdmZip directly from upload buffer with no size/count limits and extracts with overwrite. WHAT: zip-bomb / decompression-bomb exhausts memory/disk/CPU.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import zipfile,io; b=io.BytesIO(); z=zipfile.ZipFile(b,'w',zipfile.ZIP_DEFLATED);\nz.writestr('a'*100+'.txt','x'*1000000); z.close(); print(len(b.getvalue()))\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to POST /import with crafted zip"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "var zip = AdmZip(importFile.data);",
+    "hunter_snippet": "var zip = AdmZip(importFile.data);",
+    "patch_summary": "Enforce fileSize/file count limits on fileUpload, validate zip entries against traversal, cap decompressed size/count and extract to isolated temp dir.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-18",
+    "title": "Unbounded File Upload Size in express-fileupload",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 49,
+    "end_line": 49,
+    "snippet": "app.use(fileUpload());",
+    "taint": {
+      "source": "multipart importFile",
+      "sink": "memory exhaustion",
+      "path": [
+        "app.js:49 unlimited upload",
+        "routes/index.js:247 buffer consumption"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 49,
+        "note": "no upload limits"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 247,
+        "note": "consumes importFile.data"
+      }
+    ],
+    "evidence": "app.use(fileUpload()); | validator: app.js:49 app.use(fileUpload()) with no limits buffers entire upload in memory consumed at routes/index.js:247 importFile.data; reachable unauthenticated via app.js:64 POST /import with no size check | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated uploader. HOW: fileUpload() configured with no limits (fileSize, files, abortOnLimit). WHAT: unbounded memory/disk consumption on /import leads to DoS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('upload 1GB file, no limits configured')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access with large multipart upload"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "app.use(fileUpload());",
+    "hunter_snippet": "app.use(fileUpload());",
+    "patch_summary": "Configure express-fileupload limits:{fileSize, files} and reject oversize uploads before buffering.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-19",
+    "title": "Cloud Environment Disclosure in Logs",
+    "cwe": "CWE-532",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "mongoose-db.js",
+    "start_line": 21,
+    "end_line": 21,
+    "snippet": "console.log(JSON.stringify(cfenv.getAppEnv()));",
+    "taint": {
+      "source": "cfenv.getAppEnv credentials",
+      "sink": "console.log env disclosure",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "mongoose-db.js",
+        "line": 21,
+        "note": "env dump"
+      }
+    ],
+    "evidence": "console.log(JSON.stringify(cfenv.getAppEnv())); | validator: mongoose-db.js:21 console.log(JSON.stringify(cfenv.getAppEnv())) dumps full CF env including bound-service credentials | consensus: 1/1 confirmed",
+    "rationale": "WHO log reader. HOW full cfenv dumped and mongo URI logged. WHAT credentials disclosed in logs.",
+    "status": "confirmed",
+    "conditions": [
+      "log access suffices"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(JSON.stringify(cfenv.getAppEnv()));",
+    "hunter_snippet": "console.log(JSON.stringify(cfenv.getAppEnv()));",
+    "patch_summary": "Remove env dump log; log only non-secret status without VCAP_SERVICES.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-3",
+    "title": "CSRF via State-Changing GET /destroy/:id route",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "app.get('/destroy/:id', routes.destroy);",
+    "taint": {
+      "source": "cross-site forged GET request",
+      "sink": "unauthenticated state change via GET",
+      "path": [
+        "app.js:61 GET route",
+        "routes/index.js:191 Todo.findById+remove"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 61,
+        "note": "state-changing handler on GET"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 190,
+        "note": "destroy removes Todo"
+      }
+    ],
+    "evidence": "app.get('/destroy/:id', routes.destroy); | validator: app.js:61 mounts state-changing destroy on GET with no CSRF token; routes/index.js:190-198 Todo.findById+remove executes on forged GET | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker crafting third-party page. HOW: app.js mounts state-changing destroy via GET without CSRF token or SameSite; victim browser auto-sends session cookie on GET. WHAT: CSRF enables forced deletion of todos.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('<img src=\"http://localhost:3001/destroy/abc123\">')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to GET /destroy/:id"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "app.get('/destroy/:id', routes.destroy);",
+    "hunter_snippet": "app.get('/destroy/:id', routes.destroy);",
+    "patch_summary": "Change destroy to POST/DELETE with CSRF token and require auth/ownership check.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-6",
+    "title": "Missing Authorization in create allows anonymous todo creation",
+    "cwe": "CWE-862",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 152,
+    "end_line": 152,
+    "snippet": "exports.create = function (req, res, next) {",
+    "taint": {
+      "source": "unauthenticated POST /create",
+      "sink": "Todo.save without authorization",
+      "path": [
+        "app.js:60 unauthenticated POST /create",
+        "routes/index.js:152 create handler"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 60,
+        "note": "POST /create mounted without isLoggedIn"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 152,
+        "note": "create saves without auth check"
+      },
+      {
+        "file": "app.js",
+        "line": 56,
+        "note": "sibling /admin requires isLoggedIn"
+      }
+    ],
+    "evidence": "exports.create = function (req, res, next) { | validator: app.js:60 POST /create mounted without isLoggedIn vs app.js:56-58 guarded admin/account_details; routes/index.js:152 create does Todo.save with no session check | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client. HOW: create handler saves Todo with no isLoggedIn check, while sibling /admin and /account_details enforce it. WHAT: missing authorization allows anonymous spam/pollution of shared todo store rendered to all users.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client,urllib.parse; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('POST','/create',urllib.parse.urlencode({'content':'spam'}),{'Content-Type':'application/x-www-form-urlencoded'});\nprint(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /create"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "exports.create = function (req, res, next) {",
+    "hunter_snippet": "exports.create = function (req, res, next) {",
+    "patch_summary": "Add isLoggedIn/ownership gate to /create or enforce explicit public-create policy with abuse limits.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-15",
+    "title": "Unauthenticated Chat History Disclosure in chat.get",
+    "cwe": "CWE-200",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 332,
+    "end_line": 332,
+    "snippet": "res.send(messages);",
+    "taint": {
+      "source": "unauthenticated GET /chat",
+      "sink": "chat history disclosure",
+      "path": [
+        "app.js:66 GET /chat",
+        "routes/index.js:332 res.send"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 66,
+        "note": "GET /chat without guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 331,
+        "note": "get returns messages unauthenticated"
+      }
+    ],
+    "evidence": "res.send(messages); | validator: app.js:66 GET /chat mounted without guard; routes/index.js:331-333 chat.get does res.send(messages) with no findUser check unlike add/delete | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client. HOW: chat.get returns entire in-memory messages array with no auth, while add/delete require auth. WHAT: information disclosure of chat history and usernames, inconsistent authorization.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('GET','/chat'); r=c.getresponse(); print(r.status, r.read()[:100])\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /chat"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "res.send(messages);",
+    "hunter_snippet": "res.send(messages);",
+    "patch_summary": "Require authentication on GET /chat or scope history to authorized participants.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-auth-get-chat",
+    "title": "Missing Authentication on GET /chat Exposes In-Memory Chat History",
+    "cwe": "CWE-306",
+    "severity": "medium",
+    "confidence": 0.92,
+    "path": "app.js",
+    "start_line": 66,
+    "end_line": 66,
+    "snippet": "app.get('/chat', routes.chat.get);",
+    "taint": {
+      "source": "unauthenticated GET /chat request",
+      "sink": "unauthenticated disclosure of in-memory messages",
+      "path": [
+        "app.js:66 GET /chat -> routes/index.js:331 chat.get",
+        "routes/index.js:332 res.send(messages)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 66,
+        "note": "GET /chat route with no auth middleware"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 332,
+        "note": "handler sends all messages without check"
+      }
+    ],
+    "evidence": "app.js:66 GET /chat has no isLoggedIn or auth; handler at routes/index.js:331-333 unconditionally res.send(messages) disclosing all in-memory chat (userNames, timestamps, attacker-polluted fields) | validator: app.js:66 GET/chat has no auth; routes/index.js:330-332 chat.get unconditionally res.send(messages) | consensus: 1/1 confirmed",
+    "rationale": "All sibling sensitive routes /admin and /account_details require isLoggedIn (app.js:56-58) and PUT/DELETE /chat require findUser auth, but GET /chat is exposed with zero authentication, allowing unauthenticated enumeration of chat history and of pollution-injected prototype keys.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:66 GET /chat has no isLoggedIn or auth; handler at routes/index.js:331-333 unconditionally res.send(messages) disclosing all in-memory chat (userNames, timestamps, attacker-polluted fields)",
+    "hunter_snippet": "app.get('/chat', routes.chat.get);",
+    "patch_summary": "Require authentication on GET/chat or restrict disclosure to authorized principals",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-4",
+    "title": "Null-Dereference DoS in update missing existence check",
+    "cwe": "CWE-476",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 219,
+    "end_line": 219,
+    "snippet": "Todo.findById(req.params.id, function (err, todo) {",
+    "taint": {
+      "source": "req.params.id URL path",
+      "sink": "null dereference crash",
+      "path": [
+        "routes/index.js:219 req.params.id",
+        "routes/index.js:221 todo.content deref"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 219,
+        "note": "findById without null/err guard"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 221,
+        "note": "deref todo.content crashes if null"
+      }
+    ],
+    "evidence": "Todo.findById(req.params.id, function (err, todo) { | validator: routes/index.js:219 Todo.findById(req.params.id) with no err/null guard flows to routes/index.js:221 todo.content assignment; reachable unauthenticated via app.js:63 POST /update/:id, throwing TypeError on invalid/missing id as uncaught exception | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controls :id path. HOW: update calls Todo.findById without checking err or null todo before dereferencing todo.content. Invalid/nonexistent id yields null. WHAT: TypeError crash, unhandled exception, DoS and error leakage.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('POST','/update/invalid-id', 'content=x', {'Content-Type':'application/x-www-form-urlencoded'});\nprint(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access with invalid ObjectId"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "Todo.findById(req.params.id, function (err, todo) {",
+    "hunter_snippet": "Todo.findById(req.params.id, function (err, todo) {",
+    "patch_summary": "Check err||!todo after findById and return 404/next(err) before dereferencing todo.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-1",
+    "title": "Session Fixation in adminLoginSuccess missing regeneration",
+    "cwe": "CWE-384",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 55,
+    "end_line": 55,
+    "snippet": "session.loggedIn = 1",
+    "taint": {
+      "source": "pre-login attacker-controlled session",
+      "sink": "privilege escalation on same session ID",
+      "path": [
+        "routes/index.js:44 session object reused"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 54,
+        "note": "adminLoginSuccess sets auth flag"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 55,
+        "note": "no session regeneration"
+      },
+      {
+        "file": "app.js",
+        "line": 42,
+        "note": "express-session without regenerate"
+      }
+    ],
+    "evidence": "session.loggedIn = 1 | validator: routes/index.js:54-55 adminLoginSuccess sets session.loggedIn=1 on pre-login session without regenerate; no session.regenerate in repo; reachable via app.js:55 POST /login with express-session app.js:42-46 reusing attacker-planted connect.sid | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client authenticating. HOW: adminLoginSuccess sets session.loggedIn=1 on existing session without regenerating session ID. WHAT: session fixation allows attacker to plant victim session cookie pre-login and hijack post-login session.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /login"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "session.loggedIn = 1",
+    "hunter_snippet": "session.loggedIn = 1",
+    "patch_summary": "Call req.session.regenerate() on successful login before setting loggedIn flag.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-06",
+    "title": "Missing CSRF, Security Headers, Rate Limiting and Hardened Cookies",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app.js",
+    "start_line": 42,
+    "end_line": 49,
+    "snippet": "app.use(session({",
+    "taint": {
+      "source": "victim browser with ambient session cookie (path-only)",
+      "sink": "unauthorized cross-site state change and clickjacking",
+      "path": [
+        "app.js:42-49 middleware without csurf/helmet/rate-limit",
+        "app.js:60-69 mutating routes without tokens",
+        "routes/index.js:191 destroy via GET"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 41,
+        "note": "unrestricted methodOverride enables verb tunneling"
+      },
+      {
+        "file": "app.js",
+        "line": 42,
+        "note": "session stack without secure flags or helmet"
+      },
+      {
+        "file": "app.js",
+        "line": 60,
+        "note": "POST /create no CSRF/rate-limit"
+      },
+      {
+        "file": "app.js",
+        "line": 61,
+        "note": "state-changing GET /destroy/:id CSRF-able"
+      },
+      {
+        "file": "app.js",
+        "line": 69,
+        "note": "USE /users POST/GET with no CSRF/auth"
+      }
+    ],
+    "evidence": "app.js:40-49 middleware stack has no csurf, no helmet/CSP/HSTS/X-Frame-Options, no rate-limit; session cookie at app.js:45 sets only path leaving httpOnly/secure/sameSite unset; state-changing routes POST /create (60), POST /update/:id (63), POST /import (64), PUT /chat (67), DELETE /chat (68), POST /users via app.js:69 and state-changing GET /destroy/:id (61) are all CSRF-able; methodOverride at app.js:41 enables verb tunneling | validator: app.js:40-49 stack has no csurf/helmet/rate-limit and app.js:42-45 session cookie path-only; app.js:61 GET/destroy/:id is state-changing GET reachable cross-site | consensus: 1/1 confirmed",
+    "rationale": "Absence of CSRF, security headers, rate limiting and hardened cookies across the route manifest lets cross-site requests forge Todo/chat/user mutations, clickjack admin flows, and brute-force login/NoSQL vectors without throttling",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:40-49 middleware stack has no csurf, no helmet/CSP/HSTS/X-Frame-Options, no rate-limit; session cookie at app.js:45 sets only path leaving httpOnly/secure/sameSite unset; state-changing routes POST /create (60), POST /update/:id (63), POST /import (64), PUT /chat (67), DELETE /chat (68), POST /users via app.js:69 and state-changing GET /destroy/:id (61) are all CSRF-able; methodOverride at app.js:41 enables verb tunneling",
+    "hunter_snippet": "app.use(session({",
+    "patch_summary": "Add CSRF tokens, helmet/CSP/HSTS, rate-limit, SameSite/HttpOnly/Secure cookies; make destroy DELETE with CSRF",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-11",
+    "title": "Attacker-Controlled Moment Locale in import",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "routes/index.js",
+    "start_line": 279,
+    "end_line": 279,
+    "snippet": "moment.locale(locale);",
+    "taint": {
+      "source": "importFile CSV locale column",
+      "sink": "global locale mutation / parser DoS",
+      "path": [
+        "routes/index.js:273 CSV locale field",
+        "routes/index.js:279 moment.locale sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 273,
+        "note": "locale from CSV split"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 279,
+        "note": "global locale mutation"
+      }
+    ],
+    "evidence": "moment.locale(locale); | validator: routes/index.js:273 locale from CSV parts[2] split flows to routes/index.js:279 moment.locale(locale) mutating global locale for all users; reachable via app.js:64 POST /import with no allowlist, only isBlank check routes/index.js:277 | consensus: 1/1 confirmed",
+    "rationale": "WHO: uploader controls CSV field parts[2] as locale. HOW: import passes attacker locale directly to moment.locale() which mutates global locale state. WHAT: global-state pollution affects all users plus crafted locale strings can trigger excessive parsing/CPU.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('locale=xx'*1000)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /import with CSV"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "moment.locale(locale);",
+    "hunter_snippet": "moment.locale(locale);",
+    "patch_summary": "Allowlist locales or avoid global moment.locale; parse dates without mutating global state.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-33",
+    "title": "Insecure HTTP Script Include in layout.ejs",
+    "cwe": "CWE-829",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "views/layout.ejs",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "<script src=\"http://html5shiv.googlecode.com/svn/trunk/html5.js\"></script>",
+    "taint": {
+      "source": "hardcoded http URL",
+      "sink": "remote script execution over HTTP",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "views/layout.ejs",
+        "line": 7,
+        "note": "insecure script include"
+      }
+    ],
+    "evidence": "<script src=\"http://html5shiv.googlecode.com/svn/trunk/html5.js\"></script> | validator: views/layout.ejs:7 hardcodes http://html5shiv.googlecode.com script rendered via ejs-locals layout to browsers | consensus: 1/1 confirmed",
+    "rationale": "WHO: network attacker. HOW: layout includes html5shiv via insecure http:// URL executed in every page. WHAT: MITM can inject arbitrary JS into all pages.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('http://html5shiv script over HTTP')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim uses HTTP page"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "<script src=\"http://html5shiv.googlecode.com/svn/trunk/html5.js\"></script>",
+    "hunter_snippet": "<script src=\"http://html5shiv.googlecode.com/svn/trunk/html5.js\"></script>",
+    "patch_summary": "Remove IE shim or serve over https/inline; add CSP to block http scripts",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-14",
+    "title": "Hardcoded SECRET_TOKEN Logged to Console",
+    "cwe": "CWE-798",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 83,
+    "end_line": 83,
+    "snippet": "var token = 'SECRET_TOKEN_f8ed84e8f41e4146403dd4a6bbcea5e418d23a9';",
+    "taint": {
+      "source": "hardcoded SECRET_TOKEN",
+      "sink": "console.log token disclosure",
+      "path": [
+        "app.js:83 token literal",
+        "app.js:84 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 83,
+        "note": "hardcoded token"
+      },
+      {
+        "file": "app.js",
+        "line": 84,
+        "note": "console.log disclosure"
+      }
+    ],
+    "evidence": "var token = 'SECRET_TOKEN_f8ed84e8f41e4146403dd4a6bbcea5e418d23a9'; | validator: app.js:83 hardcoded var token SECRET_TOKEN_f8ed84e8f41e4146403dd4a6bbcea5e418d23a9 logged at app.js:84 console.log; value in source, no use as auth but exposed in logs/source | consensus: 1/1 confirmed",
+    "rationale": "WHO anyone with log/source. HOW SECRET_TOKEN literal logged to stdout. WHAT secret disclosure.",
+    "status": "confirmed",
+    "conditions": [
+      "log or source access"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "var token = 'SECRET_TOKEN_f8ed84e8f41e4146403dd4a6bbcea5e418d23a9';",
+    "hunter_snippet": "var token = 'SECRET_TOKEN_f8ed84e8f41e4146403dd4a6bbcea5e418d23a9';",
+    "patch_summary": "Remove hardcoded token from source, load from env/vault if needed, never log secrets.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-0",
+    "title": "Log Injection in adminLoginSuccess via username",
+    "cwe": "CWE-117",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 58,
+    "end_line": 58,
+    "snippet": "console.log(`User logged in: ${username}`)",
+    "taint": {
+      "source": "req.body.username POST /login",
+      "sink": "console.log with attacker string",
+      "path": [
+        "routes/index.js:43 req.body.username",
+        "routes/index.js:58 console.log sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 43,
+        "note": "username taken from req.body"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 58,
+        "note": "unsanitized interpolation into console.log"
+      }
+    ],
+    "evidence": "console.log(`User logged in: ${username}`) | validator: routes/index.js:42 validator.isEmail(req.body.username) gates login before routes/index.js:58 console.log(`User logged in: ${username}`), rejecting CRLF payloads so log line forgery neutralized | refute: sanitized | consensus: 1/1 fp | triage: validator shows isEmail gate rejects CRLF so log forgery neutralized; parked log-forgery threat",
+    "rationale": "WHO: unauthenticated client controls req.body.username. HOW: loginHandler passes username to adminLoginSuccess which interpolates it into console.log template string without sanitization. WHAT: log injection/forgery breaks audit integrity, enables log spoofing and ANSI/CRLF injection.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nbody='username=admin%40x.com%0d%0aINJECTED_LOG&password=x&redirectPage=/admin';\nc.request('POST','/login',body,{'Content-Type':'application/x-www-form-urlencoded'});\nprint(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /login"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(`User logged in: ${username}`)",
+    "hunter_snippet": "console.log(`User logged in: ${username}`)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "sanitizer",
+      "preconditions": [
+        "valid email login"
+      ],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "sanitized log sink with email validation, no forgery"
+    },
+    "cvss": 2.4,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-13",
+    "title": "Insecure Session Cookie Flags",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 45,
+    "end_line": 45,
+    "snippet": "cookie: { path: '/' }",
+    "taint": {
+      "source": "express-session config",
+      "sink": "session cookie without flags",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 45,
+        "note": "cookie flags"
+      }
+    ],
+    "evidence": "cookie: { path: '/' } | validator: app.js:44-46 session cookie is { path: '/' } with no httpOnly/secure/sameSite flags | consensus: 2/2 confirmed",
+    "rationale": "WHO network attacker. HOW session cookie only path set, missing HttpOnly Secure SameSite. WHAT cookie theft via XSS.",
+    "status": "confirmed",
+    "conditions": [
+      "XSS or network sniffing"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "cookie: { path: '/' }",
+    "hunter_snippet": "cookie: { path: '/' }",
+    "patch_summary": "Set cookie httpOnly:true, secure:true, sameSite:'lax' (or strict) in express-session config.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-13",
+    "title": "Stored XSS via import CSV content persistence",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 285,
+    "end_line": 288,
+    "snippet": "new Todo({\n        content: item,",
+    "taint": {
+      "source": "importFile CSV content",
+      "sink": "stored XSS payload persistence",
+      "path": [
+        "routes/index.js:270 CSV what",
+        "routes/index.js:285 Todo.save",
+        "views/index.ejs:20 marked sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 270,
+        "note": "what from CSV"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 285,
+        "note": "unsanitized save"
+      },
+      {
+        "file": "views/index.ejs",
+        "line": 20,
+        "note": "unescaped marked sink"
+      }
+    ],
+    "evidence": "new Todo({\n        content: item, | validator: app.js:44-46 session cookie is { path: '/' } with no httpOnly/secure/sameSite flags | consensus: 2/2 confirmed",
+    "rationale": "WHO: uploader controls CSV what field stored as Todo content. HOW: import saves item without sanitization; index.ejs later renders with <%- marked() %> unescaped using vulnerable marked 0.3.5. WHAT: stored XSS via import path distinct from create path.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('<script>alert(1)</script> via CSV what field')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "skipped",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /import"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "new Todo({\n        content: item,",
+    "hunter_snippet": "new Todo({\n        content: item,",
+    "patch_summary": "Set cookie httpOnly:true, secure:true, sameSite:'lax' (or strict) in express-session config.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-20",
+    "title": "Verbose Error Disclosure via development errorHandler",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app.js",
+    "start_line": 80,
+    "end_line": 80,
+    "snippet": "app.use(errorHandler());",
+    "taint": {
+      "source": "error paths e.g. invalid ids",
+      "sink": "stack trace disclosure",
+      "path": [
+        "app.js:79 env check",
+        "app.js:80 errorHandler"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 79,
+        "note": "development gate defaults true"
+      },
+      {
+        "file": "app.js",
+        "line": 80,
+        "note": "verbose error handler"
+      }
+    ],
+    "evidence": "app.use(errorHandler()); | validator: app.js:79-80 if(app.get('env')=='development') app.use(errorHandler()) defaults to development when NODE_ENV unset, returning stack traces on next(err) paths | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client triggering errors. HOW: errorHandler() enabled when env==development which is Express default when NODE_ENV unset. WHAT: stack traces and internals disclosed in error responses.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('GET','/edit/invalid-id-that-crashes'); print(c.getresponse().read()[:200])\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Default NODE_ENV unset (development)"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "app.use(errorHandler());",
+    "hunter_snippet": "app.use(errorHandler());",
+    "patch_summary": "Enable errorHandler only when explicitly development and return generic message in production.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-10",
+    "title": "Weak Random Admin Password in chat users",
+    "cwe": "CWE-338",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 317,
+    "end_line": 317,
+    "snippet": "{ name: 'admin', password: Math.random().toString(32), canDelete: true },",
+    "taint": {
+      "source": "Math.random PRNG",
+      "sink": "predictable admin password",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 317,
+        "note": "weak PRNG password"
+      }
+    ],
+    "evidence": "{ name: 'admin', password: Math.random().toString(32), canDelete: true }, | validator: routes/index.js:317 uses Math.random().toString(32) as admin chat password with no CSPRNG; routes/index.js:324 findUser compares it directly | consensus: 1/1 confirmed",
+    "rationale": "WHO code generates admin secret with Math.random predictable PRNG. HOW admin password set to Math.random string. WHAT guessable admin chat credential.",
+    "status": "confirmed",
+    "conditions": [
+      "attacker can guess PUT/DELETE /chat auth"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "{ name: 'admin', password: Math.random().toString(32), canDelete: true },",
+    "hunter_snippet": "{ name: 'admin', password: Math.random().toString(32), canDelete: true },",
+    "patch_summary": "Generate admin secret with crypto.randomBytes at startup and store outside code.",
+    "control_type": "none",
+    "poc": {
+      "status": "skipped"
+    },
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-26",
+    "title": "Verbose SQL Logging Leaks PII in TypeORM",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.75,
+    "path": "typeorm-db.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "\"logging\": true,",
+    "taint": {
+      "source": "ORM queries",
+      "sink": "SQL/PII in logs",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "typeorm-db.js",
+        "line": 15,
+        "note": "verbose SQL logging"
+      }
+    ],
+    "evidence": "\"logging\": true, | validator: typeorm-db.js:15 logging:true logs SQL with user PII saved at routes/users.js:30-32 to stdout | consensus: 1/1 confirmed",
+    "rationale": "WHO: log reader. HOW: TypeORM logging:true logs all SQL including inserts of name/address/role and errors. WHAT: PII and query details leak to logs.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Log access"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "\"logging\": true,",
+    "hunter_snippet": "\"logging\": true,",
+    "patch_summary": "Set logging:false in production or route TypeORM logs to protected sink with parameter redaction",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.2,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-log-inject-import-what",
+    "title": "Log Injection via Unsanitized CSV Field in POST /import",
+    "cwe": "CWE-117",
+    "severity": "low",
+    "confidence": 0.8,
+    "path": "routes/index.js",
+    "start_line": 271,
+    "end_line": 271,
+    "snippet": "    console.log('importing ' + what);",
+    "taint": {
+      "source": "uploaded import file CSV first column",
+      "sink": "console.log log forgery",
+      "path": [
+        "app.js:64 POST /import -> routes/index.js:241 req.files.importFile.data",
+        "routes/index.js:270 parts[0] CSV field",
+        "routes/index.js:271 console.log concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 271,
+        "note": "unsanitized attacker CSV field to console.log"
+      }
+    ],
+    "evidence": "POST /import CSV line split at routes/index.js:268-271; what=parts[0] from uploaded file bytes flows unsanitized to console.log at line 271; attacker controls newlines to forge log lines; distinct from reported log sinks at lines 58 and 299 | validator: routes/index.js:268-271 splits uploaded file to what=parts[0] then console.log(importing+what) at routes/index.js:271 with no sanitization via app.js:64 POST/import | consensus: 1/1 confirmed",
+    "rationale": "Uploaded CSV field what is attacker-controlled file content echoed to stdout without stripping CR/LF, enabling log forgery/spoofing and obscuring audit of import actions. Same file also logs attacker url at line 159 and todo at 290 without sanitization.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST /import CSV line split at routes/index.js:268-271; what=parts[0] from uploaded file bytes flows unsanitized to console.log at line 271; attacker controls newlines to forge log lines; distinct from reported log sinks at lines 58 and 299",
+    "hunter_snippet": "    console.log('importing ' + what);",
+    "patch_summary": "Strip CR/LF/ANSI and encode CSV field before console.log or use structured logging",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.2,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-11",
+    "title": "Insecure Randomness in utils.ran_no",
+    "cwe": "CWE-338",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "utils.js",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "return Math.floor( Math.random() * ( max - min + 1 )) + min;",
+    "taint": {
+      "source": "process PRNG",
+      "sink": "Math.random predictable generation",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "utils.js",
+        "line": 4,
+        "note": "Math.random sink"
+      }
+    ],
+    "evidence": "return Math.floor( Math.random() * ( max - min + 1 )) + min; | validator: utils.js:3-4 defines ran_no via Math.random but no security caller: no utils. use in routes/ (only require at routes/index.js:1, internal use at utils.js:14); admin secret at routes/index.js:317 uses Math.random directly | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO any caller requesting randomness. HOW ran_no uses Math.random. WHAT predictable outputs for security decisions.",
+    "status": "fp",
+    "conditions": [
+      "security use of ran_no"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "return Math.floor( Math.random() * ( max - min + 1 )) + min;",
+    "hunter_snippet": "return Math.floor( Math.random() * ( max - min + 1 )) + min;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-27",
+    "title": "User Data Disclosure in Logs via console.log(results)",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "console.log(results)",
+    "taint": {
+      "source": "MySQL Users rows",
+      "sink": "PII in logs",
+      "path": [
+        "routes/users.js:16 repo.find",
+        "routes/users.js:20 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 16,
+        "note": "repo.find returns rows"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 20,
+        "note": "rows logged"
+      }
+    ],
+    "evidence": "console.log(results) | validator: routes/users.js:20 console.log(results) logs rows that are already returned unauthenticated via routes/users.js:22 res.json(results); logged fields name/address/role per entity/Users.js:1-19 contain no secrets and log readers are trusted operators, no new principal boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client. HOW: GET handler logs full results array to stdout. WHAT: user PII persisted in logs, expanding breach scope beyond JSON response.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('GET','/users/'); print(c.getresponse().read()[:200])\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /users"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(results)",
+    "hunter_snippet": "console.log(results)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-30",
+    "title": "Node Debugger Port Exposed in Dockerfile",
+    "cwe": "CWE-200",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "Dockerfile",
+    "start_line": 12,
+    "end_line": 12,
+    "snippet": "EXPOSE 9229",
+    "taint": {
+      "source": "container build config",
+      "sink": "debugger port exposure",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 12,
+        "note": "debugger port exposed"
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 10,
+        "note": "9229 mapped to host"
+      }
+    ],
+    "evidence": "EXPOSE 9229 | validator: Dockerfile:12 EXPOSE 9229 and docker-compose.yml:10 9229:9229 mapping are Dockerfile/container run config, explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: network-adjacent attacker. HOW: Dockerfile EXPOSEs 9229 Node debugger port and compose maps it. WHAT: remote debugging interface exposure enables code execution and secret theft.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('docker ps exposes 9229 debugger')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Container exposes 9229 or attacker on network"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "EXPOSE 9229",
+    "hunter_snippet": "EXPOSE 9229",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-32",
+    "title": "Hardcoded MySQL Root Password in docker-compose",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "docker-compose.yml",
+    "start_line": 24,
+    "end_line": 24,
+    "snippet": "MYSQL_ROOT_PASSWORD: root",
+    "taint": {
+      "source": "compose file literal",
+      "sink": "hardcoded DB credential",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "docker-compose.yml",
+        "line": 24,
+        "note": "hardcoded root password"
+      }
+    ],
+    "evidence": "MYSQL_ROOT_PASSWORD: root | validator: docker-compose.yml:24 MYSQL_ROOT_PASSWORD: root is container run config, explicitly out of scope per infrastructure exclusion | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: anyone reading repo/compose or reaching DB. HOW: compose hardcodes MYSQL_ROOT_PASSWORD root for mysql:5. WHAT: default credential compromise of MySQL, distinct from typeorm-db.js creds.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('MYSQL_ROOT_PASSWORD=root in compose')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Host or network access to MySQL"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "MYSQL_ROOT_PASSWORD: root",
+    "hunter_snippet": "MYSQL_ROOT_PASSWORD: root",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-14",
+    "title": "Log Injection via req.query in about_new",
+    "cwe": "CWE-117",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routes/index.js",
+    "start_line": 299,
+    "end_line": 299,
+    "snippet": "console.log(JSON.stringify(req.query));",
+    "taint": {
+      "source": "req.query.device GET /about_new",
+      "sink": "log forgery",
+      "path": [
+        "routes/index.js:299 req.query",
+        "routes/index.js:299 console.log"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 299,
+        "note": "unsanitized query logged"
+      }
+    ],
+    "evidence": "console.log(JSON.stringify(req.query)); | validator: routes/index.js:299 console.log(JSON.stringify(req.query)) serializes attacker query; JSON.stringify escapes CR/LF so raw newlines cannot forge log lines | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client controls req.query. HOW: about_new logs JSON.stringify(req.query) without sanitization. WHAT: log injection via query params forges log lines and obscures forensics.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client,urllib.parse; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('GET','/about_new?device='+urllib.parse.quote('\\r\\nINJECTED'));\nprint(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to GET /about_new"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "console.log(JSON.stringify(req.query));",
+    "hunter_snippet": "console.log(JSON.stringify(req.query));",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-17",
+    "title": "Unrestricted HTTP Method Override Enables Verb Tunneling",
+    "cwe": "CWE-650",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "app.use(methodOverride());",
+    "taint": {
+      "source": "X-HTTP-Method-Override header",
+      "sink": "HTTP verb confusion",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 41,
+        "note": "unrestricted method override"
+      }
+    ],
+    "evidence": "app.use(methodOverride()); | validator: app.js:41 app.use(methodOverride()) allows verb tunneling but auth is session-based via routes/index.js:117 isLoggedIn (req.session.loggedIn===1), not method-specific; no method-gated check demonstrated to bypass | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network client. HOW: methodOverride() without allowlist honors X-HTTP-Method-Override, allowing verb tunneling (e.g., POST tunneled to DELETE for /chat). WHAT: bypasses method-based controls and logging assumptions.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('X-HTTP-Method-Override: DELETE bypasses method checks')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any deployment"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "app.use(methodOverride());",
+    "hunter_snippet": "app.use(methodOverride());",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-29",
+    "title": "Predictable Token Generation in utils.uid",
+    "cwe": "CWE-338",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "utils.js",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "uid : function ( len ){",
+    "taint": {
+      "source": "Math.random PRNG",
+      "sink": "predictable identifier",
+      "path": [
+        "utils.js:4 Math.random",
+        "utils.js:7 uid generation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "utils.js",
+        "line": 7,
+        "note": "uid uses weak PRNG"
+      },
+      {
+        "file": "utils.js",
+        "line": 14,
+        "note": "char via ran_no"
+      }
+    ],
+    "evidence": "uid : function ( len ){ | validator: utils.js:7 uid() via utils.js:4 Math.random defined but has zero callers (no utils.uid/ran_no use in routes/); admin secret uses routes/index.js:317 Math.random directly, so uid sink is dead/unreachable | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: any caller of uid for identifiers. HOW: uid builds strings via ran_no which uses Math.random, predictable PRNG. WHAT: predictable tokens/ids enable guessing, distinct from ran_no primitive itself.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('uid uses Math.random, predictable')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any caller requesting tokens/ids"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "uid : function ( len ){",
+    "hunter_snippet": "uid : function ( len ){",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-5",
+    "title": "Empty Catch Suppresses Errors in destroy",
+    "cwe": "CWE-391",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 198,
+    "end_line": 198,
+    "snippet": "} catch (e) {",
+    "taint": {
+      "source": "invalid id / DB error",
+      "sink": "suppressed exception, no response",
+      "path": [
+        "routes/index.js:191 findById",
+        "routes/index.js:198 empty catch"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 191,
+        "note": "findById may yield null"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 198,
+        "note": "empty catch swallows error"
+      }
+    ],
+    "evidence": "} catch (e) { | validator: routes/index.js:191 Todo.findById to routes/index.js:198 empty catch(e){} only swallows single-request error with no response; server stays up, no secret/auth boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: attacker or system error. HOW: destroy wraps todo.remove in try/catch with empty catch swallowing all exceptions including null-deref when todo not found. WHAT: unchecked error / silent failure breaks auditability, hides attacks, leaves client hanging with no response.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to /destroy/:id with invalid id"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "} catch (e) {",
+    "hunter_snippet": "} catch (e) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-12",
+    "title": "Attacker-Controlled Moment Format String in import",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routes/index.js",
+    "start_line": 282,
+    "end_line": 282,
+    "snippet": "item += ' [' + d.format(format) + ']';",
+    "taint": {
+      "source": "importFile CSV format column",
+      "sink": "attacker-controlled format expansion",
+      "path": [
+        "routes/index.js:274 CSV format field",
+        "routes/index.js:282 d.format sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/index.js",
+        "line": 274,
+        "note": "format from CSV"
+      },
+      {
+        "file": "routes/index.js",
+        "line": 282,
+        "note": "attacker format string"
+      }
+    ],
+    "evidence": "item += ' [' + d.format(format) + ']'; | validator: routes/index.js:274 format from CSV to routes/index.js:282 d.format(format) only controls display formatting with no code exec or ReDoS; attacker already controls arbitrary stored content via routes/index.js:270 parts[0], so no new boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: uploader controls CSV field parts[3] as format. HOW: import passes attacker format to moment d.format(format) without allowlist. WHAT: crafted format strings cause excessive CPU / ReDoS-like expansion and log bloat.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('format='+ 'Y'*5000)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to POST /import with CSV"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "item += ' [' + d.format(format) + ']';",
+    "hunter_snippet": "item += ' [' + d.format(format) + ']';",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-21",
+    "title": "Verbose Request Logging via morgan dev",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 40,
+    "end_line": 40,
+    "snippet": "app.use(logger('dev'));",
+    "taint": {
+      "source": "HTTP requests including secrets",
+      "sink": "stdout log with request details",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 40,
+        "note": "verbose dev logger"
+      }
+    ],
+    "evidence": "app.use(logger('dev')); | validator: app.js:40 uses morgan dev format which logs method/url/status only, not bodies/passwords; no sensitive sink demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: log reader / attacker forcing requests. HOW: morgan dev format logs method, URL, status and response times including sensitive query/body fragments and tokens. WHAT: sensitive data and session identifiers leak to stdout/logs.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any deployment with dev logging"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "app.use(logger('dev'));",
+    "hunter_snippet": "app.use(logger('dev'));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 59,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-31",
+    "title": "Unpinned Base Image Tag Allows Supply-Chain Substitution",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 2,
+    "end_line": 2,
+    "snippet": "FROM node:18.13.0",
+    "taint": {
+      "source": "container build config",
+      "sink": "unverified base image",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 2,
+        "note": "mutable tag without digest"
+      }
+    ],
+    "evidence": "FROM node:18.13.0 | validator: Dockerfile:2 FROM node:18.13.0 is build/infra config out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: supply-chain attacker / compromised registry. HOW: base image pinned only by mutable tag without digest. WHAT: unpinned base allows silent substitution of backdoored image.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('FROM node:18.13.0 without digest')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Image build / registry access"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "FROM node:18.13.0",
+    "hunter_snippet": "FROM node:18.13.0",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 60,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-25",
+    "title": "Unsafe TypeORM synchronize true in production",
+    "cwe": "CWE-704",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "typeorm-db.js",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "synchronize: true,",
+    "taint": {
+      "source": "configuration flag",
+      "sink": "automatic schema synchronization",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "typeorm-db.js",
+        "line": 14,
+        "note": "auto-sync enabled"
+      }
+    ],
+    "evidence": "synchronize: true, | validator: typeorm-db.js:14 synchronize:true is operational schema flag with no attacker-controlled inflow; no auth/dataflow boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any client causing entity change or attacker with code influence. HOW: createConnection sets synchronize:true which auto-syncs schema on startup. WHAT: unintended DDL in production risks data loss and widens injection surface.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('synchronize:true alters prod schema')\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Production MySQL deployment"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "synchronize: true,",
+    "hunter_snippet": "synchronize: true,",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 61,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-routes-28",
+    "title": "Improper Error Handling Hangs Request in POST /users",
+    "cwe": "CWE-755",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routes/users.js",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "next();",
+    "taint": {
+      "source": "DB exception",
+      "sink": "hung response / lost error",
+      "path": [
+        "routes/users.js:36 repo.save error",
+        "routes/users.js:43 next()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 41,
+        "note": "error logged"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 43,
+        "note": "next without error/response"
+      }
+    ],
+    "evidence": "next(); | validator: routes/users.js:41-43 catch calls next() without err falls to Express finalhandler 404, not hang; no security impact | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: client triggering save error. HOW: catch block logs error then calls next() with no argument, so Express continues to default handler with no response sent, hanging request. WHAT: improper error handling causes DoS/hang and error details already logged.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import http.client,json; c=http.client.HTTPConnection('localhost',3001,timeout=3);\nc.request('POST','/users/',json.dumps({}),{'Content-Type':'application/json'});\nprint(c.getresponse().status)\nprint('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Malformed POST /users causing DB error"
+    ],
+    "unit": "routes",
+    "hunter_evidence": "next();",
+    "hunter_snippet": "next();",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 62,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

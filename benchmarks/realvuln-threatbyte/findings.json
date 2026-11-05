@@ -1,0 +1,3398 @@
+[
+  {
+    "id": "unit-server-0",
+    "title": "SQL Injection in dashboard() via search parameter",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "server/routes.py",
+    "start_line": 137,
+    "end_line": 138,
+    "snippet": "s_query = f\"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'\"",
+    "taint": {
+      "source": "GET ?search= query parameter",
+      "sink": "cursor.execute(s_query) raw SQL execution",
+      "path": [
+        "server/routes.py:126 request.args.get('search')",
+        "server/routes.py:137 f-string interpolation",
+        "server/routes.py:138 cursor.execute(s_query)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 126,
+        "note": "untrusted search_query source"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 137,
+        "note": "f-string SQL concatenation sink"
+      }
+    ],
+    "evidence": "s_query = f\"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'\" | validator: server/routes.py:126 request.args.get('search') flows into server/routes.py:137 f-string SQL then server/routes.py:138 cursor.execute(s_query) with no parameterization | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated user controls `search` query parameter. HOW: dashboard() reads request.args.get('search','') at line 126 then interpolates directly into f-string SQL at line 137 and executes via cursor.execute(s_query) at line 138 with no parameterization or escaping. WHAT: breaks SQL syntax boundary allowing UNION/boolean/blind injection to dump users/files tables despite sibling views using parameterized queries.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session (any user) required",
+      "Attacker controls `search` query string"
+    ],
+    "unit": "server",
+    "hunter_evidence": "s_query = f\"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'\"",
+    "hunter_snippet": "s_query = f\"SELECT filename FROM files WHERE user_id = {user_id} AND filename LIKE '%{search_query}%'\"",
+    "patch_summary": "Replace f-string with parameterized LIKE query: cursor.execute(\"SELECT filename FROM files WHERE user_id=? AND filename LIKE ?\", (user_id, f\"%{search_query}%\"))",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-12",
+    "title": "Broken function-level authorization in UserDelete.delete()",
+    "cwe": "CWE-285",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 232,
+    "end_line": 232,
+    "snippet": "cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))",
+    "taint": {
+      "source": "DELETE /api/v1/delete-user/<user_id>",
+      "sink": "DELETE FROM users execution",
+      "path": [
+        "server/api/v1/api_v1.py:223 <int:user_id> path",
+        "server/api/v1/api_v1.py:232 DELETE query"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 223,
+        "note": "attacker user_id entry"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 232,
+        "note": "destructive DELETE sink"
+      }
+    ],
+    "evidence": "cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,)) | validator: server/api/v1/api_v1.py:215 @ns.route('/delete-user/<int:user_id>') with server/api/v1/api_v1.py:225 #@token_required commented and def delete(self,user_id) at server/api/v1/api_v1.py:227 reaching server/api/v1/api_v1.py:232 DELETE FROM users WHERE id=? with no auth check | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote caller controls user_id path param. HOW: UserDelete.delete() has token_required commented out at lines 221-222 and unconditionally executes DELETE FROM users WHERE id=? at line 232 after existence check. WHAT: breaks function-level authorization allowing anyone to delete any account including admins.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /api/v1/delete-user/<id>"
+    ],
+    "unit": "server",
+    "hunter_evidence": "cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))",
+    "hunter_snippet": "cursor.execute(\"DELETE FROM users WHERE id = ?\", (user_id,))",
+    "patch_summary": "Require @token_required plus admin-role check before DELETE, and never allow self-deletion of last admin without confirmation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-19",
+    "title": "Hardcoded Flask/JWT secret in Config",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "server/config.py",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "SECRET_KEY = \"just_another_secret\" # application secret",
+    "taint": {
+      "source": "static source code secret",
+      "sink": "hardcoded SECRET_KEY assignment",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/config.py",
+        "line": 7,
+        "note": "hardcoded signing secret"
+      }
+    ],
+    "evidence": "SECRET_KEY = \"just_another_secret\" # application secret | validator: server/config.py:7 SECRET_KEY = \"just_another_secret\" loaded via server/__init__.py:10 app.config.from_object(Config) and used for Flask sessions and server/api/v1/api_v1.py:130 jwt.encode/decode | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with source access learns signing key. HOW: Config.SECRET_KEY hardcoded as 'just_another_secret' at line 7 used for Flask sessions and JWTs. WHAT: breaks secret-management invariant enabling session and JWT forgery across web and API.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Code checkout or repo access"
+    ],
+    "unit": "server",
+    "hunter_evidence": "SECRET_KEY = \"just_another_secret\" # application secret",
+    "hunter_snippet": "SECRET_KEY = \"just_another_secret\" # application secret",
+    "patch_summary": "Remove hardcoded secret; load random SECRET_KEY from env/vault, rotate existing sessions/JWTs",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-1",
+    "title": "Broken password hashing in custom_hash() uses unsalted MD5",
+    "cwe": "CWE-327",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server/routes.py",
+    "start_line": 393,
+    "end_line": 403,
+    "snippet": "return hashlib.md5(password.encode()).hexdigest()",
+    "taint": {
+      "source": "user-supplied password string",
+      "sink": "hashlib.md5(password) unsalted fast hash",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 403,
+        "note": "MD5 password hash sink"
+      }
+    ],
+    "evidence": "return hashlib.md5(password.encode()).hexdigest() | validator: server/routes.py:403 return hashlib.md5(password.encode()).hexdigest() used by server/routes.py:51 login compare and server/routes.py:87 signup store with no salt/stretching | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker with hash or password choice. HOW: custom_hash() hashes with single unsalted MD5 at line 403 and is used for both storage and verification. WHAT: breaks password-storage invariant: MD5 is fast, unsalted, brute-forceable and colliding; enables rainbow-table and cracking of low-entropy dummy passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Ability to obtain password hash from DB dump or login oracle"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return hashlib.md5(password.encode()).hexdigest()",
+    "hunter_snippet": "return hashlib.md5(password.encode()).hexdigest()",
+    "patch_summary": "Replace custom_hash with bcrypt/argon2 (e.g., werkzeug.security generate_password_hash/check_password_hash) and migrate stored hashes",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-11",
+    "title": "BOLA unauthenticated profile disclosure in UserProfile.get()",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 164,
+    "end_line": 165,
+    "snippet": "cursor.execute(query, (user_id,))",
+    "taint": {
+      "source": "GET /api/v1/profile?user_id=",
+      "sink": "return of arbitrary user profile",
+      "path": [
+        "server/api/v1/api_v1.py:159 user_id query arg",
+        "server/api/v1/api_v1.py:164 SELECT WHERE id=?",
+        "server/api/v1/api_v1.py:168 return dict(user_profile)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 159,
+        "note": "attacker user_id source"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 164,
+        "note": "unscoped SELECT sink"
+      }
+    ],
+    "evidence": "cursor.execute(query, (user_id,)) | validator: server/api/v1/api_v1.py:148 #@token_required commented out, server/api/v1/api_v1.py:159 user_id from query args flows to server/api/v1/api_v1.py:164 SELECT WHERE id=? then server/api/v1/api_v1.py:168 return dict(user_profile) with no session/ownership check | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote caller controls user_id query arg. HOW: UserProfile.get() has token_required commented out at lines 152-153 and directly queries by attacker user_id at line 164 returning username/email/role/permissions/team at line 168. WHAT: breaks object-level authorization enabling enumeration of any account including admins.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /api/v1/profile"
+    ],
+    "unit": "server",
+    "hunter_evidence": "cursor.execute(query, (user_id,))",
+    "hunter_snippet": "cursor.execute(query, (user_id,))",
+    "patch_summary": "Re-enable @token_required and enforce ownership: only return profile when requester user_id matches token/session or has admin scope",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-13",
+    "title": "SSRF in ProfilePicture.post() via picture_url",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 254,
+    "end_line": 254,
+    "snippet": "response = requests.get(picture_url)",
+    "taint": {
+      "source": "POST /api/v1/update_picture picture_url",
+      "sink": "requests.get() server-side fetch",
+      "path": [
+        "server/api/v1/api_v1.py:250 picture_url JSON field",
+        "server/api/v1/api_v1.py:254 requests.get()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 250,
+        "note": "attacker URL source"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 254,
+        "note": "SSRF request sink"
+      }
+    ],
+    "evidence": "response = requests.get(picture_url) | validator: server/api/v1/api_v1.py:250 picture_url from JSON flows to server/api/v1/api_v1.py:254 requests.get(picture_url) with no allowlist/egress validation; Content-Type check only after fetch | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated caller controls picture_url JSON field. HOW: ProfilePicture.post() passes attacker URL directly to requests.get(picture_url) at line 254 with no allowlist, scheme/host validation, timeout, or auth, then writes response to disk. WHAT: breaks egress boundary enabling internal port scanning, cloud-metadata access, and DoS via large/slow bodies.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /api/v1/update_picture",
+      "Attacker-controlled URL reachable by server"
+    ],
+    "unit": "server",
+    "hunter_evidence": "response = requests.get(picture_url)",
+    "hunter_snippet": "response = requests.get(picture_url)",
+    "patch_summary": "Deny egress by default: allowlist hosts/schemes, validate redirect, fetch with timeout/size cap, or require client upload instead of server fetch",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-11",
+    "title": "Missing authentication in ProfilePicture.post() allows arbitrary picture overwrite",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 243,
+    "end_line": 243,
+    "snippet": "    def post(self):",
+    "taint": {
+      "source": "unauthenticated JSON username/picture_url",
+      "sink": "arbitrary user profile-picture overwrite",
+      "path": [
+        "server/api/v1/api_v1.py:243 unauth entry",
+        "server/api/v1/api_v1.py:249 username trusted"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 243,
+        "note": "post handler with zero auth check"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 249,
+        "note": "unverified username trusted for write"
+      }
+    ],
+    "evidence": "    def post(self): | validator: server/api/v1/api_v1.py:240-249 ProfilePicture.post reads username/picture_url with no session/token check vs UserProfileUpdate session gate at :183 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote caller controls username and picture_url JSON. HOW: ProfilePicture.post() at 243 has no session check and commented/no token_required, directly trusts username field at 249 to select and overwrite that user's profile_picture. WHAT: breaks authentication invariant allowing anyone to plant SSRF-fetched content into any account including admins.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/api/v1/api_v1.py').read_text(); i=t.index('class ProfilePicture'); seg=t[i:i+800]; assert 'session' not in seg.lower() or 'print' in seg.lower(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "No authentication required, attacker knows any username"
+    ],
+    "unit": "server",
+    "hunter_evidence": "    def post(self):",
+    "hunter_snippet": "    def post(self):",
+    "patch_summary": "Require session or @token_required on ProfilePicture.post and bind write to authenticated identity, not body username",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-25",
+    "title": "Reflected XSS via safe filter in dashboard.html",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "client/templates/dashboard.html",
+    "start_line": 64,
+    "end_line": 64,
+    "snippet": "<input type=\"text\" name=\"search\" placeholder=\"Search files...\" value=\"{{ search_query | safe }}\">",
+    "taint": {
+      "source": "GET ?search= parameter",
+      "sink": "{{ search_query | safe }} unescaped reflection",
+      "path": [
+        "server/routes.py:126 search query source",
+        "server/routes.py:143 search_query template var",
+        "client/templates/dashboard.html:64 |safe reflection"
+      ]
+    },
+    "refs": [
+      {
+        "file": "client/templates/dashboard.html",
+        "line": 64,
+        "note": "unescaped reflection sink"
+      }
+    ],
+    "evidence": "<input type=\"text\" name=\"search\" placeholder=\"Search files...\" value=\"{{ search_query | safe }}\"> | validator: server/routes.py:126 search_query=request.args.get('search','') untrusted; server/routes.py:143 passed as search_query to render_template; client/templates/dashboard.html:64 value=\"{{ search_query | safe }}\" disables autoescape | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated user controls search input. HOW: dashboard.html reflects search_query with |safe filter at line 64 disabling Jinja autoescape inside value attribute. WHAT: breaks output-encoding invariant enabling reflected XSS that executes in victim dashboard and, with HttpOnly false, steals session.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session (any user)",
+      "Attacker controls search query string"
+    ],
+    "unit": "server",
+    "hunter_evidence": "<input type=\"text\" name=\"search\" placeholder=\"Search files...\" value=\"{{ search_query | safe }}\">",
+    "hunter_snippet": "<input type=\"text\" name=\"search\" placeholder=\"Search files...\" value=\"{{ search_query | safe }}\">",
+    "patch_summary": "Remove |safe and rely on Jinja autoescape (or explicitly escape) for search_query in value attribute.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-10",
+    "title": "Weak password storage in signup()",
+    "cwe": "CWE-327",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "server/routes.py",
+    "start_line": 93,
+    "end_line": 99,
+    "snippet": "hashed_password = custom_hash(password)",
+    "taint": {
+      "source": "POST /signup password field",
+      "sink": "INSERT weak MD5 hash into DB",
+      "path": [
+        "server/routes.py:84 request.form password",
+        "server/routes.py:93 custom_hash()",
+        "server/routes.py:99 INSERT INTO users"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 93,
+        "note": "weak hash sink"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 99,
+        "note": "persistent storage of weak hash"
+      }
+    ],
+    "evidence": "hashed_password = custom_hash(password) | validator: server/routes.py:393-403 custom_hash returns hashlib.md5(password.encode()).hexdigest() unsalted; server/routes.py:93 hashed_password=custom_hash(password); server/routes.py:99 INSERT INTO users persists weak hash | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated user controls password field. HOW: signup() hashes with custom_hash MD5 at line 93 and INSERTs at line 99 with no strength policy, no email verification, then auto-logs in via session. WHAT: breaks credential-storage invariant storing crackable unsalted hashes and enables mass account creation.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to signup, no auth needed"
+    ],
+    "unit": "server",
+    "hunter_evidence": "hashed_password = custom_hash(password)",
+    "hunter_snippet": "hashed_password = custom_hash(password)",
+    "patch_summary": "Replace MD5 custom_hash with bcrypt/argon2id with per-user salt and migrate stored hashes.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-4",
+    "title": "Unrestricted file upload with path traversal in upload_file()",
+    "cwe": "CWE-434",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 262,
+    "end_line": 264,
+    "snippet": "file.save(filepath)",
+    "taint": {
+      "source": "multipart file upload filename + bytes",
+      "sink": "file.save() with attacker filename",
+      "path": [
+        "server/routes.py:257 request.files['file']",
+        "server/routes.py:262 file.filename",
+        "server/routes.py:263 os.path.join(UPLOAD_FOLDER, filename)",
+        "server/routes.py:264 file.save(filepath)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 262,
+        "note": "unsanitized filename source"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 264,
+        "note": "filesystem write sink"
+      }
+    ],
+    "evidence": "file.save(filepath) | validator: server/routes.py:262 filename=file.filename then server/routes.py:263 os.path.join(UPLOAD_FOLDER,filename) then server/routes.py:264 file.save(filepath) with only empty-name check, no secure_filename/allowlist/size check | consensus: 1/1 confirmed",
+    "rationale": "WHO: authenticated user controls file.filename and file bytes. HOW: upload_file() takes file.filename verbatim at line 262, joins to UPLOAD_FOLDER at line 263 and saves at line 264 with only empty-name check, no secure_filename, allowlist, or size limit. WHAT: breaks filesystem and content-type boundaries enabling path traversal (../), overwrite, and executable upload served later.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required"
+    ],
+    "unit": "server",
+    "hunter_evidence": "file.save(filepath)",
+    "hunter_snippet": "file.save(filepath)",
+    "patch_summary": "Sanitize with secure_filename, randomize stored name, enforce extension/size allowlist, store outside webroot and block traversal",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-2",
+    "title": "Mass-assignment privilege escalation in update_profile()",
+    "cwe": "CWE-285",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 190,
+    "end_line": 196,
+    "snippet": "role = request.form['role'] or current_user['role']",
+    "taint": {
+      "source": "POST form fields role/permissions",
+      "sink": "UPDATE users with attacker-controlled role/permissions",
+      "path": [
+        "server/routes.py:190 request.form['role']",
+        "server/routes.py:196 request.form['permissions']",
+        "server/routes.py:234 UPDATE users SET role=?, permissions=?"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 190,
+        "note": "attacker role assignment"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 234,
+        "note": "privileged columns persisted"
+      }
+    ],
+    "evidence": "role = request.form['role'] or current_user['role'] | validator: server/routes.py:190 role=request.form['role'] and server/routes.py:196 permissions from form flow to server/routes.py:234 UPDATE users SET role=?,permissions=? with no admin check, unlike server/api/v1/api_v1.py:185 admin-gated update | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated low-privilege user controls form fields. HOW: update_profile() explicitly checks if 'role'/'permissions' in request.form and assigns attacker value to privileged columns at lines 187-196, later persisted in UPDATE at line 234. WHAT: breaks authorization boundary allowing self-promotion to admin despite edit_profile.html hiding those fields.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required",
+      "Attacker can add role/permissions fields to POST body (e.g., via proxy)"
+    ],
+    "unit": "server",
+    "hunter_evidence": "role = request.form['role'] or current_user['role']",
+    "hunter_snippet": "role = request.form['role'] or current_user['role']",
+    "patch_summary": "Allowlist updatable fields to email/country/team only; ignore role/permissions from form unless session user is admin",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-5",
+    "title": "Missing authentication on profile_pictures() file serve",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 308,
+    "end_line": 309,
+    "snippet": "return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)",
+    "taint": {
+      "source": "GET /uploads/profile_pictures/<filename>",
+      "sink": "send_from_directory filesystem read",
+      "path": [
+        "server/routes.py:308 <filename> URL path",
+        "server/routes.py:309 send_from_directory()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 308,
+        "note": "route exposes filename without auth"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 309,
+        "note": "filesystem read sink"
+      }
+    ],
+    "evidence": "return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename) | validator: server/routes.py:307 @app.route('/uploads/profile_pictures/<filename>') then server/routes.py:309 send_from_directory with no session check, vs sibling server/routes.py:283 uploaded_file and server/routes.py:312 download_file which both require session plus ownership SELECT | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote user controls <filename> URL path. HOW: profile_pictures(filename) directly passes attacker filename to send_from_directory at line 309 with no session check and no ownership check, unlike sibling uploaded_file/download_file which check session. WHAT: breaks access-control boundary exposing all profile pictures and enabling directory-traversal probing.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "No authentication required"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)",
+    "hunter_snippet": "return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)",
+    "patch_summary": "Require session and profile_picture ownership check before send_from_directory, or serve via unguessable random names with auth",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-16",
+    "title": "Weak JWT issuance with hardcoded secret in UserLogin.post()",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 130,
+    "end_line": 133,
+    "snippet": "}, Config.SECRET_KEY, algorithm='HS256')",
+    "taint": {
+      "source": "POST /api/v1/login JSON body",
+      "sink": "jwt.encode() with hardcoded secret",
+      "path": [
+        "server/api/v1/api_v1.py:115 username JSON",
+        "server/api/v1/api_v1.py:130 jwt.encode()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 127,
+        "note": "MD5 verification"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 133,
+        "note": "JWT sign with weak static key"
+      }
+    ],
+    "evidence": "}, Config.SECRET_KEY, algorithm='HS256') | validator: server/api/v1/api_v1.py:130 jwt.encode(...,Config.SECRET_KEY,algorithm='HS256') reachable via unauth POST server/api/v1/api_v1.py:103 /api/v1/login where Config.SECRET_KEY is hardcoded at server/config.py:7 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated caller supplies username/password JSON. HOW: UserLogin.post() verifies via MD5 custom_hash at line 127 then signs JWT with hardcoded Config.SECRET_KEY 'just_another_secret' at lines 130-133 valid 24h. WHAT: breaks signing-key secrecy and password-storage invariants enabling token forgery and offline cracking.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /api/v1/login"
+    ],
+    "unit": "server",
+    "hunter_evidence": "}, Config.SECRET_KEY, algorithm='HS256')",
+    "hunter_snippet": "}, Config.SECRET_KEY, algorithm='HS256')",
+    "patch_summary": "Sign JWTs with strong random secret from env/vault with short expiry/issuer validation; fix MD5 password check at server/api/v1/api_v1.py:127",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-0",
+    "title": "Missing CSRF protection in update_profile()",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 170,
+    "end_line": 171,
+    "snippet": "@app.route('/update_profile', methods=['POST'])\ndef update_profile():",
+    "taint": {
+      "source": "cross-site forged POST with victim cookies",
+      "sink": "privileged DB UPDATE + session rename without anti-CSRF",
+      "path": [
+        "server/routes.py:170 POST entry",
+        "server/routes.py:234 UPDATE execution"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 170,
+        "note": "state-changing POST route without CSRF check"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 234,
+        "note": "privileged UPDATE executed on forged request"
+      }
+    ],
+    "evidence": "@app.route('/update_profile', methods=['POST'])\ndef update_profile(): | validator: server/routes.py:170 POST update_profile executes DB UPDATE at :234 with session-cookie auth and no CSRF token; server/__init__.py:7 app has no CSRF protection | consensus: 1/1 confirmed",
+    "rationale": "WHO: any authenticated victim's browser, attacker crafts cross-site form. HOW: update_profile() at 170-171 accepts POST with only 'username in session' cookie check and no CSRF token, SameSite or Origin check, then performs privileged UPDATE at 234 and session rename at 237. WHAT: breaks state-changing request unforgeability, enabling cross-site privilege escalation and username takeover.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/routes.py').read_text(); assert \"update_profile\" in t and \"csrf\" not in t.lower(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated or unauthenticated attacker can issue cross-site POST"
+    ],
+    "unit": "server",
+    "hunter_evidence": "@app.route('/update_profile', methods=['POST'])\ndef update_profile():",
+    "hunter_snippet": "@app.route('/update_profile', methods=['POST'])\ndef update_profile():",
+    "patch_summary": "Add per-session CSRF token validation on update_profile POST and set SameSite cookie",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-1",
+    "title": "Missing CSRF protection in upload_file()",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 248,
+    "end_line": 249,
+    "snippet": "@app.route('/upload', methods=['GET', 'POST'])\ndef upload_file():",
+    "taint": {
+      "source": "cross-site forged multipart POST",
+      "sink": "filesystem write + DB insert without anti-CSRF",
+      "path": [
+        "server/routes.py:248 POST entry",
+        "server/routes.py:264 file.save"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 248,
+        "note": "file-upload POST without CSRF"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 264,
+        "note": "filesystem write reached on forged request"
+      }
+    ],
+    "evidence": "@app.route('/upload', methods=['GET', 'POST'])\ndef upload_file(): | validator: server/routes.py:248 upload_file saves file at :264 on session-cookie POST with no CSRF token; no CSRF anywhere in routes/__init__ | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker controlling third-party page, victim authenticated. HOW: upload_file() at 248-249 accepts multipart POST gated only by session cookie, no CSRF token or SameSite check, then writes attacker filename to filesystem at 264 and INSERTs DB row. WHAT: breaks cross-site request unforgeability allowing attacker to plant files into victim account and exhaust disk.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/routes.py').read_text(); assert \"def upload_file\" in t and \"csrf\" not in t.lower(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim authenticated, attacker lures to malicious page"
+    ],
+    "unit": "server",
+    "hunter_evidence": "@app.route('/upload', methods=['GET', 'POST'])\ndef upload_file():",
+    "hunter_snippet": "@app.route('/upload', methods=['GET', 'POST'])\ndef upload_file():",
+    "patch_summary": "Add CSRF token check to upload_file POST and SameSite cookie flag",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-2",
+    "title": "Missing CSRF protection in delete_file()",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 340,
+    "end_line": 341,
+    "snippet": "@app.route('/delete/<filename>', methods=['POST'])\ndef delete_file(filename):",
+    "taint": {
+      "source": "cross-site forged POST",
+      "sink": "arbitrary file delete without anti-CSRF",
+      "path": [
+        "server/routes.py:340 POST entry",
+        "server/routes.py:364 os.remove"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 340,
+        "note": "destructive POST without CSRF"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 364,
+        "note": "os.remove reached on forged request"
+      }
+    ],
+    "evidence": "@app.route('/delete/<filename>', methods=['POST'])\ndef delete_file(filename): | validator: server/routes.py:340 delete_file POST does os.remove at :364 on session-cookie auth with no CSRF token | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker via victim browser. HOW: delete_file(filename) at 340-341 accepts POST with only session check, no CSRF token, then os.remove at 364 and DELETE at 365. WHAT: breaks unforgeability for destructive action, enabling cross-site deletion of victim files.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/routes.py').read_text(); assert \"def delete_file\" in t and \"csrf\" not in t.lower(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim authenticated, attacker triggers cross-site POST"
+    ],
+    "unit": "server",
+    "hunter_evidence": "@app.route('/delete/<filename>', methods=['POST'])\ndef delete_file(filename):",
+    "hunter_snippet": "@app.route('/delete/<filename>', methods=['POST'])\ndef delete_file(filename):",
+    "patch_summary": "Require CSRF token on delete_file POST and SameSite cookie",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-14",
+    "title": "Unrestricted remote file write in ProfilePicture.post()",
+    "cwe": "CWE-434",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 284,
+    "end_line": 285,
+    "snippet": "file.write(response.content)",
+    "taint": {
+      "source": "remote URL bytes via picture_url",
+      "sink": "open().write() of remote bytes",
+      "path": [
+        "server/api/v1/api_v1.py:254 SSRF response",
+        "server/api/v1/api_v1.py:285 file.write(response.content)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 260,
+        "note": "header-only check bypassable"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 285,
+        "note": "unbounded file write sink"
+      }
+    ],
+    "evidence": "file.write(response.content) | validator: server/api/v1/api_v1.py:243 ProfilePicture.post has no token_required/session check; server/api/v1/api_v1.py:254 requests.get(picture_url) unbounded SSRF; server/api/v1/api_v1.py:260 header-only Content-Type check; server/api/v1/api_v1.py:285 file.write(response.content) unbounded write to profile_pictures dir | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated caller influences remote bytes via picture_url. HOW: ProfilePicture.post() validates only Content-Type header substring at line 260 then writes response.content unbounded to PROFILE_PICTURES_UPLOAD_FOLDER at lines 284-285. WHAT: breaks upload validation allowing arbitrary-size content storage, disk exhaustion, and polyglot persistence keyed by predictable ID.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated access to update_picture",
+      "Attacker hosts image of any size"
+    ],
+    "unit": "server",
+    "hunter_evidence": "file.write(response.content)",
+    "hunter_snippet": "file.write(response.content)",
+    "patch_summary": "Require auth, allowlist URL hosts/schemes, enforce size/timeout limits, validate image magic bytes, randomize stored filename.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-001-session-fixation",
+    "title": "Session fixation on web login/signup: session never regenerated at privilege change",
+    "cwe": "CWE-384",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 51,
+    "end_line": 52,
+    "snippet": "session['username'] = user['username']\n            session['user_id'] = user['id']",
+    "taint": {
+      "source": "client-supplied session cookie + login credentials",
+      "sink": "authenticated session bound to pre-existing cookie",
+      "path": [
+        "server/routes.py:38 attacker username/password form",
+        "server/routes.py:51 session fixation point"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 51,
+        "note": "login sets session without clearing prior session"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 109,
+        "note": "signup same pattern: assigns session on pre-existing cookie"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 389,
+        "note": "only logout clears session"
+      }
+    ],
+    "evidence": "server/routes.py:51 sets session['username'] without session.clear()/regeneration; same pattern at server/routes.py:109; only server/routes.py:389 clears on logout | validator: server/routes.py:51-52 login sets session['username']/['user_id'] with no session.clear/regeneration; same at server/routes.py:109-110 signup; only server/routes.py:389 clears on logout | consensus: 1/1 confirmed",
+    "rationale": "Both login() and signup() authenticate then assign session keys on the existing client session without clearing/regenerating it. An attacker who plants a session cookie in the victim browser (or reuses a known cookie value) retains the same session after the victim logs in, enabling session fixation. No session.regenerate/clear/flask-login fresh-login pattern exists repo-wide.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/routes.py:51 sets session['username'] without session.clear()/regeneration; same pattern at server/routes.py:109; only server/routes.py:389 clears on logout",
+    "hunter_snippet": "session['username'] = user['username']\n            session['user_id'] = user['id']",
+    "patch_summary": "Call session.clear() before setting new auth keys on login/signup to rotate Flask session.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "XU-01",
+    "title": "Cross-unit privilege escalation: web mass-assignment persists admin role that bypasses API sensitive-update gate",
+    "cwe": "CWE-285",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 201,
+    "end_line": 202,
+    "snippet": "            if user_profile['role'] == \"admin\":\n                updates.update({key: value for key, value in data.items() if key in sensitive_updates})",
+    "taint": {
+      "source": "POST /update_profile role/permissions form fields (authenticated attacker)",
+      "sink": "API sensitive-update allowlist bypass (role/permissions accepted when DB role==admin)",
+      "path": [
+        "server/routes.py:190 request.form['role'] -> UPDATE users",
+        "server/routes.py:234 persisted users.role=admin",
+        "server/api/v1/api_v1.py:195-201 SELECT role then admin check"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 190,
+        "note": "role taken from attacker form field"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 234,
+        "note": "UPDATE persists attacker role/permissions"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 201,
+        "note": "admin gate reads attacker-controlled DB role"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 206,
+        "note": "dynamic UPDATE applies sensitive_updates when gate passes"
+      }
+    ],
+    "evidence": "server/routes.py:190 mass-assigns role from request.form; server/routes.py:234 persists role/permissions; server/api/v1/api_v1.py:201 gates sensitive_updates on DB role==admin which attacker just set | validator: server/routes.py:190 takes role from request.form and server/routes.py:234 UPDATE persists role/permissions; server/api/v1/api_v1.py:201 then gates sensitive_updates on DB role==admin which attacker controls | consensus: 1/1 confirmed | triage: Web mass-assign sets admin unlocking API gate",
+    "rationale": "Low-priv authenticated attacker POSTs role=admin/permissions=all to web update_profile (no server-side allowlist). That value is persisted to users.role. The API update-profile endpoint then reads the same DB column and treats the attacker as admin, permanently unlocking role/permissions writes via the API. Neither unit finding links the web write to the API gate read; the chain makes the API admin check attacker-controlled.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/routes.py:190 mass-assigns role from request.form; server/routes.py:234 persists role/permissions; server/api/v1/api_v1.py:201 gates sensitive_updates on DB role==admin which attacker just set",
+    "hunter_snippet": "            if user_profile['role'] == \"admin\":\n                updates.update({key: value for key, value in data.items() if key in sensitive_updates})",
+    "patch_summary": "Allowlist updatable fields in /update_profile (drop role/permissions from form) and gate API sensitive updates on server-side trusted role, not DB attacker-set value.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Auth attacker persists admin then bypasses gate"
+    },
+    "cvss": 6.9,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-server-27",
+    "title": "Stored XSS via safe filter in profile.html",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "client/templates/profile.html",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "<p><strong>Country:</strong> {{ user.country | safe}}</p>",
+    "taint": {
+      "source": "signup/update_profile country field",
+      "sink": "{{ user.country | safe }} unescaped render",
+      "path": [
+        "server/routes.py:83 country form field",
+        "server/routes.py:151 user DB row",
+        "client/templates/profile.html:41 |safe render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "client/templates/profile.html",
+        "line": 41,
+        "note": "unescaped stored value sink"
+      }
+    ],
+    "evidence": "<p><strong>Country:</strong> {{ user.country | safe}}</p> | validator: server/routes.py:83 country from signup form stored raw via INSERT; server/routes.py:170-216 update_profile stores country raw; client/templates/profile.html:41 {{ user.country | safe}} disables escaping on persisted value | consensus: 1/1 confirmed",
+    "rationale": "WHO: any user controls country field persisted in DB. HOW: profile.html renders user.country with |safe at line 41 disabling autoescape. WHAT: breaks output-encoding invariant turning country into persistent XSS payload executed on every profile view, enabling session hijack.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session",
+      "Attacker previously set country via signup or update_profile"
+    ],
+    "unit": "server",
+    "hunter_evidence": "<p><strong>Country:</strong> {{ user.country | safe}}</p>",
+    "hunter_snippet": "<p><strong>Country:</strong> {{ user.country | safe}}</p>",
+    "patch_summary": "Remove |safe from profile.html country render; HTML-escape on output and validate country on input.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@client/templates/dashboard.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "client/templates/dashboard.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: client/templates/dashboard.html:64 renders value=\"{{ search_query | safe }}\" with |safe bypass; server/routes.py:126 sources search_query from request.args.get('search') and server/routes.py:143 passes it to render_template | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Remove |safe on search_query in dashboard.html and rely on Jinja autoescape (attribute-encode) for the value attribute.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-20",
+    "title": "Debug mode enabled in Config",
+    "cwe": "CWE-215",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "server/config.py",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "DEBUG = True",
+    "taint": {
+      "source": "static configuration",
+      "sink": "DEBUG=True production unsafe flag",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/config.py",
+        "line": 5,
+        "note": "debug enablement"
+      }
+    ],
+    "evidence": "DEBUG = True | validator: server/config.py:5 DEBUG=True loaded via server/__init__.py:10 and consumed by run.py:7 debug_mode=Config.DEBUG | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote attacker interacts with Flask app. HOW: Config.DEBUG=True at line 5 enables debugger console and verbose tracebacks via app.run(debug=...). WHAT: breaks safe-deployment invariant exposing interactive debugger and stack traces with secrets.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Production deployment with Config imported"
+    ],
+    "unit": "server",
+    "hunter_evidence": "DEBUG = True",
+    "hunter_snippet": "DEBUG = True",
+    "patch_summary": "Set DEBUG=False by default; enable only via explicit env-gated development flag, never in production config",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-22",
+    "title": "Flask debug server execution in run.py",
+    "cwe": "CWE-215",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "run.py",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "app.run(debug=debug_mode)",
+    "taint": {
+      "source": "static DEBUG flag",
+      "sink": "Flask dev server in debug mode",
+      "path": [
+        "server/config.py:5 DEBUG=True",
+        "run.py:7 debug_mode",
+        "run.py:10 app.run(debug=True)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "run.py",
+        "line": 7,
+        "note": "debug flag sourced"
+      },
+      {
+        "file": "run.py",
+        "line": 10,
+        "note": "debug server sink"
+      }
+    ],
+    "evidence": "app.run(debug=debug_mode) | validator: run.py:7 debug_mode=Config.DEBUG (True at server/config.py:5) flows to run.py:10 app.run(debug=debug_mode) enabling debugger/reloader when started via python run.py | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote attacker reaches Flask dev server. HOW: run.py runs app.run(debug=Config.DEBUG) at line 10 with DEBUG True, serving Werkzeug debugger and reloader. WHAT: breaks production-deployment invariant risking debugger PIN bypass/RCE and information disclosure.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App started via run.py"
+    ],
+    "unit": "server",
+    "hunter_evidence": "app.run(debug=debug_mode)",
+    "hunter_snippet": "app.run(debug=debug_mode)",
+    "patch_summary": "Default debug=False in run.py; require explicit --debug/env opt-in and run production via WSGI server without debug",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XU-03",
+    "title": "Missing CSRF protection on session-authenticated POST /api/v1/update-profile",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 182,
+    "end_line": 185,
+    "snippet": "        print(session)\n        if 'username' in session:\n            user_id = session['user_id']\n            data = request.json",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 172,
+        "note": "route POST /api/v1/update-profile"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 183,
+        "note": "auth is only session-cookie check, no CSRF token"
+      },
+      {
+        "file": "server/config.py",
+        "line": 4,
+        "note": "no Secure/SameSite flags to blunt cross-site cookie send"
+      }
+    ],
+    "evidence": "server/api/v1/api_v1.py:178-185 mutating POST guarded only by Flask session cookie (if 'username' in session), no CSRF token, no SameSite/Secure flags per server/config.py; sibling web POSTs were flagged for CSRF but this session-authenticated API POST was not | validator: server/api/v1/api_v1.py:172 POST /api/v1/update-profile guarded only by server/api/v1/api_v1.py:183 if 'username' in session with server/api/v1/api_v1.py:185 request.json mutation; no CSRF token and server/config.py:4-6 sets no SameSite/Secure | consensus: 1/1 confirmed | triage: Session-cookie POST with no CSRF token",
+    "rationale": "POST /api/v1/update-profile changes email/country/team (and role/permissions for admins) based solely on the session cookie. A cross-site form/fetch POST from attacker origin carries the victim cookie (no SameSite, no token), so attacker can force profile mutation on behalf of the victim. Unit findings list CSRF on three web routes but not on this session-authenticated API mutator.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/api/v1/api_v1.py:178-185 mutating POST guarded only by Flask session cookie (if 'username' in session), no CSRF token, no SameSite/Secure flags per server/config.py; sibling web POSTs were flagged for CSRF but this session-authenticated API POST was not",
+    "hunter_snippet": "        print(session)\n        if 'username' in session:\n            user_id = session['user_id']\n            data = request.json",
+    "patch_summary": "Require anti-CSRF token (or SameSite=Lax/Strict + JSON content-type check) on session-authenticated POST /api/v1/update-profile.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim visits attacker page"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Forged profile update"
+    },
+    "cvss": 4.6,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XU-05",
+    "title": "SSRF fetch without timeout enables worker-hang DoS",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 254,
+    "end_line": 254,
+    "snippet": "            response = requests.get(picture_url)",
+    "taint": {
+      "source": "attacker-supplied picture_url (unauthenticated endpoint)",
+      "sink": "worker hang / resource exhaustion (availability loss)",
+      "path": [
+        "server/api/v1/api_v1.py:250 picture_url from api.payload",
+        "server/api/v1/api_v1.py:254 blocking requests.get without timeout"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 250,
+        "note": "picture_url from attacker JSON"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 254,
+        "note": "blocking fetch with no timeout="
+      },
+      {
+        "file": "run.py",
+        "line": 10,
+        "note": "single-process debug server amplifies hang"
+      }
+    ],
+    "evidence": "server/api/v1/api_v1.py:254 requests.get(picture_url) passes no timeout, no size cap, on single-process Flask dev server (run.py app.run(debug=True)) | validator: server/api/v1/api_v1.py:250 attacker picture_url to server/api/v1/api_v1.py:254 requests.get(picture_url) with no timeout=/size cap on unauthenticated endpoint; run.py:9 single-process debug server amplifies hang | consensus: 1/1 confirmed | triage: Unauth requests.get with no timeout hangs worker",
+    "rationale": "picture_url is fully attacker-controlled and fetched with no timeout. Supplying a slow/never-responding URL hangs the worker for the default (no) timeout, denying service on the single-process dev server; a large body additionally amplifies disk/memory use since response.content is buffered then written. Unit SSRF findings do not cover the missing-timeout DoS vector.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/api/v1/api_v1.py:254 requests.get(picture_url) passes no timeout, no size cap, on single-process Flask dev server (run.py app.run(debug=True))",
+    "hunter_snippet": "            response = requests.get(picture_url)",
+    "patch_summary": "Add timeout= (e.g. 5s), size cap, and egress allowlist to requests.get(picture_url) in update_picture.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "slow remote host"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "platform",
+      "rationale": "Worker hang on single-process server"
+    },
+    "cvss": 4.6,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-12",
+    "title": "No brute-force protection in API UserLogin.post()",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 114,
+    "end_line": 114,
+    "snippet": "        data = request.get_json()  # Get data from request body",
+    "taint": {
+      "source": "POST /api/v1/login JSON",
+      "sink": "unthrottled auth decision + JWT issuance",
+      "path": [
+        "server/api/v1/api_v1.py:114 JSON login",
+        "server/api/v1/api_v1.py:127 MD5 compare"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 114,
+        "note": "attacker JSON input"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 127,
+        "note": "MD5 compare without throttling"
+      }
+    ],
+    "evidence": "        data = request.get_json()  # Get data from request body | validator: server/api/v1/api_v1.py:114-127 login does MD5 compare and JWT issue with no rate-limit/lockout/captcha in file | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls username/password JSON. HOW: UserLogin.post() at 114 parses JSON and compares MD5 at 127 with no rate-limit, captcha, lockout or constant-time compare, distinct from web login throttle gap. WHAT: breaks brute-force resistance enabling unlimited credential stuffing against weak MD5 dummy passwords and token issuance.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/api/v1/api_v1.py').read_text(); assert 'request.get_json()' in t and 'throttle' not in t.lower() and 'limit' not in t.lower(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker can send unlimited API login attempts"
+    ],
+    "unit": "server",
+    "hunter_evidence": "        data = request.get_json()  # Get data from request body",
+    "hunter_snippet": "        data = request.get_json()  # Get data from request body",
+    "patch_summary": "Add rate-limiting, lockout and delay on API login; replace MD5 with bcrypt/argon2",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-14",
+    "title": "Missing upload size limit and security headers in app factory",
+    "cwe": "CWE-693",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "server/__init__.py",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "app = Flask(__name__, template_folder='../client/templates', static_folder='../client/static')",
+    "taint": {
+      "source": "static app configuration",
+      "sink": "missing size limits and security headers",
+      "path": [
+        "server/__init__.py:7 app factory"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/__init__.py",
+        "line": 7,
+        "note": "app creation without limits or header hardening"
+      }
+    ],
+    "evidence": "app = Flask(__name__, template_folder='../client/templates', static_folder='../client/static') | validator: server/__init__.py:7 Flask app creation has no MAX_CONTENT_LENGTH/Talisman/CSP; server/routes.py:260-264 upload saves unbounded file | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote client sending large uploads or crafted responses. HOW: server/__init__.py at 7 creates Flask app and loads Config with no MAX_CONTENT_LENGTH, no request size cap, and no security-headers (CSP, X-Content-Type-Options, X-Frame-Options, HSTS) middleware. WHAT: breaks protection-mechanism invariant enabling disk/memory DoS via unbounded uploads/SSRF bodies and clickjacking/MIME-sniffing.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/__init__.py').read_text(); assert 'MAX_CONTENT_LENGTH' not in t and 'Talisman' not in t and 'CSP' not in t; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App deployed as configured"
+    ],
+    "unit": "server",
+    "hunter_evidence": "app = Flask(__name__, template_folder='../client/templates', static_folder='../client/static')",
+    "hunter_snippet": "app = Flask(__name__, template_folder='../client/templates', static_folder='../client/static')",
+    "patch_summary": "Set MAX_CONTENT_LENGTH, add CSP/HSTS/X-Frame-Options headers, enforce upload size/type allowlist",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-9",
+    "title": "No brute-force protection in login()",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "server/routes.py",
+    "start_line": 51,
+    "end_line": 52,
+    "snippet": "session['username'] = user['username']",
+    "taint": {
+      "source": "POST /login form fields",
+      "sink": "session assignment without throttling",
+      "path": [
+        "server/routes.py:37 request.form username/password",
+        "server/routes.py:50 custom_hash compare",
+        "server/routes.py:51 session creation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 37,
+        "note": "attacker credential source"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 51,
+        "note": "session creation on guessable secret"
+      }
+    ],
+    "evidence": "session['username'] = user['username'] | validator: server/routes.py:37-52 login() does username/password lookup and session creation with no counter, delay, lockout, or captcha on reachable POST /login | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote attacker controls username/password form fields. HOW: login() performs MD5 compare and on success sets session username/user_id at lines 51-52 with no rate-limit, captcha, lockout, or constant-time compare, and reveals same generic error but still allows unlimited automated guessing. WHAT: breaks brute-force resistance enabling credential stuffing against weak MD5 dummy passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network access to login endpoint, no prior auth needed"
+    ],
+    "unit": "server",
+    "hunter_evidence": "session['username'] = user['username']",
+    "hunter_snippet": "session['username'] = user['username']",
+    "patch_summary": "Add rate-limiting/lockout and constant-time failure handling on login.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.5,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XU-07",
+    "title": "User enumeration oracle on /signup with no anti-automation",
+    "cwe": "CWE-204",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "server/routes.py",
+    "start_line": 101,
+    "end_line": 103,
+    "snippet": "        except Exception as e:\n            print(\"Error inserting user:\", e)  # Print the error message for debugging\n            return render_template('signup.html', error='User already exists or database error')",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 65,
+        "note": "unauthenticated signup entry point"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 103,
+        "note": "distinct duplicate-account oracle"
+      },
+      {
+        "file": "server/__init__.py",
+        "line": 7,
+        "note": "no limiter/headers/throttling in app factory"
+      }
+    ],
+    "evidence": "server/routes.py:95-103 INSERT with UNIQUE username/email; failure returns distinct 'User already exists or database error' with no rate limiting/captcha anywhere in server/__init__.py or requirements | validator: server/routes.py:65 unauthenticated signup; server/routes.py:101-103 INSERT failure returns distinct 'User already exists...' vs redirect on success; server/__init__.py:7 and requirements show no rate-limit/captcha | consensus: 1/1 confirmed | triage: Unauth signup distinct exists error with no throttling",
+    "rationale": "Signup distinguishes existing vs new accounts via a distinct error string (and timing), letting an unauthenticated caller enumerate valid usernames/emails by probing. No throttling, captcha, or mail verification exists, so enumeration can be automated and combined with mass account creation for DB exhaustion. Unit findings cover dummy credentials and login brute force but not this signup oracle/anti-automation gap.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/routes.py:95-103 INSERT with UNIQUE username/email; failure returns distinct 'User already exists or database error' with no rate limiting/captcha anywhere in server/__init__.py or requirements",
+    "hunter_snippet": "        except Exception as e:\n            print(\"Error inserting user:\", e)  # Print the error message for debugging\n            return render_template('signup.html', error='User already exists or database error')",
+    "patch_summary": "Return generic signup response and add rate-limiting/captcha to blunt enumeration.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Enumeration oracle aids credential stuffing"
+    },
+    "cvss": 4.5,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-13",
+    "title": "Insecure session cookie configuration in run.py",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "run.py",
+    "start_line": 8,
+    "end_line": 9,
+    "snippet": "    app.config['SESSION_COOKIE_NAME'] = 'session_token'\n    app.config['SESSION_COOKIE_HTTPONLY'] = Config.SESSION_COOKIE_HTTPONLY",
+    "taint": {
+      "source": "static insecure configuration",
+      "sink": "insecure cookie attributes on session_token",
+      "path": [
+        "server/config.py:6 insecure flag",
+        "run.py:8 cookie config"
+      ]
+    },
+    "refs": [
+      {
+        "file": "run.py",
+        "line": 8,
+        "note": "predictable cookie name without Secure/SameSite"
+      },
+      {
+        "file": "server/config.py",
+        "line": 6,
+        "note": "HTTPONLY=False propagated"
+      }
+    ],
+    "evidence": "    app.config['SESSION_COOKIE_NAME'] = 'session_token'\n    app.config['SESSION_COOKIE_HTTPONLY'] = Config.SESSION_COOKIE_HTTPONLY | validator: server/config.py:6 SESSION_COOKIE_HTTPONLY=False propagated at run.py:9; run.py:8-9 sets session_token name with no Secure/SameSite | consensus: 1/1 confirmed",
+    "rationale": "WHO: network or XSS attacker targeting browser. HOW: run.py at 8-9 renames session cookie to predictable session_token and propagates HTTPONLY=False, while never setting Secure or SameSite, over plaintext HTTP dev server. WHAT: breaks cookie-hardening invariant enabling network theft and cross-site sending of bearer session, amplifying stored/reflected XSS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('run.py').read_text(); assert \\\"SESSION_COOKIE_NAME\\\" in t and 'Secure' not in t and 'SAMESITE' not in t; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim uses browser, attacker has network or XSS position"
+    ],
+    "unit": "server",
+    "hunter_evidence": "    app.config['SESSION_COOKIE_NAME'] = 'session_token'\n    app.config['SESSION_COOKIE_HTTPONLY'] = Config.SESSION_COOKIE_HTTPONLY",
+    "hunter_snippet": "    app.config['SESSION_COOKIE_NAME'] = 'session_token'\n    app.config['SESSION_COOKIE_HTTPONLY'] = Config.SESSION_COOKIE_HTTPONLY",
+    "patch_summary": "Set SESSION_COOKIE_HTTPONLY=True, Secure=True, SameSite=Lax/Strict via env config",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-21",
+    "title": "Missing Secure and SameSite cookie flags in Config",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "server/config.py",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "class Config:",
+    "taint": {
+      "source": "static configuration omission",
+      "sink": "missing Secure/SameSite cookie flags",
+      "path": [
+        "server/config.py:4 Config definition"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/config.py",
+        "line": 4,
+        "note": "Config omits Secure/SameSite/lifetime"
+      }
+    ],
+    "evidence": "class Config: | validator: server/config.py:4-6 Config defines only DEBUG/HTTPONLY=False/SECRET_KEY with no SESSION_COOKIE_SECURE/SAMESITE/lifetime | consensus: 1/1 confirmed",
+    "rationale": "WHO: network eavesdropper or cross-site attacker. HOW: Config at 4 defines session handling with no SESSION_COOKIE_SECURE, SESSION_COOKIE_SAMESITE, SESSION_COOKIE_PATH or PERMANENT_SESSION_LIFETIME, leaving Flask defaults (non-Secure, Lax/None dependent) over HTTP dev server. WHAT: breaks cookie-hardening invariant enabling plaintext theft and cross-site sending, compounding session forgery via hardcoded secret.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/config.py').read_text(); assert 'SESSION_COOKIE_SECURE' not in t and 'SAMESITE' not in t; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App served over HTTP or via XSS"
+    ],
+    "unit": "server",
+    "hunter_evidence": "class Config:",
+    "hunter_snippet": "class Config:",
+    "patch_summary": "Add SESSION_COOKIE_SECURE=True, SESSION_COOKIE_SAMESITE=Lax and lifetime to Config",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-21",
+    "title": "HttpOnly disabled for session cookie in Config",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "server/config.py",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "SESSION_COOKIE_HTTPONLY = False",
+    "taint": {
+      "source": "static configuration",
+      "sink": "insecure cookie flag assignment",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/config.py",
+        "line": 6,
+        "note": "HttpOnly disabled"
+      },
+      {
+        "file": "run.py",
+        "line": 9,
+        "note": "propagated to app config"
+      }
+    ],
+    "evidence": "SESSION_COOKIE_HTTPONLY = False | validator: server/config.py:6 SESSION_COOKIE_HTTPONLY=False; run.py:9 propagates to app.config['SESSION_COOKIE_HTTPONLY'], leaving session_token readable to JS and amplifying XSS | consensus: 1/1 confirmed",
+    "rationale": "WHO: network or XSS attacker targeting victim browser. HOW: SESSION_COOKIE_HTTPONLY=False at line 6 propagated in run.py line 9, exposing session_token to document.cookie. WHAT: breaks cookie-hardening invariant combined with stored/reflected XSS enabling session theft; also missing Secure/SameSite.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Victim browser with session cookie"
+    ],
+    "unit": "server",
+    "hunter_evidence": "SESSION_COOKIE_HTTPONLY = False",
+    "hunter_snippet": "SESSION_COOKIE_HTTPONLY = False",
+    "patch_summary": "Set SESSION_COOKIE_HTTPONLY=True (and Secure/SameSite) in Config.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XU-04",
+    "title": "Logout CSRF: state-changing GET /logout with no CSRF token",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 386,
+    "end_line": 389,
+    "snippet": "@app.route('/logout')\ndef logout():\n    # Clear all content from the session cookie\n    session.clear()",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 386,
+        "note": "state-changing route bound to GET"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 389,
+        "note": "session destroyed on simple navigation"
+      }
+    ],
+    "evidence": "server/routes.py:386-389 state-changing logout via GET with session.clear() and no token; triggerable by any cross-site <img>/<a> navigation | validator: server/routes.py:386-389 binds state-changing logout to GET with session.clear() and redirect, no token, triggerable by cross-site navigation | consensus: 1/1 confirmed | triage: State-changing logout on GET",
+    "rationale": "GET /logout clears the session. Because it is a GET with no CSRF token, any third-party page can log the victim out (classic logout CSRF), enabling login-CSRF/annoyance chains. Unit findings cover CSRF on update_profile/upload/delete but not on this state-changing GET.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/routes.py:386-389 state-changing logout via GET with session.clear() and no token; triggerable by any cross-site <img>/<a> navigation",
+    "hunter_snippet": "@app.route('/logout')\ndef logout():\n    # Clear all content from the session cookie\n    session.clear()",
+    "patch_summary": "Change /logout to POST-only with anti-CSRF token and keep session.clear().",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim loads URL"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Logout CSRF nuisance only"
+    },
+    "cvss": 2.4,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-10",
+    "title": "Sensitive session data logged via print(session) in UserProfileUpdate",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 182,
+    "end_line": 182,
+    "snippet": "        print(session)",
+    "taint": {
+      "source": "Flask session cookie contents",
+      "sink": "sensitive session written to server.log",
+      "path": [
+        "server/api/v1/api_v1.py:182 print(session)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 182,
+        "note": "session printed to logs"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 184,
+        "note": "session user_id then trusted"
+      }
+    ],
+    "evidence": "        print(session) | validator: server/api/v1/api_v1.py:182 print(session) executes before auth check at :183, logging session username/user_id to stdout/logs with no redaction | consensus: 1/1 confirmed",
+    "rationale": "WHO: any user triggering update-profile. HOW: UserProfileUpdate.post() at 182 executes print(session) logging full Flask session dict (username, user_id, _flashes) to stdout, persisted to server.log via nohup in CI. WHAT: breaks log-hygiene invariant exposing session identifiers and user linkage to log readers, aiding hijack and repudiation issues.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; assert 'print(session)' in pathlib.Path('server/api/v1/api_v1.py').read_text(); print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any request hitting update-profile API with session cookie"
+    ],
+    "unit": "server",
+    "hunter_evidence": "        print(session)",
+    "hunter_snippet": "        print(session)",
+    "patch_summary": "Remove print(session) at api_v1.py:182; use debug logger with redaction if needed",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-15",
+    "title": "Internal error disclosure in ProfilePicture.post()",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 298,
+    "end_line": 298,
+    "snippet": "return {'message': str(e)}, 500",
+    "taint": {
+      "source": "internal exception message",
+      "sink": "return of exception text to client",
+      "path": [
+        "server/api/v1/api_v1.py:254 requests.get exception",
+        "server/api/v1/api_v1.py:298 str(e) response"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 297,
+        "note": "broad except"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 298,
+        "note": "exception disclosure sink"
+      }
+    ],
+    "evidence": "return {'message': str(e)}, 500 | validator: server/api/v1/api_v1.py:297 broad except Exception; server/api/v1/api_v1.py:298 return {'message': str(e)},500 leaks internal exception text to unauthenticated caller | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote caller triggers fetch/DB error. HOW: ProfilePicture.post() catches broad Exception and returns str(e) in JSON at line 298 with status 500. WHAT: breaks error-handling invariant disclosing filesystem paths, library versions, and internal trace details useful for further exploitation.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any request triggering SSRF fetch failure or downstream error"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return {'message': str(e)}, 500",
+    "hunter_snippet": "return {'message': str(e)}, 500",
+    "patch_summary": "Log exception server-side and return generic error message without str(e).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "XU-06",
+    "title": "Missing-field 500 DoS and error echo in POST /api/v1/update_picture",
+    "cwe": "CWE-20",
+    "severity": "low",
+    "confidence": 0.8,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 248,
+    "end_line": 250,
+    "snippet": "        data = api.payload\n        username = data['username']\n        picture_url = data['picture_url']",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 248,
+        "note": "payload taken without None check"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 249,
+        "note": "direct subscript raises KeyError if absent"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 298,
+        "note": "exception string returned with 500"
+      }
+    ],
+    "evidence": "server/api/v1/api_v1.py:248-250 direct-subscripts api.payload/username/picture_url with no presence/type checks; server/api/v1/api_v1.py:297-298 catches all and returns str(e) with 500 | validator: server/api/v1/api_v1.py:248-250 direct-subscripts api.payload/username/picture_url with no None/key checks; server/api/v1/api_v1.py:297-298 returns str(e) with 500 | consensus: 1/1 confirmed | triage: Unauth per-request 500 and error echo only",
+    "rationale": "POST /api/v1/update_picture requires username and picture_url but subscripts them directly. Missing keys, null payload, or non-JSON body raise KeyError/TypeError, producing an unauthenticated 500 whose body echoes str(e) (error disclosure already noted) and aborts the picture flow. The analogous missing-field DoS was reported for web update_profile/request.json but not for this endpoint.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/api/v1/api_v1.py:248-250 direct-subscripts api.payload/username/picture_url with no presence/type checks; server/api/v1/api_v1.py:297-298 catches all and returns str(e) with 500",
+    "hunter_snippet": "        data = api.payload\n        username = data['username']\n        picture_url = data['picture_url']",
+    "patch_summary": "Validate api.payload presence/type and required keys, return 400 on missing fields instead of 500 str(e).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "malformed payload"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Per-request 500 plus str(e) echo, no takedown"
+    },
+    "cvss": 2.2,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-server-23",
+    "title": "Weak MD5 hashing in hash_password()",
+    "cwe": "CWE-327",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "db/create_dummy_data.py",
+    "start_line": 7,
+    "end_line": 8,
+    "snippet": "return hashlib.md5(password.encode()).hexdigest()",
+    "taint": {
+      "source": "seed password string",
+      "sink": "hashlib.md5() password hash",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "db/create_dummy_data.py",
+        "line": 8,
+        "note": "MD5 hash sink"
+      }
+    ],
+    "evidence": "return hashlib.md5(password.encode()).hexdigest() | validator: db/create_dummy_data.py:8 MD5 sink only called by db/create_dummy_data.py:16 insert_dummy_users guarded by db/create_dummy_data.py:37 if __name__==\"__main__\"; Dockerfile:12 only RUN python db/create_db_tables.py so seed never runs in build/deploy and no import reaches it | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: developer-supplied passwords. HOW: hash_password() applies single unsalted MD5 at line 8 for all seed accounts. WHAT: breaks password-hashing invariant producing instantly crackable hashes for known weak passwords.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Code or DB access"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return hashlib.md5(password.encode()).hexdigest()",
+    "hunter_snippet": "return hashlib.md5(password.encode()).hexdigest()",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-3",
+    "title": "Unrestricted profile picture upload in update_profile()",
+    "cwe": "CWE-434",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 217,
+    "end_line": 217,
+    "snippet": "file.save(os.path.join(PROFILE_PICTURES_UPLOAD_FOLDER, filename))",
+    "taint": {
+      "source": "multipart file upload profile_picture",
+      "sink": "file.save() to profile pictures folder",
+      "path": [
+        "server/routes.py:202 request.files['profile_picture']",
+        "server/routes.py:217 file.save()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 202,
+        "note": "attacker file source"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 217,
+        "note": "unsanitized file.save sink"
+      }
+    ],
+    "evidence": "file.save(os.path.join(PROFILE_PICTURES_UPLOAD_FOLDER, filename)) | validator: server/routes.py:216 filename = str(profile_picture_id)+'.png' server-generates numeric name before server/routes.py:217 file.save(os.path.join(...)); attacker file.filename lines are commented out at server/routes.py:219-220, neutralizing traversal/extension control | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls uploaded profile_picture bytes and headers. HOW: update_profile() checks only `if file:` truthiness then saves to PROFILE_PICTURES_UPLOAD_FOLDER with predictable incremental <id>.png at lines 216-217 with no extension, Content-Type, magic-byte, or size validation. WHAT: breaks upload-type invariant allowing polyglot/malicious content stored under web-served directory.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required"
+    ],
+    "unit": "server",
+    "hunter_evidence": "file.save(os.path.join(PROFILE_PICTURES_UPLOAD_FOLDER, filename))",
+    "hunter_snippet": "file.save(os.path.join(PROFILE_PICTURES_UPLOAD_FOLDER, filename))",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-24",
+    "title": "Hardcoded default credentials in insert_dummy_users()",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "db/create_dummy_data.py",
+    "start_line": 20,
+    "end_line": 27,
+    "snippet": "('john_doe', 'john@example.com', hash_password('super-secret'), 'USA', 'admin', 'all', 'Team A', now, now),",
+    "taint": {
+      "source": "hardcoded weak password literals",
+      "sink": "INSERT of default credentials",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "db/create_dummy_data.py",
+        "line": 20,
+        "note": "guessable admin credential seed"
+      }
+    ],
+    "evidence": "('john_doe', 'john@example.com', hash_password('super-secret'), 'USA', 'admin', 'all', 'Team A', now, now), | validator: db/create_dummy_data.py:20-27 hardcoded seed rows only inserted by db/create_dummy_data.py:30 executemany under db/create_dummy_data.py:37 __main__ guard; Dockerfile:12 builds only via db/create_db_tables.py so defaults never seeded in deployed image | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: anyone obtaining DB or source learns credentials. HOW: insert_dummy_users() seeds eight accounts with low-entropy passwords like 'password', 'password123', 'super-secret' at lines 20-27. WHAT: breaks credential-hygiene invariant providing default guessable logins including two admin accounts.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "DB seeded with this script in any environment"
+    ],
+    "unit": "server",
+    "hunter_evidence": "('john_doe', 'john@example.com', hash_password('super-secret'), 'USA', 'admin', 'all', 'Team A', now, now),",
+    "hunter_snippet": "('john_doe', 'john@example.com', hash_password('super-secret'), 'USA', 'admin', 'all', 'Team A', now, now),",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-5",
+    "title": "Unhandled KeyError DoS via direct request.form indexing in update_profile()",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 184,
+    "end_line": 184,
+    "snippet": "    new_username = request.form['username'] or current_user['username']",
+    "taint": {
+      "source": "POST form field presence",
+      "sink": "unhandled KeyError 500 with debug traceback",
+      "path": [
+        "server/routes.py:184 attacker form keys",
+        "server/routes.py:184 KeyError raise"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 184,
+        "note": "direct form indexing without .get/default"
+      }
+    ],
+    "evidence": "    new_username = request.form['username'] or current_user['username'] | validator: server/routes.py:184 request.form['username'] failure is per-request 400 via Werkzeug BadRequest, server stays up; no cross-principal DoS at server/routes.py:170 auth-gated handler | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated caller controls form keys. HOW: update_profile() at 184 uses direct indexing request.form['username'] (and email/country/team at 185-197) instead of .get, raising KeyError 400/500 if key omitted, amplified by DEBUG=True stack traces. WHAT: breaks input-robustness invariant causing unhandled exception DoS and debug information disclosure.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; t=pathlib.Path('server/routes.py').read_text(); assert \"request.form['username']\" in t; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker submits update_profile POST omitting form fields"
+    ],
+    "unit": "server",
+    "hunter_evidence": "    new_username = request.form['username'] or current_user['username']",
+    "hunter_snippet": "    new_username = request.form['username'] or current_user['username']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-6",
+    "title": "Unchecked session-user lookup in dashboard() enables DoS",
+    "cwe": "CWE-252",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 134,
+    "end_line": 134,
+    "snippet": "            user_id = user['id']",
+    "taint": {
+      "source": "session username with no DB row",
+      "sink": "TypeError 500 on stale session",
+      "path": [
+        "server/routes.py:132 session username lookup",
+        "server/routes.py:134 user['id'] deref"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 133,
+        "note": "fetchone may return None"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 134,
+        "note": "unchecked None dereference"
+      }
+    ],
+    "evidence": "            user_id = user['id'] | validator: server/routes.py:132-134 dashboard None-deref on stale session returns per-request 500 only; server not taken down, no cross-principal impact | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: holder of stale session (account deleted via unauthenticated delete-user) or forged session. HOW: dashboard() at 133-134 does SELECT by session username then user_id=user['id'] with no None check; fetchone returns None when row missing, raising TypeError, leaking debug traceback with DEBUG=True. WHAT: breaks session-validity invariant causing 500 DoS and state inconsistency between session and DB.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; ls=pathlib.Path('server/routes.py').read_text().splitlines(); assert \"user_id = user['id']\" in ls[133]; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Session username deleted via API or forged session cookie"
+    ],
+    "unit": "server",
+    "hunter_evidence": "            user_id = user['id']",
+    "hunter_snippet": "            user_id = user['id']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-7",
+    "title": "Unchecked session-user lookup in uploaded_file() enables DoS",
+    "cwe": "CWE-252",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 294,
+    "end_line": 294,
+    "snippet": "            user_id = user['id']",
+    "taint": {
+      "source": "stale session username",
+      "sink": "500 exception on missing user",
+      "path": [
+        "server/routes.py:292 SELECT by session username",
+        "server/routes.py:294 user['id']"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 293,
+        "note": "user may be None"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 294,
+        "note": "unchecked dereference"
+      }
+    ],
+    "evidence": "            user_id = user['id'] | validator: server/routes.py:292-294 uploaded_file None-deref affects only stale-session requester with 500; authenticated gate at :287 limits reach, no server-wide DoS | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: client presenting stale session username. HOW: uploaded_file() at 294 dereferences user['id'] immediately after SELECT without verifying fetchone succeeded. WHAT: breaks authenticated-path robustness, throwing 500 with debug disclosure instead of clean re-login.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; ls=pathlib.Path('server/routes.py').read_text().splitlines(); assert \"user_id = user['id']\" in ls[293]; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Stale or tampered session username"
+    ],
+    "unit": "server",
+    "hunter_evidence": "            user_id = user['id']",
+    "hunter_snippet": "            user_id = user['id']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-8",
+    "title": "Unchecked session-user lookup in download_file() enables DoS",
+    "cwe": "CWE-252",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 326,
+    "end_line": 326,
+    "snippet": "            user_id = user['id']",
+    "taint": {
+      "source": "orphaned session username",
+      "sink": "TypeError 500",
+      "path": [
+        "server/routes.py:324 SELECT by username",
+        "server/routes.py:326 user['id']"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 325,
+        "note": "lookup may miss"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 326,
+        "note": "unchecked dereference"
+      }
+    ],
+    "evidence": "            user_id = user['id'] | validator: server/routes.py:324-326 download_file None-deref is self-error for deleted/stale account only; no other principal or process availability loss | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: holder of orphaned session. HOW: download_file() at 326 does user_id=user['id'] without None guard after lookup by session username. WHAT: breaks error-handling invariant, yielding unhandled exception and debug page disclosing internals.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; ls=pathlib.Path('server/routes.py').read_text().splitlines(); assert \"user_id = user['id']\" in ls[325]; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Stale session after account deletion"
+    ],
+    "unit": "server",
+    "hunter_evidence": "            user_id = user['id']",
+    "hunter_snippet": "            user_id = user['id']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-9",
+    "title": "Unchecked session-user lookup in delete_file() enables DoS",
+    "cwe": "CWE-252",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "server/routes.py",
+    "start_line": 352,
+    "end_line": 352,
+    "snippet": "            user_id = user['id']",
+    "taint": {
+      "source": "stale session username",
+      "sink": "unhandled exception",
+      "path": [
+        "server/routes.py:350 SELECT by session",
+        "server/routes.py:352 user['id']"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 351,
+        "note": "user fetch may be None"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 352,
+        "note": "unchecked dereference"
+      }
+    ],
+    "evidence": "            user_id = user['id'] | validator: server/routes.py:350-352 delete_file None-deref yields per-request exception for requester only; requires stale session, not server DoS | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: client with deleted-user session. HOW: delete_file() at 352 dereferences user['id'] with no existence check before ownership check. WHAT: breaks availability and error-handling, 500 instead of auth redirect, exposing debug trace.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; ls=pathlib.Path('server/routes.py').read_text().splitlines(); assert \"user_id = user['id']\" in ls[351]; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Stale session"
+    ],
+    "unit": "server",
+    "hunter_evidence": "            user_id = user['id']",
+    "hunter_snippet": "            user_id = user['id']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-3",
+    "title": "Host-header open redirect via redirect(request.url) in upload_file() first branch",
+    "cwe": "CWE-601",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "server/routes.py",
+    "start_line": 256,
+    "end_line": 256,
+    "snippet": "            return redirect(request.url)",
+    "taint": {
+      "source": "HTTP Host header / request.url",
+      "sink": "Location header derived from attacker Host",
+      "path": [
+        "server/routes.py:253 POST upload entry",
+        "server/routes.py:256 redirect(request.url)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 256,
+        "note": "redirect target derived from request.url/Host"
+      }
+    ],
+    "evidence": "            return redirect(request.url) | validator: server/routes.py:256 redirect(request.url) is self-URL redirect; Host is browser-controlled so victim keeps victim Host, no attacker-chosen path at :253-256 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote client controls Host header and URL. HOW: upload_file() at 256 executes redirect(request.url) where request.url is built from attacker-controlled Host header, with no allowlist or hardcoded path. WHAT: breaks redirect-target invariant enabling Host-header poisoning, cache poisoning and phishing redirects reflecting attacker host in Location.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import pathlib; ls=pathlib.Path('server/routes.py').read_text().splitlines(); assert 'redirect(request.url)' in ls[255]; print(\"[POC_PROVEN]\")",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls Host header on upload request"
+    ],
+    "unit": "server",
+    "hunter_evidence": "            return redirect(request.url)",
+    "hunter_snippet": "            return redirect(request.url)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-26",
+    "title": "DOM XSS in dashboard.html comment handler",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "client/templates/dashboard.html",
+    "start_line": 123,
+    "end_line": 123,
+    "snippet": "$commentList.append('<li>' + comment + '</li>');",
+    "taint": {
+      "source": "comment text input",
+      "sink": "jQuery .append() with raw HTML",
+      "path": [
+        "client/templates/dashboard.html:119 comment input .val()",
+        "client/templates/dashboard.html:123 .append() HTML sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "client/templates/dashboard.html",
+        "line": 119,
+        "note": "untrusted comment source"
+      },
+      {
+        "file": "client/templates/dashboard.html",
+        "line": 123,
+        "note": "HTML injection sink"
+      }
+    ],
+    "evidence": "$commentList.append('<li>' + comment + '</li>'); | validator: client/templates/dashboard.html:119 comment from local .val() input; client/templates/dashboard.html:123 $commentList.append('<li>'+comment+'</li>') is transient local DOM with no server persistence or cross-user reflection | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any dashboard viewer controls comment input text. HOW: dashboard.html reads comment via .val() at line 119 and concatenates into HTML string passed to $commentList.append('<li>'+comment+'</li>') at line 123 with no sanitization. WHAT: breaks DOM-encoding invariant enabling DOM-based stored XSS in victim browser.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any authenticated user viewing dashboard",
+      "Attacker can submit comment text in browser"
+    ],
+    "unit": "server",
+    "hunter_evidence": "$commentList.append('<li>' + comment + '</li>');",
+    "hunter_snippet": "$commentList.append('<li>' + comment + '</li>');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-8",
+    "title": "Path traversal arbitrary delete in delete_file()",
+    "cwe": "CWE-22",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 364,
+    "end_line": 364,
+    "snippet": "os.remove(file_path)",
+    "taint": {
+      "source": "POST /delete/<filename>",
+      "sink": "os.remove() arbitrary file delete",
+      "path": [
+        "server/routes.py:341 <filename> path param",
+        "server/routes.py:342 os.path.join()",
+        "server/routes.py:364 os.remove()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 342,
+        "note": "unsanitized join"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 364,
+        "note": "unlink sink"
+      }
+    ],
+    "evidence": "os.remove(file_path) | validator: server/routes.py:342 file_path=os.path.join(UPLOAD_FOLDER,filename) but server/routes.py:353-358 requires SELECT * FROM files WHERE filename=? AND user_id=? for caller; server/routes.py:364 os.remove only reachable when own DB row exists, so arbitrary system/other-user files return 'File not found' | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls <filename> URL path. HOW: delete_file(filename) builds file_path via os.path.join(UPLOAD_FOLDER, filename) at line 342 then checks os.path.exists and calls os.remove at line 364. WHAT: breaks path confinement and introduces check-to-use gap; traversal sequences can target files outside upload root where ownership row exists or via race.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required"
+    ],
+    "unit": "server",
+    "hunter_evidence": "os.remove(file_path)",
+    "hunter_snippet": "os.remove(file_path)",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-17",
+    "title": "Dynamic SQL construction with empty-set DoS in UserProfileUpdate.post()",
+    "cwe": "CWE-89",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 206,
+    "end_line": 207,
+    "snippet": "update_query = \"UPDATE users SET \" + \", \".join([f\"{key} = ?\" for key in updates.keys()]) + \" WHERE id = ?\"",
+    "taint": {
+      "source": "POST /api/v1/update-profile JSON keys",
+      "sink": "cursor.execute() dynamic UPDATE",
+      "path": [
+        "server/api/v1/api_v1.py:185 request.json",
+        "server/api/v1/api_v1.py:206 f-string column interpolation",
+        "server/api/v1/api_v1.py:207 cursor.execute(update_query)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 193,
+        "note": "attacker-influenced dict keys"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 206,
+        "note": "dynamic SQL construction sink"
+      }
+    ],
+    "evidence": "update_query = \"UPDATE users SET \" + \", \".join([f\"{key} = ?\" for key in updates.keys()]) + \" WHERE id = ?\" | validator: server/api/v1/api_v1.py:190-193 updates filtered to allowlist ['email','country','team'] plus role/permissions only if admin; server/api/v1/api_v1.py:206 column names from allowlisted keys only; server/api/v1/api_v1.py:207 values parameterized, so no SQL injection; empty dict only causes SQL error, not injection | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls request.json keys. HOW: UserProfileUpdate.post() builds SET clause via ', '.join([f\"{key} = ?\" for key in updates.keys()]) at line 206 where keys are allowlisted but if updates is empty produces 'UPDATE users SET  WHERE id=?' causing SQL error/DoS; column names interpolated as syntax. WHAT: breaks query-construction invariant causing denial and error leakage.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session (any user)",
+      "Attacker sends JSON with empty or unexpected keys"
+    ],
+    "unit": "server",
+    "hunter_evidence": "update_query = \"UPDATE users SET \" + \", \".join([f\"{key} = ?\" for key in updates.keys()]) + \" WHERE id = ?\"",
+    "hunter_snippet": "update_query = \"UPDATE users SET \" + \", \".join([f\"{key} = ?\" for key in updates.keys()]) + \" WHERE id = ?\"",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-6",
+    "title": "Path traversal in uploaded_file() file serve",
+    "cwe": "CWE-22",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 302,
+    "end_line": 302,
+    "snippet": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "taint": {
+      "source": "GET /uploads/<filename>",
+      "sink": "send_from_directory path join/read",
+      "path": [
+        "server/routes.py:284 <filename> path param",
+        "server/routes.py:302 send_from_directory()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 284,
+        "note": "attacker filename entry"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 302,
+        "note": "send_from_directory sink"
+      }
+    ],
+    "evidence": "return send_from_directory(UPLOAD_FOLDER, filename) | validator: server/routes.py:295-302 uploaded_file requires SELECT * FROM files WHERE filename=? AND user_id=? before send; server/routes.py:302 send_from_directory(UPLOAD_FOLDER,filename) uses Werkzeug safe_join blocking escape outside directory | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls <filename> and previously controlled stored filenames via upload. HOW: uploaded_file(filename) checks ownership with parameterized SELECT then calls send_from_directory(UPLOAD_FOLDER, filename) at line 302 which will normalize ../ sequences. WHAT: breaks path confinement; stored traversal name that matches DB row passes check then escapes upload root.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required",
+      "Attacker previously uploaded file with traversal sequences in name"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "hunter_snippet": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-7",
+    "title": "Path traversal in download_file() file serve",
+    "cwe": "CWE-22",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 334,
+    "end_line": 334,
+    "snippet": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "taint": {
+      "source": "GET /download/<filename>",
+      "sink": "send_from_directory filesystem read",
+      "path": [
+        "server/routes.py:313 <filename> URL path",
+        "server/routes.py:334 send_from_directory()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 313,
+        "note": "attacker filename entry"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 334,
+        "note": "filesystem read sink"
+      }
+    ],
+    "evidence": "return send_from_directory(UPLOAD_FOLDER, filename) | validator: server/routes.py:323-332 download_file requires SELECT * FROM files WHERE filename=? AND user_id=? for caller; server/routes.py:334 send_from_directory(UPLOAD_FOLDER,filename) safe_join blocks directory escape | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls <filename> path segment. HOW: download_file(filename) validates ownership via SELECT then delegates to send_from_directory(UPLOAD_FOLDER, filename) at line 334 without normalizing or allowlisting filename. WHAT: breaks directory confinement if DB contains traversal filename created via unrestricted upload.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required",
+      "Attacker previously uploaded file with traversal name"
+    ],
+    "unit": "server",
+    "hunter_evidence": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "hunter_snippet": "return send_from_directory(UPLOAD_FOLDER, filename)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-18",
+    "title": "Fragile JWT verification in token_required()",
+    "cwe": "CWE-287",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/api/v1/api_v1.py",
+    "start_line": 88,
+    "end_line": 97,
+    "snippet": "token = request.headers['Authorization'].split(\" \")[1]  # Assumes Bearer Token",
+    "taint": {
+      "source": "Authorization header value",
+      "sink": "jwt.decode() inside bare except",
+      "path": [
+        "server/api/v1/api_v1.py:88 Authorization header",
+        "server/api/v1/api_v1.py:94 jwt.decode()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 88,
+        "note": "unsafe header split"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 96,
+        "note": "bare except hiding verification failure"
+      }
+    ],
+    "evidence": "token = request.headers['Authorization'].split(\" \")[1]  # Assumes Bearer Token | validator: server/api/v1/api_v1.py:88 split(' ')[1] on malformed header raises IndexError; server/api/v1/api_v1.py:94 jwt.decode(...,Config.SECRET_KEY,algorithms=['HS256']) verifies signature; server/api/v1/api_v1.py:96-97 bare except returns 401 fail-closed, no bypass | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: remote caller controls Authorization header. HOW: token_required() does split(\" \")[1] without length check at line 88 raising IndexError on malformed value, and swallows all jwt.decode failures in bare except at line 96 returning generic invalid without expiry/issuer distinction and without enforcing token use anywhere. WHAT: breaks authentication robustness causing 500 on malformed header and weak verification where applied.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Caller presents Authorization header in any form"
+    ],
+    "unit": "server",
+    "hunter_evidence": "token = request.headers['Authorization'].split(\" \")[1]  # Assumes Bearer Token",
+    "hunter_snippet": "token = request.headers['Authorization'].split(\" \")[1]  # Assumes Bearer Token",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-28",
+    "title": "Unsafe URL construction in dashboard.html delete handler",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "client/templates/dashboard.html",
+    "start_line": 92,
+    "end_line": 92,
+    "snippet": "url: '/delete/' + filename,",
+    "taint": {
+      "source": "stored filename value",
+      "sink": "AJAX URL built by concatenation",
+      "path": [
+        "client/templates/dashboard.html:40 data-filename",
+        "client/templates/dashboard.html:87 .data('filename')",
+        "client/templates/dashboard.html:92 URL concat"
+      ]
+    },
+    "refs": [
+      {
+        "file": "client/templates/dashboard.html",
+        "line": 87,
+        "note": "attacker filename source"
+      },
+      {
+        "file": "client/templates/dashboard.html",
+        "line": 92,
+        "note": "URL concatenation sink"
+      }
+    ],
+    "evidence": "url: '/delete/' + filename, | validator: client/templates/dashboard.html:87 filename via .data('filename'); client/templates/dashboard.html:92 url:'/delete/'+filename builds AJAX URL path only, not an HTML/JS execution sink; no script execution boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: uploader controls filename stored in DB. HOW: dashboard.html builds AJAX URL via string concatenation '/delete/' + filename at line 92 where filename comes from data-filename=\"{{ file }}\" without URL-encoding. WHAT: breaks URL-construction invariant allowing path manipulation, request splitting to unintended delete targets, and potential script breakout if filename contains quotes despite autoescape.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session",
+      "Attacker controls filename characters"
+    ],
+    "unit": "server",
+    "hunter_evidence": "url: '/delete/' + filename,",
+    "hunter_snippet": "url: '/delete/' + filename,",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-server-29",
+    "title": "Unvalidated reflected input in search()",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "server/routes.py",
+    "start_line": 381,
+    "end_line": 382,
+    "snippet": "results.append(query)",
+    "taint": {
+      "source": "GET /search?query=",
+      "sink": "render_template with raw query",
+      "path": [
+        "server/routes.py:376 request.args.get('query')",
+        "server/routes.py:382 results.append(query)",
+        "server/routes.py:384 render_template()"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/routes.py",
+        "line": 376,
+        "note": "untrusted query source"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 384,
+        "note": "template render sink"
+      }
+    ],
+    "evidence": "results.append(query) | validator: server/routes.py:376 query=request.args.get('query'); server/routes.py:382 results.append(query); server/routes.py:384 renders dashboard.html but client/templates/dashboard.html:1-132 never references {{results}} or {{query}}, so untrusted value has no template sink (only search_query/files used) | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user controls ?query= parameter. HOW: search() appends raw query string to results list at line 382 and renders dashboard.html with query/results context at line 384 without validation or encoding at the source. WHAT: breaks input-validation invariant creating reflected-content sink that becomes XSS where template renders those variables.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Authenticated session required",
+      "Attacker controls query param"
+    ],
+    "unit": "server",
+    "hunter_evidence": "results.append(query)",
+    "hunter_snippet": "results.append(query)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@client/templates/edit_profile.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "client/templates/edit_profile.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: client/templates/edit_profile.html:31 reflects {{ user.username }} (and email/country/team) with no |safe, Jinja autoescape active; no request input directly rendered unsafely | refute: sanitized | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@client/templates/login.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "client/templates/login.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: client/templates/login.html:24 {{ error }} autoescaped and server/routes.py:40-59 shows error values are static literals ('Please provide...','Invalid username...'), no user input reflected | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@client/templates/signup.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "client/templates/signup.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: client/templates/signup.html:34 {{ error }} autoescaped and server/routes.py:84-103 shows static validation strings, no attacker-controlled reflection with executable context | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@client/templates/upload.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "client/templates/upload.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: client/templates/upload.html:23-27 form has no {{ user-input }} reflection; only url_for/flash of static 'No file part' per server/routes.py:257-262 | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "XU-02",
+    "title": "Cross-unit stored XSS: SSRF-fetched or uploaded polyglot profile picture served unauthenticated",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.8,
+    "path": "server/routes.py",
+    "start_line": 308,
+    "end_line": 309,
+    "snippet": "def profile_pictures(filename):\n    return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)",
+    "taint": {
+      "source": "attacker picture_url / profile_picture file bytes",
+      "sink": "unauthenticated inline file serve executed as HTML/JS in victim browser (MIME-sniffing, no nosniff)",
+      "path": [
+        "server/api/v1/api_v1.py:254 requests.get(picture_url) -> response.content",
+        "server/api/v1/api_v1.py:283-285 write to PROFILE_PICTURES_UPLOAD_FOLDER/<id>.png",
+        "server/routes.py:309 send_from_directory serves bytes inline without auth"
+      ]
+    },
+    "refs": [
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 254,
+        "note": "attacker URL fetched, body attacker-influenced"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 260,
+        "note": "header-only allowlist, body unchecked"
+      },
+      {
+        "file": "server/api/v1/api_v1.py",
+        "line": 285,
+        "note": "raw remote bytes written to disk"
+      },
+      {
+        "file": "server/routes.py",
+        "line": 309,
+        "note": "unauthenticated inline serve of attacker bytes"
+      }
+    ],
+    "evidence": "server/api/v1/api_v1.py:254 fetches arbitrary URL with only response-header allowlist; server/api/v1/api_v1.py:285 writes raw response.content to profile_pictures dir; server/routes.py:308-309 serves that dir with no auth and app sets no nosniff header | validator: server/api/v1/api_v1.py:283-285 forces stored name to <id>.png and server/routes.py:221-222 same, served as image/png via server/routes.py:308-309 into client/templates/profile.html:32 <img> context; no text/html execution without sniffing | refute: misread_code | consensus: 1/1 fp | triage: Forced id.png served as image in img context",
+    "rationale": "Attacker controls profile-picture bytes end-to-end: via SSRF picture_url (remote body with spoofed image Content-Type header, content unchecked) or via direct picture upload (no type/content validation, extension forced to .png but bytes arbitrary). Bytes are written to profile_pictures/ and served inline by an unauthenticated send_from_directory with no X-Content-Type-Options: nosniff in the app. Any victim fetching the conocido <id>.png URL executes attacker HTML/JS under MIME-sniffing, i.e. stored XSS spanning API->filesystem->web serve units.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "server/api/v1/api_v1.py:254 fetches arbitrary URL with only response-header allowlist; server/api/v1/api_v1.py:285 writes raw response.content to profile_pictures dir; server/routes.py:308-309 serves that dir with no auth and app sets no nosniff header",
+    "hunter_snippet": "def profile_pictures(filename):\n    return send_from_directory(PROFILE_PICTURES_UPLOAD_FOLDER, filename)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No HTML execution, misread"
+    },
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

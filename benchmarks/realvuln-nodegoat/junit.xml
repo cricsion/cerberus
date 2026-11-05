@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="44" errors="0" skipped="0" timestamp="2026-11-04T16:27:06Z" time="0.000" failures="29">
+  <testcase classname="CWE-94" name="Server-Side JS Injection via eval(req.body.preTax) in handleContributionsUpdate [critical] app/routes/contributions.js:32-32">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-Side JS Injection via eval(req.body.preTax) in handleContributionsUpdate (CWE-94) critical conf=1.0 app/routes/contributions.js:32-32">const preTax = eval(req.body.preTax);
+const preTax = eval(req.body.preTax);</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Default Administrative Credentials in db-reset.js [critical] artifacts/db-reset.js:20-20">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Default Administrative Credentials in db-reset.js (CWE-798) critical conf=1.0 artifacts/db-reset.js:20-20">"password": "Admin_123",
+"password": "Admin_123",</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL/JavaScript Injection via $where threshold interpolation in getByUserIdAndThreshold [critical] app/data/allocations-dao.js:78-78">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL/JavaScript Injection via $where threshold interpolation in getByUserIdAndThreshold (CWE-943) critical conf=0.95 app/data/allocations-dao.js:78-78">$where: `this.userId == ${parsedUserId} &amp;&amp; this.stocks &gt; '${threshold}'`
+$where: `this.userId == ${parsedUserId} &amp;&amp; this.stocks &gt; '${threshold}'`</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext Password Storage in UserDAO.addUser [high] app/data/user-dao.js:30-30">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext Password Storage in UserDAO.addUser (CWE-256) high conf=1.0 app/data/user-dao.js:30-30">password //received from request param
+password //received from request param</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext Password Comparison in validateLogin [high] app/data/user-dao.js:62-62">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext Password Comparison in validateLogin (CWE-256) high conf=1.0 app/data/user-dao.js:62-62">return fromDB === fromUser;
+return fromDB === fromUser;</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Session Secret and Crypto Key in default config [high] config/env/all.js:8-8">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Session Secret and Crypto Key in default config (CWE-798) high conf=1.0 config/env/all.js:8-8">cookieSecret: "session_cookie_secret_key_here",
+cookieSecret: "session_cookie_secret_key_here",</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Global Template Autoescape Disabled in server.js [high] server.js:137-137">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Global Template Autoescape Disabled in server.js (CWE-79) high conf=1.0 server.js:137-137">autoescape: false
+autoescape: false</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Insecure Direct Object Reference in displayAllocations uses URL userId [high] app/routes/allocations.js:22-24">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure Direct Object Reference in displayAllocations uses URL userId (CWE-639) high conf=0.95 app/routes/allocations.js:22-24">} = req.params;
+} = req.params;</failure>
+  </testcase>
+  <testcase classname="CWE-862" name="Missing Function-Level Authorization on GET /benefits [high] app/routes/index.js:55-55">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing Function-Level Authorization on GET /benefits (CWE-862) high conf=0.95 app/routes/index.js:55-55">app.get("/benefits", isLoggedIn, benefitsHandler.displayBenefits);
+app.get("/benefits", isLoggedIn, benefitsHandler.displayBenefits);</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="Server-Side Request Forgery in displayResearch via url+symbol [high] app/routes/research.js:16-16">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Server-Side Request Forgery in displayResearch via url+symbol (CWE-918) high conf=0.95 app/routes/research.js:16-16">return needle.get(url, (error, newResponse, body) =&gt; {
+return needle.get(url, (error, newResponse, body) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Committed TLS Private Key in artifacts/cert/server.key [high] artifacts/cert/server.key:1-1">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Committed TLS Private Key in artifacts/cert/server.key (CWE-798) high conf=0.95 artifacts/cert/server.key:1-1">artifacts/cert/server.key:1 contains committed RSA private key header; server.js:19-25 references this key for HTTPS (commented fix) confirming it is a live TLS credential, not a placeholder
+-----BEGIN RSA PRIVATE KEY-----</failure>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF Protection (csurf disabled) in server.js [high] server.js:108-108">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing CSRF Protection (csurf disabled) in server.js (CWE-352) high conf=0.95 server.js:108-108">// app.use(csrf());
+// app.use(csrf());</failure>
+  </testcase>
+  <testcase classname="CWE-639" name="Horizontal IDOR / Missing Authorization in POST /benefits updateBenefits [high] app/routes/benefits.js:35-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.2" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Horizontal IDOR / Missing Authorization in POST /benefits updateBenefits (CWE-639) high conf=0.92 app/routes/benefits.js:35-35">app/routes/index.js:56 POST /benefits only requires isLoggedIn; app/routes/benefits.js:32 userId taken from req.body without ownership/admin check; app/data/benefits-dao.js:24-25 update({_id:parseInt(userId)},$set:{benefitStartDate}) modifies arbitrary user
+benefitsDAO.updateBenefits(userId, benefitStartDate, (error) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-312" name="Unencrypted Sensitive PII Storage in ProfileDAO.updateUser [high] app/data/profile-dao.js:86-86">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unencrypted Sensitive PII Storage in ProfileDAO.updateUser (CWE-312) high conf=0.9 app/data/profile-dao.js:86-86">user.ssn = ssn;
+user.ssn = ssn;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Spoofed Admin Flag in BenefitsHandler.displayBenefits [high] app/routes/benefits.js:19-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Spoofed Admin Flag in BenefitsHandler.displayBenefits (CWE-79) high conf=0.9 app/routes/benefits.js:19-24">return res.render("benefits", {
+return res.render("benefits", {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via memo Markdown rendering in MemosHandler [high] app/routes/memos.js:15-15">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via memo Markdown rendering in MemosHandler (CWE-79) high conf=0.9 app/routes/memos.js:15-15">memosDAO.insert(req.body.memo, (err, docs) =&gt; {
+memosDAO.insert(req.body.memo, (err, docs) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-Site Scripting via unescaped firstNameSafeString in handleProfileUpdate error path [high] app/routes/profile.js:60-60">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Site Scripting via unescaped firstNameSafeString in handleProfileUpdate error path (CWE-79) high conf=0.9 app/routes/profile.js:60-60">const firstNameSafeString = firstName;
+const firstNameSafeString = firstName;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via profile fields rendered unescaped on update success [high] app/routes/profile.js:95-95">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via profile fields rendered unescaped on update success (CWE-79) high conf=0.9 app/routes/profile.js:95-95">return res.render("profile", {
+return res.render("profile", {</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via unsanitized SSRF body in displayResearch [high] app/routes/research.js:23-23">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via unsanitized SSRF body in displayResearch (CWE-79) high conf=0.9 app/routes/research.js:23-23">res.write(body);
+res.write(body);</failure>
+  </testcase>
+  <testcase classname="CWE-384" name="Session Fixation in handleLoginRequest (no session regeneration) [high] app/routes/session.js:118-118">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Session Fixation in handleLoginRequest (no session regeneration) (CWE-384) high conf=0.9 app/routes/session.js:118-118">req.session.userId = user._id;
+req.session.userId = user._id;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via allocation owner name in allocations.html [high] app/views/allocations.html:35-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via allocation owner name in allocations.html (CWE-79) high conf=0.9 app/views/allocations.html:35-35">&lt;strong&gt;Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}&lt;/strong&gt;
+&lt;strong&gt;Asset Allocations for {{allocation.firstName}} {{allocation.lastName}}&lt;/strong&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via firstName in benefits.html [high] app/views/benefits.html:51-51">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via firstName in benefits.html (CWE-79) high conf=0.9 app/views/benefits.html:51-51">&lt;td&gt;{{user.firstName}}&lt;/td&gt;
+&lt;td&gt;{{user.firstName}}&lt;/td&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Stored XSS via benefitStartDate in benefits.html [high] app/views/benefits.html:57-57">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Stored XSS via benefitStartDate in benefits.html (CWE-79) high conf=0.9 app/views/benefits.html:57-57">&lt;input type="date" class="form-control" name="benefitStartDate" value="{{user.benefitStartDate}}"&gt;&lt;/input&gt;
+&lt;input type="date" class="form-control" name="benefitStartDate" value="{{user.benefitStartDate}}"&gt;&lt;/input&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-Unit Stored XSS: POST /profile names persist to layout.html top-nav [high] app/views/layout.html:75-75">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Stored XSS: POST /profile names persist to layout.html top-nav (CWE-79) high conf=0.9 app/views/layout.html:75-75">POST /profile firstName/lastName persisted unsanitized via ProfileDAO.updateUser then rendered unescaped in layout.html top-nav on every authenticated page with autoescape disabled
+&lt;a href="#" class="dropdown-toggle" data-toggle="dropdown"&gt;&lt;i class="fa fa-user"&gt;&lt;/i&gt; {{firstName}} {{lastName}} &lt;b class="caret"&gt;&lt;/b&gt;&lt;/a&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via userName in login.html [high] app/views/login.html:110-110">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via userName in login.html (CWE-79) high conf=0.9 app/views/login.html:110-110">&lt;input type="text" class="form-control" id="userName" name="userName" value="{{userName}}" placeholder="Enter User Name"&gt;
+&lt;input type="text" class="form-control" id="userName" name="userName" value="{{userName}}" placeholder="Enter User Name"&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-Unit Stored XSS: POST /memos memo persistence to memos.html [high] app/views/memos.html:30-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-Unit Stored XSS: POST /memos memo persistence to memos.html (CWE-79) high conf=0.9 app/views/memos.html:30-30">app/routes/memos.js:13 memosDAO.insert(req.body.memo) with no validation; app/data/memos-dao.js:18-23 persists raw memo to memos collection; app/routes/memos.js:25-31 getAllMemos returns all docs to any user; app/views/memos.html:30 {{ marked(doc.memo) }} with swig autoescape:false in server.js:137 renders attacker markdown/HTML unescaped
+{{ marked(doc.memo) }}</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via userName in signup.html [high] app/views/signup.html:75-75">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via userName in signup.html (CWE-79) high conf=0.9 app/views/signup.html:75-75">&lt;input type="text" class="form-control" id="userName" value="{{userName}}" name="userName" placeholder="Enter user name"&gt;
+&lt;input type="text" class="form-control" id="userName" value="{{userName}}" name="userName" placeholder="Enter user name"&gt;</failure>
+  </testcase>
+  <testcase classname="CWE-319" name="Cleartext HTTP Transport (HTTPS disabled) in server.js [high] server.js:145-145">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cleartext HTTP Transport (HTTPS disabled) in server.js (CWE-319) high conf=0.9 server.js:145-145">http.createServer(app).listen(port, () =&gt; {
+http.createServer(app).listen(port, () =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Operator Injection Authentication Bypass in validateLogin [high] app/data/user-dao.js:97-98">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="6.8" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="NoSQL Operator Injection Authentication Bypass in validateLogin (CWE-943) high conf=0.8 app/data/user-dao.js:97-98">usersCol.findOne({
+usersCol.findOne({</failure>
+  </testcase>
+  <testcase classname="CWE-601" name="Open Redirect in /learn via req.query.url [medium] app/routes/index.js:72-72">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1333" name="Regular Expression DoS (ReDoS) in bankRouting validation [medium] app/routes/profile.js:57-57">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-521" name="Weak Password Policy in validateSignup [medium] app/routes/session.js:150-150">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose Error Disclosure and XSS in errorHandler [medium] app/routes/error.js:11-11">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-204" name="User Enumeration via Distinct Login Error Messages in handleLoginRequest [medium] app/routes/session.js:65-78">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Secret Disclosure via Config Dump to Logs [medium] config/config.js:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Disabled Helmet Security Headers in server.js [medium] server.js:90-90">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-862" name="Spoofed Admin Flag in BenefitsHandler.updateBenefits [medium] app/routes/benefits.js:44-48">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Error-Handler Reflected XSS via Attacker-Influenced DB Error [medium] app/routes/error.js:10-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing Rate Limiting / Brute-Force Protection on POST /login [medium] app/routes/index.js:34-34">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-943" name="NoSQL Operator Injection in getUserByUserName [medium] app/data/user-dao.js:104-105">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.4" />
+      <property name="confidence" value="0.75" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure Session Cookie Configuration (missing HttpOnly/Secure) in server.js [low] server.js:73-75">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Logout CSRF via State-Changing GET /logout [low] app/routes/index.js:41-41">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-117" name="Log Forging via Unsanitized userName in handleLoginRequest [low] app/routes/session.js:64-64">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded ZAP API Key in test config [low] config/env/test.js:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.75" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

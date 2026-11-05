@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="20" errors="0" skipped="0" timestamp="2026-11-04T20:35:26Z" time="0.000" failures="3">
+  <testcase classname="CWE-89" name="Cross-unit SQL injection authentication bypass in login flow [critical] models/usersModel.js:15-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-unit SQL injection authentication bypass in login flow (CWE-89) critical conf=0.98 models/usersModel.js:15-15">POST / login (routes/users/index.js:8) -&gt; passport LocalStrategy (utils/passportLocalStrategy.js:20 credentials from req.body) -&gt; UsersController.authenticateUser (controllers/usersController.js:30) -&gt; UsersModel.authenticateUser sink at models/usersModel.js:15 with string-concatenated email/password into SELECT; bypass with ' OR '1'='1
+let query = "SELECT * FROM users WHERE email ='" + parameter[0] + "' AND password = '" + parameter[1] + "'";</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage and comparison without hashing [high] models/usersModel.js:56-56">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password storage and comparison without hashing (CWE-256) high conf=0.95 models/usersModel.js:56-56">POST /register (routes/users/index.js:12) -&gt; user.registerUser (routes/users/user.js:68 req.body) -&gt; UsersController.registerUser -&gt; UsersModel.registerUser inserts user.password directly; no call to generateHash anywhere (utils/sha512.js defines generateHash but grep shows zero call sites; passportLocalStrategy.js imports sha512 but never uses it) and login compares plaintext (models/usersModel.js:15)
+executeQueryWithParam(query, [user.fullname, user.username, user.email, user.phone, user.password]).then(() =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded session secret with insecure cookie flags [high] app.js:25-28">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded session secret with insecure cookie flags (CWE-798) high conf=0.9 app.js:25-28">Session secret committed in source with httpOnly false secure false plus unsigned base64 user cookie
+secret is set to default committed value;</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection in UsersModel.findUserById [medium] models/usersModel.js:7-7">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-78" name="Cross-unit OS command injection in ping feature [medium] utils/utility.js:63-63">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-502" name="Cross-unit insecure deserialization RCE via user cookie [medium] utils/utility.js:140-140">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Insecure password change allows arbitrary account takeover via client-supplied id [medium] routes/users/user.js:122-122">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-unit stored XSS via registration persisted to dashboard header [medium] views/body-header.ejs:34-34">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-unit stored reflected XSS via unescaped EJS output [medium] controllers/usersController.js:58-58">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-352" name="Missing CSRF protection on state-changing POST endpoints [medium] routes/users/index.js:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing authorization (IDOR) on error-based-sqli profile read/update [medium] routes/users/index.js:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-639" name="Missing authorization IDOR on profile and password endpoints [medium] routes/users/index.js:40-42">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-22" name="Cross-unit path traversal arbitrary file read [medium] utils/utility.js:81-81">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-611" name="Cross-unit XXE with external entity expansion [medium] utils/utility.js:127-127">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-307" name="Missing rate limiting / brute-force protection on login and registration [medium] routes/users/index.js:8-8">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1333" name="Cross-unit regex injection ReDoS in log search [medium] utils/utility.js:94-94">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="DOM-based XSS via default parameter [medium] views/body-header.ejs:16-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-613" name="Insufficient session expiration: logout does not invalidate server session [medium] views/body-header.ejs:64-64">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded default database credentials in application config [medium] config/config.js:5-5">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.5" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Sensitive information exposure via raw database error responses [low] routes/users/user.js:36-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

@@ -1,0 +1,4363 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-95",
+              "name": "CWE-95",
+              "shortDescription": {
+                "text": "Eval injection via req.query.red in rgbToHex handler"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/95.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/95.html",
+                "markdown": "[MITRE CWE-95](https://cwe.mitre.org/data/definitions/95.html)"
+              }
+            },
+            {
+              "id": "CWE-502",
+              "name": "CWE-502",
+              "shortDescription": {
+                "text": "Unsafe deserialization RCE in cwe502 serialize handler"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/502.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/502.html",
+                "markdown": "[MITRE CWE-502](https://cwe.mitre.org/data/definitions/502.html)"
+              }
+            },
+            {
+              "id": "CWE-78",
+              "name": "CWE-78",
+              "shortDescription": {
+                "text": "OS command injection in cwe78 childprocess handler"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/78.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/78.html",
+                "markdown": "[MITRE CWE-78](https://cwe.mitre.org/data/definitions/78.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Reflected XSS in cwe79 echo handler"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Hardcoded Veracode API credentials in start-agent-server.sh"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-113",
+              "name": "CWE-113",
+              "shortDescription": {
+                "text": "HTTP response splitting in cwe113 split handler"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/113.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/113.html",
+                "markdown": "[MITRE CWE-113](https://cwe.mitre.org/data/definitions/113.html)"
+              }
+            },
+            {
+              "id": "CWE-22",
+              "name": "CWE-22",
+              "shortDescription": {
+                "text": "Missing authentication on CWE-73 file-read route"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/22.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/22.html",
+                "markdown": "[MITRE CWE-22](https://cwe.mitre.org/data/definitions/22.html)"
+              }
+            },
+            {
+              "id": "CWE-829",
+              "name": "CWE-829",
+              "shortDescription": {
+                "text": "Unpinned container image in Semgrep workflow"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/829.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/829.html",
+                "markdown": "[MITRE CWE-829](https://cwe.mitre.org/data/definitions/829.html)"
+              }
+            },
+            {
+              "id": "CWE-532",
+              "name": "CWE-532",
+              "shortDescription": {
+                "text": "Session token exposed in CI logs via echo"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/532.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/532.html",
+                "markdown": "[MITRE CWE-532](https://cwe.mitre.org/data/definitions/532.html)"
+              }
+            },
+            {
+              "id": "CWE-1104",
+              "name": "CWE-1104",
+              "shortDescription": {
+                "text": "End-of-life Node.js 8.x toolchain"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/1104.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/1104.html",
+                "markdown": "[MITRE CWE-1104](https://cwe.mitre.org/data/definitions/1104.html)"
+              }
+            },
+            {
+              "id": "CWE-297",
+              "name": "CWE-297",
+              "shortDescription": {
+                "text": "TLS verification disabled in IAST status poll"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/297.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/297.html",
+                "markdown": "[MITRE CWE-297](https://cwe.mitre.org/data/definitions/297.html)"
+              }
+            },
+            {
+              "id": "CWE-306",
+              "name": "CWE-306",
+              "shortDescription": {
+                "text": "Missing authentication on CWE-95 rgbToHex route"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/306.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/306.html",
+                "markdown": "[MITRE CWE-306](https://cwe.mitre.org/data/definitions/306.html)"
+              }
+            },
+            {
+              "id": "CWE-601",
+              "name": "CWE-601",
+              "shortDescription": {
+                "text": "Open redirect in cwe601 redirect handler"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/601.html",
+                "markdown": "[MITRE CWE-601](https://cwe.mitre.org/data/definitions/601.html)"
+              }
+            },
+            {
+              "id": "CWE-494",
+              "name": "CWE-494",
+              "shortDescription": {
+                "text": "Remote code execution via curl piped to sh"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/494.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/494.html",
+                "markdown": "[MITRE CWE-494](https://cwe.mitre.org/data/definitions/494.html)"
+              }
+            },
+            {
+              "id": "CWE-20",
+              "name": "CWE-20",
+              "shortDescription": {
+                "text": "Missing 0-255 range check in rgbToHex"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/20.html",
+                "markdown": "[MITRE CWE-20](https://cwe.mitre.org/data/definitions/20.html)"
+              }
+            },
+            {
+              "id": "CWE-693",
+              "name": "CWE-693",
+              "shortDescription": {
+                "text": "Express app without any security middleware"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/693.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/693.html",
+                "markdown": "[MITRE CWE-693](https://cwe.mitre.org/data/definitions/693.html)"
+              }
+            },
+            {
+              "id": "CWE-248",
+              "name": "CWE-248",
+              "shortDescription": {
+                "text": "Abrupt process.exit in gracefulShutdown"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/248.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/248.html",
+                "markdown": "[MITRE CWE-248](https://cwe.mitre.org/data/definitions/248.html)"
+              }
+            },
+            {
+              "id": "CWE-400",
+              "name": "CWE-400",
+              "shortDescription": {
+                "text": "Uncaught exception DoS via rgbToHex call"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/400.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/400.html",
+                "markdown": "[MITRE CWE-400](https://cwe.mitre.org/data/definitions/400.html)"
+              }
+            },
+            {
+              "id": "CWE-209",
+              "name": "CWE-209",
+              "shortDescription": {
+                "text": "NaN results returned as success in hexToRgb response"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/209.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/209.html",
+                "markdown": "[MITRE CWE-209](https://cwe.mitre.org/data/definitions/209.html)"
+              }
+            },
+            {
+              "id": "CWE-201",
+              "name": "CWE-201",
+              "shortDescription": {
+                "text": "Information exposure in cwe201 exposure handler"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/201.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/201.html",
+                "markdown": "[MITRE CWE-201](https://cwe.mitre.org/data/definitions/201.html)"
+              }
+            },
+            {
+              "id": "CWE-319",
+              "name": "CWE-319",
+              "shortDescription": {
+                "text": "Cleartext HTTP listen without TLS"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/319.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/319.html",
+                "markdown": "[MITRE CWE-319](https://cwe.mitre.org/data/definitions/319.html)"
+              }
+            },
+            {
+              "id": "CWE-117",
+              "name": "CWE-117",
+              "shortDescription": {
+                "text": "Log injection via exec error in console.log"
+              },
+              "properties": {
+                "security-severity": "0.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/117.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/117.html",
+                "markdown": "[MITRE CWE-117](https://cwe.mitre.org/data/definitions/117.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-95",
+          "level": "error",
+          "message": {
+            "text": "Eval injection via req.query.red in rgbToHex handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 32,
+                  "endLine": 32,
+                  "snippet": {
+                    "text": "var red = eval(req.query.red);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Replace eval(req.query.red) with parseInt(req.query.red,10) and validate numeric range before converter.rgbToHex."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.red untrusted query string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.red to eval"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: eval code execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-95",
+          "level": "error",
+          "message": {
+            "text": "Cross-unit Eval RCE to response via converter.rgbToHex (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 39,
+                  "endLine": 40,
+                  "snippet": {
+                    "text": "  var hex = converter.rgbToHex(red, green, blue);\n  res.send(hex);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Replace eval(req.query.*) at app/server.js:32-34 with parseInt(req.query.*,10) and validate numeric range before converter.rgbToHex."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Source: app/server.js:32 req.query.red/green/blue via eval()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "eval(req.query.red)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "converter.rgbToHex(red, green, blue)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "red.toString(16) + pad concatenation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 40
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: app/server.js:40 res.send(hex)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-502",
+          "level": "error",
+          "message": {
+            "text": "Unsafe deserialization RCE in cwe502 serialize handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 97,
+                  "endLine": 97,
+                  "snippet": {
+                    "text": "serialize.unserialize(req.query.foo);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove node-serialize unserialize of query input; use JSON.parse with schema validation and drop node-serialize dependency."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.foo untrusted"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.foo to unserialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: node-serialize unserialize code exec"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-78",
+          "level": "error",
+          "message": {
+            "text": "OS command injection in cwe78 childprocess handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 106,
+                  "endLine": 106,
+                  "snippet": {
+                    "text": "cprocess.exec(req.query.foo, (error,stdout,stderr) => {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Stop passing query to child_process.exec; use execFile with allowlisted command/args and no shell."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.foo untrusted"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.foo to exec"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: child_process.exec OS command"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-502",
+          "level": "error",
+          "message": {
+            "text": "Use of known-vulnerable node-serialize component (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2,
+                  "snippet": {
+                    "text": "serialize.unserialize(req.query.foo);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "8.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove node-serialize dependency; replace serialize.unserialize(req.query.foo) with JSON.parse on validated schema and reject _$$ND_FUNC$$_ payloads."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Source: third-party vulnerable component"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "require node-serialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 97
+                          }
+                        },
+                        "message": {
+                          "text": "unserialize attacker payload"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 2
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: vulnerable deserializer exposed"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in cwe79 echo handler (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 62,
+                  "endLine": 62,
+                  "snippet": {
+                    "text": "res.send(\"<p>You sent this: \" + req.query.text + \"</p>\")"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "HTML-encode req.query.text or send as text/plain / JSON instead of HTML concatenation."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.text untrusted query string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.text to res.send"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 62
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.send HTML response"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in /cwe201/exposure via unsanitized res.send (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 80,
+                  "endLine": 80,
+                  "snippet": {
+                    "text": "res.send(req.query.text);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Encode req.query.text before res.send or set text/plain content-type and escape HTML at app/server.js:80."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.text in /cwe201/exposure handler"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 79
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.text entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "res.send sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.send attacker string as text/html"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded Veracode API credentials in start-agent-server.sh (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "start-agent-server.sh"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 4,
+                  "snippet": {
+                    "text": "export VERACODE_API_KEY_ID=***\nexport VERACODE_API_KEY_SECRET=***"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove hardcoded keys from start-agent-server.sh:3-4, load from vault/env at runtime, rotate exposed Veracode credentials."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "start-agent-server.sh"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded credential assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "start-agent-server.sh"
+                          },
+                          "region": {
+                            "startLine": 4
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: committed plaintext credential in start-agent-server.sh:3-4"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-113",
+          "level": "warning",
+          "message": {
+            "text": "HTTP response splitting in cwe113 split handler (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 70,
+                  "endLine": 70,
+                  "snippet": {
+                    "text": "res.append(req.query.key, req.query.value);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Allowlist header name and validate/sanitize header value; reject CR/LF and unknown headers."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 70
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.key and value untrusted"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 70
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.key value to res.append"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 70
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.append header injection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-22",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on CWE-73 file-read route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 53,
+                  "endLine": 53,
+                  "snippet": {
+                    "text": "res.send(fse.readJsonSync(req.query.foo));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Resolve req.query.foo against allowlisted directory, normalize and reject traversal, or remove arbitrary-path read."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe73/read?foo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 53
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: readJsonSync file read"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "note",
+          "message": {
+            "text": "Unpinned container image in Semgrep workflow (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".github/workflows/semgrep.yml"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 19,
+                  "snippet": {
+                    "text": "      image: returntocorp/semgrep"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Source: container registry image"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "unpinned"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: CI execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "note",
+          "message": {
+            "text": "Unpinned GitHub Action checkout@v3 (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".github/workflows/semgrep.yml"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 21,
+                  "snippet": {
+                    "text": "    - uses: actions/checkout@v3"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Source: upstream action tag"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "floating tag"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": ".github/workflows/semgrep.yml"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: CI execution with secrets"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-829",
+          "level": "note",
+          "message": {
+            "text": "Unpinned floating container image in Azure pipeline (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "    image: 'veracode/iast-agent-server:latest'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: container registry tag"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "floating image to CI service"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: CI execution of unpinned image"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-532",
+          "level": "note",
+          "message": {
+            "text": "Session token exposed in CI logs via echo (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 48,
+                  "endLine": 48,
+                  "snippet": {
+                    "text": "        echo Using session_id: $SESSION_ID"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "Source: IAST agent session_id bearer"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 47
+                          }
+                        },
+                        "message": {
+                          "text": "SESSION_ID assignment"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "echo to CI logs"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 48
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sensitive session token in persistent logs"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-1104",
+          "level": "note",
+          "message": {
+            "text": "End-of-life Node.js 8.x toolchain (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines.yml"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "    versionSpec: '8.x'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: EOL Node distribution"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Node 8.x toolchain"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines.yml"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: vulnerable runtime for build/test"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-297",
+          "level": "note",
+          "message": {
+            "text": "TLS verification disabled in IAST status poll (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 38,
+                  "snippet": {
+                    "text": "          status_code=`curl --write-out \"%{http_code}\" --silent --output /dev/null --insecure $(AGENT_SERVER_URL)`"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Source: AGENT_SERVER_URL response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "insecure curl"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: curl --insecure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-297",
+          "level": "note",
+          "message": {
+            "text": "TLS verification disabled in IAST session allocation (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 47,
+                  "endLine": 47,
+                  "snippet": {
+                    "text": "        SESSION_ID=`curl -H \"Content-Type:application/json\" -H \"x-iast-event:session_start\" --silent --insecure -X POST -d \"{\\\"BUILD_TAG\\\":\\\"${BUILD_TAG}\\\"}\" ${AGENT_SERVER_URL}/events | jq -r '.session_id'`"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 47
+                          }
+                        },
+                        "message": {
+                          "text": "Source: AGENT_SERVER_URL response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 47
+                          }
+                        },
+                        "message": {
+                          "text": "insecure curl"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 47
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: curl --insecure POST"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-297",
+          "level": "note",
+          "message": {
+            "text": "TLS verification disabled in IAST results fetch (conf 0.98)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 76,
+                  "endLine": 76,
+                  "snippet": {
+                    "text": "        curl -H \"Accept:text/plain\" --silent --insecure -X GET $(AGENT_SERVER_URL)/results?session_id=${SESSION_ID}"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "Source: AGENT_SERVER_URL results"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "insecure curl"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 76
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: curl --insecure GET"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-95 rgbToHex route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 29,
+                  "snippet": {
+                    "text": "app.get(\"/cwe95/rgbToHex\", function(req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe95/rgbToHex"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: eval RCE handler"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on hexToRgb route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 43,
+                  "snippet": {
+                    "text": "app.get(\"/hexToRgb\", function(req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /hexToRgb?hex"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: hexToRgb substring"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-79 echo route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 61,
+                  "snippet": {
+                    "text": "app.get('/cwe79/echo', function (req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe79/echo?text"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.send HTML reflection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-113 header-split route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 69,
+                  "endLine": 69,
+                  "snippet": {
+                    "text": "app.get('/cwe113/split', function (req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe113/split"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 69
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.append header injection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-201 exposure route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 79,
+                  "endLine": 79,
+                  "snippet": {
+                    "text": "app.get('/cwe201/exposure', function (req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 79
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe201/exposure"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 79
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 79
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.send reflection"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-601 redirect route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 88,
+                  "endLine": 88,
+                  "snippet": {
+                    "text": "app.get('/cwe601/redirect', function (req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 88
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe601/redirect"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 88
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 88
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.redirect tainted URL"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-601",
+          "level": "note",
+          "message": {
+            "text": "Open redirect in cwe601 redirect handler (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 89,
+                  "endLine": 89,
+                  "snippet": {
+                    "text": "res.redirect(\"http://localhost:3001/echo?text=\" + req.query.text"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.text untrusted"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.text to res.redirect"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.redirect tainted URL"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-502 deserialize route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 96,
+                  "endLine": 96,
+                  "snippet": {
+                    "text": "app.get(\"/cwe502/serialize\", function(req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 96
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe502/serialize?foo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 96
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 96
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unserialize RCE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-306",
+          "level": "note",
+          "message": {
+            "text": "Missing authentication on CWE-78 exec route (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 105,
+                  "endLine": 105,
+                  "snippet": {
+                    "text": "app.get(\"/cwe78/childprocess\", function(req, res) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 105
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET /cwe78/childprocess?foo"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 105
+                          }
+                        },
+                        "message": {
+                          "text": "route no guard"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 105
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: exec shell"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-494",
+          "level": "note",
+          "message": {
+            "text": "Remote code execution via curl piped to sh (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "azure-pipelines-1.yml"
+                },
+                "region": {
+                  "startLine": 52,
+                  "endLine": 52,
+                  "snippet": {
+                    "text": "curl --silent --insecure ${AGENT_SERVER_URL}/downloads | sh"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "Source: remote downloads script"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "curl to sh"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "azure-pipelines-1.yml"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: sh execution"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Missing 0-255 range check in rgbToHex (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/converter.js"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "exports.rgbToHex = function(red, green, blue) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker eval red/green/blue"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "eval to app/converter.js:1"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: overlong hex return"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Missing input validation in rgbToHex converter (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/converter.js"
+                },
+                "region": {
+                  "startLine": 3,
+                  "endLine": 5,
+                  "snippet": {
+                    "text": "var redHex   = red.toString(16);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "Source: red green blue caller-controlled"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "red to toString"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: toString on unvalidated type"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Missing hex format check in hexToRgb (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/converter.js"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "exports.hexToRgb = function(hex) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.hex attacker string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "hex to app/converter.js:15"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: NaN array return"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Missing input validation in hexToRgb converter (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/converter.js"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 19,
+                  "snippet": {
+                    "text": "var red   = parseInt(hex.substring(0, 2), 16);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hex caller-controlled"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "hex to substring"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 19
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: substring on unvalidated input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "note",
+          "message": {
+            "text": "Express app without any security middleware (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 8,
+                  "endLine": 8,
+                  "snippet": {
+                    "text": "var app = express();"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "Source: untrusted HTTP requests to bare app"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "bare express()"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 8
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unprotected route handlers"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-248",
+          "level": "note",
+          "message": {
+            "text": "Abrupt process.exit in gracefulShutdown (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 16,
+                  "endLine": 16,
+                  "snippet": {
+                    "text": "  process.exit();"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Source: SIGTERM/SIGINT"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "SIGTERM to app/server.js:16"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: process.exit abrupt"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Uncaught exception DoS via rgbToHex call (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 39,
+                  "endLine": 39,
+                  "snippet": {
+                    "text": "  var hex = converter.rgbToHex(red, green, blue);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Source: missing query params"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 32
+                          }
+                        },
+                        "message": {
+                          "text": "eval to app/server.js:39"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 39
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: uncaught throw"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Cross-unit unvalidated hex to converter substring DoS and response disclosure (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 46,
+                  "snippet": {
+                    "text": "  var hex = req.query.hex;\n  var rgb = converter.hexToRgb(hex);\n  res.send(JSON.stringify(rgb));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "Source: app/server.js:44 req.query.hex"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "var hex = req.query.hex"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "hex.substring(0,2)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "converter.hexToRgb(hex)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: app/server.js:46 res.send(JSON.stringify(rgb))"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-209",
+          "level": "note",
+          "message": {
+            "text": "NaN results returned as success in hexToRgb response (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 46,
+                  "endLine": 46,
+                  "snippet": {
+                    "text": "  res.send(JSON.stringify(rgb));"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker hex yielding NaN"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "hex to app/server.js:46"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 46
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: JSON 200 response"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-201",
+          "level": "note",
+          "message": {
+            "text": "Information exposure in cwe201 exposure handler (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 80,
+                  "endLine": 80,
+                  "snippet": {
+                    "text": "res.send(req.query.text);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.text untrusted"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.text to res.send"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 80
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.send information exposure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-319",
+          "level": "note",
+          "message": {
+            "text": "Cleartext HTTP listen without TLS (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 122,
+                  "endLine": 122,
+                  "snippet": {
+                    "text": "var server = app.listen(3001, function () {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 122
+                          }
+                        },
+                        "message": {
+                          "text": "Source: network traffic port 3001"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 122
+                          }
+                        },
+                        "message": {
+                          "text": "listen no TLS"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 122
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: cleartext HTTP listener"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Unsafe length dereference in pad helper (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/converter.js"
+                },
+                "region": {
+                  "startLine": 11,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "function pad(hex) {"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Source: attacker-derived hex fragments"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 3
+                          }
+                        },
+                        "message": {
+                          "text": "toString to app/converter.js:12"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/converter.js"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: hex.length deref"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-400",
+          "level": "note",
+          "message": {
+            "text": "Unhandled exception DoS via unvalidated hex in hexToRgb handler (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 44,
+                  "endLine": 45,
+                  "snippet": {
+                    "text": "var hex = req.query.hex;"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.hex possibly absent"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.hex to hexToRgb"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: substring on unvalidated input"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-113",
+          "level": "note",
+          "message": {
+            "text": "CRLF header injection in /cwe601/redirect Location header (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 89,
+                  "endLine": 89,
+                  "snippet": {
+                    "text": "res.redirect(\"http://localhost:3001/echo?text=\" + req.query.text + \" (Redirected)\");"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.text in /cwe601/redirect handler"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 88
+                          }
+                        },
+                        "message": {
+                          "text": "req.query.text entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "string concat into Location"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "res.redirect header sink"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 89
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: res.redirect Location header with attacker CRLF"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-117",
+          "level": "note",
+          "message": {
+            "text": "Log injection via exec error in console.log (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/server.js"
+                },
+                "region": {
+                  "startLine": 108,
+                  "endLine": 108,
+                  "snippet": {
+                    "text": "    console.log(`Error executing endpoint /cwe78/childprocess: ${error}`);"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "0.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 108
+                          }
+                        },
+                        "message": {
+                          "text": "Source: req.query.foo in error"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 106
+                          }
+                        },
+                        "message": {
+                          "text": "exec to app/server.js:108 log"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/server.js"
+                          },
+                          "region": {
+                            "startLine": 108
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: console.log log sink"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

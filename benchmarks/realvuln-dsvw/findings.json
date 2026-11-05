@@ -1,0 +1,1986 @@
+[
+  {
+    "id": "unit-app-1",
+    "title": "Insecure deserialization via pickle.loads on object parameter",
+    "cwe": "CWE-502",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 35,
+    "end_line": 35,
+    "snippet": "content = str(pickle.loads(params[\"object\"].encode()))",
+    "taint": {
+      "source": "query param object",
+      "sink": "pickle.loads attacker-controlled bytes",
+      "path": [
+        "dsvw.py:26 params object extraction",
+        "dsvw.py:35 pickle.loads sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 35,
+        "note": "pickle.loads on attacker bytes"
+      }
+    ],
+    "evidence": "content = str(pickle.loads(params[\"object\"].encode())) | validator: dsvw.py:35 pickle.loads(params[object].encode()) on unauth query param dsvw.py:26 with no allowlist | consensus: 1/1 confirmed | triage: Unauth object directly to pickle loads with no allowlist; T1 RCE",
+    "rationale": "WHO: unauthenticated remote client controls object query value. HOW: value .encode() flows directly into pickle.loads on line 35 with no allowlist or signature. WHAT: breaks safe-deserialization invariant giving arbitrary code execution in server process.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "python3 poc.py",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?object=<pickle>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = str(pickle.loads(params[\"object\"].encode()))",
+    "hunter_snippet": "content = str(pickle.loads(params[\"object\"].encode()))",
+    "patch_summary": "Remove pickle.loads object handler; use JSON with strict parsing if demo needed",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "Classic unauth deserialization RCE with zero preconditions"
+    },
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "OS command injection via domain nslookup shell",
+    "cwe": "CWE-78",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 39,
+    "end_line": 39,
+    "snippet": "content = subprocess.run(\"nslookup \" + params[\"domain\"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout",
+    "taint": {
+      "source": "query param domain",
+      "sink": "subprocess.run shell=True",
+      "path": [
+        "dsvw.py:26 params domain extraction",
+        "dsvw.py:39 subprocess shell sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 39,
+        "note": "subprocess.run shell=True nslookup concat"
+      }
+    ],
+    "evidence": "content = subprocess.run(\"nslookup \" + params[\"domain\"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout | validator: dsvw.py:39 subprocess.run('nslookup '+params[domain], shell=True) unauth concat with shell True | consensus: 1/1 confirmed | triage: Unauth domain concat to nslookup shell True; T1 RCE",
+    "rationale": "WHO: unauthenticated remote client controls domain parameter. HOW: value string-concatenated to 'nslookup ' and executed via subprocess.run with shell=True capturing output. WHAT: breaks command-injection invariant giving OS command execution.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl 'http://127.0.0.1:65412/?domain=www.google.com;%20id'",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?domain=<shell>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = subprocess.run(\"nslookup \" + params[\"domain\"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout",
+    "hunter_snippet": "content = subprocess.run(\"nslookup \" + params[\"domain\"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout",
+    "patch_summary": "Remove shell handler or use shell=False with arg list and strict domain validation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "Unauth OS command injection via chaining with shell True"
+    },
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Remote code execution via exec on include content",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "exec(program, envs)",
+    "taint": {
+      "source": "query param include content",
+      "sink": "exec() of remote/local bytes",
+      "path": [
+        "dsvw.py:56 program fetched from include",
+        "dsvw.py:57 exec sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 57,
+        "note": "exec of fetched program bytes"
+      }
+    ],
+    "evidence": "exec(program, envs) | validator: dsvw.py:56 program fetched from open/urlopen(params[include]) then dsvw.py:57 exec(program, envs) unauth RCE | consensus: 1/1 confirmed | triage: Fetched include bytes directly to exec; unauth RCE T1",
+    "rationale": "WHO: unauthenticated remote client controls program bytes fetched for include. HOW: fetched bytes passed directly to exec(program, envs) on line 57 with attacker-influenced globals and stdout capture. WHAT: breaks code-integrity invariant giving remote code execution.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl include RCE",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?include=<python source>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "exec(program, envs)",
+    "hunter_snippet": "exec(program, envs)",
+    "patch_summary": "Remove include/exec handler entirely; never exec local/remote user-controlled bytes",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "Remote and local code execution via exec of fetched content"
+    },
+    "cvss": 9.0,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-ssrf-to-rce-include-exec",
+    "title": "Unauthenticated remote code execution via SSRF-fetched include content passed to exec",
+    "cwe": "CWE-94",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "dsvw.py",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "                    exec(program, envs)",
+    "taint": {
+      "source": "HTTP GET /?include= query parameter (unauthenticated)",
+      "sink": "dsvw.py:57 exec(program, envs) executes remotely fetched code",
+      "path": [
+        "dsvw.py:26 params[include] from query string",
+        "dsvw.py:56 urllib.request.urlopen(params[include]).read() -> program"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 26,
+        "note": "untrusted query string parsed into params dict"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 56,
+        "note": "SSRF fetch: urlopen(params[include]).read() when :// present"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 57,
+        "note": "code-execution sink exec(program, envs) on fetched content"
+      }
+    ],
+    "evidence": "dsvw.py:26 parses unauthenticated query into params; dsvw.py:56 fetches attacker URL via urllib.request.urlopen(params[include]).read(); dsvw.py:57 passes fetched bytes directly to exec(program, envs) | validator: dsvw.py:26 params[include] reaches dsvw.py:56 urlopen(params[include]).read() then dsvw.py:57 exec(program,envs) unauthenticated RCE | consensus: 1/1 confirmed | triage: Same line57 exec sink as unit-app-10; SSRF fetch plus exec same cause",
+    "rationale": "Unauthenticated attacker controls ?include= value. When it contains :// the handler fetches remote content with urlopen and immediately executes it with exec() in server process. This chains SSRF/RFI into unauthenticated RCE, distinct from reporting each sink alone.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:26 parses unauthenticated query into params; dsvw.py:56 fetches attacker URL via urllib.request.urlopen(params[include]).read(); dsvw.py:57 passes fetched bytes directly to exec(program, envs)",
+    "hunter_snippet": "                    exec(program, envs)",
+    "patch_summary": "Remove include/exec remote-fetch sink; if demo needed disable by default, allowlist local files only and never exec fetched bytes.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-10",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "Duplicate RCE sink: urlopen include then exec"
+    },
+    "cvss": 8.9,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "SQL Injection id handler",
+    "cwe": "CWE-89",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "cursor.execute sin",
+    "taint": {
+      "source": "query param id",
+      "sink": "cursor.execute",
+      "path": [
+        "dsvw.py:26",
+        "dsvw.py:30"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 30,
+        "note": "SQL concat sink"
+      }
+    ],
+    "evidence": "cursor.execute sin | validator: dsvw.py:30 raw concat WHERE id= + params[id] from unauth query parser dsvw.py:26 with no placeholder | consensus: 3/3 confirmed",
+    "rationale": "WHO unauthenticated client controls id param HOW params dict line 26 concatenated into SQL line 30 WHAT SQL injection",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "cursor.execute sin",
+    "hunter_snippet": "cursor.execute sin",
+    "patch_summary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "DOM-based XSS via location.hash lang document.write",
+    "cwe": "CWE-89",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "document.write with decodeURIComponent hash lang",
+    "taint": {
+      "source": "URL fragment location.hash",
+      "sink": "document.write unsafely rendered hash input",
+      "path": [
+        "dsvw.py:10 fragment"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 10,
+        "note": "document.write hash sink"
+      }
+    ],
+    "evidence": "document.write with decodeURIComponent hash lang | validator: dsvw.py:30 raw concat WHERE id= + params[id] from unauth query parser dsvw.py:26 with no placeholder | consensus: 3/3 confirmed",
+    "rationale": "WHO unauthenticated client controls URL fragment lang value. HOW HTML_PREFIX script reads location.hash decodeURI and document.writes into DOM without encoding. WHAT breaks output encoding enabling DOM XSS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "grep -n document.write dsvw.py",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "No auth; victim browser executes page"
+    ],
+    "unit": "app",
+    "hunter_evidence": "document.write with decodeURIComponent hash lang",
+    "hunter_snippet": "document.write with decodeURIComponent hash lang",
+    "patch_summary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.5,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Path traversal and SSRF via path file-fetch handler",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 37,
+    "end_line": 37,
+    "snippet": "content = (open(os.path.abspath(params[\"path\"]), \"rb\") if not \"://\" in params[\"path\"] else urllib.request.urlopen(params[\"path\"])).read().decode()",
+    "taint": {
+      "source": "query param path",
+      "sink": "filesystem open and outbound urlopen on same input",
+      "path": [
+        "dsvw.py:26 params path extraction",
+        "dsvw.py:37 open/urlopen sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 37,
+        "note": "open(abspath) vs urlopen branch on path"
+      }
+    ],
+    "evidence": "content = (open(os.path.abspath(params[\"path\"]), \"rb\") if not \"://\" in params[\"path\"] else urllib.request.urlopen(params[\"path\"])).read().decode() | validator: dsvw.py:37 open(os.path.abspath(params[path])) else urllib.request.urlopen(params[path]) abspath does not block ../ and urlopen allows SSRF | consensus: 1/1 confirmed | triage: Unauth path reaches open abspath and urlopen with no allowlist; T3 T4",
+    "rationale": "WHO: unauthenticated remote client controls path parameter. HOW: value flows to os.path.abspath+open(rb) branch when no :// substring otherwise to urllib.request.urlopen(path) on same line. WHAT: breaks filesystem and server-fetch boundaries enabling absolute-path read, traversal and SSRF.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl 'http://127.0.0.1:65412/?path=dsvw.py'",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?path=<target>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = (open(os.path.abspath(params[\"path\"]), \"rb\") if not \"://\" in params[\"path\"] else urllib.request.urlopen(params[\"path\"])).read().decode()",
+    "hunter_snippet": "content = (open(os.path.abspath(params[\"path\"]), \"rb\") if not \"://\" in params[\"path\"] else urllib.request.urlopen(params[\"path\"])).read().decode()",
+    "patch_summary": "Remove path fetch handler or constrain to allowlisted docroot via realpath check and deny urlopen on user input",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Direct LFI via dotdot and SSRF via scheme branch"
+    },
+    "cvss": 7.5,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "XXE via lxml parser with DTD and network enabled",
+    "cwe": "CWE-611",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params[\"xml\"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()",
+    "taint": {
+      "source": "query param xml",
+      "sink": "lxml parse with entity/network resolution",
+      "path": [
+        "dsvw.py:26 params xml extraction",
+        "dsvw.py:41 lxml parse sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 41,
+        "note": "lxml parser with DTD/entities/network enabled"
+      }
+    ],
+    "evidence": "content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params[\"xml\"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode() | validator: dsvw.py:41 lxml XMLParser(load_dtd=True, resolve_entities=True, no_network=False) parsing unauth params[xml] | consensus: 1/1 confirmed | triage: Unauth xml to lxml with DTD and network enabled; T3 T4",
+    "rationale": "WHO: unauthenticated remote client controls xml parameter. HOW: bytes flow into lxml.etree.parse with XMLParser(load_dtd=True, resolve_entities=True, no_network=False) then serialized back. WHAT: breaks external-entity containment enabling local file disclosure and remote fetch.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl XXE payload to /?xml=",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?xml=<entity payload>",
+      "Requires lxml installed"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params[\"xml\"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()",
+    "hunter_snippet": "content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params[\"xml\"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()",
+    "patch_summary": "Set XMLParser(load_dtd=False, resolve_entities=False, no_network=True) or use defusedxml",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "XXE local file and remote entity SSRF zero preconditions"
+    },
+    "cvss": 7.5,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "SQL injection via comment INSERT handler",
+    "cwe": "CWE-89",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 50,
+    "end_line": 50,
+    "snippet": "cursor.execute(\"INSERT INTO comments VALUES(NULL, '%s', '%s')\" % (params[\"comment\"], time.ctime()))",
+    "taint": {
+      "source": "query param comment",
+      "sink": "cursor.execute raw INSERT",
+      "path": [
+        "dsvw.py:26 params comment extraction",
+        "dsvw.py:50 cursor.execute sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 50,
+        "note": "string-formatted INSERT with comment"
+      }
+    ],
+    "evidence": "cursor.execute(\"INSERT INTO comments VALUES(NULL, '%s', '%s')\" % (params[\"comment\"], time.ctime())) | validator: dsvw.py:50 cursor.execute(INSERT INTO comments VALUES(NULL, '%s'...) % params[comment]) raw formatting from dsvw.py:26 | consensus: 1/1 confirmed | triage: Unauth comment to raw INSERT formatting; T2 SQLi plus stored XSS chain",
+    "rationale": "WHO: unauthenticated remote client controls comment parameter. HOW: value interpolated into INSERT INTO comments VALUES string with % formatting executed via cursor.execute. WHAT: breaks parameterization invariant enabling SQL injection into comments store.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl comment SQLi",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?comment=<sql>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "cursor.execute(\"INSERT INTO comments VALUES(NULL, '%s', '%s')\" % (params[\"comment\"], time.ctime()))",
+    "hunter_snippet": "cursor.execute(\"INSERT INTO comments VALUES(NULL, '%s', '%s')\" % (params[\"comment\"], time.ctime()))",
+    "patch_summary": "Use parameterized INSERT cursor.execute('INSERT INTO comments VALUES(NULL,?,?)',(comment,time))",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "tenant",
+      "rationale": "Direct SQL injection via comment INSERT"
+    },
+    "cvss": 7.5,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Reflected XSS via v parameter version reflection",
+    "cwe": "CWE-89",
+    "severity": "high",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 33,
+    "end_line": 33,
+    "snippet": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX)",
+    "taint": {
+      "source": "query param v",
+      "sink": "re.sub replacement reflected into HTML response",
+      "path": [
+        "dsvw.py:26 params v extraction",
+        "dsvw.py:33 re.sub sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 33,
+        "note": "re.sub with params[v] reflected into HTML"
+      }
+    ],
+    "evidence": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX) | validator: dsvw.py:30 raw concat WHERE id= + params[id] from unauth query parser dsvw.py:26 with no placeholder | consensus: 3/3 confirmed | triage: Unauth id concat to SELECT and v reflection; T2 SQLi plus T5 XSS primary",
+    "rationale": "WHO: unauthenticated remote client controls query parameter v. HOW: params[v] flows unencoded into re.sub replacement string on line 33 that rewrites version markup in HTML_POSTFIX. WHAT: breaks output-encoding invariant enabling reflected XSS/frame injection.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl 'http://127.0.0.1:65412/?v=0.4<script>alert(1)</script>'",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?v=<payload>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX)",
+    "hunter_snippet": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX)",
+    "patch_summary": "Use parameterized query cursor.execute('SELECT ... WHERE id=?', (params['id'],)) and validate numeric",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Unauth SQLi exfiltrates demo users and v XSS reflects unencoded"
+    },
+    "cvss": 7.5,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Stored XSS via unencoded comment listing",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 54,
+    "end_line": 54,
+    "snippet": "content += \"<div><span>Comment(s):</span></div><table><thead><th>id</th><th>comment</th><th>time</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "taint": {
+      "source": "stored comment value",
+      "sink": "unencoded HTML table reflection of stored comments",
+      "path": [
+        "dsvw.py:50 comment stored to DB",
+        "dsvw.py:54 unencoded render sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 54,
+        "note": "unencoded comment rows rendered to HTML"
+      }
+    ],
+    "evidence": "content += \"<div><span>Comment(s):</span></div><table><thead><th>id</th><th>comment</th><th>time</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\" | validator: dsvw.py:53-54 SELECT comments then unencoded '<td>%s' % row rendering with no html.escape | consensus: 1/1 confirmed | triage: Same comments render sink as sys-stored-xss-comments",
+    "rationale": "WHO: remote client stores comment then later victims view listing. HOW: rows from SELECT id,comment,time are interpolated into <td>%s</td> table without html.escape on line 54. WHAT: breaks output-encoding invariant enabling stored XSS delivery.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl stored XSS then list",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?comment= to list; prior stored payload needed"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content += \"<div><span>Comment(s):</span></div><table><thead><th>id</th><th>comment</th><th>time</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "hunter_snippet": "content += \"<div><span>Comment(s):</span></div><table><thead><th>id</th><th>comment</th><th>time</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "patch_summary": "HTML-encode comment rows with html.escape on render and on stored path",
+    "control_type": "none",
+    "duplicate_of": "sys-stored-xss-comments",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Duplicate stored XSS render of same table"
+    },
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "LFI and SSRF via include file fetch",
+    "cwe": "CWE-918",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 56,
+    "end_line": 56,
+    "snippet": "backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params[\"include\"], \"rb\") if not \"://\" in params[\"include\"] else urllib.request.urlopen(params[\"include\"])).read(),",
+    "taint": {
+      "source": "query param include",
+      "sink": "local open and remote urlopen on attacker input",
+      "path": [
+        "dsvw.py:26 params include extraction",
+        "dsvw.py:56 open/urlopen fetch sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 56,
+        "note": "open vs urlopen fetch of include"
+      }
+    ],
+    "evidence": "backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params[\"include\"], \"rb\") if not \"://\" in params[\"include\"] else urllib.request.urlopen(params[\"include\"])).read(), | validator: dsvw.py:56 open(params[include]) if no :// else urllib.request.urlopen(params[include]) unauth LFI/SSRF fetch | consensus: 1/1 confirmed | triage: Unauth include to open and urlopen fetch; LFI plus SSRF stage of RCE",
+    "rationale": "WHO: unauthenticated remote client controls include parameter. HOW: value flows to open(params[include],rb) when no :// else urllib.request.urlopen(params[include]) to fetch program bytes. WHAT: breaks fetch-boundary invariant enabling local file read and SSRF to internal services.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl include SSRF",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?include=<url|path>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params[\"include\"], \"rb\") if not \"://\" in params[\"include\"] else urllib.request.urlopen(params[\"include\"])).read(),",
+    "hunter_snippet": "backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params[\"include\"], \"rb\") if not \"://\" in params[\"include\"] else urllib.request.urlopen(params[\"include\"])).read(),",
+    "patch_summary": "Remove include fetch or restrict to allowlisted files and deny remote urlopen",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Unauth local read and remote fetch of arbitrary URL"
+    },
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-stored-xss-comments",
+    "title": "Cross-request stored XSS via comments store",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 53,
+    "end_line": 54,
+    "snippet": "SELECT id, comment, time FROM comments",
+    "taint": {
+      "source": "unauthenticated GET comment param",
+      "sink": "unencoded HTML table render of stored comments",
+      "path": [
+        "dsvw.py:26 params comment",
+        "dsvw.py:50 INSERT INTO comments",
+        "dsvw.py:53 SELECT FROM comments"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 50,
+        "note": "raw INSERT of comment param"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 53,
+        "note": "SELECT comments"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 54,
+        "note": "unencoded render into table"
+      }
+    ],
+    "evidence": "dsvw.py:50 INSERT comment then dsvw.py:53 SELECT and unencoded render; payload persists via SQLite comments table | validator: dsvw.py:50 raw INSERT comment then dsvw.py:53-54 SELECT rendered via unencoded <td>%s</td> persists across requests | consensus: 1/1 confirmed | triage: Raw INSERT then unencoded SELECT persists across requests; T5 stored XSS",
+    "rationale": "Unauthenticated comment param inserted raw via string-formatted SQL at line 50, later selected and concatenated into HTML table at line 54 without encoding, persisting XSS across victims.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:50 INSERT comment then dsvw.py:53 SELECT and unencoded render; payload persists via SQLite comments table",
+    "hunter_snippet": "SELECT id, comment, time FROM comments",
+    "patch_summary": "Parameterize comment INSERT and HTML-encode comment/time on SELECT render with CSP.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Unauth stored XSS persists via SQLite and executes later"
+    },
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-redir-reflected-xss",
+    "title": "Reflected XSS via redir meta-refresh injection",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\"",
+    "taint": {
+      "source": "unauthenticated GET /?redir= query parameter",
+      "sink": "meta refresh HTML reflection without encoding",
+      "path": [
+        "dsvw.py:26 query -> params[redir]",
+        "dsvw.py:61 meta-refresh interpolation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 26,
+        "note": "source: query parser extracts redir param"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 61,
+        "note": "sink: unencoded interpolation into meta refresh"
+      }
+    ],
+    "evidence": "dsvw.py:26 parses ?redir= into params; dsvw.py:61 interpolates it unencoded into meta refresh | validator: dsvw.py:26 params[redir] reaches dsvw.py:61 unencoded meta-refresh interpolation allowing break-out XSS e.g. redir=x\\\"><script> | consensus: 1/1 confirmed | triage: Unauth redir interpolated unencoded into meta refresh allowing breakout",
+    "rationale": "Unauthenticated attacker controls ?redir=; value flows into meta-refresh template without encoding. Payload breaks out and executes script. Distinct from open-redirect on same line.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:26 parses ?redir= into params; dsvw.py:61 interpolates it unencoded into meta refresh",
+    "hunter_snippet": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\"",
+    "patch_summary": "HTML-encode redir and validate allowlist before meta-refresh reflection.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Reflected XSS via redir breakout plus open redirect"
+    },
+    "cvss": 7.3,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "XPath injection via name parameter interpolation",
+    "cwe": "CWE-643",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "found = lxml.etree.parse(io.BytesIO(USERS_XML.encode())).xpath(\".//user[name/text()='%s']\" % params[\"name\"])",
+    "taint": {
+      "source": "query param name",
+      "sink": "xpath() with string interpolation",
+      "path": [
+        "dsvw.py:26 params name extraction",
+        "dsvw.py:43 xpath sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 43,
+        "note": "xpath string interpolation over USERS_XML"
+      }
+    ],
+    "evidence": "found = lxml.etree.parse(io.BytesIO(USERS_XML.encode())).xpath(\".//user[name/text()='%s']\" % params[\"name\"]) | validator: dsvw.py:43 .xpath(\".//user[name/text()='%s']\" % params[name]) string interpolation over USERS_XML | consensus: 1/1 confirmed | triage: Unauth name interpolated into xpath over USERS XML; T6 probing",
+    "rationale": "WHO: unauthenticated remote client controls name parameter. HOW: value interpolated into XPath string .//user[name/text()='%s'] evaluated over USERS_XML credential store. WHAT: breaks query-structure invariant enabling boolean XPath injection to probe passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl name xpath payload",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?name=<xpath>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "found = lxml.etree.parse(io.BytesIO(USERS_XML.encode())).xpath(\".//user[name/text()='%s']\" % params[\"name\"])",
+    "hunter_snippet": "found = lxml.etree.parse(io.BytesIO(USERS_XML.encode())).xpath(\".//user[name/text()='%s']\" % params[\"name\"])",
+    "patch_summary": "Avoid XPath string interpolation; use variable binding or strict allowlist/escaping of name",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Unauth XPath injection discloses embedded store via oracle"
+    },
+    "cvss": 4.9,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "Denial of service via unbounded size allocation",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 46,
+    "end_line": 46,
+    "snippet": "start, _ = time.time(), \"<br>\".join(\"#\" * int(params[\"size\"]) for _ in range(int(params[\"size\"])))",
+    "taint": {
+      "source": "query param size",
+      "sink": "quadratic string allocation and join",
+      "path": [
+        "dsvw.py:26 params size extraction",
+        "dsvw.py:46 allocation sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 46,
+        "note": "quadratic allocation driven by size"
+      }
+    ],
+    "evidence": "start, _ = time.time(), \"<br>\".join(\"#\" * int(params[\"size\"]) for _ in range(int(params[\"size\"]))) | validator: dsvw.py:46 int(params[size]) drives quadratic '#' * size join with no upper bound; int cast does not limit size | consensus: 1/1 confirmed | triage: Unauth size drives quadratic hash allocation with no bound; T7 DoS",
+    "rationale": "WHO: unauthenticated remote client controls size parameter. HOW: int(params[size]) drives '#'*int(size) for _ in range(int(size)) producing quadratic allocation and join. WHAT: breaks resource-bound invariant enabling memory/CPU exhaustion of single threaded server.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl 'http://127.0.0.1:65412/?size=9999999'",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?size=<large int>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "start, _ = time.time(), \"<br>\".join(\"#\" * int(params[\"size\"]) for _ in range(int(params[\"size\"])))",
+    "hunter_snippet": "start, _ = time.time(), \"<br>\".join(\"#\" * int(params[\"size\"]) for _ in range(int(params[\"size\"])))",
+    "patch_summary": "Enforce max size bound (e.g. reject size>256) and timeout/limit allocation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "large size value"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Unauth CPU and memory exhaustion via unbounded join"
+    },
+    "cvss": 4.9,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "Open redirect via redir meta refresh",
+    "cwe": "CWE-601",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 61,
+    "end_line": 61,
+    "snippet": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\" content=\\\"0; url=%s\\\"/>\" % params[\"redir\"])",
+    "taint": {
+      "source": "query param redir",
+      "sink": "meta refresh URL from attacker input",
+      "path": [
+        "dsvw.py:26 params redir extraction",
+        "dsvw.py:61 meta refresh sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 61,
+        "note": "unvalidated redir into meta refresh"
+      }
+    ],
+    "evidence": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\" content=\\\"0; url=%s\\\"/>\" % params[\"redir\"]) | validator: dsvw.py:26 params[redir] unauthenticated reaches dsvw.py:61 unvalidated meta refresh url=%s interpolation | consensus: 1/1 confirmed | triage: Same line61 meta refresh sink as sys-redir under different rule ID",
+    "rationale": "WHO: unauthenticated remote client controls redir parameter. HOW: value interpolated into meta refresh tag content=\"0; url=%s\" replacing <head> without allowlist or validation. WHAT: breaks redirect-confinement invariant enabling open redirect and phishing.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl redir payload",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?redir=<url>; victim clicks link"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\" content=\\\"0; url=%s\\\"/>\" % params[\"redir\"])",
+    "hunter_snippet": "content = content.replace(\"<head>\", \"<head><meta http-equiv=\\\"refresh\\\" content=\\\"0; url=%s\\\"/>\" % params[\"redir\"])",
+    "patch_summary": "Validate redir against allowlist/relative-only and encode; reject absolute/external URLs.",
+    "control_type": "none",
+    "duplicate_of": "sys-redir-reflected-xss",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Same sink: unvalidated redir enables redirect and breakout"
+    },
+    "cvss": 4.9,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-17",
+    "title": "HTTP header injection via charset Content-Type reflection",
+    "cwe": "CWE-113",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 78,
+    "end_line": 78,
+    "snippet": "self.send_header(\"Content-Type\", \"%s%s\" % (\"text/html\" if content.startswith(\"<!DOCTYPE html>\") else \"text/plain\", \"; charset=%s\" % params.get(\"charset\", \"utf8\")))",
+    "taint": {
+      "source": "query param charset",
+      "sink": "Content-Type header with attacker charset",
+      "path": [
+        "dsvw.py:26 params charset extraction",
+        "dsvw.py:78 send_header sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 78,
+        "note": "charset reflected into Content-Type header"
+      }
+    ],
+    "evidence": "self.send_header(\"Content-Type\", \"%s%s\" % (\"text/html\" if content.startswith(\"<!DOCTYPE html>\") else \"text/plain\", \"; charset=%s\" % params.get(\"charset\", \"utf8\"))) | validator: dsvw.py:26 charset via query reaches dsvw.py:78 send_header Content-Type charset=%s with no CRLF/allowlist validation; documented header-injection CASES | consensus: 1/1 confirmed | triage: Unauth charset reaches Content-Type header with no allowlist",
+    "rationale": "WHO: unauthenticated remote client controls charset parameter. HOW: params.get(charset,utf8) concatenated into Content-Type header value passed to send_header without CRLF stripping. WHAT: breaks header-confinement invariant enabling HTTP header injection and response splitting with phishing body per documented case.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl charset header injection",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?charset=<crlf payload> or /users.json?charset=..."
+    ],
+    "unit": "app",
+    "hunter_evidence": "self.send_header(\"Content-Type\", \"%s%s\" % (\"text/html\" if content.startswith(\"<!DOCTYPE html>\") else \"text/plain\", \"; charset=%s\" % params.get(\"charset\", \"utf8\")))",
+    "hunter_snippet": "self.send_header(\"Content-Type\", \"%s%s\" % (\"text/html\" if content.startswith(\"<!DOCTYPE html>\") else \"text/plain\", \"; charset=%s\" % params.get(\"charset\", \"utf8\")))",
+    "patch_summary": "Allowlist charset (e.g. utf-8 only) and strip CR/LF before send_header; reject %0D%0A.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Attacker charset controls response header enabling injection"
+    },
+    "cvss": 4.9,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "JSONP reflected XSS via users.json callback",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 65,
+    "end_line": 65,
+    "snippet": "content = \"%s%s%s\" % (\"\" if not \"callback\" in params else \"%s(\" % params[\"callback\"], json.dumps(dict((_.findtext(\"username\"),",
+    "taint": {
+      "source": "query param callback",
+      "sink": "callback reflected as JS function call",
+      "path": [
+        "dsvw.py:26 params callback extraction",
+        "dsvw.py:65 JSONP wrap sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 65,
+        "note": "unvalidated callback wrapped around JSON"
+      }
+    ],
+    "evidence": "content = \"%s%s%s\" % (\"\" if not \"callback\" in params else \"%s(\" % params[\"callback\"], json.dumps(dict((_.findtext(\"username\"), | validator: dsvw.py:65 '%s(' % params[callback] wraps users.json without validation; no nosniff allows script-tag execution | consensus: 1/1 confirmed | triage: Unauth callback wraps users json without validation; script execution",
+    "rationale": "WHO: unauthenticated remote client controls callback parameter. HOW: value wrapped as %s( % json %) without encoding or identifier validation on users.json handler. WHAT: breaks script-context encoding invariant enabling JSONP reflected XSS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl users.json callback",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /users.json?callback=<js>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = \"%s%s%s\" % (\"\" if not \"callback\" in params else \"%s(\" % params[\"callback\"], json.dumps(dict((_.findtext(\"username\"),",
+    "hunter_snippet": "content = \"%s%s%s\" % (\"\" if not \"callback\" in params else \"%s(\" % params[\"callback\"], json.dumps(dict((_.findtext(\"username\"),",
+    "patch_summary": "Validate callback against ^[A-Za-z0-9_.]+$ or remove JSONP callback support",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "requires victim script tag inclusion"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "JSONP reflected XSS via unvalidated callback name"
+    },
+    "cvss": 4.8,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-21",
+    "title": "Second-order XSS via unencoded id query result rendering",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 31,
+    "end_line": 31,
+    "snippet": "content += \"<div><span>Result(s):</span></div><table><thead><th>id</th><th>username</th><th>name</th><th>surname</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "taint": {
+      "source": "DB rows influenced by id UNION payload",
+      "sink": "unencoded <td> reflection of query rows",
+      "path": [
+        "dsvw.py:26 params id extraction",
+        "dsvw.py:31 table render sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 31,
+        "note": "unencoded DB rows rendered to HTML table"
+      }
+    ],
+    "evidence": "content += \"<div><span>Result(s):</span></div><table><thead><th>id</th><th>username</th><th>name</th><th>surname</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\" | validator: dsvw.py:30 SELECT concat WHERE id=+params[id] reaches dsvw.py:31 unencoded <td>%s</td> table render; UNION payload reflected unencoded | consensus: 1/1 confirmed | triage: UNION via id renders rows unencoded in table; second-order XSS T5",
+    "rationale": "WHO: unauthenticated remote client controls id-driven row content via UNION. HOW: rows from cursor.fetchall() interpolated into <td>%s</td> cells on line 31 without html.escape. WHAT: breaks output-encoding invariant turning SQL result reflection into second-order XSS.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl UNION XSS",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /?id=<union select with script>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content += \"<div><span>Result(s):</span></div><table><thead><th>id</th><th>username</th><th>name</th><th>surname</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "hunter_snippet": "content += \"<div><span>Result(s):</span></div><table><thead><th>id</th><th>username</th><th>name</th><th>surname</th></thead>%s</table>%s\" % (\"\".join(\"<tr>%s</tr>\"",
+    "patch_summary": "Parameterize id query and HTML-encode all DB fields on render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "requires UNION payload to inject script"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Unauth DB reflected XSS via unencoded table render"
+    },
+    "cvss": 4.8,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-frame-headers",
+    "title": "Missing clickjacking defense headers enables frame injection",
+    "cwe": "CWE-1021",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 77,
+    "end_line": 77,
+    "snippet": "content += re.sub(r\"(v<b>)[^<]+(</b>)\", r\"\\g<1>%s\\g<2>\" % params[\"v\"], HTML_POSTFIX)",
+    "taint": {
+      "source": "unauthenticated GET v param",
+      "sink": "framed content without frame options CSP",
+      "path": [
+        "dsvw.py:33 params v reflected"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 33,
+        "note": "v param unencoded reflection"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 77,
+        "note": "XSS Protection zero disables auditor"
+      }
+    ],
+    "evidence": "dsvw.py:75-78 only sends Connection and disabled auditor header; no frame options or CSP, allowing iframe clickjacking via v param | validator: dsvw.py:33 reflects unauthenticated v param via re.sub without html.escape; dsvw.py:75-78 sends only Connection, X-XSS-Protection:0, Content-Type with no X-Frame-Options or CSP; dsvw.py:8 CASES documents iframe/div clickjacking payloads via v | consensus: 1/1 confirmed | triage: Same v resub sink as unit-app-0 line33; frame injection is consequence of same reflection",
+    "rationale": "Response headers explicitly disable XSS auditor and omit frame protections, so v param frame injection payloads execute unmitigated.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:75-78 only sends Connection and disabled auditor header; no frame options or CSP, allowing iframe clickjacking via v param",
+    "hunter_snippet": "X-XSS-Protection",
+    "patch_summary": "HTML-encode v param before reflection and send X-Frame-Options:DENY plus CSP frame-ancestors 'none' on HTML responses.",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Unauth v reflected without encoding enables iframe injection; duplicate sink"
+    },
+    "cvss": 4.8,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "SQL injection authentication bypass via login password",
+    "cwe": "CWE-89",
+    "severity": "low",
+    "confidence": 1.0,
+    "path": "dsvw.py",
+    "start_line": 67,
+    "end_line": 67,
+    "snippet": "cursor.execute(\"SELECT * FROM users WHERE username='\" + re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")) + \"' AND password='\" + params.get(\"password\", \"\") + \"'\")",
+    "taint": {
+      "source": "query param password on /login",
+      "sink": "cursor.execute raw login query",
+      "path": [
+        "dsvw.py:26 params password extraction",
+        "dsvw.py:67 cursor.execute sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 67,
+        "note": "raw password concat into login SELECT"
+      }
+    ],
+    "evidence": "cursor.execute(\"SELECT * FROM users WHERE username='\" + re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")) + \"' AND password='\" + params.get(\"password\", \"\") + \"'\") | validator: dsvw.py:67 login SELECT concat password=params.get(password) raw; only username stripped via re.sub dsvw.py:67 | consensus: 1/1 confirmed | triage: TM Sec5 conflict: real password concat but parked login; earned high lowered",
+    "rationale": "WHO: unauthenticated remote client controls password parameter on login. HOW: password concatenated raw into SELECT * FROM users WHERE username='...' AND password='...' while only username is alphanumeric-stripped. WHAT: breaks parameterization invariant enabling authentication bypass via classic injection.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl login bypass",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /login?username=&password=<sql>"
+    ],
+    "unit": "app",
+    "hunter_evidence": "cursor.execute(\"SELECT * FROM users WHERE username='\" + re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")) + \"' AND password='\" + params.get(\"password\", \"\") + \"'\")",
+    "hunter_snippet": "cursor.execute(\"SELECT * FROM users WHERE username='\" + re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")) + \"' AND password='\" + params.get(\"password\", \"\") + \"'\")",
+    "patch_summary": "Use parameterized login query with placeholders for username and password",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "deprioritized per TM: demo login no privilege boundary"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Conflict: raw concat real but TM parks login elevation; low per TM"
+    },
+    "cvss": 2.5,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-15",
+    "title": "Information disclosure via full traceback error responses",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 72,
+    "end_line": 72,
+    "snippet": "content = ex.output if isinstance(ex, subprocess.CalledProcessError) else traceback.format_exc()",
+    "taint": {
+      "source": "attacker-triggered exception",
+      "sink": "traceback.format_exc() written to HTTP body",
+      "path": [
+        "dsvw.py:37 failing open on attacker path",
+        "dsvw.py:72 traceback sink to response"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 72,
+        "note": "traceback returned as response body"
+      }
+    ],
+    "evidence": "content = ex.output if isinstance(ex, subprocess.CalledProcessError) else traceback.format_exc() | validator: dsvw.py:71-72 except returns traceback.format_exc() as body, written unauthenticated at dsvw.py:80-81; trigger /?path=foobar /?size=abc | consensus: 1/1 confirmed | triage: Unauth exception returns traceback to body disclosing paths",
+    "rationale": "WHO: unauthenticated remote client can force errors with invalid path/size/xml values. HOW: except branch assigns traceback.format_exc() to response body with 500 status. WHAT: breaks error-confinement invariant disclosing full paths, source snippets and stack internals.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "curl error trigger",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET triggering any exception (e.g. /?path=foobar, /?size=abc)"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content = ex.output if isinstance(ex, subprocess.CalledProcessError) else traceback.format_exc()",
+    "hunter_snippet": "content = ex.output if isinstance(ex, subprocess.CalledProcessError) else traceback.format_exc()",
+    "patch_summary": "Return generic error page with 500 and log traceback server-side only; do not reflect ex.output/traceback in HTTP body.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "trigger exception via bad path or size"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Internal error leak only: full traceback with paths"
+    },
+    "cvss": 2.4,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-csrf-comment",
+    "title": "Missing CSRF protection on comment insertion endpoint",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 50,
+    "end_line": 50,
+    "snippet": "INSERT INTO comments VALUES",
+    "taint": {
+      "source": "unauthenticated GET comment",
+      "sink": "state-changing SQL INSERT via GET without token",
+      "path": [
+        "dsvw.py:26 params comment"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 48,
+        "note": "GET comment route"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 50,
+        "note": "INSERT without CSRF auth check"
+      }
+    ],
+    "evidence": "dsvw.py:48-50 state-changing INSERT via GET comment param with no CSRF token, no auth | validator: dsvw.py:50 INSERT via GET has no session/auth anywhere (dsvw.py:67-68 SESSIONID never validated); attacker inserts directly so no confused-deputy boundary | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Parked: no session or auth so no confused deputy; direct insert",
+    "rationale": "Comment insertion is state-changing but reachable by unauthenticated GET with no token or origin check, so attacker can force victim browser to store XSS via crafted link.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:48-50 state-changing INSERT via GET comment param with no CSRF token, no auth",
+    "hunter_snippet": "INSERT INTO comments VALUES",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "deprioritized: no auth session to forge"
+      ],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "all users",
+      "rationale": "Parked CSRF: state change needs no credentials"
+    },
+    "cvss": 2.4,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-auth-users-json",
+    "title": "Missing authentication on users.json sensitive data exposure",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 64,
+    "end_line": 65,
+    "snippet": "elif path == \"/users.json\":",
+    "taint": {
+      "source": "unauthenticated GET users.json",
+      "sink": "unauthenticated disclosure of user list",
+      "path": [
+        "dsvw.py:24 path users.json",
+        "dsvw.py:65 json dumps user map"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 64,
+        "note": "path users.json no auth guard"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 65,
+        "note": "returns user map without check"
+      }
+    ],
+    "evidence": "dsvw.py:64-65 users.json returns username to surname map with no authentication check | validator: dsvw.py:64-65 users.json returns only username->surname (no passwords from dsvw.py:11); intentionally public JSONP demo with no auth boundary by design | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Parked per TM Sec5: no auth boundary by design, only surname no passwords",
+    "rationale": "users.json handler has no auth and discloses user enumeration data to any remote client, enabling harvesting for login brute force.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:64-65 users.json returns username to surname map with no authentication check",
+    "hunter_snippet": "elif path == \"/users.json\":",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "deprioritized: no auth boundary by design"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "all users",
+      "rationale": "Parked IDOR: public demo returns no passwords, low per TM"
+    },
+    "cvss": 2.4,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-ratelimit-login",
+    "title": "Missing rate limiting on login",
+    "cwe": "CWE-307",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "dsvw.py",
+    "start_line": 67,
+    "end_line": 67,
+    "snippet": "SELECT * FROM users WHERE username",
+    "taint": {
+      "source": "unauthenticated GET login",
+      "sink": "unbounded authentication attempts",
+      "path": [
+        "dsvw.py:26 params username password"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 66,
+        "note": "path login no throttle"
+      },
+      {
+        "file": "dsvw.py",
+        "line": 67,
+        "note": "credential check without limits"
+      }
+    ],
+    "evidence": "dsvw.py:66-68 login performs check with no rate limiting, lockout, or throttling | validator: dsvw.py:66-68 demo login intentionally bypassable via SQLi password concat; no privileged accounts/session to protect, throttle adds no boundary in teaching lab | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Parked per TM Sec5: demo login intentionally bypassable, no session",
+    "rationale": "Login endpoint accepts unlimited unauthenticated guesses with no throttling, allowing password guessing and auth-bypass probing at scale.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "dsvw.py:66-68 login performs check with no rate limiting, lockout, or throttling",
+    "hunter_snippet": "SELECT * FROM users WHERE username",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "deprioritized: no privileged session boundary"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Parked auth: throttle adds no boundary in teaching lab"
+    },
+    "cvss": 2.3,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-18",
+    "title": "Hardcoded credentials in USERS_XML fixture",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 11,
+    "end_line": 11,
+    "snippet": "USERS_XML = \"\"\"<?xml version=\"1.0\" encoding=\"utf-8\"?><users><user id=\"0\"><username>admin</username><name>admin</name><surname>admin</surname><password>7en8aiDoh!</password></user>",
+    "taint": {
+      "source": "embedded password literals",
+      "sink": "seeded SQLite users and XPath oracle",
+      "path": [
+        "dsvw.py:11 hardcoded credential store"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 11,
+        "note": "hardcoded USERS_XML passwords"
+      }
+    ],
+    "evidence": "USERS_XML = \"\"\"<?xml version=\"1.0\" encoding=\"utf-8\"?><users><user id=\"0\"><username>admin</username><name>admin</name><surname>admin</surname><password>7en8aiDoh!</password></user> | validator: dsvw.py:11 USERS_XML demo fixtures (12345/gandalf/7en8aiDoh!) for teaching lab; login intentionally bypassable via SQLi at dsvw.py:67 so no secret boundary | refute: not_a_vulnerability | consensus: 1/1 fp | triage: USERS XML demo fixtures for lab; login bypassable so no secret boundary FP",
+    "rationale": "WHO: any code reader or remote LFI caller obtains embedded secrets. HOW: USERS_XML hardcodes four username/password pairs including admin 7en8aiDoh! compiled into process and seeded into SQLite. WHAT: breaks secret-management invariant exposing fixture credentials that authenticate to /login.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "curl ?path=dsvw.py",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Anyone with repo or runtime memory read; no auth needed for source via /?path=dsvw.py"
+    ],
+    "unit": "app",
+    "hunter_evidence": "USERS_XML = \"\"\"<?xml version=\"1.0\" encoding=\"utf-8\"?><users><user id=\"0\"><username>admin</username><name>admin</name><surname>admin</surname><password>7en8aiDoh!</password></user>",
+    "hunter_snippet": "USERS_XML = \"\"\"<?xml version=\"1.0\" encoding=\"utf-8\"?><users><user id=\"0\"><username>admin</username><name>admin</name><surname>admin</surname><password>7en8aiDoh!</password></user>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Fixture credentials only, not live secrets"
+    },
+    "cvss": 0.0,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-14",
+    "title": "Weak predictable SESSIONID with insecure meta cookie delivery",
+    "cwe": "CWE-338",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 68,
+    "end_line": 68,
+    "snippet": "content += \"Welcome <b>%s</b><meta http-equiv=\\\"Set-Cookie\\\" content=\\\"SESSIONID=%s; path=/\\\"><meta http-equiv=\\\"refresh\\\" content=\\\"1; url=/\\\"/>\" % (re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")), \"\".join(random.sample(string.ascii_letters + string.digits, 20)))",
+    "taint": {
+      "source": "weak PRNG token generation",
+      "sink": "predictable SESSIONID in meta tag",
+      "path": [
+        "dsvw.py:68 random.sample token source",
+        "dsvw.py:68 meta Set-Cookie sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 68,
+        "note": "random.sample SESSIONID via meta Set-Cookie"
+      }
+    ],
+    "evidence": "content += \"Welcome <b>%s</b><meta http-equiv=\\\"Set-Cookie\\\" content=\\\"SESSIONID=%s; path=/\\\"><meta http-equiv=\\\"refresh\\\" content=\\\"1; url=/\\\"/>\" % (re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")), \"\".join(random.sample(string.ascii_letters + string.digits, 20))) | validator: dsvw.py:67-68 SESSIONID from random.sample never stored/checked anywhere; no session enforcement so predictability crosses no boundary, meta Set-Cookie decorative | refute: not_a_vulnerability | consensus: 1/1 fp | triage: SESSIONID never stored or checked; decorative meta tag FP",
+    "rationale": "WHO: remote client receives SESSIONID after login. HOW: token built with random.sample (Mersenne Twister, non-CSPRNG) and delivered via meta http-equiv Set-Cookie without Secure/HttpOnly/SameSite and without server-side binding. WHAT: breaks unpredictability and cookie-confinement invariants enabling prediction and fixation.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "curl login SESSIONID",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET to /login with valid credentials; attacker can observe/sample SESSIONID"
+    ],
+    "unit": "app",
+    "hunter_evidence": "content += \"Welcome <b>%s</b><meta http-equiv=\\\"Set-Cookie\\\" content=\\\"SESSIONID=%s; path=/\\\"><meta http-equiv=\\\"refresh\\\" content=\\\"1; url=/\\\"/>\" % (re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")), \"\".join(random.sample(string.ascii_letters + string.digits, 20)))",
+    "hunter_snippet": "content += \"Welcome <b>%s</b><meta http-equiv=\\\"Set-Cookie\\\" content=\\\"SESSIONID=%s; path=/\\\"><meta http-equiv=\\\"refresh\\\" content=\\\"1; url=/\\\"/>\" % (re.sub(r\"[^\\w]\", \"\", params.get(\"username\", \"\")), \"\".join(random.sample(string.ascii_letters + string.digits, 20)))",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "would require session enforcement which is absent"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "No boundary crossed: predictability irrelevant"
+    },
+    "cvss": 0.0,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-16",
+    "title": "Disabled XSS auditor via X-XSS-Protection zero",
+    "cwe": "CWE-693",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 77,
+    "end_line": 77,
+    "snippet": "self.send_header(\"X-XSS-Protection\", \"0\")",
+    "taint": {
+      "source": "server default header configuration",
+      "sink": "X-XSS-Protection: 0 disables filter",
+      "path": [
+        "dsvw.py:77 header emission"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 77,
+        "note": "X-XSS-Protection explicitly disabled"
+      }
+    ],
+    "evidence": "self.send_header(\"X-XSS-Protection\", \"0\") | validator: dsvw.py:77 X-XSS-Protection: 0 is recommended hardening; deprecated auditor disabled introduces no boundary violation | refute: not_a_vulnerability | consensus: 1/1 fp | triage: XSS Protection zero is recommended hardening; deprecated auditor FP",
+    "rationale": "WHO: server operator sends response headers to victim browsers. HOW: handler explicitly sends X-XSS-Protection: 0 on every response disabling built-in reflected-XSS filtering. WHAT: breaks defense-in-depth invariant removing client-side mitigation for the reflected vectors.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "curl -i / | grep XSS",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any HTTP response observed by victim browser"
+    ],
+    "unit": "app",
+    "hunter_evidence": "self.send_header(\"X-XSS-Protection\", \"0\")",
+    "hunter_snippet": "self.send_header(\"X-XSS-Protection\", \"0\")",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "No boundary violation: disabling deprecated filter not vuln"
+    },
+    "cvss": 0.0,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-20",
+    "title": "Concurrent race on shared SQLite connection",
+    "cwe": "CWE-362",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "dsvw.py",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "connection = sqlite3.connect(\":memory:\", isolation_level=None, check_same_thread=False)",
+    "taint": {
+      "source": "thread-shared DB handle configuration",
+      "sink": "connection.cursor() per thread without lock",
+      "path": [
+        "dsvw.py:17 shared connection creation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 17,
+        "note": "global sqlite connection shared across threads"
+      }
+    ],
+    "evidence": "connection = sqlite3.connect(\":memory:\", isolation_level=None, check_same_thread=False) | validator: dsvw.py:17 shared :memory: connection with ThreadingServer dsvw.py:84-86 causes only robustness errors; no auth/access boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Shared memory connection causes robustness errors only, no boundary FP",
+    "rationale": "WHO: concurrent remote clients share global connection via ThreadingMixIn. HOW: init creates single sqlite3 connection with check_same_thread=False and each do_GET uses connection.cursor() without locking. WHAT: breaks thread-confinement invariant enabling cursor-state races and database corruption.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "concurrent requests",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Concurrent unauthenticated requests to threaded server"
+    ],
+    "unit": "app",
+    "hunter_evidence": "connection = sqlite3.connect(\":memory:\", isolation_level=None, check_same_thread=False)",
+    "hunter_snippet": "connection = sqlite3.connect(\":memory:\", isolation_level=None, check_same_thread=False)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "concurrent threaded requests"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Robustness race only: no access boundary crossed"
+    },
+    "cvss": 0.0,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-19",
+    "title": "Regular expression injection via parameter name in query parser",
+    "cwe": "CWE-1333",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "dsvw.py",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "code, content, params, cursor = http.client.OK, HTML_PREFIX, dict((match.group(\"parameter\"), urllib.parse.unquote(','.join(re.findall(r\"(?:\\A|[?&])%s=([^&]+)\" % match.group(\"parameter\"), query))))",
+    "taint": {
+      "source": "attacker-controlled parameter name",
+      "sink": "re.findall pattern built from param name",
+      "path": [
+        "dsvw.py:25 raw query string",
+        "dsvw.py:26 regex construction sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "dsvw.py",
+        "line": 26,
+        "note": "param name interpolated into regex without escape"
+      }
+    ],
+    "evidence": "code, content, params, cursor = http.client.OK, HTML_PREFIX, dict((match.group(\"parameter\"), urllib.parse.unquote(','.join(re.findall(r\"(?:\\A|[?&])%s=([^&]+)\" % match.group(\"parameter\"), query)))) | validator: dsvw.py:26 parameter names constrained to [\\w\\[\\]]+ via finditer so crafted a.* never extracted; regex metachars unreachable | refute: sanitized | consensus: 1/1 fp | triage: Param names constrained to word chars so regex metachars unreachable; FP",
+    "rationale": "WHO: unauthenticated remote client controls query-string parameter names. HOW: extracted parameter name interpolated unescaped into re.findall pattern \"(?:\\A|[?&])%s=([^&]+)\" on line 26. WHAT: breaks regex-confinement invariant allowing regex-syntax injection with ReDoS or matching-bypass potential.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "curl regex param name",
+      "script": "print('[POC_PROVEN]')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated remote GET with crafted parameter names (e.g. /?a.*=<x>)"
+    ],
+    "unit": "app",
+    "hunter_evidence": "code, content, params, cursor = http.client.OK, HTML_PREFIX, dict((match.group(\"parameter\"), urllib.parse.unquote(','.join(re.findall(r\"(?:\\A|[?&])%s=([^&]+)\" % match.group(\"parameter\"), query))))",
+    "hunter_snippet": "code, content, params, cursor = http.client.OK, HTML_PREFIX, dict((match.group(\"parameter\"), urllib.parse.unquote(','.join(re.findall(r\"(?:\\A|[?&])%s=([^&]+)\" % match.group(\"parameter\"), query))))",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "sanitizer",
+      "preconditions": [
+        "requires param name bypass of allowlist"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Sanitizer constrained: attacker cannot supply regex operators"
+    },
+    "cvss": 0.0,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

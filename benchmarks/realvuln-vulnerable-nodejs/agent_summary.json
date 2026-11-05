@@ -1,0 +1,18 @@
+{
+  "total": 9,
+  "by_state": {
+    "succeeded": 9
+  },
+  "by_role": {
+    "threat:researcher": 1,
+    "threat:historian": 1,
+    "threat:synthesizer": 1,
+    "hunter": 1,
+    "system-pass": 1,
+    "validator": 3,
+    "triage:1": 1
+  },
+  "failed": [],
+  "running": [],
+  "run_id": "/Users/critical/llms/cyber/Real-Vuln-Benchmark/repos/realvuln-vulnerable-nodejs"
+}

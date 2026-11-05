@@ -1,0 +1,1185 @@
+[
+  {
+    "id": "unit-public-0",
+    "title": "OS command injection in ExecPHP parseFile",
+    "cwe": "CWE-78",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "execphp.js",
+    "start_line": 22,
+    "end_line": 23,
+    "snippet": "let cmd = this.phpPath + ' ' + realFileName + ' ' + arg1 + ' ' + arg2;",
+    "taint": {
+      "source": "HTTP URL query item price",
+      "sink": "child_process exec shell",
+      "path": [
+        "routes/php.js line 30 queryParams",
+        "execphp.js line 22 cmd"
+      ]
+    },
+    "refs": [
+      {
+        "file": "execphp.js",
+        "line": 22,
+        "note": "shell concatenation of args"
+      },
+      {
+        "file": "execphp.js",
+        "line": 23,
+        "note": "exec with shell"
+      }
+    ],
+    "evidence": "let cmd = this.phpPath + realFileName + arg1 + arg2; | alt: secret test | alt: let db = monk('localhost:27017/nodetest2'); | validator: execphp.js:22 shell-concatenates attacker item/price into cmd executed via child_process.exec at execphp.js:23 reachable unauth from routes/php.js:30-34 with no sanitizer | consensus: 1/1 confirmed",
+    "rationale": "Remote client controls item price path via bridge URL. Handler passes them to parseFile which builds shell string for exec. Breaks command separation allowing OS command execution.",
+    "status": "confirmed",
+    "conditions": [
+      "Network access to php bridge",
+      "php binary present"
+    ],
+    "unit": "public",
+    "hunter_evidence": "let cmd = this.phpPath + realFileName + arg1 + arg2; | alt: secret test | alt: let db = monk('localhost:27017/nodetest2');",
+    "hunter_snippet": "let cmd = this.phpPath + realFileName + arg1 + arg2;",
+    "patch_summary": "Replace exec with execFile/allowlisted dispatch: validate path against allowlist and pass item/price as argv array without shell.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "bulk-disclosure",
+    "title": "Unauthenticated bulk disclosure",
+    "cwe": "CWE-200",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routes/users.js",
+    "start_line": 10,
+    "end_line": 11,
+    "snippet": "collection.find({}, {}, function (e, docs) {",
+    "taint": {
+      "source": "HTTP GET userlist",
+      "sink": "res.json docs bulk",
+      "path": [
+        "GET userlist anonymous"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 7,
+        "note": "unauthenticated bulk endpoint"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 10,
+        "note": "unfiltered find all"
+      }
+    ],
+    "evidence": "routes/users.js:7 GET userlist no auth; find all docs; global.js:34 fetches it exposing passwords PII cards | validator: routes/users.js:7 GET userlist no auth + routes/users.js:10 find({},{}) + routes/users.js:11 res.json bulk mounted at app.js:48, fetched at public/javascripts/global.js:34 | consensus: 1/1 confirmed | triage: Unauth bulk exfil of passwords PII cards",
+    "rationale": "GET userlist has no auth and returns every doc including plaintext passwords PII cards. Any anonymous client can exfiltrate.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:7 GET userlist no auth; find all docs; global.js:34 fetches it exposing passwords PII cards",
+    "hunter_snippet": "collection.find({}, {}, function (e, docs) {",
+    "patch_summary": "Require authenticated session/role on GET userlist, paginate and filter secret fields (password/card)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "GET userlist find all res.json with no auth exposes passwords and cards"
+    },
+    "cvss": 8.8,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "missing-auth-php-bridge-rce-entry",
+    "title": "Missing authentication on GET *.php code-execution bridge",
+    "cwe": "CWE-306",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "routes/php.js",
+    "start_line": 28,
+    "end_line": 28,
+    "snippet": "router.get('*.php', function (request, response, next) {",
+    "taint": {
+      "source": "untrusted network request, no session required",
+      "sink": "unauthenticated access to OS command / PHP execution",
+      "path": [
+        "routes/php.js:28 unauthenticated GET *.php entry",
+        "routes/php.js:30 parseFile dispatch",
+        "execphp.js:22 child_process.exec sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/php.js",
+        "line": 28,
+        "note": "unauthenticated *.php handler, no auth guard"
+      },
+      {
+        "file": "execphp.js",
+        "line": 22,
+        "note": "reached privileged exec sink"
+      },
+      {
+        "file": "app.js",
+        "line": 52,
+        "note": "php router mounted without auth middleware"
+      }
+    ],
+    "evidence": "routes/php.js:28 registers GET *.php with no session check, no auth middleware; reaches execphp.js:22 child_process.exec and phpFiles/order.php XML parser | validator: routes/php.js:28 GET *.php no auth guard mounted at app.js:52 reaching execphp.js:22 child_process.exec shell-concatenated cmd | consensus: 1/1 confirmed | triage: Unauth entry to OS command execution",
+    "rationale": "Anyone on the network can invoke server-side PHP execution + XXE chain without logging in; sibling privileged routes also lack checks, but this endpoint directly yields OS command execution and file disclosure.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/php.js:28 registers GET *.php with no session check, no auth middleware; reaches execphp.js:22 child_process.exec and phpFiles/order.php XML parser",
+    "hunter_snippet": "router.get('*.php', function (request, response, next) {",
+    "patch_summary": "Remove shell bridge or gate with auth plus execFile allowlisted file and validated args",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "GET php with no auth reaches child exec shell concatenated cmd"
+    },
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "nosql-bypass",
+    "title": "NoSQL auth bypass in login",
+    "cwe": "CWE-943",
+    "severity": "critical",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 58,
+    "end_line": 58,
+    "snippet": "var user = await collection.findOne({ username: req.body.username, password: req.body.password });",
+    "taint": {
+      "source": "HTTP POST body",
+      "sink": "collection.findOne attacker query",
+      "path": [
+        "POST session body"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 58,
+        "note": "unsanitized findOne"
+      },
+      {
+        "file": "app.js",
+        "line": 37,
+        "note": "extended true enables operators"
+      }
+    ],
+    "evidence": "routes/users.js:58 findOne uses req.body verbatim; app.js:37 extended true enables operator objects; only empty-string check at routes/users.js:52 | validator: routes/users.js:58 findOne({username:req.body.username,password:req.body.password}) verbatim with only empty check at routes/users.js:52 and extended:true at app.js:37 enabling $gt objects | consensus: 1/1 confirmed",
+    "rationale": "POST session passes body fields directly as Mongo query with no type check. Attacker sends operator objects to match arbitrary user and bypass auth.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:58 findOne uses req.body verbatim; app.js:37 extended true enables operator objects; only empty-string check at routes/users.js:52",
+    "hunter_snippet": "var user = await collection.findOne({ username: req.body.username, password: req.body.password });",
+    "patch_summary": "Strict string type-check, reject $-prefixed operators, schema validation before findOne",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.5,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "xxe-php-order",
+    "title": "XXE in PHP order bridge",
+    "cwe": "CWE-611",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "phpFiles/order.php",
+    "start_line": 21,
+    "end_line": 23,
+    "snippet": "libxml_disable_entity_loader (false);",
+    "taint": {
+      "source": "HTTP GET *.php item param",
+      "sink": "DOMDocument loadXML with NOENT DTDLOAD",
+      "path": [
+        "routes/php.js:28 originalUrl item",
+        "phpFiles/order.php:12 argv into XML"
+      ]
+    },
+    "refs": [
+      {
+        "file": "phpFiles/order.php",
+        "line": 21,
+        "note": "entity loader enabled"
+      },
+      {
+        "file": "phpFiles/order.php",
+        "line": 23,
+        "note": "loadXML with NOENT DTDLOAD"
+      }
+    ],
+    "evidence": "routes/php.js:30-34 item forwarded to PHP argv; phpFiles/order.php:12 urldecode argv interpolated; phpFiles/order.php:21-23 loadXML with LIBXML_NOENT DTDLOAD and entity loader enabled | validator: phpFiles/order.php:21 loader enabled (false) + phpFiles/order.php:23 loadXML LIBXML_NOENT|DTDLOAD on attacker $name from phpFiles/order.php:12 via routes/php.js:30-34 and execphp.js:22 | consensus: 1/1 confirmed",
+    "rationale": "Attacker item flows Node to PHP argv into XML parsed with external entities explicitly enabled. Attacker can inject DOCTYPE ENTITY to read server files like etc passwd.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/php.js:30-34 item forwarded to PHP argv; phpFiles/order.php:12 urldecode argv interpolated; phpFiles/order.php:21-23 loadXML with LIBXML_NOENT DTDLOAD and entity loader enabled",
+    "hunter_snippet": "libxml_disable_entity_loader (false);",
+    "patch_summary": "Disable external entities (loader true), drop NOENT/DTDLOAD, use LIBXML_NONET, validate item/price and allowlist PHP file",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "missing-auth-admin",
+    "title": "Missing authorization on GET admin",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routes/admin.js",
+    "start_line": 5,
+    "end_line": 6,
+    "snippet": "router.get('/admin', function(req, res) {",
+    "taint": {
+      "source": "HTTP GET admin",
+      "sink": "render admin UI",
+      "path": [
+        "GET admin anonymous"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/admin.js",
+        "line": 5,
+        "note": "admin route no guard"
+      }
+    ],
+    "evidence": "routes/admin.js:5 GET admin renders UI with no check; mounted at app.js:47 | validator: routes/admin.js:5 router.get('/admin') with no session check rendering admin UI, mounted at app.js:47 without middleware | consensus: 1/1 confirmed | triage: Unauth GET admin renders privileged UI",
+    "rationale": "GET admin has no server-side auth check before rendering privileged UI, combined with unauthenticated APIs gives full admin to anonymous.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/admin.js:5 GET admin renders UI with no check; mounted at app.js:47",
+    "hunter_snippet": "router.get('/admin', function(req, res) {",
+    "patch_summary": "Enforce server-side session/role check on GET /admin before render",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Router get admin with no session check mounted without middleware"
+    },
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "idor-delete",
+    "title": "IDOR on DELETE deleteuser",
+    "cwe": "CWE-639",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "routes/users.js",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "collection.remove({ '_id': userToDelete }, function (err) {",
+    "taint": {
+      "source": "HTTP DELETE param",
+      "sink": "collection.remove attacker id",
+      "path": [
+        "userlist leaks _id",
+        "DELETE id param"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 34,
+        "note": "delete missing auth"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 38,
+        "note": "remove by attacker id"
+      }
+    ],
+    "evidence": "routes/users.js:34 DELETE deleteuser id from URL no check; IDs enumerable via bulk userlist | validator: routes/users.js:32 DELETE deleteuser/:id + routes/users.js:38 remove by attacker id with no ownership check, IDs enumerable via routes/users.js:10 | consensus: 1/1 confirmed",
+    "rationale": "DELETE trusts URL id with no session or ownership check. Attacker enumerates IDs then deletes arbitrary accounts.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:34 DELETE deleteuser id from URL no check; IDs enumerable via bulk userlist",
+    "hunter_snippet": "collection.remove({ '_id': userToDelete }, function (err) {",
+    "patch_summary": "Require auth + ownership/admin check on delete, validate ObjectId",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "plaintext-pw",
+    "title": "Plaintext password handling",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "views/login.jade",
+    "start_line": 40,
+    "end_line": 40,
+    "snippet": "input#loginPassword(type='text', placeholder='Password')",
+    "taint": {
+      "source": "password input no hashing",
+      "sink": "plaintext compare and disclosure",
+      "path": [
+        "login form capture"
+      ]
+    },
+    "refs": [
+      {
+        "file": "views/login.jade",
+        "line": 40,
+        "note": "plaintext field"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 58,
+        "note": "plaintext compare"
+      }
+    ],
+    "evidence": "views/login.jade:40 type text password; routes/users.js:58 plaintext compare; bulk disclosure returns plaintext | validator: views/login.jade:40 password field type='text'; routes/users.js:58 plaintext findOne compare; no bcrypt in package.json; bulk leak via routes/users.js:7 | consensus: 1/1 confirmed | triage: Plaintext password capture compare storage",
+    "rationale": "Passwords collected stored compared in plaintext and disclosed in bulk, exposes all credentials.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "views/login.jade:40 type text password; routes/users.js:58 plaintext compare; bulk disclosure returns plaintext",
+    "hunter_snippet": "input#loginPassword(type='text', placeholder='Password')",
+    "patch_summary": "Hash passwords with bcrypt/argon2, set input type=password, never return password/card to client.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "Text field plus plaintext compare with no bcrypt enables theft"
+    },
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "xss-php-echo",
+    "title": "Reflected XSS via unescaped PHP echo",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "phpFiles/order.php",
+    "start_line": 27,
+    "end_line": 27,
+    "snippet": "echo You have ordered name with price;",
+    "taint": {
+      "source": "HTTP GET item param",
+      "sink": "echo name unescaped",
+      "path": [
+        "routes/php.js:28 item",
+        "phpFiles/order.php:12 name"
+      ]
+    },
+    "refs": [
+      {
+        "file": "phpFiles/order.php",
+        "line": 27,
+        "note": "unescaped echo"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 32,
+        "note": "verbatim response.send"
+      }
+    ],
+    "evidence": "phpFiles/order.php:12 name from argv; phpFiles/order.php:27 unescaped echo; routes/php.js:32 sends PHP output verbatim | validator: phpFiles/order.php:12 $name from argv + phpFiles/order.php:27 unescaped echo sent verbatim at routes/php.js:32 response.send | consensus: 1/1 confirmed",
+    "rationale": "Attacker item echoed without encoding into HTML returned verbatim by Node bridge, executing script in victim browser.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "phpFiles/order.php:12 name from argv; phpFiles/order.php:27 unescaped echo; routes/php.js:32 sends PHP output verbatim",
+    "hunter_snippet": "echo You have ordered name with price;",
+    "patch_summary": "Context-encode $name/$price with htmlspecialchars before echo",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "mass-assign",
+    "title": "Mass-assignment in PUT modify",
+    "cwe": "CWE-915",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 113,
+    "end_line": 113,
+    "snippet": "collection.findOneAndUpdate({ username: req.session.user.username }, { $set: query },",
+    "taint": {
+      "source": "HTTP PUT body",
+      "sink": "findOneAndUpdate $set",
+      "path": [
+        "PUT modify body"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 111,
+        "note": "whole body assigned"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 113,
+        "note": "$set sink"
+      }
+    ],
+    "evidence": "routes/users.js:104 PUT modify; routes/users.js:111 req.body verbatim; routes/users.js:113 $set query | validator: routes/users.js:111 query=req.body verbatim + routes/users.js:113 findOneAndUpdate $set query gated only by routes/users.js:104 session check with no field allowlist | consensus: 1/1 confirmed",
+    "rationale": "Authenticated user controls whole body used as $set with no allowlist, can overwrite username password or inject operators.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:104 PUT modify; routes/users.js:111 req.body verbatim; routes/users.js:113 $set query",
+    "hunter_snippet": "collection.findOneAndUpdate({ username: req.session.user.username }, { $set: query },",
+    "patch_summary": "Allowlist updatable fields and reject username/_id/operators before $set",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "stored-xss",
+    "title": "Stored XSS in admin table",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "public/javascripts/global.js",
+    "start_line": 46,
+    "end_line": 46,
+    "snippet": "$('.userList table tbody').html(tableContent);",
+    "taint": {
+      "source": "attacker username",
+      "sink": "jQuery html",
+      "path": [
+        "adduser username",
+        "userlist JSON"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/javascripts/global.js",
+        "line": 40,
+        "note": "unsafe concat"
+      },
+      {
+        "file": "public/javascripts/global.js",
+        "line": 46,
+        "note": "html sink"
+      }
+    ],
+    "evidence": "adduser stores username verbatim; userlist returns them; global.js:40 concat; global.js:46 html sink | validator: public/javascripts/global.js:40 concat username/email unsanitized + public/javascripts/global.js:46 .html sink with verbatim insert at routes/users.js:25 returned at routes/users.js:10 | consensus: 1/1 confirmed",
+    "rationale": "Stored XSS: attacker registers with script in username, persisted in Mongo, later injected via jQuery html in admin view.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "adduser stores username verbatim; userlist returns them; global.js:40 concat; global.js:46 html sink",
+    "hunter_snippet": "$('.userList table tbody').html(tableContent);",
+    "patch_summary": "HTML-encode username/email on render (use .text) and validate on adduser",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "insecure-http-cdn",
+    "title": "Active content loaded over plaintext HTTP without integrity",
+    "cwe": "CWE-829",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "views/layout.jade",
+    "start_line": 9,
+    "end_line": 9,
+    "snippet": "script(src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js')",
+    "taint": {
+      "source": "remote CDN fetch over HTTP",
+      "sink": "browser executes MITM-controlled JavaScript",
+      "path": [
+        "views/layout.jade:9 CDN script include",
+        "views/login.jade:33 password/card forms in same DOM"
+      ]
+    },
+    "refs": [
+      {
+        "file": "views/layout.jade",
+        "line": 9,
+        "note": "plaintext CDN script sink"
+      },
+      {
+        "file": "views/login.jade",
+        "line": 33,
+        "note": "credential form whose confidentiality depends on page scripts"
+      }
+    ],
+    "evidence": "views/layout.jade:9 loads jQuery 2.1.1 over plaintext http:// with no integrity/subresource-integrity hash; every view extends layout so every page executes the MITM-able script | validator: views/layout.jade:9 script http://ajax.googleapis.com jquery 2.1.1 no integrity, extended by all views e.g. views/login.jade:1 | consensus: 1/1 confirmed",
+    "rationale": "Network-adjacent attacker can intercept or modify the plaintext CDN response and inject arbitrary JS into every page (login, admin, order), stealing plaintext passwords, PII and credit-card data entered in those forms. Distinct from reported stored/reflected XSS; this is supply-chain inclusion weakness.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "views/layout.jade:9 loads jQuery 2.1.1 over plaintext http:// with no integrity/subresource-integrity hash; every view extends layout so every page executes the MITM-able script",
+    "hunter_snippet": "script(src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js')",
+    "patch_summary": "Load over https with SRI hash and pin version, or vendor locally",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "missing-auth-unauthenticated-account-creation",
+    "title": "Missing authentication allows unauthenticated account creation via POST /users/adduser",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "router.post('/adduser', async function (req, res) {",
+    "taint": {
+      "source": "untrusted request body, no session required",
+      "sink": "unauthenticated creation of persistent user document",
+      "path": [
+        "routes/users.js:16 unauthenticated POST /users/adduser entry",
+        "routes/users.js:25 collection.insert(req.body)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 16,
+        "note": "POST /adduser with no auth guard"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 104,
+        "note": "contrast: PUT /modify does check req.session.user"
+      },
+      {
+        "file": "app.js",
+        "line": 48,
+        "note": "users router mounted without auth"
+      }
+    ],
+    "evidence": "routes/users.js:16 POST /adduser handler has no req.session / role check, unlike PUT /modify at routes/users.js:104-107 which checks login; mounted in app.js:48 without auth middleware | validator: routes/users.js:16 POST adduser no session check inserting at routes/users.js:25 mounted at app.js:48, contrast PUT modify check at routes/users.js:104 | consensus: 1/1 confirmed | triage: Unauth persistent account creation",
+    "rationale": "Add-user form lives on /admin UI but server enforces no authentication, so any unauthenticated client can create arbitrary accounts (with attacker-chosen fields including card/password) for persistence and subsequent login.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:16 POST /adduser handler has no req.session / role check, unlike PUT /modify at routes/users.js:104-107 which checks login; mounted in app.js:48 without auth middleware",
+    "hunter_snippet": "router.post('/adduser', async function (req, res) {",
+    "patch_summary": "Require admin session/role on POST adduser",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "tenant",
+      "rationale": "POST adduser inserts body with no session check"
+    },
+    "cvss": 7.1,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "insert-inject",
+    "title": "Unsanitized insert in adduser",
+    "cwe": "CWE-943",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "routes/users.js",
+    "start_line": 25,
+    "end_line": 25,
+    "snippet": "collection.insert(req.body, function (err, result) {",
+    "taint": {
+      "source": "HTTP POST body",
+      "sink": "collection.insert body",
+      "path": [
+        "POST adduser body"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 25,
+        "note": "verbatim insert sink"
+      }
+    ],
+    "evidence": "routes/users.js:16 POST adduser; routes/users.js:25 insert req.body verbatim | validator: routes/users.js:25 collection.insert(req.body) verbatim on active POST /users/adduser (app.js:48) with only duplicate check at routes/users.js:21 and no operator/field validation | consensus: 1/1 confirmed",
+    "rationale": "Add-user inserts entire body without validation, allows operator injection and stored payloads for admin XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:16 POST adduser; routes/users.js:25 insert req.body verbatim",
+    "hunter_snippet": "collection.insert(req.body, function (err, result) {",
+    "patch_summary": "Allowlist insertable fields and reject keys starting with $; enforce string types before insert.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "php-bridge-path-traversal-file-control",
+    "title": "Path traversal / unrestricted file control in PHP bridge file parameter",
+    "cwe": "CWE-22",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "execphp.js",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "let realFileName = this.phpFolder + fileName;",
+    "taint": {
+      "source": "untrusted URL path component",
+      "sink": "filesystem path handed to /usr/bin/php execution",
+      "path": [
+        "routes/php.js:28 GET *.php receives originalUrl",
+        "routes/php.js:12 result.path = query.split(\"?\")[0] attacker-controlled",
+        "routes/php.js:30 execPHP.parseFile(queryParams.path,...)",
+        "execphp.js:18 phpFolder + fileName concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/php.js",
+        "line": 12,
+        "note": "path taken from raw URL"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 30,
+        "note": "attacker path forwarded to parseFile"
+      },
+      {
+        "file": "execphp.js",
+        "line": 18,
+        "note": "unsanitized concatenation to phpFolder"
+      }
+    ],
+    "evidence": "routes/php.js:12 derives result.path directly from request.originalUrl; routes/php.js:30-31 passes queryParams.path to parseFile; execphp.js:18 concatenates without validation | validator: routes/php.js:12 path derived from originalUrl and forwarded at routes/php.js:30 to execphp.js:18 phpFolder+fileName concat with no validation then executed at execphp.js:22 | consensus: 1/1 confirmed | triage: Unauth path control selects PHP file executed",
+    "rationale": "Unauthenticated URL path controls the filesystem path passed to /usr/bin/php; no allowlist, basename check, or traversal rejection, so attacker can select arbitrary local PHP/file for execution beyond the intended phpFiles/ dir \u2014 distinct file-name sink from shell-arg injection.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/php.js:12 derives result.path directly from request.originalUrl; routes/php.js:30-31 passes queryParams.path to parseFile; execphp.js:18 concatenates without validation",
+    "hunter_snippet": "let realFileName = this.phpFolder + fileName;",
+    "patch_summary": "Allowlist PHP filenames and canonicalize with path.resolve containment check; never concatenate URL path.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "platform",
+      "rationale": "Path from originalUrl concatenated without validation then exec php"
+    },
+    "cvss": 7.1,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "weak-default-password-username-equals-password",
+    "title": "Weak default credential: new-user password set equal to username",
+    "cwe": "CWE-521",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "public/javascripts/global.js",
+    "start_line": 85,
+    "end_line": 85,
+    "snippet": "      'password': $('#addUser fieldset input#inputUserName').val()",
+    "taint": {
+      "source": "admin UI username input reused as password",
+      "sink": "MongoDB persistence of attacker-guessable password",
+      "path": [
+        "public/javascripts/global.js:85 password derived from username input",
+        "routes/users.js:16 POST /users/adduser receives newUser",
+        "routes/users.js:25 collection.insert(req.body) persists weak password",
+        "routes/users.js:58 collection.findOne login accepts it"
+      ]
+    },
+    "refs": [
+      {
+        "file": "public/javascripts/global.js",
+        "line": 85,
+        "note": "password copied from username input"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 25,
+        "note": "verbatim insert stores weak password"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 58,
+        "note": "login accepts weak password without policy"
+      }
+    ],
+    "evidence": "public/javascripts/global.js:85 sets password from username field; routes/users.js:16-25 inserts req.body verbatim without password policy; routes/users.js:58 logs in with that password | validator: public/javascripts/global.js:85 password copied from username input persisted verbatim at routes/users.js:25 and accepted at routes/users.js:58 with no policy | consensus: 1/1 confirmed",
+    "rationale": "Any admin creating a user via /admin UI sends password identical to username; server stores it verbatim in Mongo and login accepts it, enabling trivial credential guessing and account takeover across units.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "public/javascripts/global.js:85 sets password from username field; routes/users.js:16-25 inserts req.body verbatim without password policy; routes/users.js:58 logs in with that password",
+    "hunter_snippet": "      'password': $('#addUser fieldset input#inputUserName').val()",
+    "patch_summary": "Stop deriving password from username, enforce random/password policy and hash with bcrypt",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "csrf-put-modify",
+    "title": "Missing CSRF protection on PUT /users/modify",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/users.js",
+    "start_line": 104,
+    "end_line": 104,
+    "snippet": "router.put('/modify', async function (req, res) {",
+    "taint": {
+      "source": "cross-site forged request carrying victim cookies",
+      "sink": "MongoDB findOneAndUpdate of victim account",
+      "path": [
+        "app.js:28 cookie session auth",
+        "routes/users.js:104 PUT /modify state change"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 104,
+        "note": "state-changing endpoint with session auth only"
+      },
+      {
+        "file": "app.js",
+        "line": 28,
+        "note": "cookie-session setup with no csrf protection"
+      },
+      {
+        "file": "public/javascripts/global.js",
+        "line": 256,
+        "note": "plain AJAX PUT with no token"
+      }
+    ],
+    "evidence": "routes/users.js:104 PUT /users/modify mutates the logged-in user via cookie session with no CSRF token, SameSite, or Origin check; app.js:28-38 shows cookie session and no csurf/helmet middleware; public/javascripts/global.js:256-260 issues the PUT via plain AJAX | validator: routes/users.js:104 PUT /modify does state-changing findOneAndUpdate at routes/users.js:113 on cookie session from app.js:28 with no csurf/SameSite/Origin check and tokenless AJAX at global.js:256 | consensus: 1/1 confirmed | triage: Cookie state change needs victim interaction",
+    "rationale": "Authenticated victim visiting attacker page triggers cross-site PUT /users/modify with cookies attached, letting attacker overwrite victim email/password/profile (mass-assignment target already proven). No anti-CSRF control exists anywhere in app.js. Distinct from reported mass-assignment content flaw; this is the missing request-authenticity control on the endpoint.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:104 PUT /users/modify mutates the logged-in user via cookie session with no CSRF token, SameSite, or Origin check; app.js:28-38 shows cookie session and no csurf/helmet middleware; public/javascripts/global.js:256-260 issues the PUT via plain AJAX",
+    "hunter_snippet": "router.put('/modify', async function (req, res) {",
+    "patch_summary": "Add CSRF tokens with SameSite=Lax/Strict cookies plus Origin/Referer check on state-changing routes.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim logged in",
+        "victim visits attacker site"
+      ],
+      "auth": "logged-in",
+      "rw": "write",
+      "blast": "one user",
+      "rationale": "PUT modify on cookie session with no token SameSite Origin check"
+    },
+    "cvss": 4.6,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "no-rate-limit-login",
+    "title": "Missing rate limiting on POST /users/session login",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/users.js",
+    "start_line": 46,
+    "end_line": 46,
+    "snippet": "router.post('/session', async function (req, res) {",
+    "taint": {
+      "source": "remote HTTP request body",
+      "sink": "unbounded authentication attempts",
+      "path": [
+        "routes/users.js:46 login entry",
+        "routes/users.js:58 Mongo findOne credential check"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 46,
+        "note": "login endpoint with no throttle"
+      },
+      {
+        "file": "app.js",
+        "line": 35,
+        "note": "middleware list has no rate limiter"
+      },
+      {
+        "file": "public/javascripts/global.js",
+        "line": 72,
+        "note": "password defaults to username enlarges guessing surface"
+      }
+    ],
+    "evidence": "routes/users.js:46 POST /users/session performs credential verification with no rate-limit, lockout, or CAPTCHA middleware; app.js:28-52 registers no throttling; handler returns distinguishable unauthorized vs field messages enabling online guessing | validator: routes/users.js:46 POST /users/session credential check at routes/users.js:58 has no throttle/lockout and app.js:28-52 registers no rate-limiter; distinguishable unauthorized vs fill-fields messages | consensus: 1/1 confirmed | triage: Unbounded login enables online guessing",
+    "rationale": "Remote unauthenticated attacker can issue unlimited login guesses to exploit weak/default passwords (adduser defaults password to username) and to probe NoSQL bypass payloads, with no throttling or account lockout. Distinct from reported NoSQL bypass content flaw; this is the missing brute-force control on the same endpoint.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:46 POST /users/session performs credential verification with no rate-limit, lockout, or CAPTCHA middleware; app.js:28-52 registers no throttling; handler returns distinguishable unauthorized vs field messages enabling online guessing",
+    "hunter_snippet": "router.post('/session', async function (req, res) {",
+    "patch_summary": "Add rate-limiting, account lockout/backoff and generic auth-failure messages on login.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "online brute force"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "tenant",
+      "rationale": "POST session with no throttle lockout and distinct messages"
+    },
+    "cvss": 4.6,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sensitive-session-disclosure-get-users",
+    "title": "Sensitive data exposure: GET /users returns full user object with password and credit-card",
+    "cwe": "CWE-200",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/users.js",
+    "start_line": 97,
+    "end_line": 97,
+    "snippet": "res.status(200).send({ user: req.session.user }).end();",
+    "taint": {
+      "source": "MongoDB user document persisted in server session",
+      "sink": "sensitive password + credit-card disclosure to session holder",
+      "path": [
+        "routes/users.js:58 findOne returns full doc with password/card",
+        "routes/users.js:65 req.session.user = user stores secrets",
+        "routes/users.js:97 GET /users sends session user verbatim"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/users.js",
+        "line": 65,
+        "note": "full user object stored in session"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 97,
+        "note": "full session user returned including secrets"
+      },
+      {
+        "file": "public/javascripts/global.js",
+        "line": 236,
+        "note": "client renders disclosed card/PII"
+      }
+    ],
+    "evidence": "routes/users.js:64-65 stores full DB user object in req.session.user; routes/users.js:97 returns it verbatim including plaintext password and credit-card fields | validator: routes/users.js:65 stores full Mongo doc in session and routes/users.js:97 returns it verbatim including password/card rendered at global.js:236 | consensus: 1/1 confirmed | triage: Auth session holder reads own password and card",
+    "rationale": "Login stores entire Mongo document (username, plaintext password, card, PII) in session; GET /users returns that object to the holder, disclosing password and payment data beyond what is needed for identity. Cross-unit flow login->session->disclosure, distinct from bulk /userlist disclosure.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/users.js:64-65 stores full DB user object in req.session.user; routes/users.js:97 returns it verbatim including plaintext password and credit-card fields",
+    "hunter_snippet": "    res.status(200).send({ user: req.session.user }).end();",
+    "patch_summary": "Store minimal session fields and strip password/card before send; project only needed fields.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "valid session"
+      ],
+      "auth": "logged-in",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "GET users returns session user verbatim including password and card"
+    },
+    "cvss": 4.6,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "insecure-session-cookie-flags",
+    "title": "Session cookie missing Secure/HttpOnly/SameSite hardening",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 30,
+    "end_line": 32,
+    "snippet": "resave: true,\n  saveUninitialized: true,\n  expires: new Date(Date.now() + (30 * 86400 * 1000)),",
+    "taint": {
+      "source": "server session configuration",
+      "sink": "session cookie issued without Secure/HttpOnly/SameSite",
+      "path": [
+        "app.js:28 session middleware issues cookie",
+        "routes/users.js:65 session stores full user object"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 28,
+        "note": "session() configuration site"
+      },
+      {
+        "file": "app.js",
+        "line": 32,
+        "note": "invalid expires option, no cookie flags"
+      },
+      {
+        "file": "routes/users.js",
+        "line": 64,
+        "note": "session state carries full user+PII object"
+      }
+    ],
+    "evidence": "app.js:28-33 configures cookie-based express-session with resave/saveUninitialized and invalid expires option and no cookie.secure/httpOnly/sameSite/maxAge; app.js:35-38 shows logger and cookieParser with no helmet or csrf middleware | validator: app.js:28 session() with no cookie.secure/sameSite/maxAge and invalid expires at app.js:32, no helmet at app.js:35 | consensus: 1/1 confirmed",
+    "rationale": "Session identity is carried in a cookie, but the cookie is issued without Secure/HttpOnly/SameSite hardening and expiry is set via invalid top-level expires instead of cookie.maxAge, so session cookies are exposed to theft via network sniffing/XSS and persist broader than intended. Distinct from reported hardcoded secret value at app.js:29; this is about missing cookie flags/lifecycle.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:28-33 configures cookie-based express-session with resave/saveUninitialized and invalid expires option and no cookie.secure/httpOnly/sameSite/maxAge; app.js:35-38 shows logger and cookieParser with no helmet or csrf middleware",
+    "hunter_snippet": "resave: true,\n  saveUninitialized: true,\n  expires: new Date(Date.now() + (30 * 86400 * 1000)),",
+    "patch_summary": "Set cookie.secure/httpOnly/sameSite/maxAge, load secret from env, fix expires placement",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "error-stack-disclosure",
+    "title": "Stack-trace disclosure in development error handler",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "views/error.jade",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "pre #{error.stack}",
+    "taint": {
+      "source": "server exception object",
+      "sink": "HTTP response body containing stack trace",
+      "path": [
+        "app.js:63 res.locals.error = err",
+        "views/error.jade:6 pre #{error.stack} render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 63,
+        "note": "full err passed in development"
+      },
+      {
+        "file": "views/error.jade",
+        "line": 6,
+        "note": "stack trace rendered to response"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 18,
+        "note": "example error trigger: undefined query handling"
+      }
+    ],
+    "evidence": "app.js:60-67 forwards full err object to error view when env is development (the default); views/error.jade:4-6 renders message, status and full error.stack to the client | validator: app.js:63 res.locals.error=err in development default + views/error.jade:6 pre #{error.stack} rendered to client | consensus: 1/1 confirmed | triage: Dev error view renders stack trace",
+    "rationale": "Unauthenticated remote user can trigger errors (e.g. GET /order.php variant without query crashes getJsonFromUrl, 404s, DB errors) and receives a rendered stack trace including paths, module versions and code frames, aiding further exploitation. Distinct from reported XSS/RCE; this is the error-handling disclosure sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:60-67 forwards full err object to error view when env is development (the default); views/error.jade:4-6 renders message, status and full error.stack to the client",
+    "hunter_snippet": "pre #{error.stack}",
+    "patch_summary": "Render generic message outside development, never send error.stack to client",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "development env",
+        "trigger exception"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "platform",
+      "rationale": "Error handler forwards err to error view rendering error.stack"
+    },
+    "cvss": 2.4,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "log-injection-php-bridge",
+    "title": "Log injection via unsanitized PHP-bridge parameters",
+    "cwe": "CWE-117",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routes/php.js",
+    "start_line": 23,
+    "end_line": 24,
+    "snippet": "console.log(result.item)\n  console.log(result.price)",
+    "taint": {
+      "source": "HTTP GET *.php query string (request.originalUrl)",
+      "sink": "console.log with attacker-controlled string",
+      "path": [
+        "routes/php.js:28 request.originalUrl",
+        "routes/php.js:21 substr item/price extraction",
+        "routes/php.js:23 console.log sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/php.js",
+        "line": 20,
+        "note": "attacker-controlled substr extraction for item/price"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 23,
+        "note": "unsanitized log sink"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 28,
+        "note": "entry: *.php handler uses request.originalUrl"
+      }
+    ],
+    "evidence": "routes/php.js:20-24 extracts attacker-controlled item/price via substr and passes them unsanitized to console.log; routes/php.js:28-31 shows the same values flow from request.originalUrl into the bridge | validator: routes/php.js:20 substr item/price from request.originalUrl logged unsanitized at routes/php.js:23 console.log via routes/php.js:28 entry | consensus: 1/1 confirmed | triage: Unauth log forgery only, no integrity impact",
+    "rationale": "Remote attacker controls item/price query substrings; they are logged verbatim with console.log without CRLF stripping, enabling log forging/injection and poisoning of morgan/console audit trail. Distinct from reported RCE/XXE which cover the exec and XML sinks, not the log sink.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/php.js:20-24 extracts attacker-controlled item/price via substr and passes them unsanitized to console.log; routes/php.js:28-31 shows the same values flow from request.originalUrl into the bridge",
+    "hunter_snippet": "console.log(result.item)\n  console.log(result.price)",
+    "patch_summary": "Strip CRLF/control chars or use structured logger for item/price before console.log",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "GET php bridge reachable"
+      ],
+      "auth": "unauthenticated",
+      "rw": "write",
+      "blast": "platform",
+      "rationale": "Attacker item price reaches console.log unsanitized but only forges logs"
+    },
+    "cvss": 2.3,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "php-bridge-parser-unhandled-exception-dos",
+    "title": "Unhandled exception / DoS in PHP-bridge URL parser on missing query string",
+    "cwe": "CWE-400",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routes/php.js",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "  let index1 = query.indexOf(\"item\"), index2 = query.indexOf(\"price\");",
+    "taint": {
+      "source": "untrusted URL without query string",
+      "sink": "unhandled exception / 500 causing availability impact",
+      "path": [
+        "routes/php.js:28 attacker URL without query string",
+        "routes/php.js:18 query becomes undefined",
+        "routes/php.js:20 TypeError on query.indexOf"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/php.js",
+        "line": 18,
+        "note": "unsafe split without null check"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 20,
+        "note": "dereference that throws when query is undefined"
+      },
+      {
+        "file": "routes/php.js",
+        "line": 28,
+        "note": "reachable unauthenticated via GET *.php"
+      }
+    ],
+    "evidence": "routes/php.js:18 takes query.split(\"?\")[1] without existence check; routes/php.js:20 calls query.indexOf on potentially undefined, throwing TypeError for GET /order.php with no query string | validator: routes/php.js:18-20 TypeError on missing query is caught by Express and handled at app.js:60-68 as single-request 500, no process crash or resource exhaustion | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Single 500 only, no crash per validator",
+    "rationale": "Crafted request without ?item/price (e.g., GET /order.php or GET /test.php) makes query undefined, causing synchronous TypeError inside handler and 500/error-path for every such hit; enables trivial unauthenticated DoS and error-handling abuse.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/php.js:18 takes query.split(\"?\")[1] without existence check; routes/php.js:20 calls query.indexOf on potentially undefined, throwing TypeError for GET /order.php with no query string",
+    "hunter_snippet": "  let index1 = query.indexOf(\"item\"), index2 = query.indexOf(\"price\");",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "GET without query string"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read",
+      "blast": "one user",
+      "rationale": "Missing query TypeError caught as 500, refuted as DoS"
+    },
+    "cvss": 2.3,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  }
+]

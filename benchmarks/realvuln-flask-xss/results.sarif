@@ -1,0 +1,4055 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "cerberus",
+          "rules": [
+            {
+              "id": "CWE-798",
+              "name": "CWE-798",
+              "shortDescription": {
+                "text": "Reflected XSS in unsafe_params view"
+              },
+              "properties": {
+                "security-severity": "9.0"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/798.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/798.html",
+                "markdown": "[MITRE CWE-798](https://cwe.mitre.org/data/definitions/798.html)"
+              }
+            },
+            {
+              "id": "CWE-862",
+              "name": "CWE-862",
+              "shortDescription": {
+                "text": "Missing authentication on API MessagesView.post"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/862.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/862.html",
+                "markdown": "[MITRE CWE-862](https://cwe.mitre.org/data/definitions/862.html)"
+              }
+            },
+            {
+              "id": "CWE-256",
+              "name": "CWE-256",
+              "shortDescription": {
+                "text": "Plaintext password comparison in login"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/256.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/256.html",
+                "markdown": "[MITRE CWE-256](https://cwe.mitre.org/data/definitions/256.html)"
+              }
+            },
+            {
+              "id": "CWE-79",
+              "name": "CWE-79",
+              "shortDescription": {
+                "text": "Reflected XSS sink in unsafe_cookies template"
+              },
+              "properties": {
+                "security-severity": "7.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/79.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/79.html",
+                "markdown": "[MITRE CWE-79](https://cwe.mitre.org/data/definitions/79.html)"
+              }
+            },
+            {
+              "id": "CWE-352",
+              "name": "CWE-352",
+              "shortDescription": {
+                "text": "Missing CSRF on change_email enables email hijack"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/352.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/352.html",
+                "markdown": "[MITRE CWE-352](https://cwe.mitre.org/data/definitions/352.html)"
+              }
+            },
+            {
+              "id": "CWE-601",
+              "name": "CWE-601",
+              "shortDescription": {
+                "text": "Open redirect in xss_protection index"
+              },
+              "properties": {
+                "security-severity": "4.9"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/601.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/601.html",
+                "markdown": "[MITRE CWE-601](https://cwe.mitre.org/data/definitions/601.html)"
+              }
+            },
+            {
+              "id": "CWE-489",
+              "name": "CWE-489",
+              "shortDescription": {
+                "text": "DEBUG True enabled"
+              },
+              "properties": {
+                "security-severity": "4.8"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/489.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/489.html",
+                "markdown": "[MITRE CWE-489](https://cwe.mitre.org/data/definitions/489.html)"
+              }
+            },
+            {
+              "id": "CWE-307",
+              "name": "CWE-307",
+              "shortDescription": {
+                "text": "Missing rate limiting on login enables brute force"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/307.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/307.html",
+                "markdown": "[MITRE CWE-307](https://cwe.mitre.org/data/definitions/307.html)"
+              }
+            },
+            {
+              "id": "CWE-614",
+              "name": "CWE-614",
+              "shortDescription": {
+                "text": "Session cookie missing Secure/SameSite flags"
+              },
+              "properties": {
+                "security-severity": "4.6"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/614.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/614.html",
+                "markdown": "[MITRE CWE-614](https://cwe.mitre.org/data/definitions/614.html)"
+              }
+            },
+            {
+              "id": "CWE-693",
+              "name": "CWE-693",
+              "shortDescription": {
+                "text": "Missing Content-Security-Policy and clickjacking/sniffing headers"
+              },
+              "properties": {
+                "security-severity": "4.5"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/693.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/693.html",
+                "markdown": "[MITRE CWE-693](https://cwe.mitre.org/data/definitions/693.html)"
+              }
+            },
+            {
+              "id": "CWE-668",
+              "name": "CWE-668",
+              "shortDescription": {
+                "text": "World-writable SQLite path in tmp"
+              },
+              "properties": {
+                "security-severity": "2.2"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/668.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/668.html",
+                "markdown": "[MITRE CWE-668](https://cwe.mitre.org/data/definitions/668.html)"
+              }
+            },
+            {
+              "id": "CWE-200",
+              "name": "CWE-200",
+              "shortDescription": {
+                "text": "Plaintext password disclosure in UsersView.index"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/200.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/200.html",
+                "markdown": "[MITRE CWE-200](https://cwe.mitre.org/data/definitions/200.html)"
+              }
+            },
+            {
+              "id": "CWE-480",
+              "name": "CWE-480",
+              "shortDescription": {
+                "text": "Assignment in condition in acknowledge JS"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/480.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/480.html",
+                "markdown": "[MITRE CWE-480](https://cwe.mitre.org/data/definitions/480.html)"
+              }
+            },
+            {
+              "id": "CWE-252",
+              "name": "CWE-252",
+              "shortDescription": {
+                "text": "Null dereference DoS in API MessagesView.get"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/252.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/252.html",
+                "markdown": "[MITRE CWE-252](https://cwe.mitre.org/data/definitions/252.html)"
+              }
+            },
+            {
+              "id": "CWE-863",
+              "name": "CWE-863",
+              "shortDescription": {
+                "text": "Confused-deputy in is_admin_user"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/863.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/863.html",
+                "markdown": "[MITRE CWE-863](https://cwe.mitre.org/data/definitions/863.html)"
+              }
+            },
+            {
+              "id": "CWE-697",
+              "name": "CWE-697",
+              "shortDescription": {
+                "text": "Type-confusion in is_owning_user"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/697.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/697.html",
+                "markdown": "[MITRE CWE-697](https://cwe.mitre.org/data/definitions/697.html)"
+              }
+            },
+            {
+              "id": "CWE-676",
+              "name": "CWE-676",
+              "shortDescription": {
+                "text": "Overly broad Jinja globals"
+              },
+              "properties": {
+                "security-severity": "2.4"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/676.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/676.html",
+                "markdown": "[MITRE CWE-676](https://cwe.mitre.org/data/definitions/676.html)"
+              }
+            },
+            {
+              "id": "CWE-20",
+              "name": "CWE-20",
+              "shortDescription": {
+                "text": "Unvalidated email write in change_email"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/20.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/20.html",
+                "markdown": "[MITRE CWE-20](https://cwe.mitre.org/data/definitions/20.html)"
+              }
+            },
+            {
+              "id": "CWE-287",
+              "name": "CWE-287",
+              "shortDescription": {
+                "text": "Username equality admin check"
+              },
+              "properties": {
+                "security-severity": "2.3"
+              },
+              "helpUri": "https://cwe.mitre.org/data/definitions/287.html",
+              "help": {
+                "text": "More information: https://cwe.mitre.org/data/definitions/287.html",
+                "markdown": "[MITRE CWE-287](https://cwe.mitre.org/data/definitions/287.html)"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS in unsafe_params view (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/sandboxes/views.py"
+                },
+                "region": {
+                  "startLine": 13,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Source: GET ?name="
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 13
+                          }
+                        },
+                        "message": {
+                          "text": "request.args"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "|safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Jinja |safe render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Reflected cookie XSS in unsafe_cookies handler (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/sandboxes/views.py"
+                },
+                "region": {
+                  "startLine": 36,
+                  "endLine": 37,
+                  "snippet": {
+                    "text": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 36
+                          }
+                        },
+                        "message": {
+                          "text": "Source: Cookie name and POST form name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "request.cookies"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "render_template"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Jinja safe render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Hardcoded Flask SECRET_KEY enables session forgery (conf 1.0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 23,
+                  "endLine": 23,
+                  "snippet": {
+                    "text": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "9.0",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded literal in config_app"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 23
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Flask session signing via SECRET_KEY"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-862",
+          "level": "error",
+          "message": {
+            "text": "Missing authentication on API MessagesView.post (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/api/views.py"
+                },
+                "region": {
+                  "startLine": 43,
+                  "endLine": 43,
+                  "snippet": {
+                    "text": "def post(self):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Add @admin_required to MessagesView.post or require auth + validate/sanitize message; keep admin render escaped"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Source: Unauthenticated JSON POST /api/v1/messages"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "unauthenticated entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "DB write"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: Persistent message store without auth"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "error",
+          "message": {
+            "text": "Plaintext password comparison in login (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/login/views.py"
+                },
+                "region": {
+                  "startLine": 17,
+                  "endLine": 17,
+                  "snippet": {
+                    "text": "if user and user.password == password:"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Hash passwords with bcrypt/argon2 on creation and use constant-time hash verification at login."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST username password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "request.form"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "compare"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 17
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext password comparison"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS sink in unsafe_cookies template (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "{{ name | safe }} in unsafe_cookies.html:6"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe filter to restore Jinja autoescaping for name."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cookie form name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 37
+                          }
+                        },
+                        "message": {
+                          "text": "name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: name safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Reflected XSS sink in unsafe_params template (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 6,
+                  "snippet": {
+                    "text": "{{ name | safe }} in unsafe_params.html:6"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe filter to restore Jinja autoescaping for name."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "name"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: name safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via from_user safe (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/admin/message.html"
+                },
+                "region": {
+                  "startLine": 29,
+                  "endLine": 29,
+                  "snippet": {
+                    "text": "{{ message.from_user | safe }} in admin/message.html:29"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe on from_user; autoescape admin table."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "Source: from_user"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 52
+                          }
+                        },
+                        "message": {
+                          "text": "from_user"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: from_user safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "error",
+          "message": {
+            "text": "Stored XSS via message safe (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/admin/message.html"
+                },
+                "region": {
+                  "startLine": 30,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "{{ message.message | safe }} in admin/message.html:30"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove |safe on message; autoescape admin table."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Source: feedback message"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "store"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: message safe"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-798",
+          "level": "error",
+          "message": {
+            "text": "Default admin credential in manage (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "manage.py"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 14,
+                  "snippet": {
+                    "text": "def add_admin(password equals admin)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "7.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+            "patchSummary": "Remove default password; require strong password via env/prompt, hash with bcrypt/argon2, force rotation."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "manage.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded default"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "manage.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: default credential"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-256",
+          "level": "warning",
+          "message": {
+            "text": "Plaintext password storage in change_password (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 34,
+                  "endLine": 35,
+                  "snippet": {
+                    "text": "User.query.filter_by(id=current_user.id).update({"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Hash new_password with bcrypt/argon2 before User.update; require current-password re-auth."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST new-password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 20
+                          }
+                        },
+                        "message": {
+                          "text": "new_password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "update"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 35
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: plaintext password write"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "Missing CSRF on change_email enables email hijack (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 41,
+                  "endLine": 43,
+                  "snippet": {
+                    "text": "@account_area.route('/change_email', methods=['POST'])\n@login_required\ndef change_email():"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add per-session CSRF token validation to change_email and include hidden token in forms macro"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 41
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST to /account_area/change_email (victim session cookie)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 44
+                          }
+                        },
+                        "message": {
+                          "text": "request.form email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "User.query.update email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 56
+                          }
+                        },
+                        "message": {
+                          "text": "db.session.commit"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 43
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: persistent User.email overwrite without CSRF token"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "warning",
+          "message": {
+            "text": "Stored XSS source in send_feedback (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "snippet": {
+                    "text": "new_message = Message(message=feedback, from_user=current_user.username)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Persist feedback as-is but remove |safe and autoescape on admin render; validate length."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST feedback"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 66
+                          }
+                        },
+                        "message": {
+                          "text": "feedback"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "store"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: persistent message with safe render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-601",
+          "level": "warning",
+          "message": {
+            "text": "Open redirect in xss_protection index (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/xss_protection/views.py"
+                },
+                "region": {
+                  "startLine": 12,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "return redirect(next)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.9",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Allowlist redirect targets (relative-only or explicit hosts) before redirect; default to index."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Source: query next"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "next"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "redirect"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: redirect next"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "Missing CSRF on send_feedback enables forced stored XSS (conf 0.92)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 63,
+                  "snippet": {
+                    "text": "@account_area.route('/send_feedback', methods=['POST'])\n@login_required\ndef send_feedback():"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require CSRF token on send_feedback and escape/sanitize Message before |safe render to admin"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST to /account_area/send_feedback (victim session)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 66
+                          }
+                        },
+                        "message": {
+                          "text": "feedback=request.form"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Message(message=feedback)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/admin/views.py"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Message.query.filter_by(acknowledged=False)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "{{ message.message | safe }}"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 63
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: admin browser JS execution of victim-forced stored message"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "CSRF-able session-state toggle via unauthenticated GET (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/xss_protection/views.py"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 12,
+                  "snippet": {
+                    "text": "session['xss_protection_enabled'] = not xss_protection_enabled"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require POST+CSRF for state toggle and allowlist next redirect targets"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated GET request with attacker next param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "GET entry"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "session write"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 73
+                          }
+                        },
+                        "message": {
+                          "text": "session read in after_request"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/xss_protection/views.py"
+                          },
+                          "region": {
+                            "startLine": 12
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: session state write + 302 redirect"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-489",
+          "level": "warning",
+          "message": {
+            "text": "DEBUG True enabled (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 26,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "app.config['DEBUG'] = True"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.8",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Set DEBUG/EXPLAIN_TEMPLATE_LOADING from env, default False in production; disable Werkzeug debugger outside local dev."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded config"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: debug mode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "CSRF blind update in acknowledge_message (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/api/views.py"
+                },
+                "region": {
+                  "startLine": 61,
+                  "endLine": 63,
+                  "snippet": {
+                    "text": "Message.query.filter_by(id=id).update({"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Require CSRF token on acknowledge POST and SameSite cookies; verify Origin."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 61
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST plus id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 63
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: acknowledge without CSRF"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-307",
+          "level": "warning",
+          "message": {
+            "text": "Missing rate limiting on login enables brute force (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/login/views.py"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "@authentication.route('/login', methods=['POST', 'GET'])\ndef login():"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add rate-limiting/lockout and delay on login; remove default credential and hash passwords"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Source: unauthenticated POST /auth/login form fields"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 14
+                          }
+                        },
+                        "message": {
+                          "text": "request.form username/password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 16
+                          }
+                        },
+                        "message": {
+                          "text": "User.query.filter_by(username)"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "login_user(user) session creation"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unlimited authentication attempts leading to session issuance"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "warning",
+          "message": {
+            "text": "Login CSRF on POST auth login (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/login/views.py"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 10,
+                  "snippet": {
+                    "text": "@authentication.route('/login', methods=['POST', 'GET'])"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Add per-session CSRF tokens to login and all state-changing POSTs; set SameSite=Lax cookies."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 9
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: login without CSRF"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "warning",
+          "message": {
+            "text": "Session cookie missing Secure/SameSite flags (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 22,
+                  "endLine": 26,
+                  "snippet": {
+                    "text": "def config_app(app):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.6",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Set SESSION_COOKIE_SECURE/SAMESITE=Lax/HTTPONLY and lifetime in config"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "Source: authenticated session cookie stored in browser"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 18
+                          }
+                        },
+                        "message": {
+                          "text": "login_user(user) session issuance"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 22
+                          }
+                        },
+                        "message": {
+                          "text": "config_app without SESSION_COOKIE_*"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 26
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: session cookie transmitted without Secure/SameSite restrictions"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "warning",
+          "message": {
+            "text": "Missing Content-Security-Policy and clickjacking/sniffing headers (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 71,
+                  "endLine": 77,
+                  "snippet": {
+                    "text": "def after_request(response):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Emit fixed CSP, X-Frame-Options:DENY/SAMEORIGIN, X-Content-Type-Options:nosniff in after_request"
+          }
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "warning",
+          "message": {
+            "text": "Unquoted attribute XSS via g.path (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/_base.html"
+                },
+                "region": {
+                  "startLine": 67,
+                  "endLine": 67,
+                  "snippet": {
+                    "text": "input name equals next type hidden"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "4.5",
+            "cvssVector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+            "patchSummary": "Quote attribute value=\"{{ g.path }}\" and rely on autoescape; prefer url_for for next values"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Source: URL path"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 68
+                          }
+                        },
+                        "message": {
+                          "text": "request.path"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "value"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 67
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unquoted attribute"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "Logout CSRF via GET-accessible logout (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/login/views.py"
+                },
+                "region": {
+                  "startLine": 28,
+                  "endLine": 30,
+                  "snippet": {
+                    "text": "def logout(): logout_user() via GET+POST"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Restrict logout to POST with per-session CSRF token and SameSite cookies."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 28
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site GET"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/login/views.py"
+                          },
+                          "region": {
+                            "startLine": 30
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: logout_user via GET"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-614",
+          "level": "note",
+          "message": {
+            "text": "Insecure cookie flags on unsafe_cookies Set-Cookie (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/sandboxes/views.py"
+                },
+                "region": {
+                  "startLine": 38,
+                  "endLine": 38,
+                  "snippet": {
+                    "text": "response.set_cookie('name', name)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Set httponly=True, secure=True, samesite='Lax' on set_cookie; set session cookie flags app-wide."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Source: server-set cookie"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/sandboxes/views.py"
+                          },
+                          "region": {
+                            "startLine": 38
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: set_cookie without flags"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-668",
+          "level": "note",
+          "message": {
+            "text": "World-writable SQLite path in tmp (conf 0.8)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 24,
+                  "snippet": {
+                    "text": "app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.2",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N",
+            "patchSummary": "Configure DB URI from env outside /tmp with 0600 perms; create directory securely, fail closed if unwritable."
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded URI"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: SQLite in tmp"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Plaintext password disclosure in UsersView.index (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/api/views.py"
+                },
+                "region": {
+                  "startLine": 72,
+                  "endLine": 72,
+                  "snippet": {
+                    "text": "users = [user.serialize for user in User.query.all()]"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Source: User table"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "serialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 72
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: JSON password disclosure"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-200",
+          "level": "note",
+          "message": {
+            "text": "Password exposure in User serialize (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/models/models.py"
+                },
+                "region": {
+                  "startLine": 27,
+                  "endLine": 29,
+                  "snippet": {
+                    "text": "password in User.serialize at models.py:27-29"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "Source: User.password"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "column"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 27
+                          }
+                        },
+                        "message": {
+                          "text": "serialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 29
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: password in JSON"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-480",
+          "level": "note",
+          "message": {
+            "text": "Assignment in condition in acknowledge JS (conf 0.95)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/admin/message.html"
+                },
+                "region": {
+                  "startLine": 42,
+                  "endLine": 42,
+                  "snippet": {
+                    "text": "if (data.status assignment success)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 42
+                          }
+                        },
+                        "message": {
+                          "text": "Source: AJAX response"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/admin/message.html"
+                          },
+                          "region": {
+                            "startLine": 42
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: assignment not compare"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-352",
+          "level": "note",
+          "message": {
+            "text": "CSRF on change_password enables takeover (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 15,
+                  "endLine": 15,
+                  "snippet": {
+                    "text": "@account_area.route('/change_password', methods=['POST'])"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Source: cross-site POST"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 15
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: password change without CSRF"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-252",
+          "level": "note",
+          "message": {
+            "text": "Null dereference DoS in API MessagesView.get (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/api/views.py"
+                },
+                "region": {
+                  "startLine": 25,
+                  "endLine": 25,
+                  "snippet": {
+                    "text": "message = Message.query.filter_by(id=id).first().serialize"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "Source: URL id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "id param"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "serialize"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 25
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: null dereference 500"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-863",
+          "level": "note",
+          "message": {
+            "text": "Confused-deputy in is_admin_user (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/decorators.py"
+                },
+                "region": {
+                  "startLine": 6,
+                  "endLine": 7,
+                  "snippet": {
+                    "text": "def is_admin_user(user):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/decorators.py"
+                          },
+                          "region": {
+                            "startLine": 6
+                          }
+                        },
+                        "message": {
+                          "text": "Source: caller user arg"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/decorators.py"
+                          },
+                          "region": {
+                            "startLine": 7
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: global instead of param"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-697",
+          "level": "note",
+          "message": {
+            "text": "Type-confusion in is_owning_user (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/decorators.py"
+                },
+                "region": {
+                  "startLine": 10,
+                  "endLine": 11,
+                  "snippet": {
+                    "text": "def is_owning_user(user, id):"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/decorators.py"
+                          },
+                          "region": {
+                            "startLine": 10
+                          }
+                        },
+                        "message": {
+                          "text": "Source: URL id string"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/api/views.py"
+                          },
+                          "region": {
+                            "startLine": 78
+                          }
+                        },
+                        "message": {
+                          "text": "string id"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/decorators.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "compare"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/decorators.py"
+                          },
+                          "region": {
+                            "startLine": 11
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: always False check"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-676",
+          "level": "note",
+          "message": {
+            "text": "Overly broad Jinja globals (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 31,
+                  "endLine": 34,
+                  "snippet": {
+                    "text": "app.jinja_env.globals.update("
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 31
+                          }
+                        },
+                        "message": {
+                          "text": "Source: hardcoded globals"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 34
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: builtins in Jinja"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-693",
+          "level": "note",
+          "message": {
+            "text": "Disabled X-XSS-Protection by default (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/flask_xss.py"
+                },
+                "region": {
+                  "startLine": 75,
+                  "endLine": 75,
+                  "snippet": {
+                    "text": "response.headers['X-XSS-Protection'] = 0"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Source: session flag"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 73
+                          }
+                        },
+                        "message": {
+                          "text": "session flag"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "header"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/flask_xss.py"
+                          },
+                          "region": {
+                            "startLine": 75
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: disable auditor"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/_base.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "Stored XSS via username safe in base (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/_base.html"
+                },
+                "region": {
+                  "startLine": 54,
+                  "endLine": 54,
+                  "snippet": {
+                    "text": "You are logged in as a regular user"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "Source: username store"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "User.username DB"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "safe"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/_base.html"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unescaped username"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "template reflection surface (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/components/forms.html"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1,
+                  "snippet": {
+                    "text": "form + {{ }} in template (verify server-side reflection)"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/components/forms.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Source: form input"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/components/forms.html"
+                          },
+                          "region": {
+                            "startLine": 1
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: template render"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-79",
+          "level": "note",
+          "message": {
+            "text": "Unquoted attribute in form macro (conf 0.9)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/templates/components/forms.html"
+                },
+                "region": {
+                  "startLine": 24,
+                  "endLine": 24,
+                  "snippet": {
+                    "text": "form class col-md-4 method action"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.4",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/components/forms.html"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Source: macro params"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/templates/components/forms.html"
+                          },
+                          "region": {
+                            "startLine": 24
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unquoted method action"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-20",
+          "level": "note",
+          "message": {
+            "text": "Unvalidated email write in change_email (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/blueprints/account_area/views.py"
+                },
+                "region": {
+                  "startLine": 54,
+                  "endLine": 55,
+                  "snippet": {
+                    "text": "User.query.filter_by(id=current_user.id).update({"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "Source: POST email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 45
+                          }
+                        },
+                        "message": {
+                          "text": "email"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 54
+                          }
+                        },
+                        "message": {
+                          "text": "update"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/blueprints/account_area/views.py"
+                          },
+                          "region": {
+                            "startLine": 55
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: unvalidated email write"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-287",
+          "level": "note",
+          "message": {
+            "text": "Username equality admin check (conf 0.85)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "app/models/models.py"
+                },
+                "region": {
+                  "startLine": 21,
+                  "endLine": 21,
+                  "snippet": {
+                    "text": "return self.username == 'admin'"
+                  }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "security-severity": "2.3",
+            "cvssVector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+          },
+          "codeFlows": [
+            {
+              "message": {
+                "text": "Taint tracking data-flow path"
+              },
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Source: username column"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "app/models/models.py"
+                          },
+                          "region": {
+                            "startLine": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Sink: privilege from username"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suppressions": [
+            {
+              "kind": "external",
+              "status": "accepted",
+              "justification": "Marked false positive during cerberus triage; see triage.log"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

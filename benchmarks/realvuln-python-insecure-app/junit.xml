@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="12" errors="0" skipped="0" timestamp="2026-11-04T17:41:39Z" time="0.000" failures="5">
+  <testcase classname="CWE-94" name="Hardcoded SUPER_SECRET_NAME credential in config [critical] app/config.py:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded SUPER_SECRET_NAME credential in config (CWE-94) critical conf=1.0 app/config.py:13-13">SUPER_SECRET_NAME = "John Ripper"  # FIXME: os.getenv("SUPER_SECRET_NAME")
+return Template(content).render()</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="SSTI test [critical] app/main.py:38-38">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSTI test (CWE-94) critical conf=1.0 app/main.py:38-38">return Template(content).render()
+return Template(content).render()</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Critical SSTI/RCE: unauthenticated ?name= rendered as Jinja2 template source [critical] app/main.py:41-41">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Critical SSTI/RCE: unauthenticated ?name= rendered as Jinja2 template source (CWE-94) critical conf=0.95 app/main.py:41-41">app/main.py:19 defines unauthenticated `name` query param defaulting to config.SUPER_SECRET_NAME; app/main.py:38 interpolates `name` and SSRF-derived `public_ip` into `content` via f-string; app/main.py:41 executes `Template(content).render()` where `content` is attacker-controlled template source
+    return Template(content).render()</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded application secrets baked into source defaults [high] app/config.py:13-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded application secrets baked into source defaults (CWE-798) high conf=0.95 app/config.py:13-15">Hardcoded fallback credentials baked into source at app/config.py:13 and app/config.py:15; same values published as example config in README.md:83-84; imported as defaults by app/main.py:19 and app/main.py:37 so they ship in repo and image layers
+SUPER_SECRET_NAME = "***"  # FIXME: os.getenv("SUPER_SECRET_NAME")</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via unescaped name interpolation into HTML [high] app/main.py:38-38">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via unescaped name interpolation into HTML (CWE-79) high conf=0.9 app/main.py:38-38">content = f"&lt;h1&gt;Hello, {name}!&lt;/h1&gt;&lt;h2&gt;Public IP: &lt;code&gt;{public_ip}&lt;/code&gt;&lt;/h2&gt;"
+content = f"&lt;h1&gt;Hello, {name}!&lt;/h1&gt;&lt;h2&gt;Public IP: &lt;code&gt;{public_ip}&lt;/code&gt;&lt;/h2&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-215" name="Production debug mode wired from env into FastAPI debug flag [medium] app/main.py:14-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="Sensitive default query value discloses baked-in secret in responses and OpenAPI [medium] app/main.py:19-19">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Outbound fetch without timeout enables worker exhaustion DoS [medium] app/main.py:31-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Coraza WAF engine disabled leaving SSTI/XSS rules non-enforcing [medium] caddy/Caddyfile:13-13">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Blocking synchronous requests call inside async handler starves event loop [medium] app/main.py:29-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Unescaped external IP-service body reflected into HTML enables XSS [medium] app/main.py:36-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-200" name="FastAPI interactive docs/OpenAPI left enabled on unauthenticated edge [low] app/main.py:10-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

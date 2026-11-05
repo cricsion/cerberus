@@ -1,0 +1,2878 @@
+[
+  {
+    "id": "unit-app-0",
+    "title": "test",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "service/search.js",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "const searchText = req.body.searchText; searchService.searchByName(searchText,...)",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [],
+    "evidence": "db.all test | validator: routes/search.js:11 reads req.body.searchText with no validation; routes/search.js:13 forwards to searchByName; service/search.js:6 concatenates into db.all; app.js:30 mounts /search unauthenticated with urlencoded parser app.js:24 | consensus: 1/1 confirmed",
+    "rationale": "WHO controls input test",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "db.all test",
+    "hunter_snippet": "db.all test",
+    "patch_summary": "Use parameterized query: db.all(\"select ... where name like ?\", ['%'+searchText+'%']) and validate searchText type/length.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Intrinsic SQL concatenation sink in searchByName",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "service/search.js",
+    "start_line": 4,
+    "end_line": 7,
+    "snippet": "db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], ...)",
+    "taint": {
+      "source": "searchText argument from route handlers",
+      "sink": "sqlite3 db.all dynamic SQL",
+      "path": [
+        "service/search.js:4 searchText param",
+        "service/search.js:6 string concat into db.all"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 4,
+        "note": "sink function entry"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "concatenated SQL execution"
+      }
+    ],
+    "evidence": "const searchByName = function (searchText, cb) {\n\n  db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], function (err, rows) { | validator: service/search.js:6 db.all(\"... like '%\" + searchText + \"%'\",...) string-concatenates parameter; called unauthenticated from routes/search.js:13 and routes/api.js:10; no parameterization/sanitization in service/search.js:4-7 | consensus: 1/1 confirmed",
+    "rationale": "WHO: any upstream route caller with attacker searchText. HOW: searchByName concatenates searchText into LIKE string line 6; commented parameterized alternative disabled. Empty [] proves no binding. WHAT: intrinsic SQLi sink primitive breaking parameterization.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "Call searchByName directly with quote payload; observe sqlite error proving injection at sink",
+      "command": "node -e \"require('./service/search').searchByName(\\\"' OR '1'='1\\\",(e,r)=>console.log(e||r))\"",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "any caller can pass attacker string; both routes reachable unauthenticated"
+    ],
+    "unit": "app",
+    "hunter_evidence": "const searchByName = function (searchText, cb) {\n\n  db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], function (err, rows) {",
+    "hunter_snippet": "const searchByName = function (searchText, cb) {\n\n  db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], function (err, rows) {",
+    "patch_summary": "Replace string concat with placeholder: db.all(\"select id,name,description from item where name like ?\", ['%'+searchText+'%'],...).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "SQL Injection entry via POST /search searchText",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "routes/search.js",
+    "start_line": 11,
+    "end_line": 13,
+    "snippet": "const searchText = req.body.searchText; searchService.searchByName(searchText,...)",
+    "taint": {
+      "source": "POST /search body param searchText",
+      "sink": "sqlite db.all with concatenated LIKE query",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "routes/search.js:13 searchByName(searchText)",
+        "service/search.js:6 db.all concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 11,
+        "note": "untrusted body field read"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 13,
+        "note": "tainted value passed to SQL sink"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "concatenated SQL sink"
+      }
+    ],
+    "evidence": "  const searchText = req.body.searchText;\n\n  searchService.searchByName(searchText, function (err, ret) { | validator: routes/search.js:11 reads req.body.searchText with no validation; routes/search.js:13 forwards to searchByName; service/search.js:6 concatenates into db.all; app.js:30 mounts /search unauthenticated with urlencoded parser app.js:24 | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client controls req.body.searchText. HOW: POST handler reads body verbatim line 11 and passes to searchService.searchByName line 13 which concatenates into SQLite in service/search.js:6 with no parameterization. WHAT: breaks SQL neutralization; allows UNION exfiltration of plaintext credentials.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "POST searchText with UNION payload and observe user table rows; proves concatenation reaches SQLite",
+      "command": "curl -s -X POST --data-urlencode \"searchText=' UNION ALL SELECT id,username,password FROM user-- \" http://localhost:3000/search | head",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated network access to POST /search",
+      "Express urlencoded body parser enabled"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  const searchText = req.body.searchText;\n\n  searchService.searchByName(searchText, function (err, ret) {",
+    "hunter_snippet": "  const searchText = req.body.searchText;\n\n  searchService.searchByName(searchText, function (err, ret) {",
+    "patch_summary": "Use parameterized query: db.all(\"select ... where name like ?\", ['%'+searchText+'%']) and validate searchText type/length.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "SQL Injection entry via GET /api/search query searchText",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.97,
+    "path": "routes/api.js",
+    "start_line": 7,
+    "end_line": 10,
+    "snippet": "const searchText = req.query.searchText !== undefined ? req.query.searchText : '';",
+    "taint": {
+      "source": "GET /api/search query searchText",
+      "sink": "sqlite db.all concatenated query",
+      "path": [
+        "routes/api.js:7 req.query.searchText",
+        "routes/api.js:10 searchByName(searchText)",
+        "service/search.js:6 db.all concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 7,
+        "note": "untrusted query param read"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 10,
+        "note": "forward to SQL sink"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "concatenated SQL sink"
+      }
+    ],
+    "evidence": "  const searchText = req.query.searchText !== undefined ? req.query.searchText : '';\n  console.log(req.query);\n  console.log('search text: ' + searchText);\n  searchService.searchByName(searchText, function (err, ret) { | validator: routes/api.js:7 reads req.query.searchText unauthenticated; routes/api.js:10 forwards to searchByName; service/search.js:6 concatenates into sqlite db.all; app.js:31 mounts /api without guards | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client controls req.query.searchText. HOW: GET /api/search reads query param with default line 7 and forwards to searchService.searchByName line 10 which concatenates into SQL service/search.js:6. No validation. WHAT: breaks query neutralization; JSON API enables UNION exfiltration. Distinct entry from POST handler.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "GET query with union payload and observe JSON rows from user table",
+      "command": "curl -s \"http://localhost:3000/api/search?searchText=%27%20UNION%20ALL%20SELECT%20id,username,password%20FROM%20user--%20\" | head",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated network access to GET /api/search"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  const searchText = req.query.searchText !== undefined ? req.query.searchText : '';\n  console.log(req.query);\n  console.log('search text: ' + searchText);\n  searchService.searchByName(searchText, function (err, ret) {",
+    "hunter_snippet": "  const searchText = req.query.searchText !== undefined ? req.query.searchText : '';\n  console.log(req.query);\n  console.log('search text: ' + searchText);\n  searchService.searchByName(searchText, function (err, ret) {",
+    "patch_summary": "Use parameterized LIKE query and validate/coerce req.query.searchText to string with length limit.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Hardcoded seed credentials including admin password",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "bootstrapdb.js",
+    "start_line": 43,
+    "end_line": 46,
+    "snippet": "userTbl.run('admin', 'S3cr37P@$$w0rD!');",
+    "taint": {
+      "source": "static strings in seed script",
+      "sink": "hardcoded credentials into user table/image",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "bootstrapdb.js",
+        "line": 43,
+        "note": "hardcoded admin password"
+      },
+      {
+        "file": "bootstrapdb.js",
+        "line": 44,
+        "note": "weak hardcoded password"
+      }
+    ],
+    "evidence": "      userTbl.run('admin', 'S3cr37P@$$w0rD!');\n      userTbl.run('user1', 'bad_password');\n      userTbl.run('user2', 'worse');\n      userTbl.run('user3', 'fail'); | validator: bootstrapdb.js:43 userTbl.run('admin','S3cr37P@$$w0rD!') plus bootstrapdb.js:44-46 weak passwords hardcoded in repo and seeded into db/vulny.db via service/search.js:2 file DB | consensus: 1/1 confirmed",
+    "rationale": "WHO: anyone with repo/image read. HOW: seed hardcodes admin S3cr37P@$$w0rD plus weak passwords lines 43-46 as plaintext; COPY bakes into image. WHAT: breaks secret management; enables impersonation incl admin.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "Grep repo for passwords and login with admin credential",
+      "command": "grep -rn S3cr37 --include=*.js .; ls -l db/vulny.db",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "repo cloned or image layers inspected"
+    ],
+    "unit": "app",
+    "hunter_evidence": "      userTbl.run('admin', 'S3cr37P@$$w0rD!');\n      userTbl.run('user1', 'bad_password');\n      userTbl.run('user2', 'worse');\n      userTbl.run('user3', 'fail');",
+    "hunter_snippet": "      userTbl.run('admin', 'S3cr37P@$$w0rD!');\n      userTbl.run('user1', 'bad_password');\n      userTbl.run('user2', 'worse');\n      userTbl.run('user3', 'fail');",
+    "patch_summary": "Remove hardcoded passwords; seed via env secrets and store bcrypt hashes, keep seed DB out of image.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.8,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "xunit-sqli-searchByName",
+    "title": "Cross-unit SQL Injection via /search and /api/search into shared SQLite sink",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "service/search.js",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], function (err, rows) {",
+    "taint": {
+      "source": "req.body.searchText (POST /search) and req.query.searchText (GET /api/search)",
+      "sink": "service/search.js:6 db.all string-concatenated SQL",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "routes/search.js:13 searchService.searchByName",
+        "routes/api.js:7 req.query.searchText",
+        "routes/api.js:10 searchService.searchByName"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 11,
+        "note": "untrusted source req.body.searchText"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 13,
+        "note": "hop searchService.searchByName(searchText,...)"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 7,
+        "note": "second untrusted source req.query.searchText"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 10,
+        "note": "second hop searchService.searchByName(searchText,...)"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "SQL concatenation sink"
+      }
+    ],
+    "evidence": "POST routes/search.js:11 req.body.searchText -> routes/search.js:13 searchService.searchByName -> service/search.js:6 string-concatenated db.all; same sink reachable from GET routes/api.js:7 req.query.searchText -> routes/api.js:10 searchService.searchByName | validator: routes/search.js:11 req.body.searchText and routes/api.js:7 req.query.searchText flow unsanitized to service/search.js:6 string-concatenated db.all; commented parameterized line proves no control used | consensus: 1/1 confirmed",
+    "rationale": "Untrusted searchText from two unauthenticated endpoints flows without validation or parameterisation into string-concatenated SQLite query, allowing UNION-based exfiltration of user table and authentication bypass. Commented-out parameterised form shows fix was known but not applied.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST routes/search.js:11 req.body.searchText -> routes/search.js:13 searchService.searchByName -> service/search.js:6 string-concatenated db.all; same sink reachable from GET routes/api.js:7 req.query.searchText -> routes/api.js:10 searchService.searchByName",
+    "hunter_snippet": "db.all(\"select id,name,description from item where name like '%\" + searchText + \"%'\", [], function (err, rows) {",
+    "patch_summary": "Replace string concatenation in service/search.js:6 with parameterized query db.all(\"select ... where name like ?\", ['%'+searchText+'%']) and validate input",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "cvss": 8.8,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "Plaintext password storage without hashing",
+    "cwe": "CWE-256",
+    "severity": "critical",
+    "confidence": 0.92,
+    "path": "bootstrapdb.js",
+    "start_line": 34,
+    "end_line": 34,
+    "snippet": "CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)",
+    "taint": {
+      "source": "seed design without hashing",
+      "sink": "plaintext credential persistence in sqlite file",
+      "path": [
+        "bootstrapdb.js:34 password TEXT schema",
+        "bootstrapdb.js:43 plaintext insert"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bootstrapdb.js",
+        "line": 34,
+        "note": "plaintext password column design"
+      },
+      {
+        "file": "service/search.js",
+        "line": 2,
+        "note": "file DB opened with credentials"
+      }
+    ],
+    "evidence": "  db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)', function (err) { | validator: bootstrapdb.js:34 CREATE TABLE user(... password TEXT ...) with bootstrapdb.js:43-46 plaintext inserts and no hashing; exfiltratable via service/search.js:6 SQLi UNION | consensus: 1/1 confirmed",
+    "rationale": "WHO: DB reader/SQLi attacker. HOW: schema password TEXT with no hash column line 34 and plaintext inserts; no bcrypt anywhere; file opened per-request. WHAT: breaks credential storage; any read yields reusable passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "Exfiltrate user rows via SQLi payload and observe plaintext",
+      "command": "curl -s -X POST --data-urlencode \"searchText=item%' union all select * from user; -- \" http://localhost:3000/search | head",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "DB readable via SQLi UNION or filesystem"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)', function (err) {",
+    "hunter_snippet": "  db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)', function (err) {",
+    "patch_summary": "Hash passwords with bcrypt/scrypt before INSERT and never persist plaintext.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.6,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "Reflected XSS render via POST /search searchResult",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.96,
+    "path": "routes/search.js",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "h1!= 'Search Results for: ' + searchText",
+    "taint": {
+      "source": "POST /search body searchText",
+      "sink": "Pug unescaped h1!= render",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "service/search.js:16 ret.searchText",
+        "routes/search.js:17 res.render",
+        "views/searchResult.pug:4 h1!= searchText"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 17,
+        "note": "tainted ret rendered to HTML"
+      },
+      {
+        "file": "service/search.js",
+        "line": 16,
+        "note": "searchText echoed into ret"
+      }
+    ],
+    "evidence": "      res.render('searchResult', ret) | validator: routes/search.js:11 tainted searchText echoed via service/search.js:16 ret.searchText=searchText then routes/search.js:17 res.render('searchResult',ret) to views/searchResult.pug:4 h1!= unescaped output | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated poster controls searchText. HOW: handler forwards tainted searchText via ret to res.render searchResult line 17; searchResult.pug uses h1!= unescaped. No escaping/CSP. WHAT: breaks output-encoding; enables cookie theft. Distinct HTML sink from SQLi.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "POST script payload and observe unescaped reflection in h1",
+      "command": "curl -s -X POST --data-urlencode \"searchText=<script>alert(1)</script>\" http://localhost:3000/search | grep -i script",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated POST to /search with JS payload",
+      "victim views response in browser"
+    ],
+    "unit": "app",
+    "hunter_evidence": "      res.render('searchResult', ret)",
+    "hunter_snippet": "      res.render('searchResult', ret)",
+    "patch_summary": "Change views/searchResult.pug:4 h1!= to h1= for auto-escaping and validate searchText.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-22",
+    "title": "Unverified version fetch piped to shell environment in CI",
+    "cwe": "CWE-494",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": ".circleci/config.yml",
+    "start_line": 13,
+    "end_line": 13,
+    "snippet": "            echo 'export HAWK_VERSION=$(curl -o- https://api.stackhawk.com/hawkscan/version)' >> \"$BASH_ENV\"",
+    "taint": {
+      "source": "remote version endpoint response",
+      "sink": "shell-evaluated BASH_ENV export",
+      "path": [
+        ".circleci/config.yml:13 curl version"
+      ]
+    },
+    "refs": [
+      {
+        "file": ".circleci/config.yml",
+        "line": 13,
+        "note": "unverified download-to-env"
+      }
+    ],
+    "evidence": "            echo 'export HAWK_VERSION=$(curl -o- https://api.stackhawk.com/hawkscan/version)' >> \"$BASH_ENV\" | validator: .circleci/config.yml:13 is CI workflow manifest \u2014 infra/build configs out of scope; BASH_ENV export runs on CI agent not app attack surface | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: MITM or compromised api.stackhawk.com. HOW: .circleci/config.yml:13 curls version endpoint and appends to BASH_ENV with no checksum/signature pin or retry validation. WHAT: supply-chain code execution (CWE-494) distinct from hawk.zip download; version string can inject shell via BASH_ENV.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "            echo 'export HAWK_VERSION=$(curl -o- https://api.stackhawk.com/hawkscan/version)' >> \"$BASH_ENV\"",
+    "hunter_snippet": "            echo 'export HAWK_VERSION=$(curl -o- https://api.stackhawk.com/hawkscan/version)' >> \"$BASH_ENV\"",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "F5-plaintext-password-storage",
+    "title": "Plaintext password storage without hashing",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "bootstrapdb.js",
+    "start_line": 30,
+    "end_line": 34,
+    "snippet": "db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)'",
+    "taint": {
+      "source": "seed inserts",
+      "sink": "plaintext password storage in SQLite user table",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "bootstrapdb.js",
+        "line": 30,
+        "note": "schema: user password TEXT NOT NULL, no hash column"
+      },
+      {
+        "file": "bootstrapdb.js",
+        "line": 43,
+        "note": "insert of plaintext password without hashing"
+      }
+    ],
+    "evidence": "bootstrapdb.js:30 CREATE TABLE user with password TEXT and bootstrapdb.js:43-46 inserts without any hash; login-equivalent SQLi can read plaintext | validator: bootstrapdb.js:30 CREATE TABLE user password TEXT with no hash column and bootstrapdb.js:43 inserts admin/S3cr37P@$$w0rD! and bad_password plaintext via db.prepare without hashing | consensus: 1/1 confirmed",
+    "rationale": "Passwords stored as plaintext TEXT with no bcrypt/scrypt/hash means any SQL injection, DB file read, or backup exposure yields immediately reusable credentials.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bootstrapdb.js:30 CREATE TABLE user with password TEXT and bootstrapdb.js:43-46 inserts without any hash; login-equivalent SQLi can read plaintext",
+    "hunter_snippet": "db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)'",
+    "patch_summary": "Hash passwords with bcrypt/scrypt before INSERT in bootstrapdb.js:43 and change schema to store hash, never plaintext; remove seed secrets from repo",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "F3-reflected-xss-searchResult",
+    "title": "Reflected XSS via unescaped Pug render of searchText",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "views/searchResult.pug",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "h1!= 'Search Results for: ' + searchText",
+    "taint": {
+      "source": "POST /search body field searchText",
+      "sink": "Pug unescaped output h1!=",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "service/search.js:18 ret.searchText assignment",
+        "routes/search.js:17 res.render('searchResult', ret)",
+        "views/searchResult.pug:4 h1!= render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 11,
+        "note": "source: req.body.searchText"
+      },
+      {
+        "file": "service/search.js",
+        "line": 18,
+        "note": "hop: ret.searchText = searchText passthrough"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 17,
+        "note": "hop: res.render('searchResult', ret)"
+      },
+      {
+        "file": "views/searchResult.pug",
+        "line": 4,
+        "note": "sink: unescaped h1!= interpolation"
+      }
+    ],
+    "evidence": "Cross-unit flow: routes/search.js:11 req.body.searchText -> service/search.js:15-18 ret.searchText passthrough -> routes/search.js:17 res.render -> views/searchResult.pug:4 unescaped render | validator: routes/search.js:11 req.body.searchText via service/search.js:18 ret.searchText to routes/search.js:17 res.render reaches views/searchResult.pug:4 h1!= unescaped output with no escaping or CSP (views/layout.pug:1-7) | consensus: 1/1 confirmed",
+    "rationale": "User-supplied searchText is stored in ret and rendered with Pug unescaped operator !=, so <script> payloads execute in victim browser enabling cookie theft. Table fields use escaped = but heading does not.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit flow: routes/search.js:11 req.body.searchText -> service/search.js:15-18 ret.searchText passthrough -> routes/search.js:17 res.render -> views/searchResult.pug:4 unescaped render",
+    "hunter_snippet": "h1!= 'Search Results for: ' + searchText",
+    "patch_summary": "Change views/searchResult.pug:4 h1!= to escaped h1= and add CSP/helmet plus output-encoding validation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-25",
+    "title": "Unpinned latest scanner install in Azure pipeline",
+    "cwe": "CWE-829",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "azure-pipelines.yml",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "      version: latest",
+    "taint": {
+      "source": "floating latest task version",
+      "sink": "code execution on self-hosted agent",
+      "path": [
+        "azure-pipelines.yml:18 HawkScanInstall",
+        "azure-pipelines.yml:20 version latest"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines.yml",
+        "line": 20,
+        "note": "first latest pin miss"
+      }
+    ],
+    "evidence": "      version: latest | validator: azure-pipelines.yml:20 is CI pipeline task pin (HawkScanInstall version:latest) \u2014 CI/CD manifests out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: registry writer / MITM. HOW: azure-pipelines.yml:20 installs HawkScanInstall@1 with version:latest floating tag, no digest pin. WHAT: supply-chain drift (CWE-829); new scanner or compromised latest executes on self-hosted agent with secrets.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      version: latest",
+    "hunter_snippet": "      version: latest",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.9,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-26",
+    "title": "Unpinned latest scanner run in Azure pipeline",
+    "cwe": "CWE-829",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "azure-pipelines.yml",
+    "start_line": 24,
+    "end_line": 24,
+    "snippet": "      version: \"latest\"",
+    "taint": {
+      "source": "floating latest task version",
+      "sink": "scan execution with secrets on agent",
+      "path": [
+        "azure-pipelines.yml:21 RunHawkScan",
+        "azure-pipelines.yml:24 version latest"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines.yml",
+        "line": 24,
+        "note": "second latest pin miss distinct from line 20"
+      }
+    ],
+    "evidence": "      version: \"latest\" | validator: azure-pipelines.yml:24 is CI pipeline task pin (RunHawkScan version:latest) \u2014 CI/CD manifests out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: registry writer / MITM. HOW: azure-pipelines.yml:24 runs RunHawkScan@1 with version:latest floating tag, no digest, on self-hosted agent holding HAWK_API_KEY. WHAT: second supply-chain site (CWE-829) distinct from install task; must be pinned independently.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      version: \"latest\"",
+    "hunter_snippet": "      version: \"latest\"",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.9,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-20",
+    "title": "Unpinned npm install as root in image build",
+    "cwe": "CWE-829",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "RUN npm install",
+    "taint": {
+      "source": "untrusted npm packages",
+      "sink": "root install without pin/audit",
+      "path": [
+        "Dockerfile:5 RUN npm install"
+      ]
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 5,
+        "note": "supply-chain sink"
+      }
+    ],
+    "evidence": "RUN npm install | validator: Dockerfile:5 RUN npm install is Dockerfile build config \u2014 explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: npm registry / MITM. HOW: Dockerfile:5 runs npm install as root without --production/--frozen-lockfile, audit, or cache clean; installs with EOL base and old Express/pug/sqlite. WHAT: supply-chain execution (CWE-829) with known-vuln deps and bloated root-owned node_modules.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "RUN npm install",
+    "hunter_snippet": "RUN npm install",
+    "control_type": "none",
+    "duplicate_of": "unit-app-19",
+    "cvss": 4.9,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "Verbose SQLite error disclosure in GET /api/search",
+    "cwe": "CWE-209",
+    "severity": "medium",
+    "confidence": 0.92,
+    "path": "routes/api.js",
+    "start_line": 11,
+    "end_line": 12,
+    "snippet": "if (err) { res.json(err);",
+    "taint": {
+      "source": "query searchText inducing DB error",
+      "sink": "JSON error response disclosing internals",
+      "path": [
+        "routes/api.js:7 attacker searchText",
+        "service/search.js:10 cb(err)",
+        "routes/api.js:12 res.json(err)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 12,
+        "note": "raw error serialized to client"
+      },
+      {
+        "file": "service/search.js",
+        "line": 10,
+        "note": "raw sqlite err forwarded"
+      }
+    ],
+    "evidence": "    if (err) {\n      res.json(err); | validator: service/search.js:10 cb(err) forwards raw sqlite error; routes/api.js:11-12 if(err) res.json(err) serializes internals unauthenticated to GET /api/search | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client triggers DB error via searchText. HOW: sqlite err forwarded via cb and serialized verbatim via res.json(err) line 12 with no generic message. WHAT: discloses SQL text and internals for fingerprinting.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "Send malformed quote to force sqlite error and observe full err JSON",
+      "command": "curl -s \"http://localhost:3000/api/search?searchText=%27\" | head",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated GET to /api/search with SQL syntax to trigger error"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    if (err) {\n      res.json(err);",
+    "hunter_snippet": "    if (err) {\n      res.json(err);",
+    "patch_summary": "Return generic error message and log details server-side instead of res.json(err).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "Blind SQLi oracle via error-vs-render discrepancy in POST /search",
+    "cwe": "CWE-203",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routes/search.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "      res.redirect('/search')",
+    "taint": {
+      "source": "POST /search body searchText causing SQL error",
+      "sink": "302 redirect vs 200 render differential oracle",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "service/search.js:10 cb(err)",
+        "routes/search.js:15 res.redirect on err"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 15,
+        "note": "error branch redirect"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 17,
+        "note": "success branch render"
+      }
+    ],
+    "evidence": "      res.redirect('/search') | validator: routes/search.js:13-17 redirect on err vs render on success leaks only 1-bit error existence, no err content; standard handling with no independent secret disclosure beyond underlying SQLi at service/search.js:6 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated attacker controls searchText. HOW: routes/search.js:15 does res.redirect('/search') on DB error while success does res.render('searchResult'); error vs success status/body differ. WHAT: creates CWE-203 observable discrepancy enabling blind boolean/error-based SQLi oracle distinct from inline UNION.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      res.redirect('/search')",
+    "hunter_snippet": "      res.redirect('/search')",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Unbounded DB result passthrough without LIMIT in search service",
+    "cwe": "CWE-400",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "service/search.js",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "      cb(null, ret);",
+    "taint": {
+      "source": "attacker ''/% searchText matching all items",
+      "sink": "callback with unbounded rows to JSON/render",
+      "path": [
+        "service/search.js:6 LIKE without LIMIT",
+        "service/search.js:20 cb(null,ret)",
+        "routes/api.js:15 res.json"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 20,
+        "note": "unbounded passthrough"
+      }
+    ],
+    "evidence": "      cb(null, ret); | validator: service/search.js:6-20 has no LIMIT but bootstrapdb.js:10-12 seeds only 3 item rows with no attacker INSERT path, so '' returns 3 rows \u2014 no exhaustion | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: service/search.js:20 returns cb(null,ret) with full rows array from LIKE '%...%' scan with no LIMIT; caller JSON-renders all rows. WHAT: unbounded allocation/network (CWE-400/CWE-770) allows full-table dump and memory exhaustion via '' or '%' searchText.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      cb(null, ret);",
+    "hunter_snippet": "      cb(null, ret);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-15",
+    "title": "Uncaught throw on non-listen errors crashes server",
+    "cwe": "CWE-248",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "bin/www",
+    "start_line": 58,
+    "end_line": 58,
+    "snippet": "    throw error;",
+    "taint": {
+      "source": "runtime syscall error outside listen",
+      "sink": "uncaught throw killing process",
+      "path": [
+        "bin/www:56 onError(error)",
+        "bin/www:58 throw error"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bin/www",
+        "line": 58,
+        "note": "crash sink"
+      }
+    ],
+    "evidence": "    throw error; | validator: bin/www:56-58 onError handles server 'error' startup event only (syscall!=='listen'), not per-request input; remote attacker cannot trigger via routes | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent network client causing listen errors. HOW: bin/www:58 does throw error for non-listen syscalls with no catch; uncaught exception crashes Node process. WHAT: unhandled exception (CWE-248) turns transient errors into full DoS.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "    throw error;",
+    "hunter_snippet": "    throw error;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-16",
+    "title": "Uncaught throw on unexpected listen error code",
+    "cwe": "CWE-248",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "bin/www",
+    "start_line": 76,
+    "end_line": 76,
+    "snippet": "      throw error;",
+    "taint": {
+      "source": "unexpected listen error code",
+      "sink": "uncaught throw in onError default",
+      "path": [
+        "bin/www:66 switch error.code",
+        "bin/www:76 default throw"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bin/www",
+        "line": 76,
+        "note": "second crash sink distinct from line 58"
+      }
+    ],
+    "evidence": "      throw error; | validator: bin/www:66-76 default throw handles unexpected listen error.code at startup only, not reachable from HTTP routes in app.js:29-31 | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent client / operator. HOW: bin/www:76 default case does throw error for EPIPE/unknown listen codes with no graceful degradation. WHAT: second uncaught-throw site (CWE-248) distinct from line 58; any unexpected listen error kills availability.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      throw error;",
+    "hunter_snippet": "      throw error;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "SQLite open with relative path, verbose mode, and insecure defaults",
+    "cwe": "CWE-732",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "service/search.js",
+    "start_line": 2,
+    "end_line": 2,
+    "snippet": "const db = new sqlite3.Database('./db/vulny.db');",
+    "taint": {
+      "source": "filesystem DB file with default permissions",
+      "sink": "process-wide shared DB handle via relative path",
+      "path": [
+        "service/search.js:2 Database open"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 2,
+        "note": "insecure open"
+      },
+      {
+        "file": "bootstrapdb.js",
+        "line": 2,
+        "note": "same file seeded with plaintext creds"
+      }
+    ],
+    "evidence": "const db = new sqlite3.Database('./db/vulny.db'); | validator: service/search.js:1-2 relative path + verbose() resolved at server-start CWD, not attacker-controlled; shared handle is normal, verbose only adds stack traces | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: local file attacker or prior DB state. HOW: service/search.js:2 opens ./db/vulny.db relative path with sqlite3 verbose() and single shared handle; file created with default umask (world-readable) containing plaintext credentials; verbose enables extended stack traces. WHAT: insecure file handling (CWE-732) + verbose info exposure; relative path allows CWD hijack to substitute DB.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "const db = new sqlite3.Database('./db/vulny.db');",
+    "hunter_snippet": "const db = new sqlite3.Database('./db/vulny.db');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-24",
+    "title": "Unvalidated PATH mutation on self-hosted Windows agent",
+    "cwe": "CWE-426",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "azure-pipelines.yml",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "      $Env:PATH = \"C:\\Program Files\\Docker\\Docker\\resources\\bin;$Env:PATH\"",
+    "taint": {
+      "source": "host filesystem Docker path",
+      "sink": "PATH used to resolve docker/scan binaries",
+      "path": [
+        "azure-pipelines.yml:16 PATH prepend",
+        "azure-pipelines.yml:17 docker run"
+      ]
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines.yml",
+        "line": 16,
+        "note": "PATH hijack sink"
+      }
+    ],
+    "evidence": "      $Env:PATH = \"C:\\Program Files\\Docker\\Docker\\resources\\bin;$Env:PATH\" | validator: azure-pipelines.yml:16 PATH prepend is self-hosted-agent example setup in CI manifest with comment to adjust as needed \u2014 CI configs out of scope, no app attacker control | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: registry / orb publisher. HOW: azure-pipelines.yml:16 mutates $Env:PATH by prepending Docker bin from fixed Program Files path with no existence/integrity check. WHAT: untrusted search path (CWE-426) allows planted docker.exe/DLL hijack on self-hosted Windows agent.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      $Env:PATH = \"C:\\Program Files\\Docker\\Docker\\resources\\bin;$Env:PATH\"",
+    "hunter_snippet": "      $Env:PATH = \"C:\\Program Files\\Docker\\Docker\\resources\\bin;$Env:PATH\"",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "xunit-verbose-db-error-api",
+    "title": "Verbose SQLite error disclosure in GET /api/search",
+    "cwe": "CWE-209",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "routes/api.js",
+    "start_line": 11,
+    "end_line": 12,
+    "snippet": "res.json(err);",
+    "taint": {
+      "source": "SQLite error from attacker-controlled searchText query",
+      "sink": "routes/api.js:12 res.json(err) to client",
+      "path": [
+        "service/search.js:6 SQL error",
+        "service/search.js:9 cb(err)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 9,
+        "note": "DB error forwarded via cb(err)"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 10,
+        "note": "callback receives err from shared sink"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 12,
+        "note": "verbatim disclosure res.json(err)"
+      }
+    ],
+    "evidence": "service/search.js:9-10 cb(err) propagates sqlite error to routes/api.js:11-12 res.json(err) returned verbatim to unauthenticated client | validator: service/search.js:9 cb(err) forwards SQLite error to routes/api.js:11-12 res.json(err) verbatim to unauthenticated client, attacker-triggerable via routes/api.js:7 searchText | consensus: 1/1 confirmed",
+    "rationale": "Raw SQLite error object including driver message and query context is serialised to JSON for unauthenticated callers, giving error-based SQLi oracle and internal disclosure. HTML handler redirects instead, confirming API uniquely leaks.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "service/search.js:9-10 cb(err) propagates sqlite error to routes/api.js:11-12 res.json(err) returned verbatim to unauthenticated client",
+    "hunter_snippet": "res.json(err);",
+    "patch_summary": "Return generic error in routes/api.js:11-12 (e.g. res.status(500).json({error:'search failed'})) and log detail server-side only",
+    "control_type": "none",
+    "duplicate_of": "unit-app-4",
+    "cvss": 4.8,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Log injection via unsanitized req.query logging",
+    "cwe": "CWE-117",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "routes/api.js",
+    "start_line": 8,
+    "end_line": 9,
+    "snippet": "console.log(req.query); console.log('search text: ' + searchText);",
+    "taint": {
+      "source": "GET /api/search query string",
+      "sink": "console.log unsanitized attacker input",
+      "path": [
+        "routes/api.js:7 req.query.searchText",
+        "routes/api.js:8 console.log(req.query)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 8,
+        "note": "raw query object logged"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 9,
+        "note": "concatenated attacker string logged"
+      }
+    ],
+    "evidence": "  console.log(req.query);\n  console.log('search text: ' + searchText); | validator: routes/api.js:7 attacker-controlled req.query.searchText logged unsanitized via routes/api.js:8 console.log(req.query) and routes/api.js:9 console.log('search text: '+searchText) with no CRLF neutralization | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated client controls req.query. HOW: handler logs raw object line 8 and concatenated string line 9 with no sanitization or structured logger. WHAT: breaks log integrity; enables forgery and erases attribution.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "Send searchText with CRLF forged line and inspect stdout",
+      "command": "curl -s \"http://localhost:3000/api/search?searchText=foo%0d%0aFORGED\" ",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated GET with CRLF in query string"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  console.log(req.query);\n  console.log('search text: ' + searchText);",
+    "hunter_snippet": "  console.log(req.query);\n  console.log('search text: ' + searchText);",
+    "patch_summary": "Remove raw query logging or sanitize with structured logger stripping CR/LF/control chars.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Seed DB file created without restrictive permissions",
+    "cwe": "CWE-732",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "bootstrapdb.js",
+    "start_line": 2,
+    "end_line": 2,
+    "snippet": "const db = new sqlite3.Database('./db/vulny.db');",
+    "taint": {
+      "source": "default file mode DB creation",
+      "sink": "readable credential DB baked into image",
+      "path": [
+        "bootstrapdb.js:2 Database create",
+        "bootstrapdb.js:43 plaintext inserts",
+        "Dockerfile:4 COPY . ."
+      ]
+    },
+    "refs": [
+      {
+        "file": "bootstrapdb.js",
+        "line": 2,
+        "note": "insecure file creation"
+      }
+    ],
+    "evidence": "const db = new sqlite3.Database('./db/vulny.db'); | validator: bootstrapdb.js:2 default-mode DB create runs in single-user root container (Dockerfile:1-5 no USER); no multi-user boundary crossed \u2014 real issue is plaintext creds not file mode | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: anyone with repo/image or host file read. HOW: bootstrapdb.js:2 creates ./db/vulny.db with default mode and seeds plaintext passwords; Dockerfile COPY bakes file into image. WHAT: breaks file protection (CWE-732/CWE-538); DB file world-readable and shipped in layers.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "const db = new sqlite3.Database('./db/vulny.db');",
+    "hunter_snippet": "const db = new sqlite3.Database('./db/vulny.db');",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-14",
+    "title": "EOL base image running as root",
+    "cwe": "CWE-1104",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 1,
+    "end_line": 1,
+    "snippet": "FROM node:14.16.1-buster",
+    "taint": {
+      "source": "container build configuration",
+      "sink": "EOL base image running as root",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 1,
+        "note": "EOL base image"
+      },
+      {
+        "file": "Dockerfile",
+        "line": 8,
+        "note": "no USER before CMD"
+      }
+    ],
+    "evidence": "FROM node:14.16.1-buster | validator: Dockerfile:1 FROM node:14.16.1-buster and Dockerfile:1-8 no USER; infrastructure/build config out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp | triage: infra config",
+    "rationale": "WHO: supply-chain consumer; breakout attacker. HOW: FROM node:14.16.1-buster EOL with known CVEs; no USER so runs as root. WHAT: breaks supply-chain and least-privilege; amplifies impact.",
+    "status": "fp",
+    "poc": {
+      "approach": "Inspect base tag EOL and check running user is root",
+      "command": "grep -n FROM Dockerfile; docker run --rm stackhawk/nodeexpressvulny whoami",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "image built/pulled; scanner runs container"
+    ],
+    "unit": "app",
+    "hunter_evidence": "FROM node:14.16.1-buster",
+    "hunter_snippet": "FROM node:14.16.1-buster",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "platform",
+      "rationale": "infra"
+    },
+    "cvss": 2.4,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "Inconsistent output filtering between API and HTML search handlers",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "routes/api.js",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "      delete ret.searchText;",
+    "taint": {
+      "source": "tainted searchText + DB rows in ret",
+      "sink": "partial field deletion that does not sanitize DB sink",
+      "path": [
+        "service/search.js:16 ret with searchText+rows",
+        "routes/api.js:14 delete ret.searchText",
+        "routes/api.js:15 res.json(ret)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 14,
+        "note": "partial output filter"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 17,
+        "note": "sibling keeps searchText for render"
+      }
+    ],
+    "evidence": "      delete ret.searchText; | validator: routes/api.js:14-15 delete ret.searchText reduces exposure before res.json; ret holds attacker echo + low-sensitivity item rows (service/search.js:16-19), no secret disclosed | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: routes/api.js:14 does delete ret.searchText before res.json, while POST /search keeps searchText and renders it; filtering is output-only and inconsistent between siblings. WHAT: incomplete remediation (CWE-200/CWE-693 sibling disagreement); API still returns full DB rows and does not stop SQLi exfiltration, giving false sense of fix.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      delete ret.searchText;",
+    "hunter_snippet": "      delete ret.searchText;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "Database row content logged without redaction",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "service/search.js",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "      console.log('rows? ' + rows);",
+    "taint": {
+      "source": "DB rows returned for attacker query",
+      "sink": "console.log of row data",
+      "path": [
+        "service/search.js:6 db.all rows",
+        "service/search.js:14 log rows"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 14,
+        "note": "row logging sink"
+      }
+    ],
+    "evidence": "      console.log('rows? ' + rows); | validator: service/search.js:14 'rows? '+rows coerces object array to '[object Object]' and rows are low-sensitivity item catalog from service/search.js:6, not credentials \u2014 no sensitive log disclosure | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any DB content plus attacker-influenced rows. HOW: service/search.js:14 concatenates rows object into console.log string, emitting DB content to stdout/logs with no redaction or structured logger. WHAT: information exposure in logs (CWE-532) and log-forging via row content containing CRLF/control chars.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      console.log('rows? ' + rows);",
+    "hunter_snippet": "      console.log('rows? ' + rows);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-21",
+    "title": "Compose service without user, read-only, or resource limits",
+    "cwe": "CWE-400",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "docker-compose.yml",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "    build: .",
+    "taint": {
+      "source": "compose deployment config",
+      "sink": "unconfined container without limits",
+      "path": [
+        "docker-compose.yml:5 build service"
+      ]
+    },
+    "refs": [
+      {
+        "file": "docker-compose.yml",
+        "line": 5,
+        "note": "missing hardening/limits"
+      }
+    ],
+    "evidence": "    build: . | validator: docker-compose.yml:5 build:. is container run/build config without user/limits \u2014 container runtime configs out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent network client / resource abuser. HOW: docker-compose.yml:5 builds with no user:, read_only:, mem_limit/cpus, pids_limit, or logging limits; inherits root EOL image. WHAT: missing container hardening and resource caps (CWE-400/CWE-250) allows DoS and amplifies breakout.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "    build: .",
+    "hunter_snippet": "    build: .",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "Double database close causing seed race and partial DB",
+    "cwe": "CWE-404",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "bootstrapdb.js",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "          db.close(function (err) {",
+    "taint": {
+      "source": "concurrent serialize branches closing shared handle",
+      "sink": "second close on closed DB / partial seed",
+      "path": [
+        "bootstrapdb.js:23 first db.close",
+        "bootstrapdb.js:51 second db.close"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bootstrapdb.js",
+        "line": 23,
+        "note": "first close"
+      },
+      {
+        "file": "bootstrapdb.js",
+        "line": 51,
+        "note": "second close"
+      }
+    ],
+    "evidence": "          db.close(function (err) { | validator: bootstrapdb.js:23 vs :51 double db.close occurs in dev-only serialize seed script (bootstrapdb.js:3) run once by developer; no remote trigger or security boundary \u2014 correctness only | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: local operator re-running seed. HOW: bootstrapdb.js:23 calls db.close() inside first CREATE callback while second CREATE branch also calls db.close() at line 51; under serialize both can run, second close on closed DB errors. WHAT: improper resource shutdown (CWE-404) causes seed failure/crash and leaves half-seeded DB (item without user or vice versa).",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "          db.close(function (err) {",
+    "hunter_snippet": "          db.close(function (err) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "xunit-log-inject-api-query",
+    "title": "Log injection via unsanitised req.query logging",
+    "cwe": "CWE-117",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "routes/api.js",
+    "start_line": 8,
+    "end_line": 9,
+    "snippet": "console.log(req.query);",
+    "taint": {
+      "source": "req.query from GET /api/search",
+      "sink": "routes/api.js:8 console.log(req.query)",
+      "path": [
+        "routes/api.js:7 req.query.searchText"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 7,
+        "note": "untrusted req.query.searchText ingress"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 8,
+        "note": "unsanitised sink console.log(req.query)"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 9,
+        "note": "second unsanitised log concat search text"
+      }
+    ],
+    "evidence": "routes/api.js:7-9 takes req.query.searchText then console.log(req.query) and string concat without sanitisation, enabling CRLF log forgery per T7 | validator: routes/api.js:7 req.query.searchText ingress flows to routes/api.js:8 console.log(req.query) and routes/api.js:9 string-concat log with no sanitization, reachable unauthenticated via GET /api/search | consensus: 1/1 confirmed",
+    "rationale": "Entire attacker-controlled query object is written to stdout/logs with no neutralisation of CRLF/control characters, allowing log forging and erasure of attribution.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/api.js:7-9 takes req.query.searchText then console.log(req.query) and string concat without sanitisation, enabling CRLF log forgery per T7",
+    "hunter_snippet": "console.log(req.query);",
+    "patch_summary": "Sanitize/strip CRLF and serialize safely before logging in routes/api.js:8-9 or use structured logger with encoding",
+    "control_type": "none",
+    "duplicate_of": "unit-app-5",
+    "cvss": 2.3,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-security-headers-baseline",
+    "title": "Missing security headers and CSP baseline amplifies XSS",
+    "cwe": "CWE-693",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app.js",
+    "start_line": 23,
+    "end_line": 27,
+    "snippet": "app.use(logger('dev'));",
+    "taint": {
+      "source": "missing hardening baseline",
+      "sink": "responses without CSP/HSTS/X-Frame-Options",
+      "path": [
+        "app.js:12 app=express()",
+        "app.js:23-27 middleware without security headers",
+        "views/searchResult.pug:4 unescaped render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 23,
+        "note": "middleware stack start, no helmet"
+      },
+      {
+        "file": "app.js",
+        "line": 27,
+        "note": "static serving without hardening"
+      },
+      {
+        "file": "package.json",
+        "line": 10,
+        "note": "no helmet dependency"
+      },
+      {
+        "file": "views/layout.pug",
+        "line": 1,
+        "note": "no CSP meta/header to compensate"
+      }
+    ],
+    "evidence": "app.js:23-27 middleware stack is logger/json/urlencoded/cookieParser/static with no helmet, no CSP, no HSTS; package.json has no helmet dependency | validator: app.js:23-27 middleware is logger/json/urlencoded/cookieParser/static with no helmet/CSP, package.json:10 has no helmet, views/layout.pug:1-7 has no CSP meta; amplifies views/searchResult.pug:4 XSS | consensus: 1/1 confirmed",
+    "rationale": "Express app sets no security headers (Helmet/CSP/X-Frame-Options/HSTS). This leaves the already-reported reflected XSS via searchResult.pug fully exploitable with inline scripts and enables clickjacking/MIME sniffing. No header middleware exists anywhere in the tree.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:23-27 middleware stack is logger/json/urlencoded/cookieParser/static with no helmet, no CSP, no HSTS; package.json has no helmet dependency",
+    "hunter_snippet": "app.use(logger('dev'));",
+    "patch_summary": "Add helmet() with CSP/HSTS/X-Frame-Options in app.js:23 and CSP meta in views/layout.pug",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-error-handler-message-disclosure",
+    "title": "Central error handler discloses error message in production and stack in development",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.75,
+    "path": "app.js",
+    "start_line": 41,
+    "end_line": 46,
+    "snippet": "res.locals.message = err.message;",
+    "taint": {
+      "source": "http-errors / thrown err reaching central handler",
+      "sink": "res.render('error') with err.message in locals",
+      "path": [
+        "app.js:34 next(createError(404))",
+        "app.js:41 err.message -> res.locals.message",
+        "app.js:46 res.render('error')",
+        "views/error.pug:4 h1= message"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 39,
+        "note": "central error handler entry"
+      },
+      {
+        "file": "app.js",
+        "line": 41,
+        "note": "unconditional err.message to locals"
+      },
+      {
+        "file": "app.js",
+        "line": 42,
+        "note": "only error object gated on development"
+      },
+      {
+        "file": "views/error.pug",
+        "line": 4,
+        "note": "renders message"
+      },
+      {
+        "file": "views/error.pug",
+        "line": 6,
+        "note": "renders error.stack"
+      }
+    ],
+    "evidence": "app.js:41 sets res.locals.message=err.message unconditionally; app.js:42 only gates stack object; views/error.pug:4-6 renders message/status/stack | validator: app.js:41 res.locals.message=err.message unconditional rendered by views/error.pug:4 h1= message; app.js:42 correctly gates stack to development so stack leak neutralized in prod | consensus: 1/1 confirmed",
+    "rationale": "Central error handler assigns err.message to template locals outside env gate and renders error.pug for any 404/500. Production responses therefore disclose internal error messages; in development full stack is also rendered. Distinct sink from GET /api/search res.json(err) already reported.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app.js:41 sets res.locals.message=err.message unconditionally; app.js:42 only gates stack object; views/error.pug:4-6 renders message/status/stack",
+    "hunter_snippet": "res.locals.message = err.message;",
+    "patch_summary": "Render generic message in production in app.js:41-46 (only expose err.message in development) and avoid rendering error.stack/message verbatim",
+    "control_type": "none",
+    "duplicate_of": "unit-app-5",
+    "cvss": 2.2,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-sensitive-data-stdout-logging",
+    "title": "Sensitive SQL errors and DB rows logged to stdout in shared search service",
+    "cwe": "CWE-532",
+    "severity": "low",
+    "confidence": 0.8,
+    "path": "service/search.js",
+    "start_line": 9,
+    "end_line": 15,
+    "snippet": "console.log('error ' + err);",
+    "taint": {
+      "source": "untrusted searchText plus DB-derived err/rows",
+      "sink": "console.log of err and rows in shared service",
+      "path": [
+        "routes/search.js:11 req.body.searchText",
+        "routes/api.js:7 req.query.searchText",
+        "service/search.js:6 db.all(...) -> err/rows",
+        "service/search.js:9 console.log('error '+err)",
+        "service/search.js:14 console.log('rows? '+rows)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 11,
+        "note": "POST body searchText entry"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 7,
+        "note": "GET query searchText entry"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "shared DB sink producing err/rows"
+      },
+      {
+        "file": "service/search.js",
+        "line": 9,
+        "note": "SQL error to stdout"
+      },
+      {
+        "file": "service/search.js",
+        "line": 14,
+        "note": "full rows array to stdout"
+      }
+    ],
+    "evidence": "service/search.js:9 logs SQL err; service/search.js:14 logs full rows array; service/search.js:15 logs row count \u2014 shared sink for both /search and /api/search | validator: service/search.js:9 console.log('error '+err) and service/search.js:14 console.log('rows? '+rows) log attacker-influenced SQL errors and full DB rows to stdout on both /search and /api/search paths | consensus: 1/1 confirmed",
+    "rationale": "Shared searchByName logs SQL error text and full DB result contents to stdout on every request. Both unauthenticated entry points (POST /search body and GET /api/search query) reach this sink, exposing query fragments, SQLite errors and item rows to logs. Distinct from req.query log-inject already reported.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "service/search.js:9 logs SQL err; service/search.js:14 logs full rows array; service/search.js:15 logs row count \u2014 shared sink for both /search and /api/search",
+    "hunter_snippet": "console.log('error ' + err);",
+    "patch_summary": "Remove verbose console.log of err/rows in service/search.js:9,14-15; log generic message with structured logger and redact PII/secrets",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.2,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-17",
+    "title": "CI unverified download-and-execute of scanner",
+    "cwe": "CWE-494",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": ".circleci/config.yml",
+    "start_line": 15,
+    "end_line": 16,
+    "snippet": "      - run: curl -v https://download.stackhawk.com/hawk/cli/hawk-\"${HAWK_VERSION}\".zip -o hawk.zip\n      - run: unzip hawk.zip",
+    "taint": {
+      "source": "remote HTTPS hosts without pin",
+      "sink": "unauthenticated download-and-execute in CI",
+      "path": [
+        ".circleci/config.yml:13 curl version",
+        ".circleci/config.yml:15 curl zip",
+        ".circleci/config.yml:16 unzip exec"
+      ]
+    },
+    "refs": [
+      {
+        "file": ".circleci/config.yml",
+        "line": 15,
+        "note": "unverified download"
+      },
+      {
+        "file": ".circleci/config.yml",
+        "line": 16,
+        "note": "unverified extraction"
+      }
+    ],
+    "evidence": "      - run: curl -v https://download.stackhawk.com/hawk/cli/hawk-\"${HAWK_VERSION}\".zip -o hawk.zip\n      - run: unzip hawk.zip | validator: .circleci/config.yml:15 curl https://download.stackhawk.com/hawk/cli/hawk-...zip and :16 unzip; CI/CD workflow manifest out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: MITM or compromised download host. HOW: job curls version line 13 then downloads zip line 15 and unzips/executes lines 16/19 with no hash/signature pin. WHAT: enables supply-chain execution on build agent.",
+    "status": "fp",
+    "poc": {
+      "approach": "Review job for curl without checksum pin",
+      "command": "grep -n curl .circleci/config.yml; grep -n unzip .circleci/config.yml",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "CI runner with network egress"
+    ],
+    "unit": "app",
+    "hunter_evidence": "      - run: curl -v https://download.stackhawk.com/hawk/cli/hawk-\"${HAWK_VERSION}\".zip -o hawk.zip\n      - run: unzip hawk.zip",
+    "hunter_snippet": "      - run: curl -v https://download.stackhawk.com/hawk/cli/hawk-\"${HAWK_VERSION}\".zip -o hawk.zip\n      - run: unzip hawk.zip",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "Missing security headers and hardening baseline",
+    "cwe": "CWE-693",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 12,
+    "end_line": 12,
+    "snippet": "var app = express();",
+    "taint": {
+      "source": "global app configuration",
+      "sink": "missing helmet/CSP/HSTS/rate-limit baseline",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 12,
+        "note": "app init without security middleware"
+      },
+      {
+        "file": "app.js",
+        "line": 29,
+        "note": "routes mounted without guards"
+      }
+    ],
+    "evidence": "var app = express(); | validator: app.js:12 var app=express() lacks helmet/CSP but no tainted sink or boundary crossing demonstrated; absence of hardening baseline alone is not exploitable | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: any network client. HOW: Express app created line 12 with no helmet/CSP/HSTS/X-Frame-Options/rate-limit before mounting routes. WHAT: breaks protection-in-depth; amplifies XSS to cookie theft and leaves DoS unthrottled.",
+    "status": "fp",
+    "poc": {
+      "approach": "Fetch page and check missing CSP/HSTS headers",
+      "command": "curl -sI http://localhost:3000/ | grep -i -E \"content-security|x-frame|strict-transport\"",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "app deployed beyond localhost; victim renders XSS"
+    ],
+    "unit": "app",
+    "hunter_evidence": "var app = express();",
+    "hunter_snippet": "var app = express();",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "Development-gated stack trace disclosure in error handler",
+    "cwe": "CWE-209",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 42,
+    "end_line": 42,
+    "snippet": "  res.locals.error = req.app.get('env') === 'development' ? err : {};",
+    "taint": {
+      "source": "server-side exception",
+      "sink": "error view with stack trace",
+      "path": [
+        "app.js:42 err into locals",
+        "app.js:46 res.render(error)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 42,
+        "note": "full error exposed in development"
+      },
+      {
+        "file": "app.js",
+        "line": 46,
+        "note": "error view rendered with stack"
+      }
+    ],
+    "evidence": "  res.locals.error = req.app.get('env') === 'development' ? err : {}; | validator: app.js:42 res.locals.error = req.app.get('env')==='development' ? err : {} neutralizes stack in production; views/error.pug:5 only renders gated locals | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client triggering errors. HOW: error handler populates full err when env development line 42 and renders error.pug with stack. stackhawk.yml sets Development. WHAT: leaks paths/versions/stack for targeting.",
+    "status": "fp",
+    "poc": {
+      "approach": "Trigger 404 and observe error page leaking stack",
+      "command": "curl -s http://localhost:3000/nonexistent | grep -i -A2 stack",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "NODE_ENV=development or error triggered"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  res.locals.error = req.app.get('env') === 'development' ? err : {};",
+    "hunter_snippet": "  res.locals.error = req.app.get('env') === 'development' ? err : {};",
+    "control_type": "sanitizer",
+    "duplicate_of": "unit-app-5",
+    "cvss": 0.0,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-15",
+    "title": "Debug enabled and secrets baked into image",
+    "cwe": "CWE-215",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "ENV DEBUG=myapp:*",
+    "taint": {
+      "source": "Docker build configuration",
+      "sink": "debug exposure plus credential DB in image",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 6,
+        "note": "debug forced on"
+      },
+      {
+        "file": "Dockerfile",
+        "line": 4,
+        "note": "blind copy ships DB"
+      }
+    ],
+    "evidence": "ENV DEBUG=myapp:* | validator: Dockerfile:6 ENV DEBUG=myapp:* ; Dockerfile build config out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: anyone with image/logs. HOW: ENV DEBUG=myapp:* forces debug verbosity; COPY . . bakes db with creds into image. WHAT: leaks internals and ships live credential DB.",
+    "status": "fp",
+    "poc": {
+      "approach": "Build/run and observe debug verbosity plus DB inclusion",
+      "command": "grep -n DEBUG Dockerfile; docker history stackhawk/nodeexpressvulny | head",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "production/container deployment using Dockerfile"
+    ],
+    "unit": "app",
+    "hunter_evidence": "ENV DEBUG=myapp:*",
+    "hunter_snippet": "ENV DEBUG=myapp:*",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "Insecure cookie configuration without signing or flags",
+    "cwe": "CWE-614",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "app.use(cookieParser());",
+    "taint": {
+      "source": "global middleware config",
+      "sink": "unsigned/insecure cookie handling",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 26,
+        "note": "unsigned cookie parser without flags"
+      }
+    ],
+    "evidence": "app.use(cookieParser()); | validator: app.js:26 app.use(cookieParser()) without secret but repo has no res.cookie/req.cookies usage (no Set-Cookie flow); no cookie boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network attacker / XSS payload. HOW: cookieParser with no secret line 26 so no signed integrity; no secure/httpOnly/sameSite defaults. Combined with XSS, cookies trivially stolen. WHAT: breaks cookie confidentiality/integrity.",
+    "status": "fp",
+    "poc": {
+      "approach": "Inspect Set-Cookie and app config for missing flags/secret",
+      "command": "grep -n cookieParser app.js; curl -sI http://localhost:3000/ | grep -i cookie",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "cookies used; XSS exists to steal them"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.use(cookieParser());",
+    "hunter_snippet": "app.use(cookieParser());",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Wildcard network listen without localhost pinning",
+    "cwe": "CWE-668",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "bin/www",
+    "start_line": 28,
+    "end_line": 28,
+    "snippet": "server.listen(port);",
+    "taint": {
+      "source": "environment plus default 3000",
+      "sink": "wildcard network listen",
+      "path": [
+        "bin/www:15 process.env.PORT",
+        "bin/www:28 server.listen(port)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bin/www",
+        "line": 15,
+        "note": "port from env"
+      },
+      {
+        "file": "bin/www",
+        "line": 28,
+        "note": "wildcard bind"
+      }
+    ],
+    "evidence": "server.listen(port); | validator: bin/www:28 server.listen(port) without host is standard Express bind; service intentionally exposes 3000 per Dockerfile:6 EXPOSE 3000 and docker-compose.yml:6 | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent/network attacker. HOW: port from env line 15 then server.listen(port) line 28 with all-interfaces comment and no host pin/auth. WHAT: expands unauthenticated SQLi/XSS reach.",
+    "status": "fp",
+    "poc": {
+      "approach": "Inspect listen binding and PORT handling for wildcard exposure",
+      "command": "grep -n \"listen\\|normalizePort\\|PORT\" bin/www; ss -ltnp | grep 3000",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "PORT env attacker-influenced; network reachability"
+    ],
+    "unit": "app",
+    "hunter_evidence": "server.listen(port);",
+    "hunter_snippet": "server.listen(port);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Unbounded body parsing and verbose logging enable DoS",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 23,
+    "end_line": 25,
+    "snippet": "app.use(logger('dev'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: false }));",
+    "taint": {
+      "source": "attacker-controlled request body",
+      "sink": "unbounded request parsing plus verbose logging",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 23,
+        "note": "verbose dev logger always on"
+      },
+      {
+        "file": "app.js",
+        "line": 24,
+        "note": "json parser without limit"
+      },
+      {
+        "file": "app.js",
+        "line": 25,
+        "note": "urlencoded without limit"
+      }
+    ],
+    "evidence": "app.use(logger('dev'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: false })); | validator: app.js:24-25 express.json()/urlencoded() on Express ~4.16.1 (package.json:13) default to 100kb body-parser limit, not unbounded; app.js:23 logger dev is request logging, not parsing sink | refute: misread_code | consensus: 2/2 fp",
+    "rationale": "WHO: remote unauthenticated client controls body size. HOW: morgan dev always on line 23; json/urlencoded lines 24-25 with no limit; unbounded LIKE scan. No rate-limit. WHAT: enables log-flooding and body/CPU exhaustion DoS.",
+    "status": "fp",
+    "poc": {
+      "approach": "Send oversized JSON and observe resource use",
+      "command": "python3 -c \"print('a'*2000000)\" | curl -s -X POST -H 'Content-Type: application/json' --data-binary @- http://localhost:3000/search -o /dev/null -w '%{http_code}'",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "unauthenticated network access; default Express limits"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.use(logger('dev'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: false }));",
+    "hunter_snippet": "app.use(logger('dev'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: false }));",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "Unvalidated PORT env allows named-pipe binding",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "bin/www",
+    "start_line": 39,
+    "end_line": 42,
+    "snippet": "  if (isNaN(port)) {\n    // named pipe\n    return val;\n  }",
+    "taint": {
+      "source": "PORT environment variable",
+      "sink": "named-pipe bind from env",
+      "path": [
+        "bin/www:15 process.env.PORT",
+        "bin/www:39 isNaN branch return val"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bin/www",
+        "line": 39,
+        "note": "NaN returns raw env string"
+      },
+      {
+        "file": "bin/www",
+        "line": 42,
+        "note": "unvalidated pipe passthrough"
+      }
+    ],
+    "evidence": "  if (isNaN(port)) {\n    // named pipe\n    return val;\n  } | validator: bin/www:15 PORT from process.env is trusted operator config with '3000' default; bin/www:39-42 normalizePort named-pipe branch has no untrusted network inflow | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: environment supplier. HOW: normalizePort returns raw string when NaN lines 39-42 enabling pipe path, and false for negatives without validation; used directly in listen. WHAT: enables pipe hijack or startup DoS via crafted env.",
+    "status": "fp",
+    "poc": {
+      "approach": "Set PORT to pipe string and observe listen behavior",
+      "command": "PORT=/tmp/evil.sock node ./bin/www & sleep 1; ls -l /tmp/evil.sock; kill %1",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "attacker controls PORT env"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  if (isNaN(port)) {\n    // named pipe\n    return val;\n  }",
+    "hunter_snippet": "  if (isNaN(port)) {\n    // named pipe\n    return val;\n  }",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-18",
+    "title": "CI secret exposed via debug logging",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": ".circleci/config.yml",
+    "start_line": 19,
+    "end_line": 19,
+    "snippet": "      - run: hawk --api-key=\"${HAWK_API_KEY}\" scan --env CIRCLE_SHA1=\"$CIRCLE_SHA1\" --env CIRCLE_BRANCH=\"$CIRCLE_BRANCH\" --debug stackhawk.yml",
+    "taint": {
+      "source": "HAWK_API_KEY pipeline secret",
+      "sink": "secret passed alongside debug logging",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": ".circleci/config.yml",
+        "line": 19,
+        "note": "key used with debug logging"
+      }
+    ],
+    "evidence": "      - run: hawk --api-key=\"${HAWK_API_KEY}\" scan --env CIRCLE_SHA1=\"$CIRCLE_SHA1\" --env CIRCLE_BRANCH=\"$CIRCLE_BRANCH\" --debug stackhawk.yml | validator: .circleci/config.yml:19 passes ${HAWK_API_KEY} as CLI arg with --debug scanner flag; no evidence key is echoed/logged, and CI workflow manifests are out-of-scope infra | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: CI log reader. HOW: hawk invoked with api-key plus --debug line 19 after curl -v line 15; verbose echoes secrets. WHAT: risks API key exfiltration.",
+    "status": "fp",
+    "poc": {
+      "approach": "Inspect logs for key leaked by debug/verbose modes",
+      "command": "grep -n \"HAWK_API_KEY\\| --debug\\|curl -v\" .circleci/config.yml",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "CI logs stored/shared; HAWK_API_KEY set"
+    ],
+    "unit": "app",
+    "hunter_evidence": "      - run: hawk --api-key=\"${HAWK_API_KEY}\" scan --env CIRCLE_SHA1=\"$CIRCLE_SHA1\" --env CIRCLE_BRANCH=\"$CIRCLE_BRANCH\" --debug stackhawk.yml",
+    "hunter_snippet": "      - run: hawk --api-key=\"${HAWK_API_KEY}\" scan --env CIRCLE_SHA1=\"$CIRCLE_SHA1\" --env CIRCLE_BRANCH=\"$CIRCLE_BRANCH\" --debug stackhawk.yml",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-19",
+    "title": "Azure pipeline unpinned image on self-hosted agent",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "azure-pipelines.yml",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "      docker run --rm --publish 3000:3000 --detach --name nodeexpressvulny stackhawk/nodeexpressvulny",
+    "taint": {
+      "source": "pipeline configuration",
+      "sink": "unpinned image plus host-exposed daemon on agent",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "azure-pipelines.yml",
+        "line": 12,
+        "note": "self-hosted pool trust"
+      },
+      {
+        "file": "azure-pipelines.yml",
+        "line": 17,
+        "note": "unpinned image with publish"
+      }
+    ],
+    "evidence": "      docker run --rm --publish 3000:3000 --detach --name nodeexpressvulny stackhawk/nodeexpressvulny | validator: azure-pipelines.yml:17 docker run stackhawk/nodeexpressvulny and azure-pipelines.yml:12 self-hosted pool are CI/CD container-run config, explicitly out-of-scope infra | refute: exclusion_rule | consensus: 2/2 fp",
+    "rationale": "WHO: agent owner / registry writer. HOW: self-hosted pool line 12 with hardcoded user path line 15 and docker run publish of mutable image line 17 no digest, plus latest scanner. WHAT: stale agent or tag yields RCE.",
+    "status": "fp",
+    "poc": {
+      "approach": "Review pipeline for self-hosted pool and unpinned image",
+      "command": "grep -n \"self-hosted\\|publish\\|latest\" azure-pipelines.yml",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "self-hosted Windows agent compromised or tag moved"
+    ],
+    "unit": "app",
+    "hunter_evidence": "      docker run --rm --publish 3000:3000 --detach --name nodeexpressvulny stackhawk/nodeexpressvulny",
+    "hunter_snippet": "      docker run --rm --publish 3000:3000 --detach --name nodeexpressvulny stackhawk/nodeexpressvulny",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-16",
+    "title": "Compose wildcard port publish without controls",
+    "cwe": "CWE-668",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "docker-compose.yml",
+    "start_line": 6,
+    "end_line": 7,
+    "snippet": "    ports:\n      - 3000:3000",
+    "taint": {
+      "source": "compose deployment config",
+      "sink": "wildcard host port exposure without limits",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "docker-compose.yml",
+        "line": 6,
+        "note": "host port publish"
+      },
+      {
+        "file": "docker-compose.yml",
+        "line": 7,
+        "note": "wildcard mapping"
+      }
+    ],
+    "evidence": "    ports:\n      - 3000:3000 | validator: docker-compose.yml:6-7 ports 3000:3000 is container publish config, explicitly out-of-scope infra per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent network client. HOW: compose publishes 3000:3000 to host with no localhost pin, auth, or limits; inherits root/EOL image. WHAT: widens unauthenticated SQLi/XSS and DoS.",
+    "status": "fp",
+    "poc": {
+      "approach": "Compose up and verify 0.0.0.0 exposure with no auth",
+      "command": "cat docker-compose.yml; docker compose config | grep -A2 ports",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "compose deployment on shared network"
+    ],
+    "unit": "app",
+    "hunter_evidence": "    ports:\n      - 3000:3000",
+    "hunter_snippet": "    ports:\n      - 3000:3000",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-20",
+    "title": "Scanner target uses cleartext HTTP in Development",
+    "cwe": "CWE-319",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "stackhawk.yml",
+    "start_line": 3,
+    "end_line": 4,
+    "snippet": "  env: Development\n  host: http://localhost:3000",
+    "taint": {
+      "source": "scanner configuration",
+      "sink": "cleartext HTTP scan target in Development",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "stackhawk.yml",
+        "line": 3,
+        "note": "development env"
+      },
+      {
+        "file": "stackhawk.yml",
+        "line": 4,
+        "note": "cleartext host"
+      }
+    ],
+    "evidence": "  env: Development\n  host: http://localhost:3000 | validator: stackhawk.yml:4 host http://localhost:3000 is loopback-only scanner target; no remote eavesdropper boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network eavesdropper. HOW: scanner targets http localhost:3000 line 4 with Development line 3 and no TLS; payloads and credential rows traverse cleartext. WHAT: leaks probing payloads and exfiltrated data.",
+    "status": "fp",
+    "poc": {
+      "approach": "Inspect scanner target for http and Development env",
+      "command": "grep -n \"host:\\|env:\" stackhawk.yml",
+      "script": "",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "scanner runs; eavesdropper present"
+    ],
+    "unit": "app",
+    "hunter_evidence": "  env: Development\n  host: http://localhost:3000",
+    "hunter_snippet": "  env: Development\n  host: http://localhost:3000",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Unauthenticated API exposure of SQL query endpoint GET /api/search",
+    "cwe": "CWE-862",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routes/api.js",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "router.get('/search', function (req, res, next) {",
+    "taint": {
+      "source": "unauthenticated GET /api/search?searchText=",
+      "sink": "SQLite query + JSON dump without auth check",
+      "path": [
+        "routes/api.js:5 route without guard",
+        "routes/api.js:10 searchByName(searchText)",
+        "service/search.js:6 db.all"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 5,
+        "note": "unguarded route definition"
+      }
+    ],
+    "evidence": "router.get('/search', function (req, res, next) { | validator: routes/api.js:5 GET /search is intentionally public catalog query mounted at app.js:31 with no auth model anywhere in repo; no auth-protected principal/resource demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: routes/api.js:5 exposes GET /api/search with no authentication, session, API key, or IP allowlist; directly queries SQLite and returns rows as JSON. WHAT: breaks CWE-862 missing authorization; enables unauthenticated bulk exfiltration via SQLi UNION including user table.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "router.get('/search', function (req, res, next) {",
+    "hunter_snippet": "router.get('/search', function (req, res, next) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Missing CSRF protection on POST /search",
+    "cwe": "CWE-352",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "routes/search.js",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "router.post('/', function (req, res, next) {",
+    "taint": {
+      "source": "cross-site POST to /search from victim browser",
+      "sink": "state-changing/DB-query handler without CSRF token",
+      "path": [
+        "routes/search.js:10 router.post('/')",
+        "routes/search.js:11 req.body.searchText",
+        "service/search.js:6 db.all concatenation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 10,
+        "note": "POST handler without CSRF guard"
+      },
+      {
+        "file": "app.js",
+        "line": 23,
+        "note": "no csurf/origin check middleware"
+      }
+    ],
+    "evidence": "router.post('/', function (req, res, next) { | validator: routes/search.js:10 POST / only calls service/search.js:6 db.all SELECT (read-only) and has no session/auth (app.js:26 only cookieParser, no session), so no ambient-authority state change for CSRF | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client can POST to /search. HOW: routes/search.js:10 defines router.post('/') with no csrf token, no csurf middleware, and app.js has no CSRF protection; req.body.searchText flows to DB and render. WHAT: breaks CWE-352 CSRF invariant; attacker site can forge cross-site POST search (and drive SQLi/XSS payloads in victim context).",
+    "status": "fp",
+    "conditions": [
+      "Victim authenticated context not required; forged POST executes from any origin"
+    ],
+    "unit": "app",
+    "hunter_evidence": "router.post('/', function (req, res, next) {",
+    "hunter_snippet": "router.post('/', function (req, res, next) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Error message disclosure unconditional in production error handler",
+    "cwe": "CWE-209",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 41,
+    "end_line": 41,
+    "snippet": "  res.locals.message = err.message;",
+    "taint": {
+      "source": "server-side exception including DB errors",
+      "sink": "error view message rendered in all envs",
+      "path": [
+        "app.js:41 err.message into locals",
+        "app.js:46 res.render('error')"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 41,
+        "note": "unconditional message exposure"
+      },
+      {
+        "file": "app.js",
+        "line": 46,
+        "note": "render error view"
+      }
+    ],
+    "evidence": "  res.locals.message = err.message; | validator: app.js:42 gates full error to development-only (req.app.get('env')==='development'?err:{}); views/error.pug:5 renders empty stack in prod, and app.js:41 message is generic http-errors text with SQL paths handling errors internally | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client triggering errors. HOW: app.js:41 sets res.locals.message = err.message unconditionally, even when env != development; error view then renders message. WHAT: leaks internal error details (paths, SQL fragments) in production (CWE-209), distinct from stack-conditional line 42.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "  res.locals.message = err.message;",
+    "hunter_snippet": "  res.locals.message = err.message;",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "Unauthenticated mount of /search router without access controls",
+    "cwe": "CWE-862",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "app.js",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "app.use('/search', searchRouter);",
+    "taint": {
+      "source": "unauthenticated network request to /search",
+      "sink": "search router with SQLi/XSS sinks, no guard",
+      "path": [
+        "app.js:30 mount /search",
+        "routes/search.js:10 POST handler",
+        "service/search.js:6 SQL sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app.js",
+        "line": 30,
+        "note": "unguarded mount"
+      }
+    ],
+    "evidence": "app.use('/search', searchRouter); | validator: app.js:30 app.use('/search',searchRouter) mounts intentionally public search; routes/search.js:7-10 show no auth system exists to bypass, catalog+search is public by README design | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client. HOW: app.js:30 mounts /search router with no authentication, rate-limit, or input-size guard; same for /api. WHAT: missing access/rate control (CWE-862/CWE-770) exposes SQLi/XSS sinks to unlimited unauthenticated probing distinct from generic helmet gap.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "app.use('/search', searchRouter);",
+    "hunter_snippet": "app.use('/search', searchRouter);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Sensitive SQL error logging to stdout in search service",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "service/search.js",
+    "start_line": 9,
+    "end_line": 9,
+    "snippet": "      console.log('error ' + err);",
+    "taint": {
+      "source": "attacker searchText causing sqlite error",
+      "sink": "console.log of full err with SQL text",
+      "path": [
+        "service/search.js:6 tainted SQL",
+        "service/search.js:9 log err"
+      ]
+    },
+    "refs": [
+      {
+        "file": "service/search.js",
+        "line": 9,
+        "note": "verbose error log sink"
+      }
+    ],
+    "evidence": "      console.log('error ' + err); | validator: app.js:24-25 express.json()/urlencoded() on Express ~4.16.1 (package.json:13) default to 100kb body-parser limit, not unbounded; app.js:23 logger dev is request logging, not parsing sink | refute: misread_code | consensus: 2/2 fp",
+    "rationale": "WHO: remote attacker inducing DB errors via searchText. HOW: service/search.js:9 logs 'error '+err where err contains SQLite message and offending SQL text to stdout/Docker logs. WHAT: sensitive information in logs (CWE-532) exposes SQL schema/query to log readers and enables log injection via crafted searchText in err string.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      console.log('error ' + err);",
+    "hunter_snippet": "      console.log('error ' + err);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-17",
+    "title": "Cleartext HTTP server without TLS",
+    "cwe": "CWE-319",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "bin/www",
+    "start_line": 22,
+    "end_line": 22,
+    "snippet": "var server = http.createServer(app);",
+    "taint": {
+      "source": "network client request/response with creds",
+      "sink": "cleartext HTTP transport",
+      "path": [
+        "bin/www:22 http.createServer",
+        "bin/www:28 server.listen"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bin/www",
+        "line": 22,
+        "note": "cleartext server"
+      }
+    ],
+    "evidence": "var server = http.createServer(app); | validator: bin/www:22 http.createServer(app) is standard localhost demo transport; repo has no login/secret transmission requiring TLS and documents localhost-only testing (README.md, stackhawk.yml:4) | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: network eavesdropper / MITM. HOW: bin/www:22 creates http.createServer(app) with no TLS options; all SQLi payloads, JSON credential rows, and cookies traverse cleartext. WHAT: cleartext transmission (CWE-319) distinct from scanner config; no HSTS/redirect.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "var server = http.createServer(app);",
+    "hunter_snippet": "var server = http.createServer(app);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-19",
+    "title": "Overbroad COPY bakes credential DB into image",
+    "cwe": "CWE-829",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "COPY . .",
+    "taint": {
+      "source": "build context with vulny.db and secrets",
+      "sink": "image layer via COPY",
+      "path": [
+        "bootstrapdb.js:2 DB file",
+        "Dockerfile:4 COPY . ."
+      ]
+    },
+    "refs": [
+      {
+        "file": "Dockerfile",
+        "line": 4,
+        "note": "overbroad copy sink"
+      }
+    ],
+    "evidence": "COPY . . | validator: azure-pipelines.yml:17 docker run stackhawk/nodeexpressvulny and azure-pipelines.yml:12 self-hosted pool are CI/CD container-run config, explicitly out-of-scope infra | refute: exclusion_rule | consensus: 2/2 fp",
+    "rationale": "WHO: anyone with image layers or build context. HOW: Dockerfile:4 COPY . . copies entire context including db/vulny.db with plaintext creds, .git history, and CI secrets files into image without .dockerignore narrowing. WHAT: sensitive data baked into layers (CWE-538) and supply-chain bloat.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "COPY . .",
+    "hunter_snippet": "COPY . .",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "Unbounded JSON result set without pagination in GET /api/search",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routes/api.js",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "      res.json(ret);",
+    "taint": {
+      "source": "attacker searchText '' or '%'",
+      "sink": "unbounded res.json of all rows",
+      "path": [
+        "routes/api.js:7 default '' query",
+        "service/search.js:6 LIKE without LIMIT",
+        "routes/api.js:15 res.json(ret)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 15,
+        "note": "unbounded JSON sink"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "LIKE query without LIMIT"
+      }
+    ],
+    "evidence": "      res.json(ret); | validator: routes/api.js:15 res.json(ret) returns at most 3 item rows seeded in bootstrapdb.js:14-17 via service/search.js:6 LIKE without LIMIT; no unbounded/pagination DoS demonstrated | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: remote unauthenticated client controls searchText. HOW: routes/api.js:15 returns res.json(ret) with all matching rows and no LIMIT, pagination, or max-rows cap; underlying SQL LIKE '%...%' without LIMIT in service/search.js:6 can return full table. WHAT: enables bulk data exfiltration and JSON/memory/CPU DoS (CWE-400/CWE-200).",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      res.json(ret);",
+    "hunter_snippet": "      res.json(ret);",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-23",
+    "title": "Background server start without readiness check in CI",
+    "cwe": "CWE-754",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": ".circleci/config.yml",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "      - run: nohup npm run start &",
+    "taint": {
+      "source": "CI job startup race",
+      "sink": "scan against not-ready server",
+      "path": [
+        ".circleci/config.yml:18 nohup start",
+        ".circleci/config.yml:19 hawk scan"
+      ]
+    },
+    "refs": [
+      {
+        "file": ".circleci/config.yml",
+        "line": 18,
+        "note": "race sink"
+      }
+    ],
+    "evidence": "      - run: nohup npm run start & | validator: .circleci/config.yml:18-19 CI scan orchestration (nohup start + hawk scan) is CI/CD workflow config out of scope, not an app security boundary | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: CI infrastructure / flaky service. HOW: .circleci/config.yml:18 starts app via nohup npm run start & with no healthcheck, readiness poll, or log redirection; subsequent hawk scan races startup and background process outlives step. WHAT: unreliable test (CWE-400/CWE-754) masks vulns and leaks process/logs.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "      - run: nohup npm run start &",
+    "hunter_snippet": "      - run: nohup npm run start &",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-app-27",
+    "title": "Aggressive scanner polling without backoff in waitForAppTarget",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "stackhawk.yml",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "    waitTimeoutMillis: 300000",
+    "taint": {
+      "source": "scanner poll config",
+      "sink": "rapid GET / polling load on dev server",
+      "path": [
+        "stackhawk.yml:8 path /",
+        "stackhawk.yml:10 waitTimeoutMillis"
+      ]
+    },
+    "refs": [
+      {
+        "file": "stackhawk.yml",
+        "line": 10,
+        "note": "poll load sink"
+      }
+    ],
+    "evidence": "    waitTimeoutMillis: 300000 | validator: stackhawk.yml:9 pollDelay: 1000 proves backoff exists, stackhawk.yml:10 waitTimeoutMillis refutes 'without backoff' claim; scanner config is not app DoS sink | refute: misread_code | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated scanner / attacker. HOW: stackhawk.yml:10 sets waitTimeoutMillis 300000 with 1000ms pollDelay against path /; scanner hammers app with ~300 rapid polls before scan. WHAT: aggressive polling (CWE-400) can DoS single-process SQLite-per-request server.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "    waitTimeoutMillis: 300000",
+    "hunter_snippet": "    waitTimeoutMillis: 300000",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "xunit-missing-csrf-post-search",
+    "title": "Missing CSRF protection on POST /search",
+    "cwe": "CWE-352",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "routes/search.js",
+    "start_line": 10,
+    "end_line": 10,
+    "snippet": "router.post('/', function (req, res, next) {",
+    "taint": {
+      "source": "cross-site form POST",
+      "sink": "routes/search.js:10 POST /search without CSRF guard",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "routes/search.js",
+        "line": 10,
+        "note": "unprotected POST route definition"
+      },
+      {
+        "file": "app.js",
+        "line": 23,
+        "note": "no csrf/session/helmet middleware, only json/urlencoded/cookie/static"
+      }
+    ],
+    "evidence": "routes/search.js:10 defines POST /search state-changing handler with no csrf, session, or token check; app.js:12-26 shows no csurf/helmet/session middleware | validator: routes/search.js:10-19 POST /search only calls searchByName SELECT and renders, no state change; app.js:12-26 has no session/auth, so no authenticated victim context for CSRF to exploit | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "POST endpoint performing DB query and reflected render has no CSRF token, SameSite, or origin check, so cross-site form can force victim browser to issue attacker-chosen searchText including XSS payload.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/search.js:10 defines POST /search state-changing handler with no csrf, session, or token check; app.js:12-26 shows no csurf/helmet/session middleware",
+    "hunter_snippet": "router.post('/', function (req, res, next) {",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "sys-unbounded-search-dos",
+    "title": "Unauthenticated unbounded search without rate limiting or pagination enables DoS/scraping",
+    "cwe": "CWE-400",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "routes/api.js",
+    "start_line": 5,
+    "end_line": 15,
+    "snippet": "router.get('/search', function (req, res, next) {",
+    "taint": {
+      "source": "unauthenticated query/body input with no size or rate limits",
+      "sink": "unbounded JSON response / HTML render of all matching rows",
+      "path": [
+        "routes/api.js:7 req.query.searchText (default '')",
+        "service/search.js:6 LIKE '%'+searchText+'%' full scan",
+        "routes/api.js:15 res.json(ret) all rows"
+      ]
+    },
+    "refs": [
+      {
+        "file": "routes/api.js",
+        "line": 5,
+        "note": "unauthenticated GET /api/search, no rate limit"
+      },
+      {
+        "file": "routes/search.js",
+        "line": 10,
+        "note": "unauthenticated POST /search, no rate limit"
+      },
+      {
+        "file": "app.js",
+        "line": 24,
+        "note": "express.json() without limit"
+      },
+      {
+        "file": "service/search.js",
+        "line": 6,
+        "note": "unbounded LIKE query without LIMIT"
+      },
+      {
+        "file": "routes/api.js",
+        "line": 15,
+        "note": "unbounded res.json(ret)"
+      }
+    ],
+    "evidence": "routes/api.js:5 unauthenticated GET /api/search; routes/search.js:10 unauthenticated POST /search; app.js:24-25 body parsers without limits; service/search.js:6 unbounded LIKE query; routes/api.js:15 res.json(ret) returns all rows | validator: service/search.js:6 unbounded LIKE without LIMIT returns only 3 seeded rows per bootstrapdb.js:14-16; no expensive amplifier or large dataset demonstrated, missing rate-limit alone is hardening gap | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "Both search endpoints are unauthenticated with no rate limiting, no input size validation, and no pagination/LIMIT. Each request triggers an unbounded LIKE '%input%' full-table scan whose full result set is rendered or returned as JSON, enabling resource exhaustion and bulk catalog scraping by remote unauthenticated callers.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "routes/api.js:5 unauthenticated GET /api/search; routes/search.js:10 unauthenticated POST /search; app.js:24-25 body parsers without limits; service/search.js:6 unbounded LIKE query; routes/api.js:15 res.json(ret) returns all rows",
+    "hunter_snippet": "router.get('/search', function (req, res, next) {",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

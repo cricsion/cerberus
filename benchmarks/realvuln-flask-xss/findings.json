@@ -1,0 +1,2214 @@
+[
+  {
+    "id": "unit-app-0",
+    "title": "Hardcoded Flask SECRET_KEY enables session forgery",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/flask_xss.py",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'",
+    "taint": {
+      "source": "hardcoded literal in config_app",
+      "sink": "Flask session signing via SECRET_KEY",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 23,
+        "note": "hardcoded SECRET_KEY"
+      }
+    ],
+    "evidence": "app.config[SECRET_KEY] = Keep it secret | validator: app/flask_xss.py:23 hardcodes SECRET_KEY='Keep it secret, keep it safe' with no env override; Flask session signing uses it | consensus: 3/3 confirmed",
+    "rationale": "Hardcoded SECRET_KEY signs Flask-Login sessions; anyone knowing it can forge admin sessions.",
+    "status": "confirmed",
+    "conditions": [
+      "defaults deployed"
+    ],
+    "unit": "app",
+    "hunter_evidence": "app.config[SECRET_KEY] = Keep it secret",
+    "hunter_snippet": "app.config[SECRET_KEY] = Keep it secret",
+    "patch_summary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Reflected XSS in unsafe_params view",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/blueprints/sandboxes/views.py",
+    "start_line": 13,
+    "end_line": 14,
+    "snippet": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'",
+    "taint": {
+      "source": "GET ?name=",
+      "sink": "Jinja |safe render",
+      "path": [
+        "app/blueprints/sandboxes/views.py:13 request.args",
+        "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html:6 |safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/sandboxes/views.py",
+        "line": 13,
+        "note": "untrusted source"
+      },
+      {
+        "file": "app/blueprints/sandboxes/views.py",
+        "line": 14,
+        "note": "sink"
+      }
+    ],
+    "evidence": "    name = request.args.get('name', 'world!') | validator: app/flask_xss.py:23 hardcodes SECRET_KEY='Keep it secret, keep it safe' with no env override; Flask session signing uses it | consensus: 3/3 confirmed",
+    "rationale": "WHO remote unauth controls ?name=. HOW request.args.get at line 13 flows to render_template name= at 14 rendered with |safe. WHAT breaks output encoding -> reflected XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "    name = request.args.get('name', 'world!')",
+    "hunter_snippet": "    name = request.args.get('name', 'world!')",
+    "patch_summary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-0",
+    "title": "Reflected cookie XSS in unsafe_cookies handler",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 1.0,
+    "path": "app/blueprints/sandboxes/views.py",
+    "start_line": 36,
+    "end_line": 37,
+    "snippet": "app.config['SECRET_KEY'] = 'Keep it secret, keep it safe'",
+    "taint": {
+      "source": "Cookie name and POST form name",
+      "sink": "Jinja safe render",
+      "path": [
+        "app/blueprints/sandboxes/views.py:27 request.cookies",
+        "app/blueprints/sandboxes/views.py:37 render_template"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/sandboxes/views.py",
+        "line": 27,
+        "note": "untrusted cookie source"
+      },
+      {
+        "file": "app/blueprints/sandboxes/views.py",
+        "line": 37,
+        "note": "render sink"
+      }
+    ],
+    "evidence": "render_template('sandboxes/unsafe_cookies.html', name=name | validator: app/flask_xss.py:23 hardcodes SECRET_KEY='Keep it secret, keep it safe' with no env override; Flask session signing uses it | consensus: 3/3 confirmed | triage: Hardcoded SECRET_KEY enables session forgery to admin",
+    "rationale": "WHO remote unauth controls Cookie name and POST form name. HOW request.cookies.get line27 and request.form.get line28 flow into name then render_template lines36-37 rendered by unsafe_cookies template with safe filter. WHAT breaks output encoding to reflected cookie XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "render_template('sandboxes/unsafe_cookies.html', name=name",
+    "hunter_snippet": "render_template('sandboxes/unsafe_cookies.html', name=name",
+    "patch_summary": "Load SECRET_KEY from environment/secret manager, require unique random value, rotate sessions.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Known key plus username admin gives forgery"
+    },
+    "cvss": 9.0,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-hardcoded-secret-key",
+    "title": "Hardcoded Flask SECRET_KEY enables session forgery",
+    "cwe": "CWE-798",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "app/flask_xss.py",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "app.config['SECRET_KEY'] = ***",
+    "taint": {
+      "source": "hardcoded SECRET_KEY committed in source",
+      "sink": "session cookie verification and admin authorization",
+      "path": [
+        "app/flask_xss.py:23 SECRET_KEY assignment",
+        "app/utils/__init__.py:8 load_user(user_id)",
+        "app/blueprints/admin/views.py:10 is_accessible -> is_admin_user"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 23,
+        "note": "hardcoded SECRET_KEY assignment"
+      },
+      {
+        "file": "app/utils/__init__.py",
+        "line": 8,
+        "note": "load_user trusts session user_id signed with SECRET_KEY"
+      },
+      {
+        "file": "app/models/models.py",
+        "line": 21,
+        "note": "admin determined by username string"
+      }
+    ],
+    "evidence": "app/flask_xss.py:23 sets SECRET_KEY to hardcoded value; app/utils/__init__.py:8 load_user trusts session user_id signed with that key; app/models/models.py:21 grants admin on username==admin | validator: Hardcoded key at app/flask_xss.py:23 SECRET_KEY='Keep it secret, keep it safe'; session user_id trusted at app/utils/__init__.py:8 load_user and admin check at app/models/models.py:21 username==admin enables forgery | consensus: 1/1 confirmed | triage: Same hardcoded SECRET_KEY line reported twice",
+    "rationale": "Hardcoded SECRET_KEY signs Flask-Login sessions. Anyone reading source can forge session cookies (e.g. admin id) via load_user, bypassing login and reaching admin views. Distinct from session-cookie flag finding.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/flask_xss.py:23 sets SECRET_KEY to hardcoded value; app/utils/__init__.py:8 load_user trusts session user_id signed with that key; app/models/models.py:21 grants admin on username==admin",
+    "hunter_snippet": "app.config['SECRET_KEY'] = ***",
+    "patch_summary": "Load SECRET_KEY from env with no hardcoded fallback and rotate; enforce strong random secret",
+    "control_type": "none",
+    "duplicate_of": "unit-app-0",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Same root flask_xss.py line 23"
+    },
+    "cvss": 8.9,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-2",
+    "title": "Plaintext password comparison in login",
+    "cwe": "CWE-256",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/blueprints/login/views.py",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "if user and user.password == password:",
+    "taint": {
+      "source": "POST username password",
+      "sink": "plaintext password comparison",
+      "path": [
+        "app/blueprints/login/views.py:15 request.form",
+        "app/blueprints/login/views.py:17 compare"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 17,
+        "note": "plaintext compare sink"
+      }
+    ],
+    "evidence": "if user and user.password == password: | validator: app/blueprints/login/views.py:17 compares user.password == password in plaintext; app/models/models.py:11-13 stores plaintext with no hashing found in repo | consensus: 1/1 confirmed | triage: Unauthenticated plaintext password comparison",
+    "rationale": "WHO remote unauth controls username password. HOW User query line16 then user.password == password line17 plaintext compare no hashing. WHAT breaks credential confidentiality.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "if user and user.password == password:",
+    "hunter_snippet": "if user and user.password == password:",
+    "patch_summary": "Hash passwords with bcrypt/argon2 on creation and use constant-time hash verification at login.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "POST login compares plaintext, confirms plaintext store"
+    },
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-9",
+    "title": "Unauthenticated stored XSS in API MessagesView.post",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/blueprints/api/views.py",
+    "start_line": 52,
+    "end_line": 52,
+    "snippet": "new_message = Message(message=message, from_user=from_user)",
+    "taint": {
+      "source": "JSON message from_user",
+      "sink": "unauthenticated store",
+      "path": [
+        "app/blueprints/api/views.py:44 get_json",
+        "app/blueprints/api/views.py:52 store"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 43,
+        "note": "missing auth decorator"
+      },
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 52,
+        "note": "spoofed store"
+      }
+    ],
+    "evidence": "new_message = Message(message=message, from_user=from_user) | validator: app/blueprints/api/views.py:39-52 MessagesView.post has no @admin_required unlike index/get/delete, takes request.get_json message/from_user and stores Message rendered safe at admin/message.html:29-30 | consensus: 1/1 confirmed | triage: Same unauth store in same function single fix",
+    "rationale": "WHO remote unauth controls JSON message from_user. HOW MessagesView.post line43 has no admin_required unlike siblings reads get_json and stores Message line52 with spoofed from_user. WHAT unauth stored XSS plus spoofing.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "new_message = Message(message=message, from_user=from_user)",
+    "hunter_snippet": "new_message = Message(message=message, from_user=from_user)",
+    "patch_summary": "Require authentication/authorization on POST (admin_required or login_required) and do not trust client from_user; set from current_user.",
+    "control_type": "none",
+    "duplicate_of": "sys-missing-auth-api-post",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "admin views messages"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Store fixed by auth on post"
+    },
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-23",
+    "title": "Reflected XSS sink in unsafe_params template",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "{{ name | safe }} in unsafe_params.html:6",
+    "taint": {
+      "source": "query name",
+      "sink": "name safe",
+      "path": [
+        "app/blueprints/sandboxes/views.py:14 name",
+        "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html:6 safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html",
+        "line": 6,
+        "note": "safe sink"
+      }
+    ],
+    "evidence": "Hello name safe | validator: app/blueprints/sandboxes/templates/sandboxes/unsafe_params.html:6 {{ name | safe }} renders view-controlled request.args name from sandboxes/views.py:13 without encoding | consensus: 1/1 confirmed | triage: Query name rendered safe without encoding",
+    "rationale": "WHO remote unauth controls name. HOW template renders name safe line6. WHAT reflected XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "Hello name safe",
+    "hunter_snippet": "Hello name safe",
+    "patch_summary": "Remove |safe filter to restore Jinja autoescaping for name.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted link"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Reflected XSS to unsafe_params template"
+    },
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-24",
+    "title": "Reflected XSS sink in unsafe_cookies template",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "{{ name | safe }} in unsafe_cookies.html:6",
+    "taint": {
+      "source": "cookie form name",
+      "sink": "name safe",
+      "path": [
+        "app/blueprints/sandboxes/views.py:37 name",
+        "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html:6 safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html",
+        "line": 6,
+        "note": "safe sink"
+      }
+    ],
+    "evidence": "Hello name safe | validator: app/blueprints/sandboxes/templates/sandboxes/unsafe_cookies.html:6 {{ name | safe }} renders cookie/form name from sandboxes/views.py:27-37 without encoding | consensus: 1/1 confirmed | triage: Cookie form name rendered safe without encoding",
+    "rationale": "WHO remote unauth controls cookie form name. HOW template renders name safe line6. WHAT reflected XSS distinct template.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "Hello name safe",
+    "hunter_snippet": "Hello name safe",
+    "patch_summary": "Remove |safe filter to restore Jinja autoescaping for name.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted link"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Reflected XSS to unsafe_cookies template"
+    },
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-25",
+    "title": "Stored XSS via from_user safe",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/templates/admin/message.html",
+    "start_line": 29,
+    "end_line": 29,
+    "snippet": "{{ message.from_user | safe }} in admin/message.html:29",
+    "taint": {
+      "source": "from_user",
+      "sink": "from_user safe",
+      "path": [
+        "app/blueprints/api/views.py:52 from_user",
+        "app/templates/admin/message.html:29 safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 29,
+        "note": "from_user safe sink"
+      }
+    ],
+    "evidence": "message from_user safe | validator: app/templates/admin/message.html:29 {{ message.from_user | safe }} renders attacker-spoofable from_user from api/views.py:52 unauthenticated store | consensus: 1/1 confirmed | triage: Attacker-spoofable from_user rendered safe to admin",
+    "rationale": "WHO any user API caller controls from_user. HOW Message from_user stored verbatim rendered safe line29. WHAT stored XSS admin browser.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "message from_user safe",
+    "hunter_snippet": "message from_user safe",
+    "patch_summary": "Remove |safe on from_user; autoescape admin table.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "unauth store via API",
+        "admin views messages"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Unauth from_user to message template safe"
+    },
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-26",
+    "title": "Stored XSS via message safe",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/templates/admin/message.html",
+    "start_line": 30,
+    "end_line": 30,
+    "snippet": "{{ message.message | safe }} in admin/message.html:30",
+    "taint": {
+      "source": "feedback message",
+      "sink": "message safe",
+      "path": [
+        "app/blueprints/account_area/views.py:75 store",
+        "app/templates/admin/message.html:30 safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 30,
+        "note": "message safe sink"
+      }
+    ],
+    "evidence": "message message safe | validator: app/templates/admin/message.html:30 {{ message.message | safe }} renders persistent feedback/Message from account_area/views.py:75 and api/views.py:52 to admin | consensus: 1/1 confirmed | triage: Distinct line 30 message sink requires independent fix",
+    "rationale": "WHO auth or API caller controls message body. HOW Message stored verbatim rendered message safe line30. WHAT stored XSS hijack admin.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "message message safe",
+    "hunter_snippet": "message message safe",
+    "patch_summary": "Remove |safe on message; autoescape admin table.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "store via feedback or API",
+        "admin views messages"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Persistent message safe sink separate line fix"
+    },
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-30",
+    "title": "Default admin credential in manage",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "manage.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "def add_admin(password equals admin)",
+    "taint": {
+      "source": "hardcoded default",
+      "sink": "default credential",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "manage.py",
+        "line": 14,
+        "note": "default password"
+      }
+    ],
+    "evidence": "def add_admin(password equals admin) | validator: manage.py:14 add_admin(password='admin') + manage.py:18 User(username='admin',password=password) creates remotely loginnable admin/admin via app/blueprints/login/views.py:14-17 plaintext compare | consensus: 1/1 confirmed | triage: Default admin admin remotely loginnable",
+    "rationale": "WHO local operator or reader. HOW add_admin default admin line14 creates predictable credential prints line21. WHAT default admin admin.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "def add_admin(password equals admin)",
+    "hunter_snippet": "def add_admin(password equals admin)",
+    "patch_summary": "Remove default password; require strong password via env/prompt, hash with bcrypt/argon2, force rotation.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "add_admin default password enables direct login"
+    },
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-missing-auth-api-post",
+    "title": "Missing authentication on API MessagesView.post",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "app/blueprints/api/views.py",
+    "start_line": 43,
+    "end_line": 43,
+    "snippet": "def post(self):",
+    "taint": {
+      "source": "Unauthenticated JSON POST /api/v1/messages",
+      "sink": "Persistent message store without auth",
+      "path": [
+        "app/blueprints/api/views.py:43 unauthenticated entry",
+        "app/blueprints/api/views.py:52 DB write"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 14,
+        "note": "sibling requires admin"
+      },
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 43,
+        "note": "post missing admin_required"
+      },
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 52,
+        "note": "unauthenticated DB write"
+      }
+    ],
+    "evidence": "Sibling methods MessagesView.index/get/delete/acknowledge at app/blueprints/api/views.py:14,24,34,59 all carry @admin_required, while post at :43 has no decorator and accepts request.get_json() from any client, storing Message at :52 | validator: Siblings at app/blueprints/api/views.py:14,24,34,59 carry @admin_required while app/blueprints/api/views.py:43 post() has none and at app/blueprints/api/views.py:45-52 does request.get_json to Message add/commit; stored payload renders |safe at app/templates/admin/message.html:30 | consensus: 1/1 confirmed | triage: Unauth JSON POST stores messages vs admin siblings",
+    "rationale": "Endpoint lacks expected authorization control present on all sibling routes; unauthenticated remote can create persistent stored-XSS payloads that later execute in admin browser",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Sibling methods MessagesView.index/get/delete/acknowledge at app/blueprints/api/views.py:14,24,34,59 all carry @admin_required, while post at :43 has no decorator and accepts request.get_json() from any client, storing Message at :52",
+    "hunter_snippet": "def post(self):",
+    "patch_summary": "Add @admin_required to MessagesView.post or require auth + validate/sanitize message; keep admin render escaped",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "admin views messages"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Post with no decorator stores Message rendered safe"
+    },
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-default-admin-credential",
+    "title": "Default administrative password in management command",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "manage.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "def add_admin(password=***):",
+    "taint": {
+      "source": "hardcoded default password in management command",
+      "sink": "persistent admin credential in User table",
+      "path": [
+        "manage.py:14 default password",
+        "manage.py:19 User(username='admin', password=password)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "manage.py",
+        "line": 14,
+        "note": "default admin password parameter"
+      },
+      {
+        "file": "manage.py",
+        "line": 19,
+        "note": "creates admin User with supplied password"
+      }
+    ],
+    "evidence": "manage.py:14 default password; manage.py:19-23 creates User(username=admin,password) with that value | validator: Default password at manage.py:14 add_admin(password=admin) creates User at manage.py:19 username=admin with that password | consensus: 1/1 confirmed | triage: Same default password line reported twice",
+    "rationale": "Management command creates/overwrites admin user with default password when operator runs without argument. Remote attacker can login as admin, then exploit stored-XSS admin view and plaintext credential store.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "manage.py:14 default password; manage.py:19-23 creates User(username=admin,password) with that value",
+    "hunter_snippet": "def add_admin(password=***):",
+    "patch_summary": "Require explicit strong password arg/env for add_admin with no default",
+    "control_type": "none",
+    "duplicate_of": "unit-app-30",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Same root manage.py line 14"
+    },
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-app-5",
+    "title": "Plaintext password storage in change_password",
+    "cwe": "CWE-256",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 34,
+    "end_line": 35,
+    "snippet": "User.query.filter_by(id=current_user.id).update({",
+    "taint": {
+      "source": "POST new-password",
+      "sink": "plaintext password write",
+      "path": [
+        "app/blueprints/account_area/views.py:20 new_password",
+        "app/blueprints/account_area/views.py:34 update"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 34,
+        "note": "plaintext write sink"
+      }
+    ],
+    "evidence": "User.query.filter_by(id=current_user.id).update({ | validator: app/blueprints/account_area/views.py:34-35 updates {'password': new_password} directly from POST and commits; no hashing | consensus: 1/1 confirmed | triage: Authenticated plaintext password write with no hashing",
+    "rationale": "WHO authenticated user controls new-password. HOW form get lines19-21 flows to User query update password lines34-35 no hashing. WHAT plaintext persistence.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "User.query.filter_by(id=current_user.id).update({",
+    "hunter_snippet": "User.query.filter_by(id=current_user.id).update({",
+    "patch_summary": "Hash new_password with bcrypt/argon2 before User.update; require current-password re-auth.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "valid victim session"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "POST new-password written plaintext via update plus commit"
+    },
+    "cvss": 4.9,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-8",
+    "title": "Stored XSS source in send_feedback",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 75,
+    "end_line": 75,
+    "snippet": "new_message = Message(message=feedback, from_user=current_user.username)",
+    "taint": {
+      "source": "POST feedback",
+      "sink": "persistent message with safe render",
+      "path": [
+        "app/blueprints/account_area/views.py:66 feedback",
+        "app/blueprints/account_area/views.py:75 store"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 75,
+        "note": "stored without encoding"
+      },
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 30,
+        "note": "safe sink"
+      }
+    ],
+    "evidence": "new_message = Message(message=feedback, from_user=current_user.username) | validator: app/blueprints/account_area/views.py:75 Message(message=feedback) stores raw POST feedback; rendered unescaped at app/templates/admin/message.html:30 {{ message.message | safe }} to admin | consensus: 1/1 confirmed | triage: Authenticated feedback stored raw for admin render",
+    "rationale": "WHO authenticated user controls feedback. HOW get feedback line66 stored as Message line75 no sanitization later rendered safe in admin template. WHAT stored XSS in admin browser.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "new_message = Message(message=feedback, from_user=current_user.username)",
+    "hunter_snippet": "new_message = Message(message=feedback, from_user=current_user.username)",
+    "patch_summary": "Persist feedback as-is but remove |safe and autoescape on admin render; validate length.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "attacker session",
+        "admin views messages"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Message store to admin message safe sink"
+    },
+    "cvss": 4.9,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-15",
+    "title": "Open redirect in xss_protection index",
+    "cwe": "CWE-601",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/blueprints/xss_protection/views.py",
+    "start_line": 12,
+    "end_line": 12,
+    "snippet": "return redirect(next)",
+    "taint": {
+      "source": "query next",
+      "sink": "redirect next",
+      "path": [
+        "app/blueprints/xss_protection/views.py:11 next",
+        "app/blueprints/xss_protection/views.py:12 redirect"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/xss_protection/views.py",
+        "line": 11,
+        "note": "next source"
+      },
+      {
+        "file": "app/blueprints/xss_protection/views.py",
+        "line": 12,
+        "note": "redirect sink"
+      }
+    ],
+    "evidence": "return redirect(next) | validator: app/blueprints/xss_protection/views.py:11 next=request.args.get('next') flows to :12 return redirect(next) with no allowlist | consensus: 1/1 confirmed | triage: Unvalidated next flows to redirect",
+    "rationale": "WHO remote unauth controls next. HOW request args get next line11 flows to redirect line12 no allowlist. WHAT open redirect phishing.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "return redirect(next)",
+    "hunter_snippet": "return redirect(next)",
+    "patch_summary": "Allowlist redirect targets (relative-only or explicit hosts) before redirect; default to index.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted link"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Open redirect enables phishing"
+    },
+    "cvss": 4.9,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-csrf-change-email",
+    "title": "Missing CSRF on change_email enables email hijack",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.95,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 41,
+    "end_line": 43,
+    "snippet": "@account_area.route('/change_email', methods=['POST'])\n@login_required\ndef change_email():",
+    "taint": {
+      "source": "cross-site POST to /account_area/change_email (victim session cookie)",
+      "sink": "persistent User.email overwrite without CSRF token",
+      "path": [
+        "app/blueprints/account_area/views.py:44 request.form email",
+        "app/blueprints/account_area/views.py:54 User.query.update email",
+        "app/blueprints/account_area/views.py:56 db.session.commit"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 41,
+        "note": "POST change_email route with only login_required, no CSRF check"
+      },
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 54,
+        "note": "unvalidated email written to User record and committed"
+      },
+      {
+        "file": "app/templates/components/forms.html",
+        "line": 20,
+        "note": "form macro has no CSRF hidden field"
+      }
+    ],
+    "evidence": "Route app/blueprints/account_area/views.py:41 defines POST /account_area/change_email with only @login_required; repo-wide grep for csrf finds no token generation/validation and app/templates/components/forms.html:20-25 form macro emits no hidden CSRF field, so cross-site POST is accepted. Handler at views.py:44 reads request.form email and at views.py:54-55 executes User.query.update email + commit. | validator: Route at app/blueprints/account_area/views.py:41 POST change_email has only @login_required; repo grep for csrf finds no token and app/templates/components/forms.html:20-25 emits no hidden field; handler at app/blueprints/account_area/views.py:44 reads form email and at app/blueprints/account_area/views.py:54-56 User.query.update+commit | consensus: 1/1 confirmed | triage: POST change_email only login_required, no CSRF token",
+    "rationale": "State-changing credential-email write relies solely on session cookie with no per-session CSRF token or SameSite/Origin check. Attacker can force victim browser to POST attacker-chosen email, hijacking password-reset/account-recovery flow. Sibling POSTs (change_password, logout) already flagged but this endpoint was missed.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route app/blueprints/account_area/views.py:41 defines POST /account_area/change_email with only @login_required; repo-wide grep for csrf finds no token generation/validation and app/templates/components/forms.html:20-25 form macro emits no hidden CSRF field, so cross-site POST is accepted. Handler at views.py:44 reads request.form email and at views.py:54-55 executes User.query.update email + commit.",
+    "hunter_snippet": "@account_area.route('/change_email', methods=['POST'])\n@login_required\ndef change_email():",
+    "patch_summary": "Add per-session CSRF token validation to change_email and include hidden token in forms macro",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim session",
+        "victim visits attacker page"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Cross-site POST overwrites User.email"
+    },
+    "cvss": 4.9,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-17",
+    "title": "DEBUG True enabled",
+    "cwe": "CWE-489",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/flask_xss.py",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "app.config['DEBUG'] = True",
+    "taint": {
+      "source": "hardcoded config",
+      "sink": "debug mode",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 26,
+        "note": "DEBUG enable"
+      }
+    ],
+    "evidence": "app.config['DEBUG'] = True | validator: app/flask_xss.py:26 hardcodes app.config['DEBUG']=True with no env override; active app enables debugger stack-trace disclosure | consensus: 1/1 confirmed | triage: Hardcoded DEBUG True enables stack disclosure",
+    "rationale": "WHO remote unauth triggers errors. HOW config sets DEBUG True line26 enabling debugger. WHAT traceback disclosure potential console RCE.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "app.config['DEBUG'] = True",
+    "hunter_snippet": "app.config['DEBUG'] = True",
+    "patch_summary": "Set DEBUG/EXPLAIN_TEMPLATE_LOADING from env, default False in production; disable Werkzeug debugger outside local dev.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "trigger exception"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "tenant",
+      "rationale": "DEBUG with no env override exposes traces"
+    },
+    "cvss": 4.8,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-csrf-send-feedback-stored-xss",
+    "title": "Missing CSRF on send_feedback enables forced stored XSS",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.92,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 61,
+    "end_line": 63,
+    "snippet": "@account_area.route('/send_feedback', methods=['POST'])\n@login_required\ndef send_feedback():",
+    "taint": {
+      "source": "cross-site POST to /account_area/send_feedback (victim session)",
+      "sink": "admin browser JS execution of victim-forced stored message",
+      "path": [
+        "app/blueprints/account_area/views.py:66 feedback=request.form",
+        "app/blueprints/account_area/views.py:75 Message(message=feedback)",
+        "app/blueprints/admin/views.py:21 Message.query.filter_by(acknowledged=False)",
+        "app/templates/admin/message.html:30 {{ message.message | safe }}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 61,
+        "note": "POST send_feedback with only login_required"
+      },
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 75,
+        "note": "feedback persisted as Message without validation"
+      },
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 30,
+        "note": "stored message rendered with |safe to admin"
+      },
+      {
+        "file": "app/blueprints/admin/views.py",
+        "line": 21,
+        "note": "admin MessagesView queries unacknowledged Messages for rendering"
+      }
+    ],
+    "evidence": "Route app/blueprints/account_area/views.py:61 POST /account_area/send_feedback has only @login_required; no CSRF token in views, forms macro, or session. Handler at views.py:66 reads request.form feedback and at views.py:75-77 persists Message(message=feedback, from_user=current_user.username). Persisted message later rendered unescaped at app/templates/admin/message.html:30. Forces victim to store attacker payload attributed to victim. | validator: Route at app/blueprints/account_area/views.py:61 POST send_feedback has only @login_required with no CSRF token anywhere; handler at app/blueprints/account_area/views.py:66 reads feedback and at app/blueprints/account_area/views.py:75 persists Message; rendered unescaped at app/templates/admin/message.html:30 via app/blueprints/admin/views.py:21 query | consensus: 1/1 confirmed | triage: POST send_feedback no CSRF forces victim-stored XSS",
+    "rationale": "Cross-unit CSRF -> stored-XSS chain: attacker cross-site POST forces authenticated victim to create Message row with attacker-chosen script; admin view renders message.message with |safe, executing in admin browser. Distinct from change_password/logout CSRF already reported; this endpoint and admin-execution impact were not covered.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Route app/blueprints/account_area/views.py:61 POST /account_area/send_feedback has only @login_required; no CSRF token in views, forms macro, or session. Handler at views.py:66 reads request.form feedback and at views.py:75-77 persists Message(message=feedback, from_user=current_user.username). Persisted message later rendered unescaped at app/templates/admin/message.html:30. Forces victim to store attacker payload attributed to victim.",
+    "hunter_snippet": "@account_area.route('/send_feedback', methods=['POST'])\n@login_required\ndef send_feedback():",
+    "patch_summary": "Require CSRF token on send_feedback and escape/sanitize Message before |safe render to admin",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim session",
+        "victim visits attacker page"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Forced Message store rendered safe at admin message"
+    },
+    "cvss": 4.8,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-toggle-csrf-state-changing-get",
+    "title": "CSRF-able session-state toggle via unauthenticated GET",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "app/blueprints/xss_protection/views.py",
+    "start_line": 6,
+    "end_line": 12,
+    "snippet": "session['xss_protection_enabled'] = not xss_protection_enabled",
+    "taint": {
+      "source": "unauthenticated GET request with attacker next param",
+      "sink": "session state write + 302 redirect",
+      "path": [
+        "app/blueprints/xss_protection/views.py:6 GET entry",
+        "app/blueprints/xss_protection/views.py:9 session write",
+        "app/flask_xss.py:73 session read in after_request"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/xss_protection/views.py",
+        "line": 6,
+        "note": "GET-accessible route with no auth decorator"
+      },
+      {
+        "file": "app/blueprints/xss_protection/views.py",
+        "line": 9,
+        "note": "session state mutation on GET"
+      },
+      {
+        "file": "app/flask_xss.py",
+        "line": 72,
+        "note": "after_request consumes session flag for header"
+      }
+    ],
+    "evidence": "app/blueprints/xss_protection/views.py:6 route allows GET, 8-9 flips session xss_protection_enabled, 11-12 redirects to attacker next; no login_required, no CSRF token, no method restriction | validator: GET route at app/blueprints/xss_protection/views.py:6 with no auth mutates session at app/blueprints/xss_protection/views.py:9 and redirects to attacker next at app/blueprints/xss_protection/views.py:11-12; consumed at app/flask_xss.py:73 | consensus: 1/1 confirmed | triage: Unauth GET flips XSS session and open-redirects",
+    "rationale": "Session-mutating toggle reachable anonymously via GET can be triggered cross-site (img/form) to disable victim XSS auditor and redirect to attacker URL. Missing authN plus missing CSRF plus state-changing GET; distinct from open-redirect-only report which covers Location header, this covers forced state change.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/blueprints/xss_protection/views.py:6 route allows GET, 8-9 flips session xss_protection_enabled, 11-12 redirects to attacker next; no login_required, no CSRF token, no method restriction",
+    "hunter_snippet": "session['xss_protection_enabled'] = not xss_protection_enabled",
+    "patch_summary": "Require POST+CSRF for state toggle and allowlist next redirect targets",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted link"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Session write plus attacker next redirect"
+    },
+    "cvss": 4.8,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-3",
+    "title": "Login CSRF on POST auth login",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/blueprints/login/views.py",
+    "start_line": 9,
+    "end_line": 10,
+    "snippet": "@authentication.route('/login', methods=['POST', 'GET'])",
+    "taint": {
+      "source": "cross-site POST",
+      "sink": "login without CSRF",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 9,
+        "note": "POST login without CSRF"
+      }
+    ],
+    "evidence": "@authentication.route('/login', methods=['POST', 'GET']) | validator: app/blueprints/login/views.py:9-17 POST /login calls login_user with no CSRF token; repo-wide grep for csrf finds zero checks, state-changing session creation CSRF-able (login-CSRF) | consensus: 1/1 confirmed | triage: Login creates session with no CSRF token",
+    "rationale": "WHO cross-site attacker. HOW login route line9 accepts POST with no CSRF token SameSite Origin check. WHAT breaks CSRF invariant login CSRF.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "@authentication.route('/login', methods=['POST', 'GET'])",
+    "hunter_snippet": "@authentication.route('/login', methods=['POST', 'GET'])",
+    "patch_summary": "Add per-session CSRF tokens to login and all state-changing POSTs; set SameSite=Lax cookies.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim visits attacker page"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "State-changing login_user without token"
+    },
+    "cvss": 4.6,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-11",
+    "title": "CSRF blind update in acknowledge_message",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/blueprints/api/views.py",
+    "start_line": 61,
+    "end_line": 63,
+    "snippet": "Message.query.filter_by(id=id).update({",
+    "taint": {
+      "source": "cross-site POST plus id",
+      "sink": "acknowledge without CSRF",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 58,
+        "note": "POST without CSRF"
+      },
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 61,
+        "note": "blind update"
+      }
+    ],
+    "evidence": "Message.query.filter_by(id=id).update({ | validator: app/blueprints/api/views.py:58-64 POST /acknowledge/<id> with @admin_required updates acknowledged=True with no CSRF token; admin cookies sent cross-site, repo has zero CSRF checks | consensus: 1/1 confirmed | triage: Admin acknowledge POST has no CSRF",
+    "rationale": "WHO cross-site attacker. HOW acknowledge_message POST only admin cookie check no CSRF blindly updates acknowledged True lines61-63. WHAT forced state change.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "Message.query.filter_by(id=id).update({",
+    "hunter_snippet": "Message.query.filter_by(id=id).update({",
+    "patch_summary": "Require CSRF token on acknowledge POST and SameSite cookies; verify Origin.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "admin session",
+        "admin visits attacker page"
+      ],
+      "auth": "admin",
+      "rw": "modification",
+      "blast": "tenant",
+      "rationale": "Cross-site POST flips acknowledged without token"
+    },
+    "cvss": 4.6,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-login-no-ratelimit",
+    "title": "Missing rate limiting on login enables brute force",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/blueprints/login/views.py",
+    "start_line": 9,
+    "end_line": 10,
+    "snippet": "@authentication.route('/login', methods=['POST', 'GET'])\ndef login():",
+    "taint": {
+      "source": "unauthenticated POST /auth/login form fields",
+      "sink": "unlimited authentication attempts leading to session issuance",
+      "path": [
+        "app/blueprints/login/views.py:14 request.form username/password",
+        "app/blueprints/login/views.py:16 User.query.filter_by(username)",
+        "app/blueprints/login/views.py:18 login_user(user) session creation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 9,
+        "note": "login route reachable anonymously with POST"
+      },
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 17,
+        "note": "password check with no attempt counting or delay"
+      },
+      {
+        "file": "manage.py",
+        "line": 14,
+        "note": "default admin account increases brute-force value"
+      }
+    ],
+    "evidence": "Handler app/blueprints/login/views.py:9 POST/GET /auth/login performs User.query.filter_by(username) + plaintext compare at line 17 with redirect on success; repo grep for limiter/ratelimit/throttle/lockout returns no matches and no Flask-Limiter, login-attempt counter, or sleep. Default admin/admin in manage.py:14 makes brute-force/credential-stuffing trivial, amplified by DEBUG=True. | validator: Login at app/blueprints/login/views.py:9-18 does User.query.filter_by+plaintext compare with no counter/delay; grep for limiter/ratelimit/throttle/lockout returns no matches; default admin/admin at manage.py:14 makes guessing trivial | consensus: 1/1 confirmed | triage: Unlimited login attempts with default admin admin",
+    "rationale": "Authentication endpoint with no excessive-attempts restriction permits unlimited online password guessing. Not reported in unit list (which covered login CSRF and plaintext compare but not rate limiting). Directly enables admin takeover given weak default credentials.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Handler app/blueprints/login/views.py:9 POST/GET /auth/login performs User.query.filter_by(username) + plaintext compare at line 17 with redirect on success; repo grep for limiter/ratelimit/throttle/lockout returns no matches and no Flask-Limiter, login-attempt counter, or sleep. Default admin/admin in manage.py:14 makes brute-force/credential-stuffing trivial, amplified by DEBUG=True.",
+    "hunter_snippet": "@authentication.route('/login', methods=['POST', 'GET'])\ndef login():",
+    "patch_summary": "Add rate-limiting/lockout and delay on login; remove default credential and hash passwords",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "default creds present"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "tenant",
+      "rationale": "No limiter throttle lockout, brute-force trivial"
+    },
+    "cvss": 4.6,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-session-cookie-no-secure-samesite",
+    "title": "Session cookie missing Secure/SameSite flags",
+    "cwe": "CWE-614",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "app/flask_xss.py",
+    "start_line": 22,
+    "end_line": 26,
+    "snippet": "def config_app(app):",
+    "taint": {
+      "source": "authenticated session cookie stored in browser",
+      "sink": "session cookie transmitted without Secure/SameSite restrictions",
+      "path": [
+        "app/blueprints/login/views.py:18 login_user(user) session issuance",
+        "app/flask_xss.py:22 config_app without SESSION_COOKIE_*"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 22,
+        "note": "config_app omits SESSION_COOKIE_SECURE/SAMESITE/HTTPONLY"
+      },
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 18,
+        "note": "login_user issues Flask session cookie without flag hardening"
+      }
+    ],
+    "evidence": "Function app/flask_xss.py:22 config_app sets only SECRET_KEY/SQLALCHEMY_DATABASE_URI/EXPLAIN/DEBUG; repo grep for SESSION_COOKIE returns no matches so Flask session cookie (issued via login_user at app/blueprints/login/views.py:18) has no Secure/SameSite hardening. Combined with prevalent XSS (|safe sinks) and HTTP localhost deployment, session theft via script or network sniffing is unmitigated. Distinct from unsafe_cookies name-cookie flags already reported. | validator: config_app at app/flask_xss.py:22-26 sets only SECRET_KEY/DB/DEBUG with no SESSION_COOKIE_SECURE/SAMESITE/HTTPONLY (grep returns no matches); session issued via login_user at app/blueprints/login/views.py:18 | consensus: 1/1 confirmed | triage: Session cookie has no Secure SameSite hardening",
+    "rationale": "Login session is the sole auth token but session cookie lacks Secure and SameSite flags and no SESSION_COOKIE_* config exists. Missing control enables cross-site sending (aids CSRF above) and cleartext theft; XSS can already read non-HttpOnly cookies where set without flags.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Function app/flask_xss.py:22 config_app sets only SECRET_KEY/SQLALCHEMY_DATABASE_URI/EXPLAIN/DEBUG; repo grep for SESSION_COOKIE returns no matches so Flask session cookie (issued via login_user at app/blueprints/login/views.py:18) has no Secure/SameSite hardening. Combined with prevalent XSS (|safe sinks) and HTTP localhost deployment, session theft via script or network sniffing is unmitigated. Distinct from unsafe_cookies name-cookie flags already reported.",
+    "hunter_snippet": "def config_app(app):",
+    "patch_summary": "Set SESSION_COOKIE_SECURE/SAMESITE=Lax/HTTPONLY and lifetime in config",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "authenticated session"
+      ],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "tenant",
+      "rationale": "login_user session without SESSION_COOKIE flags"
+    },
+    "cvss": 4.6,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-21",
+    "title": "Unquoted attribute XSS via g.path",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "app/templates/_base.html",
+    "start_line": 67,
+    "end_line": 67,
+    "snippet": "input name equals next type hidden",
+    "taint": {
+      "source": "URL path",
+      "sink": "unquoted attribute",
+      "path": [
+        "app/flask_xss.py:68 request.path",
+        "app/templates/_base.html:67 value"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 68,
+        "note": "g.path source"
+      },
+      {
+        "file": "app/templates/_base.html",
+        "line": 67,
+        "note": "unquoted sink"
+      }
+    ],
+    "evidence": "input name equals next type hidden | validator: Untrusted URL path at app/flask_xss.py:68 g.path=request.path reflected unquoted at app/templates/_base.html:67 value={{ g.path }}; Jinja autoescape does not strip spaces so attribute injection e.g. /%20onfocus= works | consensus: 1/1 confirmed | triage: URL path reflected unquoted in hidden input",
+    "rationale": "WHO remote unauth controls request path. HOW g.path request.path flows to value unquoted line67 and action unquoted line66. WHAT attribute injection XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "input name equals next type hidden",
+    "hunter_snippet": "input name equals next type hidden",
+    "patch_summary": "Quote attribute value=\"{{ g.path }}\" and rely on autoescape; prefer url_for for next values",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim clicks crafted URL"
+      ],
+      "auth": "unauthenticated",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "g.path to value attribute allows injection"
+    },
+    "cvss": 4.5,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-csp-frame-headers",
+    "title": "Missing Content-Security-Policy and clickjacking/sniffing headers",
+    "cwe": "CWE-693",
+    "severity": "medium",
+    "confidence": 0.8,
+    "path": "app/flask_xss.py",
+    "start_line": 71,
+    "end_line": 77,
+    "snippet": "def after_request(response):",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 71,
+        "note": "after_request central header location"
+      },
+      {
+        "file": "app/flask_xss.py",
+        "line": 75,
+        "note": "only header set is X-XSS-Protection"
+      },
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 29,
+        "note": "example unprotected sink needing CSP containment"
+      }
+    ],
+    "evidence": "app/flask_xss.py:71-77 after_request only sets X-XSS-Protection:0 when disabled; no Content-Security-Policy, X-Frame-Options, X-Content-Type-Options set anywhere (grep confirms no CSP header) | validator: Central header hook at app/flask_xss.py:71-77 only sets X-XSS-Protection:0; grep confirms no Content-Security-Policy/X-Frame-Options/X-Content-Type-Options, leaving |safe sinks e.g. app/templates/admin/message.html:30 without containment | consensus: 1/1 confirmed | triage: No CSP frame and sniffing headers",
+    "rationale": "Application renders multiple reflected/stored XSS sinks with |safe and no output encoding. Absence of CSP (script-src) and framing/sniffing headers leaves all XSS directly exploitable and allows clickjacking of admin acknowledge workflow. Distinct from reported X-XSS-Protection-disabled and cookie-flag gaps.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "app/flask_xss.py:71-77 after_request only sets X-XSS-Protection:0 when disabled; no Content-Security-Policy, X-Frame-Options, X-Content-Type-Options set anywhere (grep confirms no CSP header)",
+    "hunter_snippet": "def after_request(response):",
+    "patch_summary": "Emit fixed CSP, X-Frame-Options:DENY/SAMEORIGIN, X-Content-Type-Options:nosniff in after_request",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "XSS sink"
+      ],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "tenant",
+      "rationale": "after_request only sets X-XSS-Protection"
+    },
+    "cvss": 4.5,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-28",
+    "title": "Password exposure in User serialize",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "app/models/models.py",
+    "start_line": 27,
+    "end_line": 29,
+    "snippet": "password in User.serialize at models.py:27-29",
+    "taint": {
+      "source": "User.password",
+      "sink": "password in JSON",
+      "path": [
+        "app/models/models.py:11 column",
+        "app/models/models.py:27 serialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/models/models.py",
+        "line": 27,
+        "note": "password exposed"
+      }
+    ],
+    "evidence": "password self.password | validator: app/blueprints/api/views.py:103 only MessagesView.register(api); UsersView (sole user.serialize consumer at :72) is never registered so User.serialize password at models.py:27-29 is unreachable from network | refute: not_reachable | consensus: 1/1 fp | triage: User.serialize password unreachable, sole consumer dead",
+    "rationale": "WHO anyone with DB API read. HOW User serialize lines24-29 returns password verbatim stores plaintext. WHAT bulk disclosure.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "password self.password",
+    "hunter_snippet": "password self.password",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "requires code registration"
+      ],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Password in serialize unreachable without registered UsersView"
+    },
+    "cvss": 2.4,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-1",
+    "title": "Insecure cookie flags on unsafe_cookies Set-Cookie",
+    "cwe": "CWE-614",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/sandboxes/views.py",
+    "start_line": 38,
+    "end_line": 38,
+    "snippet": "response.set_cookie('name', name)",
+    "taint": {
+      "source": "server-set cookie",
+      "sink": "set_cookie without flags",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/sandboxes/views.py",
+        "line": 38,
+        "note": "set_cookie without flags"
+      }
+    ],
+    "evidence": "response.set_cookie('name', name) | validator: app/blueprints/sandboxes/views.py:38 response.set_cookie('name', name) sets cookie with no httponly/secure/samesite flags | consensus: 1/1 confirmed | triage: Demo name cookie missing HttpOnly Secure SameSite",
+    "rationale": "WHO server sets cookie from attacker-influenced name. HOW response.set_cookie line38 passes no httponly secure samesite args. WHAT breaks cookie confidentiality, XSS can steal cookie.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "response.set_cookie('name', name)",
+    "hunter_snippet": "response.set_cookie('name', name)",
+    "patch_summary": "Set httponly=True, secure=True, samesite='Lax' on set_cookie; set session cookie flags app-wide.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Missing cookie flags per rubric low"
+    },
+    "cvss": 2.4,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-4",
+    "title": "Logout CSRF via GET-accessible logout",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/login/views.py",
+    "start_line": 28,
+    "end_line": 30,
+    "snippet": "def logout(): logout_user() via GET+POST",
+    "taint": {
+      "source": "cross-site GET",
+      "sink": "logout_user via GET",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/login/views.py",
+        "line": 27,
+        "note": "GET plus POST logout"
+      }
+    ],
+    "evidence": "def logout(): | validator: app/blueprints/login/views.py:27 @authentication.route('/logout', methods=['POST','GET']) with :28-30 logout_user() allows cross-site GET to terminate session; no CSRF token anywhere | consensus: 1/1 confirmed | triage: GET-accessible logout allows cross-site termination",
+    "rationale": "WHO any cross-site request. HOW logout lines27-30 bound to GET and POST with only logout_user no token. WHAT logout CSRF.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "def logout():",
+    "hunter_snippet": "def logout():",
+    "patch_summary": "Restrict logout to POST with per-session CSRF token and SameSite cookies.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "none",
+      "preconditions": [
+        "victim session",
+        "victim visits attacker page"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "GET logout_user terminates session only"
+    },
+    "cvss": 2.4,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-6",
+    "title": "CSRF on change_password enables takeover",
+    "cwe": "CWE-352",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 15,
+    "end_line": 15,
+    "snippet": "@account_area.route('/change_password', methods=['POST'])",
+    "taint": {
+      "source": "cross-site POST",
+      "sink": "password change without CSRF",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 15,
+        "note": "POST without CSRF"
+      }
+    ],
+    "evidence": "@account_area.route('/change_password', methods=['POST']) | validator: app/blueprints/account_area/views.py:19-27 requires current_password match (current_user.password == current_password) before update; blind cross-site POST without secret fails with 'Current password incorrect', no takeover | refute: misread_code | consensus: 1/1 fp | triage: change_password requires current_password, blind CSRF fails",
+    "rationale": "WHO cross-site attacker. HOW change_password line15 POST only login_required no CSRF token. WHAT forced password change account takeover.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "@account_area.route('/change_password', methods=['POST'])",
+    "hunter_snippet": "@account_area.route('/change_password', methods=['POST'])",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "auth_check",
+      "preconditions": [
+        "know current password"
+      ],
+      "auth": "logged-in",
+      "rw": "modification",
+      "blast": "one user",
+      "rationale": "Current password check blocks blind cross-site POST"
+    },
+    "cvss": 2.4,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-12",
+    "title": "Plaintext password disclosure in UsersView.index",
+    "cwe": "CWE-200",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "app/blueprints/api/views.py",
+    "start_line": 72,
+    "end_line": 72,
+    "snippet": "users = [user.serialize for user in User.query.all()]",
+    "taint": {
+      "source": "User table",
+      "sink": "JSON password disclosure",
+      "path": [
+        "app/models/models.py:27 password",
+        "app/blueprints/api/views.py:72 serialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 72,
+        "note": "bulk serialize sink"
+      },
+      {
+        "file": "app/models/models.py",
+        "line": 27,
+        "note": "password in serialize"
+      }
+    ],
+    "evidence": "users = [user.serialize for user in User.query.all()] | validator: app/blueprints/api/views.py:69 UsersView defined but app/blueprints/api/views.py:103 registers only MessagesView; UsersView routes unreachable so serialize password sink dead | refute: not_reachable | consensus: 1/1 fp | triage: UsersView never registered, serialize sink unreachable",
+    "rationale": "WHO admin or session forger. HOW UsersView.index lines70-72 serializes every User via serialize including password. WHAT mass credential disclosure.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "users = [user.serialize for user in User.query.all()]",
+    "hunter_snippet": "users = [user.serialize for user in User.query.all()]",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "requires code registration"
+      ],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "all users",
+      "rationale": "Dead code only MessagesView registered"
+    },
+    "cvss": 2.4,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-16",
+    "title": "Disabled X-XSS-Protection by default",
+    "cwe": "CWE-693",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/flask_xss.py",
+    "start_line": 75,
+    "end_line": 75,
+    "snippet": "response.headers['X-XSS-Protection'] = 0",
+    "taint": {
+      "source": "session flag",
+      "sink": "disable auditor",
+      "path": [
+        "app/flask_xss.py:73 session flag",
+        "app/flask_xss.py:75 header"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 75,
+        "note": "disabling sink"
+      }
+    ],
+    "evidence": "response.headers['X-XSS-Protection'] = 0 | validator: app/flask_xss.py:69-75 sets X-XSS-Protection:0 when session flag False (default); deprecated auditor header where 0 is recommended secure default, no principal/resource boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp | triage: X-XSS-Protection 0 is deprecated secure default",
+    "rationale": "WHO server default plus attacker toggle. HOW after_request lines71-75 sets header to 0 when flag falsy default False. WHAT disables browser XSS auditor.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "response.headers['X-XSS-Protection'] = 0",
+    "hunter_snippet": "response.headers['X-XSS-Protection'] = 0",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Deprecated auditor header, no boundary crossed"
+    },
+    "cvss": 2.4,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-27",
+    "title": "Assignment in condition in acknowledge JS",
+    "cwe": "CWE-480",
+    "severity": "low",
+    "confidence": 0.95,
+    "path": "app/templates/admin/message.html",
+    "start_line": 42,
+    "end_line": 42,
+    "snippet": "if (data.status assignment success)",
+    "taint": {
+      "source": "AJAX response",
+      "sink": "assignment not compare",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/templates/admin/message.html",
+        "line": 42,
+        "note": "assignment in condition"
+      }
+    ],
+    "evidence": "if (data.status assignment success) | validator: app/templates/admin/message.html:42 if (data.status = \"success\") assignment always truthy causes reload logic bug only; no auth/data/execution boundary crossed | refute: exclusion_rule | consensus: 1/1 fp | triage: JS assignment bug only, no security boundary",
+    "rationale": "WHO JS engine. HOW data.status single equals line42 assignment always truthy. WHAT false success masks failures.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "if (data.status assignment success)",
+    "hunter_snippet": "if (data.status assignment success)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "admin views page"
+      ],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Always-truthy reload logic only"
+    },
+    "cvss": 2.4,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-10",
+    "title": "Null dereference DoS in API MessagesView.get",
+    "cwe": "CWE-252",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/api/views.py",
+    "start_line": 25,
+    "end_line": 25,
+    "snippet": "message = Message.query.filter_by(id=id).first().serialize",
+    "taint": {
+      "source": "URL id",
+      "sink": "null dereference 500",
+      "path": [
+        "app/blueprints/api/views.py:24 id param",
+        "app/blueprints/api/views.py:25 serialize"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/api/views.py",
+        "line": 25,
+        "note": "None serialize deref"
+      }
+    ],
+    "evidence": "message = Message.query.filter_by(id=id).first().serialize | validator: app/blueprints/api/views.py:23-25 MessagesView.get has @admin_required so only admin reaches Message.query.filter_by(id=id).first().serialize 500 on missing id; single-request admin-only error, no exploitable boundary | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Admin-only null deref gives single-request 500",
+    "rationale": "WHO admin or prober controls URL id. HOW filter_by first serialize line25 dereferences None when missing then check never reached. WHAT 500 DoS plus traceback disclosure.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "message = Message.query.filter_by(id=id).first().serialize",
+    "hunter_snippet": "message = Message.query.filter_by(id=id).first().serialize",
+    "control_type": "auth_check",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "yes",
+      "control": "auth_check",
+      "preconditions": [
+        "admin session",
+        "invalid id"
+      ],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Admin-only 500 on missing id, no data disclosure"
+    },
+    "cvss": 2.4,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-14",
+    "title": "Type-confusion in is_owning_user",
+    "cwe": "CWE-697",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/decorators.py",
+    "start_line": 10,
+    "end_line": 11,
+    "snippet": "def is_owning_user(user, id):",
+    "taint": {
+      "source": "URL id string",
+      "sink": "always False check",
+      "path": [
+        "app/blueprints/api/views.py:78 string id",
+        "app/blueprints/decorators.py:11 compare"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/decorators.py",
+        "line": 10,
+        "note": "type confused compare"
+      }
+    ],
+    "evidence": "def is_owning_user(user, id): | validator: app/blueprints/decorators.py:10-11 user.id (int) == id (URL string from api/views.py:24,60 with no <int:> converter) always False fail-closed; denies owners, grants nothing, no bypass | refute: misread_code | consensus: 1/1 fp | triage: Fail-closed int vs string compare grants nothing",
+    "rationale": "WHO owning user controls URL id string. HOW is_owning_user line11 does user.id == id int versus string always False. WHAT owners denied authz unreliable.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "def is_owning_user(user, id):",
+    "hunter_snippet": "def is_owning_user(user, id):",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "auth_check",
+      "preconditions": [],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Always-False check, no bypass"
+    },
+    "cvss": 2.4,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-20",
+    "title": "Stored XSS via username safe in base",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/templates/_base.html",
+    "start_line": 54,
+    "end_line": 54,
+    "snippet": "You are logged in as a regular user",
+    "taint": {
+      "source": "username store",
+      "sink": "unescaped username",
+      "path": [
+        "User.username DB",
+        "app/templates/_base.html:54 safe"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/templates/_base.html",
+        "line": 54,
+        "note": "safe sink"
+      }
+    ],
+    "evidence": "You are logged in as a regular user | validator: app/templates/_base.html:54 |safe sink reachable but username has no network writer: no signup, account_area/views.py only email/password/feedback, UsersView dead per api/views.py:103, manage.py:18 hardcodes 'admin' | refute: not_reachable | consensus: 1/1 fp | triage: Username safe sink has no network writer",
+    "rationale": "WHO attacker controlling username. HOW g.user.username rendered with safe line54 disabling autoescape. WHAT stored XSS every page.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "You are logged in as a regular user",
+    "hunter_snippet": "You are logged in as a regular user",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "requires username writer"
+      ],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No signup or username update, UsersView dead"
+    },
+    "cvss": 2.4,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-13",
+    "title": "Confused-deputy in is_admin_user",
+    "cwe": "CWE-863",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/blueprints/decorators.py",
+    "start_line": 6,
+    "end_line": 7,
+    "snippet": "def is_admin_user(user):",
+    "taint": {
+      "source": "caller user arg",
+      "sink": "global instead of param",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/decorators.py",
+        "line": 6,
+        "note": "ignores param"
+      }
+    ],
+    "evidence": "def is_admin_user(user): | validator: app/blueprints/decorators.py:6-7 is_admin_user ignores param for current_user.is_admin but all callers pass current_user (decorators.py:14 wrapper, :21 is_admin_or_owning_user) so result correct, no deputy bypass | refute: misread_code | consensus: 1/1 fp | triage: is_admin_user ignores param but callers pass current_user",
+    "rationale": "WHO caller passes user to authorize. HOW is_admin_user ignores param except hasattr then returns current_user global line7. WHAT confused deputy wrong principal.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "def is_admin_user(user):",
+    "hunter_snippet": "def is_admin_user(user):",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "auth_check",
+      "preconditions": [],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No deputy bypass, result correct"
+    },
+    "cvss": 2.4,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/templates/_base.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/templates/_base.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: Heuristic only at app/templates/_base.html:0 with no taint path; concrete sink in same file is app/templates/_base.html:67 value={{ g.path }} covered by unit-app-21 | refute: duplicate | consensus: 1/1 fp | triage: Heuristic form plus braces with no taint path",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No concrete sink, heuristic only"
+    },
+    "cvss": 2.4,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@app/templates/components/forms.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/templates/components/forms.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: Heuristic only at app/templates/components/forms.html:0 with no taint path; macro sinks in same file covered by unit-app-22 at app/templates/components/forms.html:24 | refute: duplicate | consensus: 1/1 fp | triage: Heuristic macro reflection with no external inflow",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Macro only receives static literals"
+    },
+    "cvss": 2.4,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-22",
+    "title": "Unquoted attribute in form macro",
+    "cwe": "CWE-79",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/templates/components/forms.html",
+    "start_line": 24,
+    "end_line": 24,
+    "snippet": "form class col-md-4 method action",
+    "taint": {
+      "source": "macro params",
+      "sink": "unquoted method action",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/templates/components/forms.html",
+        "line": 24,
+        "note": "unquoted sink"
+      }
+    ],
+    "evidence": "form class col-md-4 method action | validator: Macro sink at app/templates/components/forms.html:24 method/action only receives static literals/internal URLs at app/blueprints/account_area/templates/account_area/account_area.html:20,27,35 and app/blueprints/login/templates/login/login.html:6 and sandbox templates; no external inflow | refute: not_reachable | consensus: 1/1 fp | triage: Macro method action only static internal URLs",
+    "rationale": "WHO caller passing method action. HOW form macro line24 interpolates method action without quotes. WHAT reusable attribute injection.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "form class col-md-4 method action",
+    "hunter_snippet": "form class col-md-4 method action",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No external inflow to macro sink"
+    },
+    "cvss": 2.4,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-19",
+    "title": "Overly broad Jinja globals",
+    "cwe": "CWE-676",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "app/flask_xss.py",
+    "start_line": 31,
+    "end_line": 34,
+    "snippet": "app.jinja_env.globals.update(",
+    "taint": {
+      "source": "hardcoded globals",
+      "sink": "builtins in Jinja",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 31,
+        "note": "globals exposure"
+      }
+    ],
+    "evidence": "app.jinja_env.globals.update( | validator: Globals at app/flask_xss.py:31-34 are only hasattr/enumerate/len; templates are static files via render_template with literal names, no user-controlled template string for SSTI | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Jinja globals only hasattr enumerate len, no SSTI",
+    "rationale": "WHO template attacker. HOW add_jinja_functions exposes hasattr enumerate len to Jinja lines29-35. WHAT expands SSTI primitives.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "app.jinja_env.globals.update(",
+    "hunter_snippet": "app.jinja_env.globals.update(",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [],
+      "auth": "unauthenticated",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Static render_template only, no user template string"
+    },
+    "cvss": 2.4,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-7",
+    "title": "Unvalidated email write in change_email",
+    "cwe": "CWE-20",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app/blueprints/account_area/views.py",
+    "start_line": 54,
+    "end_line": 55,
+    "snippet": "User.query.filter_by(id=current_user.id).update({",
+    "taint": {
+      "source": "POST email",
+      "sink": "unvalidated email write",
+      "path": [
+        "app/blueprints/account_area/views.py:45 email",
+        "app/blueprints/account_area/views.py:54 update"
+      ]
+    },
+    "refs": [
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 45,
+        "note": "email source"
+      },
+      {
+        "file": "app/blueprints/account_area/views.py",
+        "line": 54,
+        "note": "write sink"
+      }
+    ],
+    "evidence": "User.query.filter_by(id=current_user.id).update({ | validator: app/blueprints/account_area/views.py:41-55 email update is self-only via current_user.id + @login_required; render at account_area.html:13 {{ g.user.email }} autoescaped (no |safe), no cross-principal security impact | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Self-only email write with autoescaped render, no cross-principal impact",
+    "rationale": "WHO authenticated user controls email. HOW get email line45 flows to update email lines54-55 only non-empty check no format validation. WHAT stored malformed data.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "User.query.filter_by(id=current_user.id).update({",
+    "hunter_snippet": "User.query.filter_by(id=current_user.id).update({",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "auth_check",
+      "preconditions": [
+        "valid session"
+      ],
+      "auth": "logged-in",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "Self-only update via current_user.id with autoescaped render"
+    },
+    "cvss": 2.3,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-29",
+    "title": "Username equality admin check",
+    "cwe": "CWE-287",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "app/models/models.py",
+    "start_line": 21,
+    "end_line": 21,
+    "snippet": "return self.username == 'admin'",
+    "taint": {
+      "source": "username column",
+      "sink": "privilege from username",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/models/models.py",
+        "line": 20,
+        "note": "username equality"
+      }
+    ],
+    "evidence": "return self.username == 'admin' | validator: app/models/models.py:20-21 username=='admin' privilege has no network-reachable writer for attacker-chosen username: no signup/username-update, UsersView dead per api/views.py:103, only manage.py:18 local 'admin'; admin takeover already via default creds | refute: not_a_vulnerability | consensus: 1/1 fp | triage: Admin flag from username has no network writer",
+    "rationale": "WHO anyone influencing username. HOW is_admin returns username equals admin lines19-21 no role column. WHAT privilege spoof.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "return self.username == 'admin'",
+    "hunter_snippet": "return self.username == 'admin'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "local manage.py only"
+      ],
+      "auth": "admin",
+      "rw": "read-only",
+      "blast": "one user",
+      "rationale": "No signup or username update, UsersView dead"
+    },
+    "cvss": 2.3,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-app-18",
+    "title": "World-writable SQLite path in tmp",
+    "cwe": "CWE-668",
+    "severity": "low",
+    "confidence": 0.8,
+    "path": "app/flask_xss.py",
+    "start_line": 24,
+    "end_line": 24,
+    "snippet": "app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'",
+    "taint": {
+      "source": "hardcoded URI",
+      "sink": "SQLite in tmp",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "app/flask_xss.py",
+        "line": 24,
+        "note": "DB path"
+      }
+    ],
+    "evidence": "app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db' | validator: app/flask_xss.py:24 hardcodes sqlite:////tmp/test.db predictable path in sticky world-writable /tmp with no env override; local users can pre-create/symlink/replace DB | consensus: 1/1 confirmed | triage: Predictable SQLite in world-writable tmp needs local",
+    "rationale": "WHO local users. HOW sqlite tmp test.db line24 world-writable tmp no perms. WHAT tampering deletion hijack.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "app",
+    "hunter_evidence": "app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'",
+    "hunter_snippet": "app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'",
+    "patch_summary": "Configure DB URI from env outside /tmp with 0600 perms; create directory securely, fail closed if unwritable.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "triage": {
+      "reachable": "no",
+      "control": "none",
+      "preconditions": [
+        "local access"
+      ],
+      "auth": "admin",
+      "rw": "modification",
+      "blast": "platform",
+      "rationale": "Local-only DB replace per rubric low"
+    },
+    "cvss": 2.2,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  }
+]

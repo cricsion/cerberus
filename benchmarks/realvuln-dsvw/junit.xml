@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="19" errors="0" skipped="0" timestamp="2026-11-04T17:46:22Z" time="0.000" failures="12">
+  <testcase classname="CWE-502" name="Insecure deserialization via pickle.loads on object parameter [critical] dsvw.py:35-35">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Insecure deserialization via pickle.loads on object parameter (CWE-502) critical conf=1.0 dsvw.py:35-35">content = str(pickle.loads(params["object"].encode()))
+content = str(pickle.loads(params["object"].encode()))</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS command injection via domain nslookup shell [critical] dsvw.py:39-39">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection via domain nslookup shell (CWE-78) critical conf=1.0 dsvw.py:39-39">content = subprocess.run("nslookup " + params["domain"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout
+content = subprocess.run("nslookup " + params["domain"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True).stdout</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Remote code execution via exec on include content [critical] dsvw.py:57-57">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Remote code execution via exec on include content (CWE-94) critical conf=1.0 dsvw.py:57-57">exec(program, envs)
+exec(program, envs)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="DOM-based XSS via location.hash lang document.write [high] dsvw.py:10-10">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="DOM-based XSS via location.hash lang document.write (CWE-89) high conf=1.0 dsvw.py:10-10">document.write with decodeURIComponent hash lang
+document.write with decodeURIComponent hash lang</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection id handler [high] dsvw.py:30-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection id handler (CWE-89) high conf=1.0 dsvw.py:30-30">cursor.execute sin
+cursor.execute sin</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="Reflected XSS via v parameter version reflection [high] dsvw.py:33-33">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via v parameter version reflection (CWE-89) high conf=1.0 dsvw.py:33-33">content += re.sub(r"(v&lt;b&gt;)[^&lt;]+(&lt;/b&gt;)", r"\g&lt;1&gt;%s\g&lt;2&gt;" % params["v"], HTML_POSTFIX)
+content += re.sub(r"(v&lt;b&gt;)[^&lt;]+(&lt;/b&gt;)", r"\g&lt;1&gt;%s\g&lt;2&gt;" % params["v"], HTML_POSTFIX)</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal and SSRF via path file-fetch handler [high] dsvw.py:37-37">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal and SSRF via path file-fetch handler (CWE-22) high conf=1.0 dsvw.py:37-37">content = (open(os.path.abspath(params["path"]), "rb") if not "://" in params["path"] else urllib.request.urlopen(params["path"])).read().decode()
+content = (open(os.path.abspath(params["path"]), "rb") if not "://" in params["path"] else urllib.request.urlopen(params["path"])).read().decode()</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE via lxml parser with DTD and network enabled [high] dsvw.py:41-41">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE via lxml parser with DTD and network enabled (CWE-611) high conf=1.0 dsvw.py:41-41">content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params["xml"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()
+content = lxml.etree.tostring(lxml.etree.parse(io.BytesIO(params["xml"].encode()), lxml.etree.XMLParser(load_dtd=True, resolve_entities=True, no_network=False)), pretty_print=True).decode()</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection via comment INSERT handler [high] dsvw.py:50-50">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection via comment INSERT handler (CWE-89) high conf=1.0 dsvw.py:50-50">cursor.execute("INSERT INTO comments VALUES(NULL, '%s', '%s')" % (params["comment"], time.ctime()))
+cursor.execute("INSERT INTO comments VALUES(NULL, '%s', '%s')" % (params["comment"], time.ctime()))</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Cross-request stored XSS via comments store [high] dsvw.py:53-54">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-request stored XSS via comments store (CWE-79) high conf=0.95 dsvw.py:53-54">dsvw.py:50 INSERT comment then dsvw.py:53 SELECT and unencoded render; payload persists via SQLite comments table
+SELECT id, comment, time FROM comments</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="LFI and SSRF via include file fetch [high] dsvw.py:56-56">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="LFI and SSRF via include file fetch (CWE-918) high conf=0.95 dsvw.py:56-56">backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params["include"], "rb") if not "://" in params["include"] else urllib.request.urlopen(params["include"])).read(),
+backup, sys.stdout, program, envs = sys.stdout, io.StringIO(), (open(params["include"], "rb") if not "://" in params["include"] else urllib.request.urlopen(params["include"])).read(),</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via redir meta-refresh injection [high] dsvw.py:61-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via redir meta-refresh injection (CWE-79) high conf=0.95 dsvw.py:61-61">dsvw.py:26 parses ?redir= into params; dsvw.py:61 interpolates it unencoded into meta refresh
+content = content.replace("&lt;head&gt;", "&lt;head&gt;&lt;meta http-equiv=\"refresh\"</failure>
+  </testcase>
+  <testcase classname="CWE-643" name="XPath injection via name parameter interpolation [medium] dsvw.py:43-43">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Denial of service via unbounded size allocation [medium] dsvw.py:46-46">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-113" name="HTTP header injection via charset Content-Type reflection [medium] dsvw.py:78-78">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Second-order XSS via unencoded id query result rendering [medium] dsvw.py:31-31">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="JSONP reflected XSS via users.json callback [medium] dsvw.py:65-65">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection authentication bypass via login password [low] dsvw.py:67-67">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-209" name="Information disclosure via full traceback error responses [low] dsvw.py:72-72">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

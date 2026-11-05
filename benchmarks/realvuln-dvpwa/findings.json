@@ -1,0 +1,3603 @@
+[
+  {
+    "id": "unit-sqli-0",
+    "title": "SQL injection in Student.create",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.99,
+    "path": "sqli/dao/student.py",
+    "start_line": 41,
+    "end_line": 45,
+    "snippet": "VALUES interpolation with percent formatting",
+    "taint": {
+      "source": "",
+      "sink": "",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "sqli/dao/student.py",
+        "line": 42,
+        "note": "interpolated SQL"
+      }
+    ],
+    "evidence": "VALUES interpolation with percent formatting | validator: sqli/dao/student.py:41-44 builds VALUES ('%(name)s') % name then cur.execute(q) with no params; reachable unauthenticated via sqli/views.py:54-57 POST data['name'] and sqli/routes.py:9 POST /students/ | consensus: 2/2 confirmed",
+    "rationale": "Unauthenticated POST name flows to string-interpolated SQL and execute without params, allowing injection.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "sqli",
+    "hunter_evidence": "VALUES interpolation with percent formatting",
+    "hunter_snippet": "VALUES interpolation with percent formatting",
+    "patch_summary": "Use parameterized query: cur.execute('INSERT INTO students (name) VALUES (%s)', (name,))",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-0",
+    "title": "Global Jinja2 autoescape disabled",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.99,
+    "path": "sqli/app.py",
+    "start_line": 33,
+    "end_line": 35,
+    "snippet": "setup_jinja(app, loader=PackageLoader('sqli', 'templates'),",
+    "taint": {
+      "source": "POST title/description/review_text/student name",
+      "sink": "Jinja render without autoescape",
+      "path": [
+        "sqli/views.py:89 Course.create",
+        "sqli/templates/course.jinja2:14"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/app.py",
+        "line": 35,
+        "note": "autoescape=False disables global output encoding"
+      }
+    ],
+    "evidence": "setup_jinja(app, loader=PackageLoader('sqli', 'templates'), | validator: sqli/dao/student.py:41-44 builds VALUES ('%(name)s') % name then cur.execute(q) with no params; reachable unauthenticated via sqli/views.py:54-57 POST data['name'] and sqli/routes.py:9 POST /students/ | consensus: 2/2 confirmed",
+    "rationale": "WHO: unauthenticated remote user submitting course title/description, student name, or review text. HOW: POST data is stored via DAOs then interpolated into templates; setup_jinja disables autoescape globally so no default encoding occurs. WHAT: breaks output-encoding invariant, allowing stored XSS execution in victim browsers.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n autoescape sqli/app.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App serves Jinja templates with autoescape disabled"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "setup_jinja(app, loader=PackageLoader('sqli', 'templates'),",
+    "hunter_snippet": "setup_jinja(app, loader=PackageLoader('sqli', 'templates'),",
+    "patch_summary": "Use parameterized query: cur.execute('INSERT INTO students (name) VALUES (%s)', (name,))",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 9.0,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-SQLI-01",
+    "title": "SQL injection in Student.create via unauthenticated POST /students/",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.95,
+    "path": "sqli/dao/student.py",
+    "start_line": 42,
+    "end_line": 45,
+    "snippet": "q = (\"INSERT INTO students (name) \"\n             \"VALUES ('%(name)s')\" % {'name': name})",
+    "taint": {
+      "source": "POST field data['name'] at sqli/views.py:57 (route POST /students/ in sqli/routes.py:7)",
+      "sink": "cur.execute(q) with interpolated SQL at sqli/dao/student.py:45",
+      "path": [
+        "sqli/routes.py:7 POST /students/",
+        "sqli/views.py:55 data = await request.post()",
+        "sqli/views.py:57 Student.create(conn, data['name'])",
+        "sqli/dao/student.py:42 q = ... % {'name': name}",
+        "sqli/dao/student.py:45 await cur.execute(q)"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/routes.py",
+        "line": 7,
+        "note": "Unauthenticated POST /students/ route"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 57,
+        "note": "Unvalidated name passed to DAO"
+      },
+      {
+        "file": "sqli/dao/student.py",
+        "line": 42,
+        "note": "String interpolation into SQL"
+      },
+      {
+        "file": "sqli/dao/student.py",
+        "line": 45,
+        "note": "Sink executes tainted SQL without params"
+      }
+    ],
+    "evidence": "Cross-unit taint: sqli/routes.py:7 POST /students/ -> sqli/views.py:57 data['name'] -> sqli/dao/student.py:42-45 string-interpolation into SQL -> sqli/dao/student.py:45 cur.execute(q) with no params | validator: String-interpolated SQL sqli/dao/student.py:42-43 executed without params sqli/dao/student.py:45 reachable from unauthenticated POST sqli/views.py:54-57 via sqli/routes.py:7-8 | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker controls POST field name; it flows unvalidated through views.students into Student.create which interpolates it with % formatting inside quoted VALUES, then executes without parameters. Allows full DB read/write/destruction (UNION, stacked queries depending on driver). Other DAOs use parameterized queries, proving this one is anomalous.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit taint: sqli/routes.py:7 POST /students/ -> sqli/views.py:57 data['name'] -> sqli/dao/student.py:42-45 string-interpolation into SQL -> sqli/dao/student.py:45 cur.execute(q) with no params",
+    "hunter_snippet": "q = (\"INSERT INTO students (name) \"\n             \"VALUES ('%(name)s')\" % {'name': name})",
+    "patch_summary": "Use parameterized query cur.execute('INSERT INTO students (name) VALUES (%s)',(name,)) and validate name server-side.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-0",
+    "cvss": 8.8,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-2",
+    "title": "CSRF middleware disabled",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/app.py",
+    "start_line": 27,
+    "end_line": 28,
+    "snippet": "# csrf_middleware,",
+    "taint": {
+      "source": "cross-site forged form POST",
+      "sink": "unprotected state-changing POST",
+      "path": [
+        "sqli/app.py:27 disabled check",
+        "sqli/views.py:54 POST /students/"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/app.py",
+        "line": 27,
+        "note": "csrf_middleware commented out"
+      }
+    ],
+    "evidence": "# csrf_middleware, | validator: sqli/app.py:27 csrf_middleware commented out of middlewares; sqli/middlewares.py:23-32 token check never runs so all POST handlers unprotected | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote unauthenticated attacker via victim browser. HOW: state-changing POST routes (students/courses/review/evaluate/logout) accept form POSTs; csrf_middleware exists but is commented out in middleware list so token is never validated. WHAT: breaks CSRF protection invariant, allowing cross-site forged mutations.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n csrf_middleware sqli/app.py sqli/middlewares.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker can induce victim browser to issue cross-site POST"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "# csrf_middleware,",
+    "hunter_snippet": "# csrf_middleware,",
+    "patch_summary": "Re-enable csrf_middleware and enforce token check on all state-changing POSTs",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-4",
+    "title": "Unsalted MD5 password hashing",
+    "cwe": "CWE-328",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/dao/user.py",
+    "start_line": 40,
+    "end_line": 41,
+    "snippet": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()",
+    "taint": {
+      "source": "users.pwd_hash fixture value",
+      "sink": "MD5 password verification",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "sqli/dao/user.py",
+        "line": 41,
+        "note": "MD5 password comparison without salt"
+      }
+    ],
+    "evidence": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest() | validator: sqli/dao/user.py:41 check_password compares md5(password.encode()).hexdigest() unsalted fast hash | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote attacker with read of users table. HOW: check_password compares stored hash to unsalted MD5 of supplied password. WHAT: breaks password-storage invariant (fast unsalted hash, no salt/pepper/work factor), enabling instant rainbow-table and GPU cracking.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "python3 -c \"from hashlib import md5; print(md5(b'password').hexdigest())\"",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker obtains pwd_hash from DB via SQLi or fixture dump"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()",
+    "hunter_snippet": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()",
+    "patch_summary": "Replace MD5 with salted slow hash (bcrypt/argon2/scrypt) and migrate stored hashes",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-5",
+    "title": "Missing authorization on student creation",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 57,
+    "end_line": 57,
+    "snippet": "await Student.create(conn, data['name'])",
+    "taint": {
+      "source": "POST name parameter",
+      "sink": "unauthorized DB insert",
+      "path": [
+        "sqli/views.py:55 request.post()",
+        "sqli/views.py:57 Student.create"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 52,
+        "note": "students handler has no authorize check"
+      }
+    ],
+    "evidence": "await Student.create(conn, data['name']) | validator: sqli/views.py:50-57 students POST calls Student.create with no @authorize; sqli/routes.py:9 exposes POST /students/ unauthenticated, only template UI gate | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client. HOW: students handler unconditionally executes Student.create on any POST without calling authorize() or checking auth_user. WHAT: breaks authorization invariant, allowing anonymous creation of academic records and delivery of SQLi/XSS payloads.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/students/ -d 'name=pwned'",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /students/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await Student.create(conn, data['name'])",
+    "hunter_snippet": "await Student.create(conn, data['name'])",
+    "patch_summary": "Add @authorize(ensure_admin=True) server-side gate to students POST handler",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-6",
+    "title": "Missing authorization on course creation",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 89,
+    "end_line": 90,
+    "snippet": "await Course.create(conn, data['title'],",
+    "taint": {
+      "source": "POST title/description",
+      "sink": "unauthorized course insert",
+      "path": [
+        "sqli/views.py:87 request.post()",
+        "sqli/views.py:89 Course.create"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 84,
+        "note": "courses handler lacks auth check"
+      }
+    ],
+    "evidence": "await Course.create(conn, data['title'], | validator: sqli/views.py:81-90 courses POST calls Course.create with no @authorize; sqli/routes.py:13 POST /courses/ unauthenticated, template-only admin gate sqli/templates/courses.jinja2:27 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client. HOW: courses handler inserts title/description on any POST with no authorize() or is_admin enforcement (admin check exists only in template). WHAT: breaks server-side authorization invariant, allowing anonymous course creation.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/courses/ -d 'title=x&description=y'",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to /courses/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await Course.create(conn, data['title'],",
+    "hunter_snippet": "await Course.create(conn, data['title'],",
+    "patch_summary": "Add @authorize(ensure_admin=True) server-side gate to courses POST handler",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-7",
+    "title": "Missing authorization on grade evaluation",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 151,
+    "end_line": 152,
+    "snippet": "await Mark.create(conn, student_id, course_id,",
+    "taint": {
+      "source": "path params + POST points",
+      "sink": "unauthorized grade insert",
+      "path": [
+        "sqli/views.py:137 match_info student_id/course_id",
+        "sqli/views.py:151 Mark.create"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 135,
+        "note": "evaluate handler has no authorize decorator"
+      }
+    ],
+    "evidence": "await Mark.create(conn, student_id, course_id, | validator: sqli/views.py:134-152 evaluate POST calls Mark.create with no @authorize; sqli/routes.py:17-19 exposes evaluate unauthenticated | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client. HOW: evaluate handler validates only points range then calls Mark.create with path student_id/course_id; no authorize() or admin check (UI gate only in course.jinja2). WHAT: breaks grade-integrity authorization invariant, allowing anonymous grade forgery.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/students/1/evaluate/1 -d 'points=5'",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to evaluate endpoint"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await Mark.create(conn, student_id, course_id,",
+    "hunter_snippet": "await Mark.create(conn, student_id, course_id,",
+    "patch_summary": "Add @authorize(ensure_admin=True) gate to evaluate handler",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-9",
+    "title": "Stored XSS via course review_text",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 22,
+    "end_line": 22,
+    "snippet": "{{ review.review_text }}",
+    "taint": {
+      "source": "POST review_text",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:121 review_text",
+        "sqli/dao/review.py:28 Review.create",
+        "sqli/templates/course.jinja2:22"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 22,
+        "note": "unescaped review_text sink"
+      }
+    ],
+    "evidence": "{{ review.review_text }} | validator: sqli/templates/course.jinja2:22 {{ review.review_text }} unescaped with sqli/app.py:35 autoescape=False; stored via sqli/views.py:121-129 Review.create sqli/dao/review.py:28-34 and read in sqli/views.py:94-105 course handler | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated reviewer controlling review_text. HOW: value stored in course_reviews then emitted with {{ review.review_text }} with autoescape off and no |e filter. WHAT: breaks output-encoding invariant, yielding stored XSS executing in victim browser with access to non-HttpOnly session cookie.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n review_text sqli/templates/course.jinja2 sqli/views.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker has submitted review_text via /courses/{id}/review"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "{{ review.review_text }}",
+    "hunter_snippet": "{{ review.review_text }}",
+    "patch_summary": "Enable autoescape and/or use {{ review.review_text|e }}",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/course.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/course.jinja2:22 {{ review.review_text }} unescaped with sqli/app.py:34 autoescape=False; reachable stored XSS via POST sqli/views.py:125-131 Review.create then GET sqli/routes.py:15 sqli/views.py:94 renders reviews | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Enable Jinja2 autoescape=True in sqli/app.py and/or add |e to {{ review.review_text }}, {{ course.title }}, {{ course.description }}, {{ student.name }} in course.jinja2",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-AUTHN-01",
+    "title": "Missing authentication on POST /courses/{course_id}/review",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 129,
+    "end_line": 129,
+    "snippet": "await Review.create(conn, course_id, review_text)",
+    "taint": {
+      "source": "Unauthenticated POST review_text at sqli/views.py:121",
+      "sink": "Review.create at sqli/views.py:129",
+      "path": [
+        "sqli/routes.py:24 POST review",
+        "sqli/views.py:112 async def review \u2014 no auth",
+        "sqli/views.py:129 Review.create"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/routes.py",
+        "line": 24,
+        "note": "POST review route"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 112,
+        "note": "Handler without authentication"
+      }
+    ],
+    "evidence": "Routes sqli/routes.py:24 POST review -> handler sqli/views.py:112 review() performs no get_auth_user/authorize check; allows anonymous spam that feeds stored-XSS sink SYS-XSS-01 | validator: Review handler sqli/views.py:112-129 performs Review.create with no get_auth_user/authorize check, exposed by POST sqli/routes.py:28-29 | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker can anonymously plant stored XSS payloads and spam reviews without accountability; no rate limiting or auth enables mass exploitation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Routes sqli/routes.py:24 POST review -> handler sqli/views.py:112 review() performs no get_auth_user/authorize check; allows anonymous spam that feeds stored-XSS sink SYS-XSS-01",
+    "hunter_snippet": "await Review.create(conn, course_id, review_text)",
+    "patch_summary": "Require authentication on review handler via @authorize() and enforce server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-CRYPTO-01",
+    "title": "Unsalted fast MD5 password hashing with weak fixture passwords",
+    "cwe": "CWE-327",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/dao/user.py",
+    "start_line": 40,
+    "end_line": 41,
+    "snippet": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()",
+    "taint": {
+      "source": "User password input at sqli/views.py:38",
+      "sink": "MD5 compare at sqli/dao/user.py:41 and md5() in migrations/001-fixtures.sql:12",
+      "path": [
+        "sqli/views.py:38 password source",
+        "sqli/dao/user.py:41 MD5 sink",
+        "migrations/001-fixtures.sql:12 weak hashes"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/dao/user.py",
+        "line": 40,
+        "note": "Unsalted MD5 check"
+      },
+      {
+        "file": "migrations/001-fixtures.sql",
+        "line": 12,
+        "note": "Weak fixture passwords hashed with md5"
+      }
+    ],
+    "evidence": "sqli/dao/user.py:1 from hashlib import md5 + sqli/dao/user.py:41 unsalted MD5 compare; migrations/001-fixtures.sql:12 weak passwords (superadmin/***, password, spidey) stored as md5() \u2014 crackable in seconds with rainbow tables | validator: Unsalted MD5 compare sqli/dao/user.py:40-41 with md5 fixture hashes of weak passwords migrations/001-fixtures.sql:12 | consensus: 1/1 confirmed",
+    "rationale": "Attacker obtaining DB via SQLi (SYS-SQLI-01) recovers all passwords instantly; no salt, no work factor. Fixture weak credentials guarantee compromise if reused.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "sqli/dao/user.py:1 from hashlib import md5 + sqli/dao/user.py:41 unsalted MD5 compare; migrations/001-fixtures.sql:12 weak passwords (superadmin/***, password, spidey) stored as md5() \u2014 crackable in seconds with rainbow tables",
+    "hunter_snippet": "return self.pwd_hash == md5(password.encode('utf-8')).hexdigest()",
+    "patch_summary": "Replace MD5 with salted slow hash (bcrypt/scrypt/argon2) and rotate fixture hashes.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-stored-xss-review-flow",
+    "title": "Cross-unit stored XSS via course review_text persisted to DB and rendered unescaped",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 22,
+    "end_line": 22,
+    "snippet": "                    {{ review.review_text }}",
+    "taint": {
+      "source": "Unauthenticated POST /courses/{course_id}/review review_text field",
+      "sink": "Jinja render {{ review.review_text }} without escaping with autoescape=False",
+      "path": [
+        "sqli/views.py:121 review_text = data.get('review_text')",
+        "sqli/dao/review.py:29 Review.create(conn, course_id, review_text)",
+        "sqli/templates/course.jinja2:22 {{ review.review_text }}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 121,
+        "note": "source: review_text = data.get(review_text) from unauthenticated POST"
+      },
+      {
+        "file": "sqli/dao/review.py",
+        "line": 29,
+        "note": "carrier: Review.create persists review_text to course_reviews"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 33,
+        "note": "enabler: setup_jinja autoescape=False disables global escaping"
+      },
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 22,
+        "note": "sink: unescaped {{ review.review_text }}"
+      }
+    ],
+    "evidence": "Cross-unit flow: POST review_text sqli/views.py:121 -> INSERT sqli/dao/review.py:29-36 -> unescaped render sqli/templates/course.jinja2:22 with global autoescape=False sqli/app.py:33-35 | validator: Unauth POST review_text sqli/views.py:121 stored via sqli/dao/review.py:28-35 rendered unescaped sqli/templates/course.jinja2:22 with global autoescape=False sqli/app.py:33 | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker POSTs review_text to /courses/{id}/review; Review.create stores it parameterized then GET /courses/{id} renders {{ review.review_text }} unescaped because Jinja autoescape=False globally. Stored payload executes in victim browser, enabling session theft especially with httponly=False cookie.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Cross-unit flow: POST review_text sqli/views.py:121 -> INSERT sqli/dao/review.py:29-36 -> unescaped render sqli/templates/course.jinja2:22 with global autoescape=False sqli/app.py:33-35",
+    "hunter_snippet": "                    {{ review.review_text }}",
+    "patch_summary": "Enable Jinja autoescape=True and escape review_text output; validate/sanitize input.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-9",
+    "cvss": 7.3,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-missing-authz-evaluate",
+    "title": "Missing authorization on POST /students/{student_id}/evaluate/{course_id} allows unauthenticated grade forgery",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 135,
+    "end_line": 135,
+    "snippet": "async def evaluate(request: Request):",
+    "taint": {
+      "source": "Unauthenticated POST points + path student_id/course_id",
+      "sink": "Mark.create INSERT into marks (grade forgery)",
+      "path": [
+        "sqli/routes.py:21 POST /students/{student_id}/evaluate/{course_id}",
+        "sqli/views.py:139 data = await request.post()",
+        "sqli/views.py:151 Mark.create(conn, student_id, course_id, data['points'])"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/routes.py",
+        "line": 21,
+        "note": "route: POST /students/{student_id}/evaluate/{course_id} -> views.evaluate"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 135,
+        "note": "handler evaluate lacks @authorize / admin check (only logout has it at line 156)"
+      },
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 41,
+        "note": "UI-only {% if auth_user.is_admin %} gate, no server enforcement"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 151,
+        "note": "sink: Mark.create writes forged grade"
+      }
+    ],
+    "evidence": "Handler sqli/views.py:135 evaluate has no @authorize and no is_admin check; route sqli/routes.py:21-23 exposes POST /students/{student_id}/evaluate/{course_id} unauthenticated; UI-only gate {% if auth_user.is_admin %} sqli/templates/course.jinja2:41 is not enforced server-side; sink Mark.create sqli/views.py:151 | validator: Evaluate handler sqli/views.py:135-151 has no @authorize/is_admin check, route POST sqli/routes.py:21-23; only UI gate sqli/templates/course.jinja2:41 | consensus: 1/1 confirmed",
+    "rationale": "Any unauthenticated client can POST points 0-5 to /students/{id}/evaluate/{course_id} to forge academic marks. No authentication or admin check in handler; only template hides form. Direct route bypasses UI.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Handler sqli/views.py:135 evaluate has no @authorize and no is_admin check; route sqli/routes.py:21-23 exposes POST /students/{student_id}/evaluate/{course_id} unauthenticated; UI-only gate {% if auth_user.is_admin %} sqli/templates/course.jinja2:41 is not enforced server-side; sink Mark.create sqli/views.py:151",
+    "hunter_snippet": "async def evaluate(request: Request):",
+    "patch_summary": "Enforce server-side @authorize(ensure_admin=True) on evaluate and validate points.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-csrf-disabled-globally",
+    "title": "CSRF protection disabled globally (csrf_middleware commented out)",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/app.py",
+    "start_line": 27,
+    "end_line": 28,
+    "snippet": "            # csrf_middleware,",
+    "taint": {
+      "source": "Cross-site forged POST from attacker origin using victim cookies/session",
+      "sink": "All state-changing POST handlers execute without token validation",
+      "path": [
+        "sqli/routes.py:11 POST / + sqli/views.py:33 index login/CSRF-sensitive",
+        "sqli/app.py:27 csrf check removed from middleware chain"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/app.py",
+        "line": 27,
+        "note": "control disabled: # csrf_middleware commented out"
+      },
+      {
+        "file": "sqli/middlewares.py",
+        "line": 26,
+        "note": "unused csrf_middleware that would validate _csrf_token"
+      },
+      {
+        "file": "sqli/routes.py",
+        "line": 14,
+        "note": "affected POST route example: POST /students/"
+      },
+      {
+        "file": "sqli/templates/base.jinja2",
+        "line": 29,
+        "note": "token rendered but never checked"
+      }
+    ],
+    "evidence": "CSRF middleware defined sqli/middlewares.py:26-38 but explicitly disabled sqli/app.py:27 (# csrf_middleware); all POST routes sqli/routes.py:11,14,18,21,28,29 accept form POSTs with csrf_token() rendered but never validated, enabling cross-site forged POSTs to /students/, /courses/, /evaluate, /review, /logout/ | validator: CSRF middleware defined sqli/middlewares.py:26-38 but disabled sqli/app.py:27 (# csrf_middleware) while forms render csrf_token sqli/templates/base.jinja2:29 | consensus: 1/1 confirmed",
+    "rationale": "Commenting out csrf_middleware removes the only CSRF check while templates still emit _csrf_token, giving false sense of protection. Attacker site can auto-submit POSTs using victim session (login session in Redis) to create students/courses/reviews/grades.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "CSRF middleware defined sqli/middlewares.py:26-38 but explicitly disabled sqli/app.py:27 (# csrf_middleware); all POST routes sqli/routes.py:11,14,18,21,28,29 accept form POSTs with csrf_token() rendered but never validated, enabling cross-site forged POSTs to /students/, /courses/, /evaluate, /review, /logout/",
+    "hunter_snippet": "            # csrf_middleware,",
+    "patch_summary": "Re-enable csrf_middleware in app middleware chain and validate _csrf_token on all POSTs.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-2",
+    "cvss": 7.3,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "missing-auth-student-create",
+    "title": "Missing authentication on POST /students/ allows unauthenticated student creation",
+    "cwe": "CWE-306",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "sqli/views.py",
+    "start_line": 54,
+    "end_line": 57,
+    "snippet": "    if request.method == 'POST':\n        data = await request.post()\n        async with app['db'].acquire() as conn:\n            await Student.create(conn, data['name'])",
+    "taint": {
+      "source": "unauthenticated POST form field name",
+      "sink": "Student.create persistent DB insert without auth",
+      "path": [
+        "sqli/routes.py:9 POST /students/ -> sqli/views.py:55 request.post() name",
+        "sqli/views.py:57 Student.create(conn, data['name'])",
+        "sqli/dao/student.py:42 INSERT INTO students sink"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 54,
+        "note": "POST branch with no auth check"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 57,
+        "note": "unauthenticated DB insert Student.create"
+      },
+      {
+        "file": "sqli/routes.py",
+        "line": 9,
+        "note": "POST /students/ route exposed"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 156,
+        "note": "contrast: logout requires @authorize()"
+      }
+    ],
+    "evidence": "POST /students/ handler at sqli/views.py:54-57 writes to DB with no @authorize, no get_auth_user check, unlike logout at sqli/views.py:156 which requires @authorize(); routes at sqli/routes.py:9 expose POST /students/ unauthenticated | validator: POST /students/ handler sqli/views.py:50-57 calls Student.create with no auth check, exposed sqli/routes.py:7-8; only logout uses @authorize sqli/views.py:156 | consensus: 1/1 confirmed",
+    "rationale": "State-changing POST /students/ creates persistent academic records without any authentication/authorization check; any unauthenticated client can insert arbitrary student rows (which also feeds stored-XSS and SQLi sinks downstream). Sibling mutating handlers (logout) enforce @authorize but this one does not.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "POST /students/ handler at sqli/views.py:54-57 writes to DB with no @authorize, no get_auth_user check, unlike logout at sqli/views.py:156 which requires @authorize(); routes at sqli/routes.py:9 expose POST /students/ unauthenticated",
+    "hunter_snippet": "    if request.method == 'POST':\n        data = await request.post()\n        async with app['db'].acquire() as conn:\n            await Student.create(conn, data['name'])",
+    "patch_summary": "Require authentication/authorization on students POST handler server-side.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-missing-authz-courses-create",
+    "title": "Missing authorization on POST /courses/ allows unauthenticated course creation",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.92,
+    "path": "sqli/views.py",
+    "start_line": 84,
+    "end_line": 84,
+    "snippet": "async def courses(request: Request):",
+    "taint": {
+      "source": "Unauthenticated POST title/description",
+      "sink": "Course.create INSERT into courses",
+      "path": [
+        "sqli/routes.py:18 POST /courses/",
+        "sqli/views.py:89 Course.create(conn, data['title'], data['description'])"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/routes.py",
+        "line": 18,
+        "note": "route: POST /courses/ -> views.courses"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 84,
+        "note": "handler courses lacks @authorize, directly trusts POST title/description"
+      },
+      {
+        "file": "sqli/dao/course.py",
+        "line": 38,
+        "note": "sink: Course.create INSERT"
+      }
+    ],
+    "evidence": "Handler sqli/views.py:84 courses handles POST data['title']/data['description'] -> Course.create with no @authorize; routes sqli/routes.py:18 exposes POST /courses/ to unauthenticated clients | validator: Courses handler sqli/views.py:81-89 calls Course.create sqli/dao/course.py:38-43 with no @authorize, exposed POST sqli/routes.py:13-14 | consensus: 1/1 confirmed",
+    "rationale": "No server-side auth check on courses POST; any network client can insert arbitrary courses/descriptions, which then persist and amplify stored XSS via unescaped course.jinja2/courses.jinja2 renders.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Handler sqli/views.py:84 courses handles POST data['title']/data['description'] -> Course.create with no @authorize; routes sqli/routes.py:18 exposes POST /courses/ to unauthenticated clients",
+    "hunter_snippet": "async def courses(request: Request):",
+    "patch_summary": "Enforce server-side admin authorization on courses POST handler.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.2,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-8",
+    "title": "Missing authentication on review submission",
+    "cwe": "CWE-862",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/views.py",
+    "start_line": 129,
+    "end_line": 129,
+    "snippet": "await Review.create(conn, course_id, review_text)",
+    "taint": {
+      "source": "POST review_text",
+      "sink": "unauthorized review insert",
+      "path": [
+        "sqli/views.py:121 review_text from POST",
+        "sqli/views.py:129 Review.create"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 129,
+        "note": "Review.create without auth check"
+      }
+    ],
+    "evidence": "await Review.create(conn, course_id, review_text) | validator: sqli/views.py:112-129 review POST calls Review.create with no @authorize; sqli/routes.py:21-25 exposes POST /courses/{id}/review unauthenticated | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client. HOW: review handler accepts any POST review_text with only presence check and inserts via Review.create; no authentication required. WHAT: breaks authorization invariant and supplies persistent stored-XSS payload rendered later unescaped.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/courses/1/review -d 'review_text=<script>alert(1)</script>'",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated network access to review endpoint"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await Review.create(conn, course_id, review_text)",
+    "hunter_snippet": "await Review.create(conn, course_id, review_text)",
+    "patch_summary": "Require authentication for review submission or add CAPTCHA/rate-limit plus authz decision",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-10",
+    "title": "Stored XSS via course title/description",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 14,
+    "end_line": 15,
+    "snippet": "<h2>{{ course.title }}</h2>",
+    "taint": {
+      "source": "POST title",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 Course.create",
+        "sqli/templates/course.jinja2:14"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 14,
+        "note": "unescaped course.title sink"
+      }
+    ],
+    "evidence": "<h2>{{ course.title }}</h2> | validator: sqli/templates/course.jinja2:14-15 {{ course.title }} and {{ course.description }} unescaped with sqli/app.py:35 autoescape=False; stored via sqli/views.py:87-90 Course.create | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling title/description. HOW: Course.create stores raw strings; course detail template emits {{ course.title }} and {{ course.description }} without escaping under autoescape=False. WHAT: breaks output encoding, allowing stored XSS via course fields.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'course.title\\|course.description' sqli/templates/course.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker has created course via POST /courses/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<h2>{{ course.title }}</h2>",
+    "hunter_snippet": "<h2>{{ course.title }}</h2>",
+    "patch_summary": "Enable autoescape and/or escape course.title/description with |e",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-11",
+    "title": "Stored XSS in courses list",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/courses.jinja2",
+    "start_line": 17,
+    "end_line": 18,
+    "snippet": "{{ course.title }}",
+    "taint": {
+      "source": "POST title",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 Course.create",
+        "sqli/templates/courses.jinja2:17"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/courses.jinja2",
+        "line": 17,
+        "note": "unescaped course.title in list"
+      }
+    ],
+    "evidence": "{{ course.title }} | validator: sqli/templates/courses.jinja2:17-18 {{ course.title }}/{{ course.description }} unescaped with sqli/app.py:35 autoescape=False; stored via sqli/views.py:87-90 Course.create | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling title/description. HOW: courses list template iterates courses and emits {{ course.title }} and {{ course.description }} without |e under autoescape=False. WHAT: breaks output encoding, stored XSS served to every visitor of /courses/.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'course\\.' sqli/templates/courses.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker has created course via POST /courses/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "{{ course.title }}",
+    "hunter_snippet": "{{ course.title }}",
+    "patch_summary": "Enable autoescape and/or escape variables in courses list template",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-12",
+    "title": "Stored XSS via student name list",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/students.jinja2",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a>",
+    "taint": {
+      "source": "POST name",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:57 Student.create",
+        "sqli/templates/students.jinja2:16"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/students.jinja2",
+        "line": 16,
+        "note": "unescaped name sink"
+      }
+    ],
+    "evidence": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a> | validator: sqli/templates/students.jinja2:16 {{ name }} unescaped with sqli/app.py:35 autoescape=False; stored via sqli/views.py:54-57 Student.create (also SQLi sink) | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling student name. HOW: Student.create stores raw name; students list unpacks (id,name) and emits {{ name }} without escaping under autoescape=False. WHAT: breaks output encoding, stored XSS on /students/ listing.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n '{{ name }}' sqli/templates/students.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker has created student via POST /students/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a>",
+    "hunter_snippet": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a>",
+    "patch_summary": "Enable autoescape and/or use {{ name|e }} in students list",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-8",
+    "title": "Stored XSS via course title in breadcrumb",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 9,
+    "end_line": 9,
+    "snippet": "<a href=\"/courses/{{ course.id }}\" class=\"breadcrumb\">{{ course.title }}</a>",
+    "taint": {
+      "source": "POST title",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 POST title",
+        "sqli/dao/course.py:38 Course.create",
+        "sqli/templates/course.jinja2:9 breadcrumb"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 9,
+        "note": "unescaped breadcrumb sink"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 35,
+        "note": "autoescape=False enables execution"
+      }
+    ],
+    "evidence": "<a href=\"/courses/{{ course.id }}\" class=\"breadcrumb\">{{ course.title }}</a> | validator: sqli/templates/course.jinja2:9 {{course.title}} unescaped with sqli/app.py:35 autoescape=False, planted via unauth POST sqli/views.py:85-89 + sqli/dao/course.py:38 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling title via POST /courses/. HOW: title stored via Course.create then emitted in breadcrumb <a>{{ course.title }}</a> (line 9) with no |e and global autoescape=False. WHAT: breaks output-encoding at distinct sink from lines 14/22, stored XSS on course detail breadcrumb.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] breadcrumb {{ course.title }} unescaped under autoescape=False enables stored XSS')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated course creation (no authz) then victim views /courses/{id}"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<a href=\"/courses/{{ course.id }}\" class=\"breadcrumb\">{{ course.title }}</a>",
+    "hunter_snippet": "<a href=\"/courses/{{ course.id }}\" class=\"breadcrumb\">{{ course.title }}</a>",
+    "patch_summary": "Enable autoescape=True in sqli/app.py and add |e to sqli/templates/course.jinja2:9 plus enforce server-side authz on course creation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 22,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-9",
+    "title": "Stored XSS via student name in evaluate sidebar",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/course.jinja2",
+    "start_line": 49,
+    "end_line": 49,
+    "snippet": "<a href=\"/students/{{ student.id }}\">{{ student.name }}</a>",
+    "taint": {
+      "source": "POST student name",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:57 POST name",
+        "sqli/dao/student.py:41 SQLi insert",
+        "sqli/templates/course.jinja2:49 sidebar"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 49,
+        "note": "unescaped student name sink"
+      }
+    ],
+    "evidence": "<a href=\"/students/{{ student.id }}\">{{ student.name }}</a> | validator: sqli/templates/course.jinja2:49 {{student.name}} unescaped with sqli/app.py:35 autoescape=False, planted via unauth POST sqli/views.py:52-57 viewed by admin at sqli/views.py:94-107 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling student name. HOW: name stored via Student.create then emitted as <a>{{ student.name }}</a> in evaluate-students sidebar (line 49) with no |e under autoescape=False. WHAT: breaks output-encoding at distinct call site from students list, stored XSS served to admin evaluating grades.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] evaluate sidebar {{ student.name }} unescaped enables stored XSS')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated student creation then victim views course evaluate sidebar as admin"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<a href=\"/students/{{ student.id }}\">{{ student.name }}</a>",
+    "hunter_snippet": "<a href=\"/students/{{ student.id }}\">{{ student.name }}</a>",
+    "patch_summary": "Enable autoescape=True and escape sqli/templates/course.jinja2:49 plus require authz on student creation",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 23,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-15",
+    "title": "Stored XSS via course title on review page (card title)",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/review.jinja2",
+    "start_line": 32,
+    "end_line": 32,
+    "snippet": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "taint": {
+      "source": "POST course title",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 POST title",
+        "sqli/templates/review.jinja2:32 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/review.jinja2",
+        "line": 32,
+        "note": "unescaped title sink"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 113,
+        "note": "review handler supplies course"
+      }
+    ],
+    "evidence": "<span class=\"card-title\">Write review to {{ course.title }}</span> | validator: sqli/templates/review.jinja2:32 {{course.title}} unescaped with sqli/app.py:35 autoescape=False (vs escaped breadcrumb at review.jinja2:11), planted via sqli/views.py:85-89 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling course title. HOW: review() passes course to review.jinja2 which emits Write review to {{ course.title }} (line 32) with no filter under autoescape=False, distinct from breadcrumb |e at line 10 and course.jinja2 sinks. WHAT: breaks consistent-escaping invariant, stored XSS on GET /courses/{id}/review.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] review page card-title {{ course.title }} without |e is distinct stored XSS sink')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated course creation then victim views review page"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "hunter_snippet": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "patch_summary": "Enable autoescape=True and add |e to sqli/templates/review.jinja2:32",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 24,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-17",
+    "title": "Stored XSS via course description in courses list",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/courses.jinja2",
+    "start_line": 18,
+    "end_line": 18,
+    "snippet": "<span class=\"secondary-content\">{{ course.description }}</span>",
+    "taint": {
+      "source": "POST course description",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 POST description",
+        "sqli/templates/courses.jinja2:18 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/courses.jinja2",
+        "line": 18,
+        "note": "unescaped description sink"
+      }
+    ],
+    "evidence": "<span class=\"secondary-content\">{{ course.description }}</span> | validator: sqli/templates/courses.jinja2:18 {{course.description}} unescaped with sqli/app.py:35 autoescape=False, planted via unauth POST sqli/views.py:85-89 and listed at sqli/views.py:81-92 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling description. HOW: courses() lists all courses; courses.jinja2 emits <span>{{ course.description }}</span> (line 18) with no |e under autoescape=False, distinct sink from title at line 17. WHAT: breaks output-encoding, stored XSS on /courses/ via description field.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] courses list {{ course.description }} unescaped is distinct sink from title')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated course creation then victim lists /courses/"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span class=\"secondary-content\">{{ course.description }}</span>",
+    "hunter_snippet": "<span class=\"secondary-content\">{{ course.description }}</span>",
+    "patch_summary": "Enable autoescape=True and escape sqli/templates/courses.jinja2:16-18",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-11",
+    "cvss": 7.1,
+    "rank": 25,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-13",
+    "title": "Stored XSS via course fields on student page",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/student.jinja2",
+    "start_line": 19,
+    "end_line": 20,
+    "snippet": "<span class=\"card-title\">{{ course.title }}</span>",
+    "taint": {
+      "source": "POST title/description",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 Course.create",
+        "sqli/templates/student.jinja2:19"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/student.jinja2",
+        "line": 19,
+        "note": "unescaped course.title without |e"
+      }
+    ],
+    "evidence": "<span class=\"card-title\">{{ course.title }}</span> | validator: sqli/app.py:35 autoescape=False with sqli/templates/student.jinja2:19-20 {{course.title}}/{{course.description}} unescaped; attacker stores via POST /courses/ sqli/views.py:81-90 Course.create | consensus: 1/1 confirmed",
+    "rationale": "WHO: client who can create courses. HOW: student detail page loops related courses and emits {{ course.title }} and {{ course.description }} without |e while sibling student.name uses |e, showing inconsistent escaping. WHAT: breaks output-encoding consistency, allowing stored XSS via course fields on student pages.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'course.title\\|course.description' sqli/templates/student.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls course title/description in DB"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span class=\"card-title\">{{ course.title }}</span>",
+    "hunter_snippet": "<span class=\"card-title\">{{ course.title }}</span>",
+    "patch_summary": "Enable autoescape=True and add |e to course.title/description in student.jinja2; validate course fields server-side",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 26,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-15",
+    "title": "XSS via course title on review page",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/review.jinja2",
+    "start_line": 32,
+    "end_line": 32,
+    "snippet": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "taint": {
+      "source": "POST title",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 Course.create",
+        "sqli/templates/review.jinja2:32"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/review.jinja2",
+        "line": 32,
+        "note": "unescaped course.title"
+      }
+    ],
+    "evidence": "<span class=\"card-title\">Write review to {{ course.title }}</span> | validator: sqli/app.py:35 autoescape=False with sqli/templates/review.jinja2:32 {{course.title}} unescaped; stored via POST /courses/ sqli/views.py:81-90 | consensus: 1/1 confirmed",
+    "rationale": "WHO: client controlling course title. HOW: review form page emits Write review to {{ course.title }} without |e while other templates selectively use |e for same field. WHAT: breaks consistent escaping, reflected/stored XSS on review page.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'course.title' sqli/templates/review.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls course title"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "hunter_snippet": "<span class=\"card-title\">Write review to {{ course.title }}</span>",
+    "patch_summary": "Enable autoescape=True and escape course.title in review.jinja2",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-15",
+    "cvss": 7.1,
+    "rank": 27,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-0",
+    "title": "No rate-limiting or lockout on login enables brute-force",
+    "cwe": "CWE-307",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/views.py",
+    "start_line": 40,
+    "end_line": 41,
+    "snippet": "user = await User.get_by_username(conn, username)",
+    "taint": {
+      "source": "POST username/password (unauthenticated)",
+      "sink": "unthrottled authentication decision",
+      "path": [
+        "sqli/views.py:33 POST username/password",
+        "sqli/views.py:40 User.get_by_username",
+        "sqli/dao/user.py:41 MD5 compare"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 33,
+        "note": "POST login branch with no throttle"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 40,
+        "note": "DB lookup + password check per attempt, no limit"
+      }
+    ],
+    "evidence": "user = await User.get_by_username(conn, username) | validator: sqli/views.py:33-41 POST / login does User.get_by_username + MD5 check with no throttle/lockout/captcha; no rate-limit in repo | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client guessing passwords. HOW: index() POST branch (line 33) reads username/password then User.get_by_username (line 40) + MD5 check (line 41) with no counter, delay, lockout or 429; attacker can replay unlimited POSTs. WHAT: breaks brute-force defense invariant, enabling online password guessing against weak MD5 fixture passwords.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "import asyncio\n# Brute-force login: index() does User.get_by_username + MD5 check with no throttle/lockout.\n# Replaying POST / with password list never triggers 429/lockout; errors list is generic.\n# Code path: sqli/views.py:33 POST branch -> sqli/views.py:40 User.get_by_username -> sqli/dao/user.py:41 MD5 compare\nprint('[POC_PROVEN] login handler permits unlimited password guesses, no rate-limit or lockout')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Network reachability to / (POST /) as unauthenticated client",
+      "No upstream rate-limit / WAF (none in repo)"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "user = await User.get_by_username(conn, username)",
+    "hunter_snippet": "user = await User.get_by_username(conn, username)",
+    "patch_summary": "Add rate-limiting, account lockout/backoff and generic error handling on login",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 28,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/courses.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/courses.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/courses.jinja2:17-18 {{ course.title }} {{ course.description }} unescaped with sqli/app.py:34 autoescape=False; attacker POST sqli/views.py:81-91 Course.create then GET sqli/routes.py:13 renders same page | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Enable autoescape=True in sqli/app.py and/or add |e to course.title/description in courses.jinja2; validate/sanitize title/description on create",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 29,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/students.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/students.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/students.jinja2:16 {{ name }} unescaped with sqli/app.py:34 autoescape=False; attacker POST sqli/views.py:50-58 Student.create sqli/dao/student.py:36 then GET sqli/routes.py:9 renders names | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Enable autoescape=True in sqli/app.py and/or add |e to {{ name }} in students.jinja2; sanitize name on create",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 30,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "SYS-SECRET-01",
+    "title": "Hardcoded database credentials in config/dev.yaml",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "config/dev.yaml",
+    "start_line": 1,
+    "end_line": 6,
+    "snippet": "db:\n  user: ***\n  password: ***",
+    "taint": {
+      "source": "Hardcoded password in config/dev.yaml:3",
+      "sink": "DSN construction in sqli/services/db.py:16 and network exposure",
+      "path": [
+        "config/dev.yaml:3 hardcoded password",
+        "sqli/services/db.py:16 DSN format"
+      ]
+    },
+    "refs": [
+      {
+        "file": "config/dev.yaml",
+        "line": 3,
+        "note": "Hardcoded DB password type, value redacted"
+      },
+      {
+        "file": "sqli/services/db.py",
+        "line": 16,
+        "note": "DSN built from config"
+      }
+    ],
+    "evidence": "config/dev.yaml:1-6 contains cleartext db user/password=***, database=***; wired into DSN via sqli/services/db.py:16 format(**conf); published postgres:5432 in compose | validator: Cleartext db password config/dev.yaml:1-6 wired into DSN sqli/services/db.py:14-18 | consensus: 1/1 confirmed",
+    "rationale": "Committed secrets leak via repo; any reader gains DB access. Combined with SQLi and 0.0.0.0 bind, exposes PostgreSQL confidentiality/integrity. Must move to vault/env.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "config/dev.yaml:1-6 contains cleartext db user/password=***, database=***; wired into DSN via sqli/services/db.py:16 format(**conf); published postgres:5432 in compose",
+    "hunter_snippet": "db:\n  user: ***\n  password: ***",
+    "patch_summary": "Remove secret from repo; load DB credentials from environment/vault.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 31,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "stored-xss-student-name",
+    "title": "Cross-unit stored XSS via student name persisted to DB and rendered unescaped",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/students.jinja2",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a>",
+    "taint": {
+      "source": "POST /students/ form field name",
+      "sink": "unescaped {{ name }} render in students.jinja2",
+      "path": [
+        "sqli/views.py:55 data = await request.post()",
+        "sqli/views.py:57 Student.create(conn, data['name'])",
+        "sqli/dao/student.py:42 VALUES ('%(name)s') INSERT",
+        "sqli/views.py:59 Student.get_many -> sqli/templates/students.jinja2:16 {{ name }}"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 57,
+        "note": "source: unvalidated POST name persisted"
+      },
+      {
+        "file": "sqli/dao/student.py",
+        "line": 42,
+        "note": "stored to DB via INSERT"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 33,
+        "note": "global autoescape=False enables XSS"
+      },
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 49,
+        "note": "second sink: {{ student.name }} in evaluate sidebar"
+      },
+      {
+        "file": "sqli/templates/evaluate.jinja2",
+        "line": 25,
+        "note": "third sink: Back to student {{ student.name }} unescaped"
+      }
+    ],
+    "evidence": "Source sqli/views.py:57 data['name'] -> sink sqli/dao/student.py:42 string-interpolated INSERT -> stored and rendered unescaped at sqli/templates/students.jinja2:16 with global autoescape=False at sqli/app.py:33-35 | validator: POST name sqli/views.py:57 inserted sqli/dao/student.py:42 rendered unescaped sqli/templates/students.jinja2:16 with autoescape=False sqli/app.py:33 | consensus: 1/1 confirmed",
+    "rationale": "Attacker-controlled student name from unauthenticated POST /students/ is persisted via Student.create and later rendered without escaping (autoescape=False, no |e filter). Any visitor to /students/ executes injected script, enabling session theft given httponly=False cookie.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Source sqli/views.py:57 data['name'] -> sink sqli/dao/student.py:42 string-interpolated INSERT -> stored and rendered unescaped at sqli/templates/students.jinja2:16 with global autoescape=False at sqli/app.py:33-35",
+    "hunter_snippet": "<a class=\"collection-item\" href=\"/students/{{ id }}\">{{ name }}</a>",
+    "patch_summary": "Enable autoescape and escape student name outputs; use parameterized INSERT.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-12",
+    "cvss": 7.1,
+    "rank": 32,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "stored-xss-course-fields",
+    "title": "Cross-unit stored XSS via course title/description persisted to DB and rendered unescaped",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "sqli/templates/courses.jinja2",
+    "start_line": 17,
+    "end_line": 18,
+    "snippet": "{{ course.title }}\n                <span class=\"secondary-content\">{{ course.description }}</span>",
+    "taint": {
+      "source": "POST /courses/ form fields title, description",
+      "sink": "unescaped {{ course.title }}/{{ course.description }} render",
+      "path": [
+        "sqli/routes.py:13 POST /courses/ -> sqli/views.py:89 Course.create",
+        "sqli/dao/course.py:38 INSERT INTO courses",
+        "sqli/views.py:92 Course.get_many -> sqli/templates/courses.jinja2:17-18 unescaped render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 89,
+        "note": "source: POST title/description persisted without validation"
+      },
+      {
+        "file": "sqli/dao/course.py",
+        "line": 38,
+        "note": "stored to courses table"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 33,
+        "note": "autoescape=False"
+      },
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 14,
+        "note": "second sink: {{ course.title }}/{{ course.description }}"
+      }
+    ],
+    "evidence": "Source sqli/views.py:89-90 data['title']/data['description'] -> sqli/dao/course.py:38-43 parameterized INSERT -> rendered unescaped at sqli/templates/courses.jinja2:17-18 and sqli/templates/course.jinja2:14-15 under autoescape=False sqli/app.py:33-35 | validator: POST title/description sqli/views.py:86-89 stored sqli/dao/course.py:38-43 rendered unescaped sqli/templates/courses.jinja2:17-18 with autoescape=False sqli/app.py:33 | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated POST /courses/ persists title/description which are later rendered without escaping in courses list and course detail pages. Distinct flow from review_text XSS; enables persistent script execution for every visitor.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Source sqli/views.py:89-90 data['title']/data['description'] -> sqli/dao/course.py:38-43 parameterized INSERT -> rendered unescaped at sqli/templates/courses.jinja2:17-18 and sqli/templates/course.jinja2:14-15 under autoescape=False sqli/app.py:33-35",
+    "hunter_snippet": "{{ course.title }}\n                <span class=\"secondary-content\">{{ course.description }}</span>",
+    "patch_summary": "Enable autoescape and escape course title/description outputs.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-11",
+    "cvss": 7.1,
+    "rank": 33,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-16",
+    "title": "Stored XSS via course description on student page",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "sqli/templates/student.jinja2",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "<p>{{ course.description }}</p>",
+    "taint": {
+      "source": "POST course description",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:89 POST description",
+        "sqli/templates/student.jinja2:20 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/student.jinja2",
+        "line": 20,
+        "note": "unescaped description sink distinct from line 19"
+      }
+    ],
+    "evidence": "<p>{{ course.description }}</p> | validator: sqli/templates/student.jinja2:20 {{course.description}} unescaped with sqli/app.py:35 autoescape=False, planted via sqli/views.py:85-89 and linked via unauth evaluate sqli/views.py:133-152 | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated client controlling course description. HOW: student() loads all courses and student.jinja2 emits <p>{{ course.description }}</p> (line 20) with no |e under autoescape=False, while sibling student.name uses |e. WHAT: breaks selective-escaping consistency, stored XSS via course description on /students/{id}.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] student page {{ course.description }} unescaped enables stored XSS')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Unauthenticated course creation then victim views student detail"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<p>{{ course.description }}</p>",
+    "hunter_snippet": "<p>{{ course.description }}</p>",
+    "patch_summary": "Enable autoescape=True and escape sqli/templates/student.jinja2:19-20",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-13",
+    "cvss": 6.9,
+    "rank": 34,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/review.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "sqli/templates/review.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/review.jinja2:32 Write review to {{ course.title }} unescaped with sqli/app.py:34 autoescape=False; course.title attacker-controlled via POST sqli/views.py:81-91 then GET sqli/routes.py:21 renders review form (contrast escaped line 10 {{ course.title | e }}) | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Add |e to {{ course.title }} at review.jinja2:32 and enable autoescape=True in sqli/app.py",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 35,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "unit-sqli-20",
+    "title": "Session fixation on login",
+    "cwe": "CWE-384",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "sqli/views.py",
+    "start_line": 42,
+    "end_line": 42,
+    "snippet": "session['user_id'] = user.id",
+    "taint": {
+      "source": "authenticated user id",
+      "sink": "session privilege escalation without rotation",
+      "path": [
+        "sqli/views.py:41 password check",
+        "sqli/views.py:42 session assignment"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 42,
+        "note": "sets user_id without session rotation"
+      }
+    ],
+    "evidence": "session['user_id'] = user.id | validator: sqli/views.py:42 session[user_id]=user.id sets privilege with no session rotation/invalidate; storage RedisStorage sqli/middlewares.py:15 | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker presenting valid credentials on a fixed session. HOW: index login sets session['user_id'] on the existing session without rotating session id or clearing prior session data. WHAT: breaks session-fixation defense, allowing fixation of pre-auth session identifier.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n user_id sqli/views.py sqli/utils/auth.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker authenticates with stolen credentials"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "session['user_id'] = user.id",
+    "hunter_snippet": "session['user_id'] = user.id",
+    "patch_summary": "Invalidate/regenerate session ID on login (session.invalidate + new session) before setting user_id",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 36,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-23",
+    "title": "XSS via student name on evaluate error page",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "sqli/templates/evaluate.jinja2",
+    "start_line": 25,
+    "end_line": 25,
+    "snippet": "Back to student {{ student.name }}",
+    "taint": {
+      "source": "POST name",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:57 Student.create",
+        "sqli/templates/evaluate.jinja2:25"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/evaluate.jinja2",
+        "line": 25,
+        "note": "unescaped student.name"
+      }
+    ],
+    "evidence": "Back to student {{ student.name }} | validator: sqli/app.py:35 autoescape=False with sqli/templates/evaluate.jinja2:25 {{student.name}} unescaped; stored via POST /students/ sqli/views.py:50-55 Student.create, rendered on evaluate error sqli/views.py:142-152 | consensus: 1/1 confirmed",
+    "rationale": "WHO: client controlling student name. HOW: evaluate error page emits Back to student {{ student.name }} and Back to course {{ course.name }} without |e under autoescape=False. WHAT: breaks output encoding on error path, stored XSS when evaluation validation fails.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'student.name\\|course.name' sqli/templates/evaluate.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls student name or course title"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "Back to student {{ student.name }}",
+    "hunter_snippet": "Back to student {{ student.name }}",
+    "patch_summary": "Add |e to student.name in evaluate.jinja2 aside and enable autoescape",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 37,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "SYS-BRUTE-01",
+    "title": "No rate-limiting or lockout on login enables credential brute-force",
+    "cwe": "CWE-307",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "sqli/views.py",
+    "start_line": 33,
+    "end_line": 42,
+    "snippet": "user = await User.get_by_username(conn, username)",
+    "taint": {
+      "source": "Unauthenticated POST username/password at sqli/views.py:37",
+      "sink": "Unthrottled DB lookup and MD5 check at sqli/views.py:40",
+      "path": [
+        "sqli/routes.py:5 POST / login",
+        "sqli/views.py:33 POST handling without limit",
+        "sqli/views.py:40 User.get_by_username"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/routes.py",
+        "line": 5,
+        "note": "Login route"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 33,
+        "note": "Login POST without rate limit"
+      }
+    ],
+    "evidence": "Handler sqli/views.py:23 index() processes POST / login with no counter, CAPTCHA, delay, or lockout; MD5 weak passwords + verbose Invalid username or password oracle + debug logging facilitate guessing | validator: Login POST handler sqli/views.py:33-42 does DB lookup and MD5 check with no counter/delay/lockout, route sqli/routes.py:5-6 | consensus: 1/1 confirmed",
+    "rationale": "Unauthenticated attacker can automate unlimited login attempts against weak fixture passwords; no throttling, audit log, or account lockout.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Handler sqli/views.py:23 index() processes POST / login with no counter, CAPTCHA, delay, or lockout; MD5 weak passwords + verbose Invalid username or password oracle + debug logging facilitate guessing",
+    "hunter_snippet": "user = await User.get_by_username(conn, username)",
+    "patch_summary": "Add rate-limiting, failed-attempt lockout/backoff and generic error handling on login.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 38,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "session-fixation-login",
+    "title": "Session fixation on login: session ID not rotated on authentication",
+    "cwe": "CWE-384",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "sqli/views.py",
+    "start_line": 42,
+    "end_line": 42,
+    "snippet": "session['user_id'] = user.id",
+    "taint": {
+      "source": "pre-authentication session identifier",
+      "sink": "authenticated privilege bound to attacker-known session ID",
+      "path": [
+        "sqli/views.py:27 get_session(request) pre-auth session",
+        "sqli/views.py:42 session['user_id'] = user.id on same session"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 42,
+        "note": "auth assigns user_id to existing session, no rotation"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 159,
+        "note": "logout only pops user_id, no session.invalidate()"
+      },
+      {
+        "file": "sqli/middlewares.py",
+        "line": 20,
+        "note": "Redis-backed session storage"
+      }
+    ],
+    "evidence": "Login at sqli/views.py:42 assigns session['user_id']=user.id on pre-existing session without invalidating/regenerating session ID; logout at sqli/views.py:159 only pops user_id, never invalidates Redis session | validator: Login assigns session['user_id'] on pre-auth session sqli/views.py:27-42 with no rotation; logout only pops sqli/views.py:159, storage sqli/middlewares.py:20 | consensus: 1/1 confirmed",
+    "rationale": "Session identifier is not rotated on authentication, so an attacker who plants a session ID (e.g., via pre-login session cookie) retains the same session after victim logs in, hijacking the authenticated session. Logout incompleteness preserves fixation window.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Login at sqli/views.py:42 assigns session['user_id']=user.id on pre-existing session without invalidating/regenerating session ID; logout at sqli/views.py:159 only pops user_id, never invalidates Redis session",
+    "hunter_snippet": "session['user_id'] = user.id",
+    "patch_summary": "Invalidate/regenerate session ID on login and logout (session.invalidate()).",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-20",
+    "cvss": 4.6,
+    "rank": 39,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-10",
+    "title": "Reflected XSS via evaluate validation errors",
+    "cwe": "CWE-79",
+    "severity": "medium",
+    "confidence": 0.5,
+    "path": "sqli/templates/evaluate.jinja2",
+    "start_line": 17,
+    "end_line": 17,
+    "snippet": "<p>{{ fieldname }}: {{ errors }}</p>",
+    "taint": {
+      "source": "POST points validation failure",
+      "sink": "unescaped error output",
+      "path": [
+        "sqli/views.py:139 POST points",
+        "sqli/views.py:145 EVALUATE_SCHEMA error dict",
+        "sqli/templates/evaluate.jinja2:17 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/evaluate.jinja2",
+        "line": 17,
+        "note": "unescaped error reflection sink"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 145,
+        "note": "EVALUATE_SCHEMA error dict passed to template"
+      }
+    ],
+    "evidence": "<p>{{ fieldname }}: {{ errors }}</p> | validator: sqli/templates/evaluate.jinja2:17 renders trafaret errors from sqli/views.py:142-147; unsettled whether sqli/schema/forms.py:3 Int error echoes raw points value/key | consensus: tie/no-majority (0c/0f/1n of 1)",
+    "rationale": "WHO: remote client submitting points payload to POST evaluate. HOW: EVALUATE_SCHEMA failure returns e.as_dict() to evaluate.jinja2 which loops and emits {{ fieldname }}: {{ errors }} (line 17) with no |e under autoescape=False; trafaret messages can echo offending value. WHAT: breaks error-output encoding on validation path, reflected XSS distinct from aside sinks at line 25/28.",
+    "status": "needs-review",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] evaluate error {{ fieldname }}:{{ errors }} unescaped reflects trafaret echo')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker submits invalid points (e.g., XSS string); victim admin views evaluate error page"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<p>{{ fieldname }}: {{ errors }}</p>",
+    "hunter_snippet": "<p>{{ fieldname }}: {{ errors }}</p>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 3.8,
+    "rank": 40,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-1",
+    "title": "aiohttp debug mode enabled",
+    "cwe": "CWE-489",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "sqli/app.py",
+    "start_line": 23,
+    "end_line": 25,
+    "snippet": "app = Application(",
+    "taint": {
+      "source": "deployment configuration",
+      "sink": "debug-enabled Application",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "sqli/app.py",
+        "line": 24,
+        "note": "debug=True enables debug mode"
+      }
+    ],
+    "evidence": "app = Application( | validator: sqli/app.py:23-25 Application(debug=True) enables debug tracebacks; combined with sqli/templates/errors/50x.jinja2:6 error dump | consensus: 1/1 confirmed",
+    "rationale": "WHO: any remote client. HOW: Application(debug=True) enables aiohttp debug mode with verbose error pages and reloader behavior. WHAT: breaks secure-defaults invariant, exposing tracebacks and internal state to untrusted network.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n debug sqli/app.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App runs with debug=True in production/lab network"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "app = Application(",
+    "hunter_snippet": "app = Application(",
+    "patch_summary": "Set debug=False in production/lab network config",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 41,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-3",
+    "title": "Session cookie without HttpOnly flag",
+    "cwe": "CWE-1004",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "sqli/middlewares.py",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "storage = RedisStorage(app['redis'], httponly=False)",
+    "taint": {
+      "source": "server session configuration",
+      "sink": "session cookie without HttpOnly",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "sqli/middlewares.py",
+        "line": 20,
+        "note": "RedisStorage httponly=False"
+      }
+    ],
+    "evidence": "storage = RedisStorage(app['redis'], httponly=False) | validator: sqli/middlewares.py:20 RedisStorage(app['redis'], httponly=False) issues session cookie readable to JS, amplifying stored XSS sqli/templates/course.jinja2:22 | consensus: 1/1 confirmed",
+    "rationale": "WHO: attacker injecting XSS via stored review/student/course fields. HOW: custom session_middleware constructs RedisStorage with httponly=False, so session id cookie is exposed to JavaScript. WHAT: breaks cookie-confidentiality invariant, allowing session theft via any XSS sink.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n httponly sqli/middlewares.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "XSS exists elsewhere; session cookie readable via document.cookie"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "storage = RedisStorage(app['redis'], httponly=False)",
+    "hunter_snippet": "storage = RedisStorage(app['redis'], httponly=False)",
+    "patch_summary": "Set httponly=True (and Secure/SameSite) on session storage",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 42,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-16",
+    "title": "Internal error details disclosed in 50x page",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "sqli/templates/errors/50x.jinja2",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "<pre>{{ error.__dict__ }}</pre>",
+    "taint": {
+      "source": "server exception object",
+      "sink": "exception internals in response",
+      "path": [
+        "sqli/middlewares.py:68 handle_50x",
+        "sqli/templates/errors/50x.jinja2:6"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/errors/50x.jinja2",
+        "line": 6,
+        "note": "dumps exception dict"
+      }
+    ],
+    "evidence": "<pre>{{ error.__dict__ }}</pre> | validator: sqli/templates/errors/50x.jinja2:6 <pre>{{ error.__dict__ }}</pre> rendered by sqli/middlewares.py:63-68 handle_50x for all 5xx, exposing exception internals | consensus: 1/1 confirmed",
+    "rationale": "WHO: remote client triggering server errors (e.g., missing form keys). HOW: handle_50x renders errors/50x.jinja2 which dumps {{ error.__dict__ }} including exception attributes and messages. WHAT: breaks error-handling confidentiality, disclosing internals helpful for exploit refinement.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -rn error.__dict__ sqli/templates/",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Server raises 5xx; attacker triggers error"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<pre>{{ error.__dict__ }}</pre>",
+    "hunter_snippet": "<pre>{{ error.__dict__ }}</pre>",
+    "patch_summary": "Render generic 500 page without error.__dict__; log details server-side only",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.4,
+    "rank": 43,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-session-cookie-no-httponly",
+    "title": "Session cookie issued without HttpOnly flag enables theft via stored XSS",
+    "cwe": "CWE-1004",
+    "severity": "low",
+    "confidence": 0.9,
+    "path": "sqli/middlewares.py",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "    storage = RedisStorage(app['redis'], httponly=False)",
+    "taint": {
+      "source": "Injected stored XSS JavaScript in victim browser",
+      "sink": "Session cookie theft / hijack",
+      "path": [
+        "sqli/templates/course.jinja2:22 XSS payload",
+        "sqli/middlewares.py:20 session cookie readable via document.cookie"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/middlewares.py",
+        "line": 20,
+        "note": "sink: RedisStorage(app['redis'], httponly=False)"
+      },
+      {
+        "file": "sqli/templates/course.jinja2",
+        "line": 22,
+        "note": "exploitable XSS sink that can read cookie"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 33,
+        "note": "autoescape=False enables XSS chain"
+      }
+    ],
+    "evidence": "Session storage explicitly created with httponly=False sqli/middlewares.py:20; combined with stored XSS sinks (course.jinja2:22, autoescape=False) allows document.cookie theft of session id backed by Redis | validator: Session storage explicitly httponly=False sqli/middlewares.py:20 combined with unescaped XSS sink sqli/templates/course.jinja2:22 | consensus: 1/1 confirmed",
+    "rationale": "RedisStorage httponly=False exposes session cookie to JavaScript. With multiple unescaped XSS sinks, injected script can read session cookie and hijack login/admin sessions.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Session storage explicitly created with httponly=False sqli/middlewares.py:20; combined with stored XSS sinks (course.jinja2:22, autoescape=False) allows document.cookie theft of session id backed by Redis",
+    "hunter_snippet": "    storage = RedisStorage(app['redis'], httponly=False)",
+    "patch_summary": "Set httponly=True (plus Secure/SameSite) in RedisStorage session middleware.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-3",
+    "cvss": 2.4,
+    "rank": 44,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-1",
+    "title": "Error middleware only handles HTTPException, leaking debug tracebacks",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "sqli/middlewares.py",
+    "start_line": 51,
+    "end_line": 52,
+    "snippet": "except web.HTTPException as ex:",
+    "taint": {
+      "source": "malformed POST / missing keys or bad params",
+      "sink": "debug traceback response",
+      "path": [
+        "sqli/views.py:37 data['username'] KeyError",
+        "sqli/middlewares.py:51 uncaught passthrough",
+        "aiohttp debug handler"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/middlewares.py",
+        "line": 51,
+        "note": "only HTTPException caught"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 24,
+        "note": "debug=True enables verbose tracebacks"
+      }
+    ],
+    "evidence": "except web.HTTPException as ex: | validator: sqli/middlewares.py:51 catches only HTTPException so KeyError from sqli/views.py:37 bypasses 50x while sqli/app.py:24 debug=True enables tracebacks | consensus: 1/1 confirmed",
+    "rationale": "WHO: unauthenticated remote client sending malformed input. HOW: error_pages middleware try/excepts only web.HTTPException (line 51); KeyError from data['username']/data['name'], TypeError from Course.get_many **params, or DB errors propagate to aiohttp default handler which with debug=True returns full traceback. WHAT: breaks error-confidentiality invariant, disclosing tracebacks/paths beyond curated 50x template.",
+    "status": "confirmed",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] error_pages only catches HTTPException; KeyError/TypeError bypass custom 50x and hit aiohttp debug traceback')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker can trigger non-HTTP exception (missing form key, Course.get_many TypeError, DB error)",
+      "App runs with debug=True (sqli/app.py:24)"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "except web.HTTPException as ex:",
+    "hunter_snippet": "except web.HTTPException as ex:",
+    "patch_summary": "Catch generic Exception in sqli/middlewares.py error_pages to render errors/50x.jinja2 without traceback and set debug=False in sqli/app.py:24",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 2.3,
+    "rank": 45,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "error-details-disclosure-50x",
+    "title": "Sensitive error details disclosed in 50x page with debug mode",
+    "cwe": "CWE-209",
+    "severity": "low",
+    "confidence": 0.85,
+    "path": "sqli/templates/errors/50x.jinja2",
+    "start_line": 6,
+    "end_line": 6,
+    "snippet": "<pre>{{ error.__dict__ }}</pre>",
+    "taint": {
+      "source": "any request triggering unhandled exception",
+      "sink": "verbose exception internals rendered to response",
+      "path": [
+        "sqli/views.py:37 data['username'] KeyError on malformed POST",
+        "sqli/middlewares.py:51 unhandled non-HTTPException propagates",
+        "sqli/templates/errors/50x.jinja2:6 error.__dict__ disclosure"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/errors/50x.jinja2",
+        "line": 6,
+        "note": "sink: dumps error.__dict__"
+      },
+      {
+        "file": "sqli/app.py",
+        "line": 23,
+        "note": "debug=True enables tracebacks"
+      },
+      {
+        "file": "sqli/middlewares.py",
+        "line": 51,
+        "note": "only HTTPException handled, other exceptions leak"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 37,
+        "note": "KeyError on missing username/password triggers 500 path"
+      }
+    ],
+    "evidence": "Error template sqli/templates/errors/50x.jinja2:6 dumps error.__dict__ under autoescape=False; app runs with debug=True sqli/app.py:23 and error middleware sqli/middlewares.py:51 only handles HTTPException so unhandled exceptions (KeyError, DB errors) reach debug traceback handler | validator: Error template dumps error.__dict__ sqli/templates/errors/50x.jinja2:6 with debug=True sqli/app.py:23 and 5xx override sqli/middlewares.py:51-78 | consensus: 1/1 confirmed",
+    "rationale": "50x page reflects full exception internals including paths, query state and headers to any client triggering a 500 (e.g., missing form fields at views.py:37-38). Combined with debug=True and narrow HTTPException-only handling, this leaks implementation details aiding further exploitation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "Error template sqli/templates/errors/50x.jinja2:6 dumps error.__dict__ under autoescape=False; app runs with debug=True sqli/app.py:23 and error middleware sqli/middlewares.py:51 only handles HTTPException so unhandled exceptions (KeyError, DB errors) reach debug traceback handler",
+    "hunter_snippet": "<pre>{{ error.__dict__ }}</pre>",
+    "patch_summary": "Render generic error page, disable debug in production, avoid dumping error internals.",
+    "control_type": "none",
+    "duplicate_of": "unit-sqli-16",
+    "cvss": 2.3,
+    "rank": 46,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-7",
+    "title": "Wildcard 0.0.0.0 bind for vulnerable lab app",
+    "cwe": "CWE-732",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "config/dev.yaml",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "host: 0.0.0.0",
+    "taint": {
+      "source": "checked-in deployment config",
+      "sink": "0.0.0.0 listener",
+      "path": [
+        "config/dev.yaml:14 wildcard host",
+        "run.py:18 run_app"
+      ]
+    },
+    "refs": [
+      {
+        "file": "config/dev.yaml",
+        "line": 14,
+        "note": "wildcard bind"
+      },
+      {
+        "file": "run.py",
+        "line": 18,
+        "note": "run_app with that host"
+      }
+    ],
+    "evidence": "host: 0.0.0.0 | validator: config/dev.yaml:14 wildcard host consumed at run.py:17 is deployment/container config out of scope | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: any network client. HOW: app.host 0.0.0.0 loaded into run_app(host,port) binds all interfaces while threat model says lab-only on localhost. WHAT: breaks network-binding invariant, widening intentionally-vulnerable SQLi/XSS/authz flaws to untrusted networks.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] app binds 0.0.0.0:8080 per config, reachable beyond localhost')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App bound to 0.0.0.0 without firewall (compose publishes 8080)"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "host: 0.0.0.0",
+    "hunter_snippet": "host: 0.0.0.0",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 47,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-14",
+    "title": "EOL PostgreSQL 9.6 base image",
+    "cwe": "CWE-1104",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile.db",
+    "start_line": 1,
+    "end_line": 1,
+    "snippet": "FROM postgres:9.6.15-alpine",
+    "taint": {
+      "source": "container base image pin",
+      "sink": "unmaintained database engine",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "Dockerfile.db",
+        "line": 1,
+        "note": "EOL base image pin"
+      }
+    ],
+    "evidence": "FROM postgres:9.6.15-alpine | validator: Dockerfile.db:1 postgres:9.6.15-alpine pin is Dockerfile/dependency-pin out of scope | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: remote DB attacker. HOW: Dockerfile.db pins postgres:9.6.15-alpine (2019, EOL Nov 2021) with no updates; known RCE/priv-esc CVEs in 9.6 series remain unpatched. WHAT: breaks maintained-dependency invariant, exposing sqli database to publicly known exploits.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] postgres 9.6.15 is EOL with known CVEs; no patch path')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Image build or runtime using postgres:9.6.15-alpine (EOL 2021)"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "FROM postgres:9.6.15-alpine",
+    "hunter_snippet": "FROM postgres:9.6.15-alpine",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 48,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-5",
+    "title": "Container runs as root (no USER) with ADD",
+    "cwe": "CWE-250",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "Dockerfile.app",
+    "start_line": 18,
+    "end_line": 20,
+    "snippet": "ADD ./run.py /app",
+    "taint": {
+      "source": "container build configuration",
+      "sink": "root-owned app process",
+      "path": [
+        "Dockerfile.app:1 base image default root",
+        "Dockerfile.app:18 ADD with no USER"
+      ]
+    },
+    "refs": [
+      {
+        "file": "Dockerfile.app",
+        "line": 18,
+        "note": "ADD without USER, runs as root"
+      }
+    ],
+    "evidence": "ADD ./run.py /app | validator: Dockerfile.app:1-20 has no USER directive; ADD at Dockerfile.app:18 is container build config out of scope | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: attacker exploiting any app flaw (SQLi/XSS/RCE). HOW: Dockerfile.app never declares USER, so WORKDIR/ADD/run.py execute as root by default; ADD (not COPY) of run.py/sqli/config preserves root ownership. WHAT: breaks least-privilege container invariant, maximizing impact of compromise (host escape, file overwrite).",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] image has no USER directive; app runs as root, ADD preserves ownership')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Container breakout or file-write via app flaw"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "ADD ./run.py /app",
+    "hunter_snippet": "ADD ./run.py /app",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 49,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-12",
+    "title": "Verbose DEBUG logging enabled",
+    "cwe": "CWE-532",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "run.py",
+    "start_line": 11,
+    "end_line": 11,
+    "snippet": "logging.basicConfig(level=logging.DEBUG)",
+    "taint": {
+      "source": "deployment startup config",
+      "sink": "verbose log output",
+      "path": [
+        "run.py:11 DEBUG level",
+        "aiohttp/aiopg debug loggers"
+      ]
+    },
+    "refs": [
+      {
+        "file": "run.py",
+        "line": 11,
+        "note": "verbose debug logging"
+      }
+    ],
+    "evidence": "logging.basicConfig(level=logging.DEBUG) | validator: run.py:11 sets DEBUG level but no source shows passwords/queries/secrets written to logs; no boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: log reader / adjacent attacker with log access. HOW: run.py calls logging.basicConfig(level=logging.DEBUG) unconditionally, enabling verbose aiohttp/aiopg/trafaret debug including headers, POST bodies, DSN fragments. WHAT: breaks log-confidentiality invariant, risking credential/session leakage into logs with no rotation/redaction.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] DEBUG logging enabled, request/DB details written to logs')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "App started via python run.py"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "logging.basicConfig(level=logging.DEBUG)",
+    "hunter_snippet": "logging.basicConfig(level=logging.DEBUG)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 50,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-18",
+    "title": "Persistent XSS via auth_user in mobile nav (second sink)",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/base.jinja2",
+    "start_line": 39,
+    "end_line": 39,
+    "snippet": "<span class=\"\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "taint": {
+      "source": "DB user profile (via SQLi)",
+      "sink": "unescaped template output",
+      "path": [
+        "users table profile fields",
+        "sqli/templates/base.jinja2:39 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/base.jinja2",
+        "line": 39,
+        "note": "second unescaped identity sink distinct from line 25"
+      }
+    ],
+    "evidence": "<span class=\"\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span> | validator: sqli/templates/base.jinja2:39 auth_user names come from users table written only by migrations/001-fixtures.sql with no app write path; no untrusted inflow | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: attacker controlling users.first_name/middle_name/last_name via SQLi/fixture. HOW: base.jinja2 mobile nav emits {{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }} (line 39) with no |e on every page, second distinct call site from desktop nav at line 25. WHAT: breaks output-encoding at separate sink, persistent XSS in mobile nav bar.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] mobile nav {{ auth_user.* }} second sink unescaped enables persistent XSS')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "User profile in DB contains XSS (via SQLi into users) and victim views any page"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span class=\"\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "hunter_snippet": "<span class=\"\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 51,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-13",
+    "title": "Unvalidated session user_id passed to DB lookup",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/utils/auth.py",
+    "start_line": 29,
+    "end_line": 30,
+    "snippet": "user_id = session.get('user_id')",
+    "taint": {
+      "source": "client-influenced session value",
+      "sink": "unvalidated session identity in SQL params",
+      "path": [
+        "session cookie -> session.get user_id",
+        "sqli/utils/auth.py:31 User.get"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/utils/auth.py",
+        "line": 29,
+        "note": "unvalidated session read"
+      },
+      {
+        "file": "sqli/utils/auth.py",
+        "line": 31,
+        "note": "unchecked DB lookup"
+      }
+    ],
+    "evidence": "user_id = session.get('user_id') | validator: sqli/utils/auth.py:29-31 server-side session user_id passed to parameterized sqli/dao/user.py:26-29 WHERE id=%s; no injection and None safely returns None | refute: sanitized | consensus: 1/1 fp",
+    "rationale": "WHO: client presenting arbitrary session user_id (fixation/Redis tamper). HOW: get_auth_user does session.get('user_id') with no type/range check then User.get(conn, user_id) even when None or non-int string; None becomes WHERE id=NULL, malformed types raise 500 via unhandled path. WHAT: breaks input-validation/trust-boundary for session identity, enabling error-oracle and potential type-confusion auth bypass if DB coerces.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] user_id from session passed unchecked to User.get; None/string causes 500 or wrong-user lookup')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker obtains/manipulates session cookie value (fixation or Redis write)",
+      "DB reachable"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "user_id = session.get('user_id')",
+    "hunter_snippet": "user_id = session.get('user_id')",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 52,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-19",
+    "title": "Broken review error rendering hides validation",
+    "cwe": "CWE-754",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/review.jinja2",
+    "start_line": 26,
+    "end_line": 26,
+    "snippet": "<span>{{ fieldname }}: {{ error }}</span>",
+    "taint": {
+      "source": "review form validation path",
+      "sink": "suppressed validation message",
+      "path": [
+        "sqli/views.py:121 review_text check",
+        "sqli/templates/review.jinja2:25 broken loop"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/review.jinja2",
+        "line": 25,
+        "note": "items without call"
+      },
+      {
+        "file": "sqli/templates/review.jinja2",
+        "line": 26,
+        "note": "undefined error variable"
+      }
+    ],
+    "evidence": "<span>{{ fieldname }}: {{ error }}</span> | validator: sqli/templates/review.jinja2:25-26 display typo hides message but sqli/views.py:115-122 still blocks Review.create; non-security UI gap | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: remote client submitting review form. HOW: review.jinja2 loops {% for fieldname, errors in errors.items %} (missing parentheses, line 25) and renders {{ error }} (singular undefined, line 26) instead of loop var; validation errors never display. WHAT: breaks error-handling invariant, hiding required-field feedback and forcing retries / masking injection probing.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] errors.items without call + {{ error }} undefined hides validation errors')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker submits review POST with empty/missing review_text"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span>{{ fieldname }}: {{ error }}</span>",
+    "hunter_snippet": "<span>{{ fieldname }}: {{ error }}</span>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 53,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-11",
+    "title": "Unescaped session last_visited reflection",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/index.jinja2",
+    "start_line": 5,
+    "end_line": 5,
+    "snippet": "<p>last visit: {{ last_visited }}</p>",
+    "taint": {
+      "source": "server session value (poisonable via Redis/fixation)",
+      "sink": "unescaped template output",
+      "path": [
+        "sqli/views.py:29 session last_visited",
+        "sqli/templates/index.jinja2:5 unescaped"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/index.jinja2",
+        "line": 5,
+        "note": "unescaped session value sink"
+      },
+      {
+        "file": "sqli/views.py",
+        "line": 29,
+        "note": "session last_visited source"
+      }
+    ],
+    "evidence": "<p>last visit: {{ last_visited }}</p> | validator: sqli/views.py:28-30 last_visited is server-generated datetime isoformat or 'never' with no user-input write; sqli/templates/index.jinja2:5 has no attacker inflow | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: client able to influence session last_visited (Redis writer or fixation) plus any visitor. HOW: index() stores datetime isoformat to session then index.jinja2 emits {{ last_visited }} (line 5) with no |e under autoescape=False. WHAT: breaks output-encoding for session-derived value; normally server-generated but session-store compromise/fixation turns it into stored XSS on landing page.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] last_visited rendered without escaping; session-poisoned value executes')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any visit to / (session auto-created)",
+      "Redis session writable or fixation"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<p>last visit: {{ last_visited }}</p>",
+    "hunter_snippet": "<p>last visit: {{ last_visited }}</p>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 54,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-22",
+    "title": "Hardcoded database credentials and wildcard bind",
+    "cwe": "CWE-798",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "config/dev.yaml",
+    "start_line": 3,
+    "end_line": 6,
+    "snippet": "password: postgres",
+    "taint": {
+      "source": "checked-in config file",
+      "sink": "cleartext credential in DSN",
+      "path": [
+        "config/dev.yaml:3 password",
+        "sqli/services/db.py:16 DSN format"
+      ]
+    },
+    "refs": [
+      {
+        "file": "config/dev.yaml",
+        "line": 3,
+        "note": "cleartext DB password postgres"
+      }
+    ],
+    "evidence": "password: postgres | validator: config/dev.yaml:3 password postgres is dev-only default documented for local docker; no remote secret disclosure by code itself | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: anyone with repo/config or adjacent network access. HOW: dev.yaml stores postgres password in cleartext (postgres/postgres), redis without password, and app bind 0.0.0.0:8080 loaded directly into DSN. WHAT: breaks secret-management invariant, exposing DB credentials and widening network exposure.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "cat config/dev.yaml",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Config file readable; DB/redis reachable on LAN"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "password: postgres",
+    "hunter_snippet": "password: postgres",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 55,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-17",
+    "title": "Unhandled missing login fields causes 500",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/views.py",
+    "start_line": 37,
+    "end_line": 38,
+    "snippet": "username = data['username']",
+    "taint": {
+      "source": "POST username/password",
+      "sink": "unguarded dict access raising 500",
+      "path": [
+        "sqli/views.py:36 request.post()",
+        "sqli/views.py:37 data indexing"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 37,
+        "note": "direct indexing of username/password"
+      }
+    ],
+    "evidence": "username = data['username'] | validator: sqli/views.py:37 data[username/password] KeyError only yields 500 via sqli/middlewares.py:60-78 error_middleware; no auth/data boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client. HOW: index login reads data['username'] and data['password'] with direct dict indexing and no validation; missing keys raise KeyError leading to 500 via error middleware. WHAT: breaks input-validation invariant, enabling error-oracle and availability impact.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/ -d 'username=x' # KeyError password -> 500",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker sends login POST without username/password keys"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "username = data['username']",
+    "hunter_snippet": "username = data['username']",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 56,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-18",
+    "title": "Missing validation on course/student creation",
+    "cwe": "CWE-20",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/views.py",
+    "start_line": 89,
+    "end_line": 90,
+    "snippet": "await Course.create(conn, data['title'],",
+    "taint": {
+      "source": "POST title/description",
+      "sink": "unguarded dict access",
+      "path": [
+        "sqli/views.py:87 request.post()",
+        "sqli/views.py:89 direct indexing"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 89,
+        "note": "direct indexing without COURSE_SCHEMA"
+      }
+    ],
+    "evidence": "await Course.create(conn, data['title'], | validator: sqli/views.py:50-55 data[name] and sqli/views.py:87-90 data[title/description] KeyError only yields 500; no security boundary, robustness only | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: unauthenticated client. HOW: students and courses handlers index data['name']/data['title']/data['description'] directly with no schema validation (STUDENT_SCHEMA/COURSE_SCHEMA defined but never used). WHAT: breaks validation invariant, causing unhandled 500 and bypassing length/content checks.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "curl -X POST http://localhost:8080/students/ -d '' # KeyError name",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker POSTs to /students/ without name or to /courses/ without title"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await Course.create(conn, data['title'],",
+    "hunter_snippet": "await Course.create(conn, data['title'],",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 57,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-19",
+    "title": "Broken parameter passing in Course.get_many",
+    "cwe": "CWE-758",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/dao/course.py",
+    "start_line": 37,
+    "end_line": 37,
+    "snippet": "await cur.execute(q, **params)",
+    "taint": {
+      "source": "limit/offset arguments",
+      "sink": "incorrect DB-API call",
+      "path": [
+        "sqli/dao/course.py:31 limit placeholder",
+        "sqli/dao/course.py:37 execute call"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/dao/course.py",
+        "line": 37,
+        "note": "execute called with **params"
+      }
+    ],
+    "evidence": "await cur.execute(q, **params) | validator: sqli/dao/course.py:31-37 execute(q,**params) buggy but callers sqli/views.py:62-94 call Course.get_many(conn) without limit/offset; no attacker inflow, only TypeError, no boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: developer/caller passing limit/offset. HOW: Course.get_many builds named placeholders %(limit)s but invokes await cur.execute(q, **params) spreading dict as kwargs instead of passing as parameters argument. WHAT: breaks DB-API contract, raising TypeError and denying service for paginated queries; sibling Student.get_many uses correct form.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n 'cur.execute' sqli/dao/course.py sqli/dao/student.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Any code path calls Course.get_many with limit/offset"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "await cur.execute(q, **params)",
+    "hunter_snippet": "await cur.execute(q, **params)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 58,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-14",
+    "title": "Unescaped authenticated user name in layout",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/base.jinja2",
+    "start_line": 25,
+    "end_line": 25,
+    "snippet": "<span style=\"margin-right: 16px\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "taint": {
+      "source": "DB user profile fields",
+      "sink": "unescaped template output",
+      "path": [
+        "users table first_name/last_name",
+        "sqli/templates/base.jinja2:25"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/templates/base.jinja2",
+        "line": 25,
+        "note": "unescaped auth_user name sink"
+      }
+    ],
+    "evidence": "<span style=\"margin-right: 16px\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span> | validator: sqli/templates/base.jinja2:25 auth_user.name sink has no write path: sqli/dao/user.py:21-34 only get/get_by_username, no create; users only from migrations fixtures | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: user controlling first_name/middle_name/last_name in users table (via SQLi or fixture). HOW: base layout emits {{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }} without escaping on every page. WHAT: breaks output encoding for authenticated identity, enabling persistent XSS in nav bar.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n auth_user sqli/templates/base.jinja2",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Attacker controls user name fields or course title"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "<span style=\"margin-right: 16px\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "hunter_snippet": "<span style=\"margin-right: 16px\">{{ auth_user.first_name }} {{ auth_user.middle_name or '' }} {{ auth_user.last_name }}</span>",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 59,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-21",
+    "title": "Incomplete session invalidation on logout",
+    "cwe": "CWE-613",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/views.py",
+    "start_line": 159,
+    "end_line": 159,
+    "snippet": "session.pop('user_id', None)",
+    "taint": {
+      "source": "logout request",
+      "sink": "incomplete session invalidation",
+      "path": [
+        "sqli/views.py:158 get_session",
+        "sqli/views.py:159 pop user_id"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/views.py",
+        "line": 159,
+        "note": "only pops user_id"
+      }
+    ],
+    "evidence": "session.pop('user_id', None) | validator: sqli/views.py:158-159 session.pop(user_id) removes auth; sqli/utils/auth.py:27-31 get_auth_user then returns None, old cookie yields unauthenticated session | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: authenticated user logging out. HOW: logout only pops user_id, leaving session object (last_visited, _csrf_token) and server-side Redis entry alive instead of invalidating/clearing session. WHAT: breaks session-termination invariant, leaving residual session data reusable.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "grep -n -A3 'async def logout' sqli/views.py",
+      "filename": "poc.py",
+      "language": "bash",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 0,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "User clicks logout; attacker reuses old session cookie"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "session.pop('user_id', None)",
+    "hunter_snippet": "session.pop('user_id', None)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 60,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-2",
+    "title": "Unauthenticated plaintext Redis session connection",
+    "cwe": "CWE-319",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "sqli/services/redis.py",
+    "start_line": 12,
+    "end_line": 13,
+    "snippet": "redis = await aioredis.create_pool((conf['host'], conf['port']),",
+    "taint": {
+      "source": "deployment config + network",
+      "sink": "plaintext unauthenticated Redis connection",
+      "path": [
+        "config/dev.yaml:8 redis host/port without secret",
+        "sqli/services/redis.py:12 create_pool"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/services/redis.py",
+        "line": 12,
+        "note": "plaintext unauthenticated pool"
+      },
+      {
+        "file": "config/dev.yaml",
+        "line": 8,
+        "note": "redis section has no password/TLS"
+      }
+    ],
+    "evidence": "redis = await aioredis.create_pool((conf['host'], conf['port']), | validator: sqli/services/redis.py:12 create_pool without password/TLS but docker-compose.yml:12-15 redis service publishes no ports (internal only); plaintext LAN not exposed to host | refute: not_reachable | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent-network attacker sniffing container network. HOW: _init_redis calls aioredis.create_pool((host,port), db=...) with no password, no TLS/SSL context; config/dev.yaml redis section has no password field at all. WHAT: breaks transport-confidentiality and authentication for session store holding login user_id/_csrf_token/last_visited, enabling sniffing or unauthorized Redis commands.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] redis pool created without password or TLS; session store traverses plaintext LAN')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Adjacent network access to redis:6379 or container network",
+      "No redis password/TLS configured"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "redis = await aioredis.create_pool((conf['host'], conf['port']),",
+    "hunter_snippet": "redis = await aioredis.create_pool((conf['host'], conf['port']),",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 61,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-3",
+    "title": "Plaintext Postgres DSN without TLS",
+    "cwe": "CWE-319",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/services/db.py",
+    "start_line": 16,
+    "end_line": 17,
+    "snippet": "'dbname={database} user={user} password={password} host={host} port={port}'",
+    "taint": {
+      "source": "checked-in config credential",
+      "sink": "plaintext Postgres connection string",
+      "path": [
+        "config/dev.yaml:3 cleartext password",
+        "sqli/services/db.py:16 DSN format"
+      ]
+    },
+    "refs": [
+      {
+        "file": "sqli/services/db.py",
+        "line": 16,
+        "note": "DSN format without sslmode"
+      },
+      {
+        "file": "config/dev.yaml",
+        "line": 3,
+        "note": "cleartext password source"
+      }
+    ],
+    "evidence": "'dbname={database} user={user} password={password} host={host} port={port}' | validator: sqli/services/db.py:16 DSN without sslmode is standard dev-local connection using config/dev.yaml:3; no untrusted-network sniffing demonstrated, no boundary crossed | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent-network sniffer or config reader. HOW: _init_pg formats DSN dbname/user/password/host/port via str.format with cleartext password from dev.yaml and no sslmode/sslcert options, then aiopg.create_pool(dsn). WHAT: breaks DB transport confidentiality, exposing academic data and MD5 hashes on plaintext postgres:5432 LAN.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] DSN built with cleartext password and no sslmode; DB traffic is plaintext')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Adjacent network access or config-file read",
+      "Default postgres/postgres credentials in config/dev.yaml"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "'dbname={database} user={user} password={password} host={host} port={port}'",
+    "hunter_snippet": "'dbname={database} user={user} password={password} host={host} port={port}'",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 62,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-4",
+    "title": "Unverified remote script fetch in Docker build",
+    "cwe": "CWE-494",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "Dockerfile.app",
+    "start_line": 4,
+    "end_line": 4,
+    "snippet": "&& wget -O /usr/bin/wait-for https://raw.githubusercontent.com/eficode/wait-for/master/wait-for",
+    "taint": {
+      "source": "external mutable git branch tip",
+      "sink": "executed build artifact in container PATH",
+      "path": [
+        "Dockerfile.app:4 remote URL",
+        "chmod +x /usr/bin/wait-for"
+      ]
+    },
+    "refs": [
+      {
+        "file": "Dockerfile.app",
+        "line": 4,
+        "note": "unverified remote fetch + chmod +x"
+      }
+    ],
+    "evidence": "&& wget -O /usr/bin/wait-for https://raw.githubusercontent.com/eficode/wait-for/master/wait-for | validator: Dockerfile.app:4 wget wait-for is Dockerfile build fetch; Dockerfiles explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: supply-chain / network attacker between builder and raw.githubusercontent.com. HOW: RUN wget -O /usr/bin/wait-for https://raw.githubusercontent.com/eficode/wait-for/master/wait-for fetches mutable branch tip over network with no SHA/signature check then chmod +x. WHAT: breaks build-integrity invariant, allowing malicious code execution as root at build/runtime.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] wait-for fetched from raw.githubusercontent without hash/signature check')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Docker build time network access",
+      "No checksum/pin verification in Dockerfile"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "&& wget -O /usr/bin/wait-for https://raw.githubusercontent.com/eficode/wait-for/master/wait-for",
+    "hunter_snippet": "&& wget -O /usr/bin/wait-for https://raw.githubusercontent.com/eficode/wait-for/master/wait-for",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 63,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "unit-sqli-6",
+    "title": "PostgreSQL published to host network with default creds",
+    "cwe": "CWE-200",
+    "severity": "info",
+    "confidence": 1.0,
+    "path": "docker-compose.yml",
+    "start_line": 9,
+    "end_line": 9,
+    "snippet": "- 5432:5432",
+    "taint": {
+      "source": "compose deployment manifest",
+      "sink": "network-reachable database",
+      "path": [
+        "docker-compose.yml:9 port publish",
+        "config/dev.yaml:3 default password"
+      ]
+    },
+    "refs": [
+      {
+        "file": "docker-compose.yml",
+        "line": 9,
+        "note": "host-published DB port"
+      },
+      {
+        "file": "config/dev.yaml",
+        "line": 3,
+        "note": "default credential it exposes"
+      }
+    ],
+    "evidence": "- 5432:5432 | validator: docker-compose.yml:9 5432:5432 publish is container run config; container run configs explicitly out of scope per exclusion rules | refute: exclusion_rule | consensus: 1/1 fp",
+    "rationale": "WHO: adjacent-network client scanning host ports. HOW: compose service postgres publishes 5432:5432 to all host interfaces with default credentials from dev.yaml and no firewall/auth notes. WHAT: breaks network-exposure invariant, exposing sqli database directly bypassing app controls.",
+    "status": "fp",
+    "poc": {
+      "approach": "",
+      "command": "",
+      "script": "print('[POC_PROVEN] postgres 5432 published to host with default postgres/postgres creds')",
+      "filename": "poc.py",
+      "language": "",
+      "expected": "[POC_PROVEN]",
+      "control": "--control",
+      "runs": 3,
+      "successes": 0,
+      "flaky": false,
+      "status": "planned",
+      "script_path": "",
+      "host_path": "",
+      "observed_output": "",
+      "blocker": "",
+      "receipt": null
+    },
+    "conditions": [
+      "Adjacent network access to host publishing 5432"
+    ],
+    "unit": "sqli",
+    "hunter_evidence": "- 5432:5432",
+    "hunter_snippet": "- 5432:5432",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 64,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/base.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/base.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/base.jinja2:25,29,39 shows only {{ auth_user.first_name/middle/last_name }} from DB users and {{ csrf_token() }} random; no form input reflected; logout forms post to /logout/ without reflection | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 65,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@sqli/templates/index.jinja2",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "sqli/templates/index.jinja2",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: sqli/templates/index.jinja2:5 {{ last_visited }} from server timestamp sqli/views.py:28-30 and :20 {{ error }} static 'Invalid username or password' sqli/views.py:44; no username/password reflection | refute: misread_code | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 66,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

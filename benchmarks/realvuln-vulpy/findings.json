@@ -1,0 +1,889 @@
+[
+  {
+    "id": "unit-good-0",
+    "title": "SQL injection in bad libuser.login",
+    "cwe": "CWE-89",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "bad/libuser.py",
+    "start_line": 12,
+    "end_line": 12,
+    "snippet": "c.execute(\"SELECT * FROM users WHERE username = '{}' and password = '{}'\".format(username, password))",
+    "taint": {
+      "source": "request.form username password via do_login",
+      "sink": "sqlite3 execute with formatted SQL",
+      "path": [
+        "bad/mod_user.py:16 form to login",
+        "bad/libuser.py:12 execute"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/libuser.py",
+        "line": 12,
+        "note": "string-format SQL with username and password"
+      }
+    ],
+    "evidence": "user = c.execute(SELECT FROM users WHERE username format username password).fetchone() | alt: c.execute(INSERT INTO users percent formatting username password) | validator: bad/libuser.py:12 SELECT with .format(username,password) reaches sqlite3 execute; reachable unauthenticated via bad/mod_user.py:16-20 request.form username/password -> libuser.login | consensus: 1/1 confirmed",
+    "rationale": "WHO remote unauthenticated user controls username and password form fields. HOW bad mod_user do_login passes them to libuser.login which interpolates both into SELECT via format with no parameterization. WHAT breaks SQL syntax boundary allowing auth bypass and extraction.",
+    "status": "confirmed",
+    "conditions": [
+      "Remote unauthenticated POST to /user/login"
+    ],
+    "unit": "good",
+    "hunter_evidence": "user = c.execute(SELECT FROM users WHERE username format username password).fetchone() | alt: c.execute(INSERT INTO users percent formatting username password)",
+    "hunter_snippet": "user = c.execute(SELECT FROM users WHERE username format username password).fetchone()",
+    "patch_summary": "Use parameterized query: c.execute(\"SELECT * FROM users WHERE username=? and password=?\", (username,password)).",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 1,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-session-forgery",
+    "title": "Broken authentication: unsigned base64 session cookie allows forgery",
+    "cwe": "CWE-287",
+    "severity": "critical",
+    "confidence": 0.98,
+    "path": "bad/libsession.py",
+    "start_line": 20,
+    "end_line": 20,
+    "snippet": "session = json.loads(base64.b64decode(cookie))",
+    "taint": {
+      "source": "Cookie vulpy_session (client-controlled)",
+      "sink": "server trusts client-controlled session dict for authorization",
+      "path": [
+        "attacker cookie vulpy_session",
+        "bad/libsession.py:20 b64decode+json loads",
+        "bad/vulpy.py:42 g.session assignment",
+        "bad/mod_posts.py:28 / bad/mod_user.py:80 / bad/mod_mfa.py:57 auth checks"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/libsession.py",
+        "line": 6,
+        "note": "create: base64 JSON with no signature"
+      },
+      {
+        "file": "bad/libsession.py",
+        "line": 20,
+        "note": "sink/trust: json.loads(b64decode(cookie)) with bare except pass"
+      },
+      {
+        "file": "bad/vulpy.py",
+        "line": 42,
+        "note": "g.session = libsession.load(request) trusted for authz"
+      }
+    ],
+    "evidence": "bad/libsession.py:18-20 base64+json decode with no HMAC; bad/vulpy.py:42 before_request trusts g.session username for all authz | validator: bad/libsession.py:6 creates base64(JSON) with no MAC; bad/libsession.py:12-24 load() trusts client cookie via b64decode+json.loads with bare except; bad/vulpy.py:42 assigns g.session for all authz (bad/mod_posts.py:28, bad/mod_mfa.py:60) | consensus: 1/1 confirmed",
+    "rationale": "Session cookie is plain base64(JSON) with no integrity. Anyone can craft base64({\"username\":\"admin\"}) and become admin. All route auth checks (posts, chpasswd, mfa) trust g.session derived from this cookie, so forgery spans session helper to every guarded handler.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/libsession.py:18-20 base64+json decode with no HMAC; bad/vulpy.py:42 before_request trusts g.session username for all authz",
+    "hunter_snippet": "session = json.loads(base64.b64decode(cookie))",
+    "patch_summary": "Replace client cookie with random server-side session or HMAC/Fernet-signed token and validate integrity/expiry on load.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 2,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-empty-password-api-key-bypass",
+    "title": "API key issuance authentication bypass with empty password",
+    "cwe": "CWE-287",
+    "severity": "critical",
+    "confidence": 0.97,
+    "path": "bad/libapi.py",
+    "start_line": 10,
+    "end_line": 12,
+    "snippet": "if password: if not libuser.login(username, password): return None",
+    "taint": {
+      "source": "POST /api/key JSON username/password",
+      "sink": "API key issuance without authentication",
+      "path": [
+        "bad/mod_api.py:32 request.get_json attacker JSON",
+        "bad/mod_api.py:39 libapi.keygen(data['username'], data['password'])",
+        "bad/libapi.py:10 truthiness gate skips login",
+        "bad/libapi.py:20-24 key file created and returned"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_api.py",
+        "line": 39,
+        "note": "passes attacker username/password to vulnerable keygen"
+      },
+      {
+        "file": "bad/libapi.py",
+        "line": 14,
+        "note": "issues /tmp key after skipped auth"
+      },
+      {
+        "file": "bad/libapi.py",
+        "line": 27,
+        "note": "issued key accepted by authenticate for POST /api/post"
+      }
+    ],
+    "evidence": "bad/mod_api.py:39 passes attacker JSON password (empty string passes key_schema) to bad/libapi.py:10 where falsy check skips libuser.login and returns a valid key | validator: bad/libapi.py:10-12 if password: skips libuser.login on falsy password; bad/mod_api.py:12-19 key_schema allows empty string (no minLength) so bad/mod_api.py:39 keygen(data username, '') returns valid /tmp key accepted at bad/libapi.py:27 | consensus: 1/1 confirmed",
+    "rationale": "keygen gates authentication on truthiness of password instead of explicit None/validation. Empty-string password supplied via POST /api/key passes jsonschema (type string, no minLength) and skips login, minting a bearer key for any username including admin. Cross-unit: mod_api.do_key_create -> libapi.keygen -> /tmp key file -> libapi.authenticate -> libposts.post.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_api.py:39 passes attacker JSON password (empty string passes key_schema) to bad/libapi.py:10 where falsy check skips libuser.login and returns a valid key",
+    "hunter_snippet": "    if password:\n        if not libuser.login(username, password):",
+    "patch_summary": "Always authenticate: remove truthiness gate, require non-empty password and return None unless libuser.login succeeds.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 8.9,
+    "rank": 3,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-stored-xss-posts",
+    "title": "Stored XSS via posts rendered with |safe (cross-unit web+API to template)",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.97,
+    "path": "bad/templates/posts.view.html",
+    "start_line": 23,
+    "end_line": 23,
+    "snippet": "<li><span class=\"w3-h3\">{{ post.text | safe }}</span></li>",
+    "taint": {
+      "source": "POST /posts/ text and POST /api/post JSON text",
+      "sink": "Jinja |safe render of stored post.text",
+      "path": [
+        "bad/mod_posts.py:34 request.form text",
+        "bad/mod_api.py:61 request JSON text",
+        "bad/libposts.py:25 INSERT posts",
+        "bad/libposts.py:13 SELECT posts",
+        "bad/templates/posts.view.html:23 |safe render"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_posts.py",
+        "line": 34,
+        "note": "source1: request.form.get text"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 61,
+        "note": "source2: request.get_json text"
+      },
+      {
+        "file": "bad/libposts.py",
+        "line": 25,
+        "note": "stored via INSERT without sanitization"
+      },
+      {
+        "file": "bad/templates/posts.view.html",
+        "line": 23,
+        "note": "sink: {{ post.text | safe }} disables escaping"
+      }
+    ],
+    "evidence": "bad/mod_posts.py:34 text and bad/mod_api.py:61-68 JSON text stored via libposts.post then rendered unescaped at posts.view.html:23 with |safe | validator: bad/mod_posts.py:34 request.form text + bad/mod_api.py:61-62 JSON text stored via bad/libposts.py:25 INSERT without sanitization, then rendered unescaped at bad/templates/posts.view.html:23 {{ post.text | safe }} reachable via bad/mod_posts.py:11-21 | consensus: 1/1 confirmed",
+    "rationale": "Post text from web form and JSON API is stored verbatim (parameterized INSERT but no encoding) and rendered with |safe, disabling autoescape. Attacker posts <script> then any viewer of /posts/<victim> executes JS, enabling session theft given missing HttpOnly.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_posts.py:34 text and bad/mod_api.py:61-68 JSON text stored via libposts.post then rendered unescaped at posts.view.html:23 with |safe",
+    "hunter_snippet": "<li><span class=\"w3-h3\">{{ post.text | safe }}</span></li>",
+    "patch_summary": "Remove |safe at bad/templates/posts.view.html:23 and HTML-escape/sanitize post.text on input/output.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.4,
+    "rank": 4,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-hardcoded-secrets",
+    "title": "Hardcoded secrets and default credentials",
+    "cwe": "CWE-798",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "bad/vulpy.py",
+    "start_line": 16,
+    "end_line": 16,
+    "snippet": "app.config['SECRET_KEY'] = 'aaaaaaa'",
+    "taint": {
+      "source": "committed source/config",
+      "sink": "hardcoded crypto/session secrets and default credentials in source",
+      "path": []
+    },
+    "refs": [
+      {
+        "file": "bad/vulpy.py",
+        "line": 16,
+        "note": "hardcoded Flask SECRET_KEY=***"
+      },
+      {
+        "file": "good/libsession.py",
+        "line": 11,
+        "note": "hardcoded Fernet key=***"
+      },
+      {
+        "file": "good/libapi.py",
+        "line": 11,
+        "note": "hardcoded JWT secret=***"
+      },
+      {
+        "file": "bad/db_init.py",
+        "line": 11,
+        "note": "default passwords admin/elliot/tim =***"
+      }
+    ],
+    "evidence": "hardcoded app secrets in source: Flask SECRET_KEY in bad/vulpy.py:16 and bad/vulpy-ssl.py:13, Fernet key in good/libsession.py:11, JWT secret in good/libapi.py:11; default seeded passwords in bad/db_init.py:11-15 | validator: bad/vulpy.py:16 SECRET_KEY='aaaaaaa' and bad/vulpy-ssl.py:13 same; good/libsession.py:11 Fernet key and good/libapi.py:11 JWT secret MYSUPERSECRETKEY committed; bad/db_init.py:11-15 seeds admin/SuperSecret, elliot/123123123, tim/12345678 | consensus: 1/1 confirmed",
+    "rationale": "Static keys and default passwords committed to repo allow session forgery, JWT forgery and login as seeded accounts. Good-variant Fernet/JWT keys are equally static and committed, defeating encryption/auth guarantees.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "hardcoded app secrets in source: Flask SECRET_KEY in bad/vulpy.py:16 and bad/vulpy-ssl.py:13, Fernet key in good/libsession.py:11, JWT secret in good/libapi.py:11; default seeded passwords in bad/db_init.py:11-15",
+    "hunter_snippet": "app.config['SECRET_KEY'] = '***'",
+    "patch_summary": "Load Flask/Fernet/JWT secrets from env/secret manager, rotate, hash passwords with salted KDF and remove seeded defaults.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 5,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-sqli-chpasswd",
+    "title": "SQL injection in password_change via chpasswd (cross-unit)",
+    "cwe": "CWE-89",
+    "severity": "high",
+    "confidence": 0.95,
+    "path": "bad/libuser.py",
+    "start_line": 53,
+    "end_line": 53,
+    "snippet": "c.execute(\"UPDATE users SET password = '{}' WHERE username = '{}'\".format(password, username))",
+    "taint": {
+      "source": "POST /user/chpasswd form password",
+      "sink": "c.execute string-format UPDATE in password_change",
+      "path": [
+        "bad/mod_user.py:69 request.form.get password",
+        "bad/mod_user.py:80 libuser.password_change(g.session username,password)",
+        "bad/libuser.py:53 c.execute format UPDATE"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_user.py",
+        "line": 69,
+        "note": "source: request.form.get password"
+      },
+      {
+        "file": "bad/mod_user.py",
+        "line": 80,
+        "note": "passes g.session username + tainted password to password_change"
+      },
+      {
+        "file": "bad/libuser.py",
+        "line": 53,
+        "note": "sink: UPDATE ... format(password,username)"
+      }
+    ],
+    "evidence": "bad/mod_user.py:69-80 new password flows into bad/libuser.py:53 UPDATE with format(); no current-password check and no auth gate on route | validator: bad/mod_user.py:69 request.form password -> bad/mod_user.py:80 password_change(g.session username,password) -> bad/libuser.py:53 UPDATE ... format(password,username) with no parameterization | consensus: 1/1 confirmed",
+    "rationale": "New password from POST /user/chpasswd reaches UPDATE via Python format without parameterization. Attacker can break out with quote to modify WHERE clause or update other columns; combined with missing re-auth and forgeable session it is privilege escalation.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_user.py:69-80 new password flows into bad/libuser.py:53 UPDATE with format(); no current-password check and no auth gate on route",
+    "hunter_snippet": "c.execute(\"UPDATE users SET password = '{}' WHERE username = '{}'\".format(password, username))",
+    "patch_summary": "Use parameterized UPDATE with placeholders for password/username and validate inputs.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.3,
+    "rank": 6,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-mass-assign-post-forge",
+    "title": "API mass-assignment allows forging posts as arbitrary user",
+    "cwe": "CWE-863",
+    "severity": "high",
+    "confidence": 0.92,
+    "path": "bad/mod_api.py",
+    "start_line": 69,
+    "end_line": 69,
+    "snippet": "libposts.post(data['username'], data['text'])",
+    "taint": {
+      "source": "POST /api/post JSON body username plus X-APIKEY header",
+      "sink": "libposts.post with forged username",
+      "path": [
+        "bad/mod_api.py:57 X-APIKEY -> authenticate -> data['username']",
+        "bad/mod_api.py:62 request.get_json()['username'] overwrites data['username']"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_api.py",
+        "line": 57,
+        "note": "auth username stored in data"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 62,
+        "note": "attacker JSON overwrites username"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 69,
+        "note": "DB write with forged username"
+      }
+    ],
+    "evidence": "bad/mod_api.py:57 authenticates as self, bad/mod_api.py:62 overwrites username from request JSON, bad/mod_api.py:69 writes post as forged username; post_schema at bad/mod_api.py:21 allows extra properties | validator: bad/mod_api.py:57 auth username in data then bad/mod_api.py:62 data.update(request.get_json()) overwrites it; bad/mod_api.py:21-28 post_schema lacks additionalProperties:False so forged username passes validate and bad/mod_api.py:69 libposts.post writes as victim | consensus: 1/1 confirmed",
+    "rationale": "Authenticated attacker with any valid X-APIKEY can forge posts as arbitrary user. do_post_create stores authenticate() result in data['username'] then unconditionally overwrites it with attacker JSON via data.update(request.get_json()) before validation; post_schema lacks additionalProperties:false so extra username passes, and libposts.post writes with forged username. Enables impersonation and stored-XSS attribution as admin.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_api.py:57 authenticates as self, bad/mod_api.py:62 overwrites username from request JSON, bad/mod_api.py:69 writes post as forged username; post_schema at bad/mod_api.py:21 allows extra properties",
+    "hunter_snippet": "    libposts.post(data['username'], data['text'])",
+    "patch_summary": "Do not merge client JSON over authenticated identity; use server-side username only and set post_schema additionalProperties:False.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.2,
+    "rank": 7,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "tpl-form-reflect@good/templates/posts.view.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "good/templates/posts.view.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "<li><span class=\"w3-h3\">{{ post.text | safe }}</span></li>",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: good/templates/posts.view.html:23 {{ post.text | safe }} renders attacker text stored via good/mod_posts.py:33-35 -> good/libposts.py:21 INSERT without sanitization, reachable via GET good/mod_posts.py:11-21 | consensus: 1/1 confirmed",
+    "status": "confirmed",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "patch_summary": "Remove |safe in good/templates/posts.view.html:23 (rely on Jinja autoescape) and/or sanitize/escape post.text on store/render.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 8,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-missing-auth-csrf",
+    "title": "Missing authentication/CSRF controls on chpasswd and MFA disable",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "bad/mod_user.py",
+    "start_line": 64,
+    "end_line": 65,
+    "snippet": "@mod_user.route('/chpasswd', methods=['GET', 'POST'])",
+    "taint": {
+      "source": "cross-site request + forgeable session",
+      "sink": "password_change and mfa_disable state changes",
+      "path": [
+        "bad/mod_user.py:64 unauthenticated POST chpasswd",
+        "bad/mod_mfa.py:56 unauthenticated GET disable"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_user.py",
+        "line": 64,
+        "note": "endpoint POST /user/chpasswd lacks auth/CSRF/current-password check"
+      },
+      {
+        "file": "bad/mod_user.py",
+        "line": 80,
+        "note": "direct password_change on g.session username"
+      },
+      {
+        "file": "bad/mod_mfa.py",
+        "line": 56,
+        "note": "endpoint GET /mfa/disable state-changing without OTP/CSRF"
+      }
+    ],
+    "evidence": "bad/mod_user.py:64-65 chpasswd route has no session check, no current-password, no CSRF; bad/mod_mfa.py:56-57 disable is state-changing GET with no OTP/CSRF | validator: bad/mod_user.py:64-65 chpasswd route has no session/auth check, no current-password, no CSRF token (vs good/mod_user.py:67,73 checks); bad/mod_mfa.py:56-63 disable is state-changing GET with only session check, no CSRF/OTP (vs good/mod_mfa.py:64 Referer check still weak) | consensus: 1/1 confirmed",
+    "rationale": "Chpasswd trusts forgeable g.session username, never verifies current password and has no anti-CSRF token, so CSRF or forged session changes victim password. MFA disable is GET with same flaws, allowing CSRF <img src=/mfa/disable> to strip second factor.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_user.py:64-65 chpasswd route has no session check, no current-password, no CSRF; bad/mod_mfa.py:56-57 disable is state-changing GET with no OTP/CSRF",
+    "hunter_snippet": "@mod_user.route('/chpasswd', methods=['GET', 'POST'])",
+    "patch_summary": "Require authenticated session + current-password re-auth for chpasswd and POST+anti-CSRF token (+OTP) for MFA disable; make state changes POST-only.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 9,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-keygen-glob-deletion",
+    "title": "Glob-injection arbitrary file deletion in API key rotation",
+    "cwe": "CWE-73",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "bad/libapi.py",
+    "start_line": 16,
+    "end_line": 18,
+    "snippet": "    for f in Path('/tmp/').glob('vulpy.apikey.' + username + '.*'):",
+    "taint": {
+      "source": "POST /api/key JSON username",
+      "sink": "Path.glob + unlink on attacker-controlled pattern in /tmp",
+      "path": [
+        "bad/mod_api.py:32 request.get_json username",
+        "bad/mod_api.py:39 libapi.keygen(data['username'],...)",
+        "bad/libapi.py:16 glob with attacker username",
+        "bad/libapi.py:18 f.unlink() deletion"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_api.py",
+        "line": 39,
+        "note": "attacker username reaches keygen"
+      },
+      {
+        "file": "bad/libapi.py",
+        "line": 20,
+        "note": "key file path also built from same username"
+      }
+    ],
+    "evidence": "bad/mod_api.py:39 flows JSON username into bad/libapi.py:16 glob pattern; username='*' matches all vulpy.apikey files and f.unlink deletes them | validator: bad/libapi.py:16 glob('vulpy.apikey.'+username+'.*') with bad/libapi.py:18 f.unlink() reachable from bad/mod_api.py:39 with no username validation; bad/mod_user.py:38 allows creating '*' user | consensus: 1/1 confirmed",
+    "rationale": "Username is concatenated into a Path.glob pattern then every match is unlinked. Wildcards (*,?,[]) in attacker username expand to other users' key files, allowing an authenticated (or empty-password-bypassed) user to delete all API keys (DoS) and interfere with auth state. Distinct sink from authenticate() glob bypass: this is file deletion in keygen cleanup.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_api.py:39 flows JSON username into bad/libapi.py:16 glob pattern; username='*' matches all vulpy.apikey files and f.unlink deletes them",
+    "hunter_snippet": "    for f in Path('/tmp/').glob('vulpy.apikey.' + username + '.*'):",
+    "patch_summary": "Validate username against ^[a-z]+$ and replace glob+unlink with exact-path lookup or directory listing with equality check before unlink.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 10,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-apikey-glob-bypass",
+    "title": "API authentication bypass via glob injection in /tmp key lookup",
+    "cwe": "CWE-287",
+    "severity": "high",
+    "confidence": 0.9,
+    "path": "bad/libapi.py",
+    "start_line": 30,
+    "end_line": 31,
+    "snippet": "for f in Path('/tmp/').glob('vulpy.apikey.*.' + key):",
+    "taint": {
+      "source": "HTTP header X-APIKEY",
+      "sink": "filesystem glob as auth decision",
+      "path": [
+        "bad/mod_api.py:57 libapi.authenticate(request)",
+        "bad/libapi.py:28 request.headers X-APIKEY",
+        "bad/libapi.py:30 Path glob with key"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_api.py",
+        "line": 57,
+        "note": "source: request.headers X-APIKEY via authenticate(request)"
+      },
+      {
+        "file": "bad/libapi.py",
+        "line": 28,
+        "note": "header extracted as key"
+      },
+      {
+        "file": "bad/libapi.py",
+        "line": 30,
+        "note": "sink: Path glob with concatenated key"
+      }
+    ],
+    "evidence": "bad/mod_api.py:54-57 X-APIKEY header flows into bad/libapi.py:30 glob pattern; '*' matches any key file and returns victim username | validator: bad/libapi.py:28 X-APIKEY header flows unsanitized into bad/libapi.py:30 Path.glob('vulpy.apikey.*.'+key) returning bad/libapi.py:31 split('.')[2]; reachable unauthenticated via bad/mod_api.py:54 do_post_create | consensus: 1/1 confirmed",
+    "rationale": "Authenticate builds Path('/tmp/').glob('vulpy.apikey.*.'+key) with attacker header. Glob metacharacters are not escaped, so X-APIKEY: * matches the first stored key file and authenticates as that user without knowing the key. Also username in keygen glob allows wildcard/ traversal.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_api.py:54-57 X-APIKEY header flows into bad/libapi.py:30 glob pattern; '*' matches any key file and returns victim username",
+    "hunter_snippet": "for f in Path('/tmp/').glob('vulpy.apikey.*.' + key):",
+    "patch_summary": "Store keys server-side indexed by exact key hash and compare with hmac.compare_digest; reject glob metacharacters and never use glob as auth decision.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 7.1,
+    "rank": 11,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "sys-good-mfa-disable-referer-bypass",
+    "title": "MFA disable protected only by spoofable Referer check plus state-changing GET",
+    "cwe": "CWE-352",
+    "severity": "high",
+    "confidence": 0.85,
+    "path": "good/mod_mfa.py",
+    "start_line": 64,
+    "end_line": 65,
+    "snippet": "    if 'referer' not in request.headers or request.headers['referer'] != 'vulpy.com':",
+    "taint": {
+      "source": "authenticated GET + spoofable Referer header",
+      "sink": "MFA disable without OTP/CSRF",
+      "path": [
+        "good/mod_mfa.py:58 GET /mfa/disable with victim cookie",
+        "good/mod_mfa.py:64 Referer header check (attacker-controlled)",
+        "good/mod_mfa.py:67 libmfa.mfa_disable"
+      ]
+    },
+    "refs": [
+      {
+        "file": "good/mod_mfa.py",
+        "line": 58,
+        "note": "state-changing GET route /mfa/disable"
+      },
+      {
+        "file": "good/mod_mfa.py",
+        "line": 67,
+        "note": "mfa_disable sink reached after bypass"
+      }
+    ],
+    "evidence": "good/mod_mfa.py:64 checks client-controlled Referer header for exact 'vulpy.com'; attacker sets Referer to bypass and GET /mfa/disable disables MFA without OTP or CSRF token | validator: good/mod_mfa.py:58 state-changing GET /mfa/disable with only good/mod_mfa.py:64 Referer=='vulpy.com' check before good/mod_mfa.py:67 mfa_disable; header is attacker-controlled, no CSRF token or OTP re-auth | consensus: 1/1 confirmed",
+    "rationale": "State-changing GET relies solely on spoofable Referer header. Any cross-site request with attacker-forged Referer (curl/fetch) passes the check while victim session cookie is attached, disabling MFA. No anti-CSRF token, no OTP re-verification, wrong comparison (no scheme/host parsing). Distinct from bad/ missing check: this is broken check in hardened variant.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "good/mod_mfa.py:64 checks client-controlled Referer header for exact 'vulpy.com'; attacker sets Referer to bypass and GET /mfa/disable disables MFA without OTP or CSRF token",
+    "hunter_snippet": "    if 'referer' not in request.headers or request.headers['referer'] != 'vulpy.com':",
+    "patch_summary": "Make disable POST-only with anti-CSRF token and require current-password or OTP re-authentication; remove Referer-equality gate.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 6.9,
+    "rank": 12,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+  },
+  {
+    "id": "vulpy-insecure-config",
+    "title": "Insecure configuration: cookie without flags, debug mode, no brute-force protection",
+    "cwe": "CWE-614",
+    "severity": "medium",
+    "confidence": 0.9,
+    "path": "bad/libsession.py",
+    "start_line": 7,
+    "end_line": 7,
+    "snippet": "response.set_cookie('vulpy_session', session)",
+    "taint": {
+      "source": "missing cookie flags, debug mode, missing throttling",
+      "sink": "cookie theft + debug exposure + brute force",
+      "path": [
+        "bad/libsession.py:7 cookie issuance without flags",
+        "bad/templates/posts.view.html:23 XSS exfiltration"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/libsession.py",
+        "line": 7,
+        "note": "set_cookie without Secure/HttpOnly/SameSite flags"
+      },
+      {
+        "file": "bad/vulpy.py",
+        "line": 55,
+        "note": "app.run(debug=True) exposes debugger"
+      },
+      {
+        "file": "bad/mod_user.py",
+        "line": 9,
+        "note": "POST /user/login no rate-limit/lockout"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 30,
+        "note": "POST /api/key no rate-limit"
+      }
+    ],
+    "evidence": "bad/libsession.py:7 and good/libsession.py:32 set_cookie without HttpOnly/Secure/SameSite; bad/vulpy.py:55 and good/vulpy.py:53 run debug=True; no rate-limit on login/key endpoints | validator: bad/libsession.py:7 set_cookie without Secure/HttpOnly/SameSite; bad/vulpy.py:55 app.run(debug=True); bad/mod_user.py:9 and bad/mod_api.py:30 login/key endpoints have no rate-limit/lockout | consensus: 1/1 confirmed",
+    "rationale": "Session cookie readable by JS amplifies stored XSS to account takeover; debug=True exposes debugger/console; login and API key endpoints have no throttling or lockout (failures column never checked), enabling brute force.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/libsession.py:7 and good/libsession.py:32 set_cookie without HttpOnly/Secure/SameSite; bad/vulpy.py:55 and good/vulpy.py:53 run debug=True; no rate-limit on login/key endpoints",
+    "hunter_snippet": "response.set_cookie('vulpy_session', session)",
+    "patch_summary": "Set HttpOnly;Secure;SameSite on session cookie, disable debug in prod, add login/key rate-limiting/lockout.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.8,
+    "rank": 13,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-weak-prng-api-key",
+    "title": "Predictable API keys from non-cryptographic PRNG",
+    "cwe": "CWE-338",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "bad/libapi.py",
+    "start_line": 14,
+    "end_line": 14,
+    "snippet": "    key = hashlib.sha256(str(random.getrandbits(2048)).encode()).hexdigest()",
+    "taint": {
+      "source": "CSPRNG misuse (no untrusted source needed)",
+      "sink": "predictable API bearer token generation",
+      "path": [
+        "bad/mod_api.py:39 libapi.keygen",
+        "bad/libapi.py:14 random.getrandbits key derivation"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/libapi.py",
+        "line": 8,
+        "note": "keygen entry reachable from POST /api/key"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 39,
+        "note": "route issuing predictable keys"
+      }
+    ],
+    "evidence": "bad/libapi.py:14 derives 256-bit API key hex via random.getrandbits (Mersenne Twister, non-CSPRNG) instead of secrets module | validator: bad/libapi.py:14 derives bearer API key via random.getrandbits (Mersenne Twister) hashed with sha256 instead of secrets module | consensus: 1/1 confirmed",
+    "rationale": "random is deterministic and predictable once state is inferred from outputs; API bearer keys require a CSPRNG. Attacker observing issued keys can narrow future key space. Cross-unit: keygen -> /tmp file -> authenticate trusts key equality.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/libapi.py:14 derives 256-bit API key hex via random.getrandbits (Mersenne Twister, non-CSPRNG) instead of secrets module",
+    "hunter_snippet": "    key = hashlib.sha256(str(random.getrandbits(2048)).encode()).hexdigest()",
+    "patch_summary": "Generate keys with secrets.token_hex(32) or secrets.token_urlsafe.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 14,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "sys-missing-csrf-posts-create",
+    "title": "Missing CSRF on POST /posts enables forced stored-post creation",
+    "cwe": "CWE-352",
+    "severity": "medium",
+    "confidence": 0.85,
+    "path": "bad/mod_posts.py",
+    "start_line": 25,
+    "end_line": 26,
+    "snippet": "@mod_posts.route('/', methods=['POST'])\ndef do_create():",
+    "taint": {
+      "source": "cross-site form POST to /posts/",
+      "sink": "authenticated post creation without CSRF check",
+      "path": [
+        "bad/mod_posts.py:25 cross-site POST with victim cookie",
+        "bad/mod_posts.py:31 g.session username + form text",
+        "bad/mod_posts.py:33 libposts.post"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_posts.py",
+        "line": 26,
+        "note": "unprotected POST endpoint"
+      },
+      {
+        "file": "bad/mod_posts.py",
+        "line": 33,
+        "note": "libposts.post sink with victim identity"
+      },
+      {
+        "file": "bad/templates/posts.view.html",
+        "line": 23,
+        "note": "stored payload executes via |safe for viewers"
+      }
+    ],
+    "evidence": "bad/mod_posts.py:25-26 POST /posts creates stored post from session cookie with no CSRF token; forged cross-site POST writes attacker post.text later rendered with |safe | validator: bad/mod_posts.py:25 POST /posts/ creates post from bad/mod_posts.py:31 g.session cookie with no CSRF token; cookie set in bad/libsession.py:5 without SameSite/token and payload later rendered via bad/templates/posts.view.html:30 |safe | consensus: 1/1 confirmed",
+    "rationale": "Authenticated POST lacks anti-CSRF token, SameSite, or Origin/Referer check. Attacker site can auto-submit form to /posts/ in victim browser, creating a stored post under victim identity that later executes via known |safe stored-XSS sink. Prior CSRF finding covered chpasswd/MFA-disable only; this is a different endpoint chaining to stored XSS.",
+    "status": "confirmed",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_posts.py:25-26 POST /posts creates stored post from session cookie with no CSRF token; forged cross-site POST writes attacker post.text later rendered with |safe",
+    "hunter_snippet": "@mod_posts.route('/', methods=['POST'])\ndef do_create():",
+    "patch_summary": "Add per-session anti-CSRF token validated on POST and set session cookie with SameSite=Lax/Strict.",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 4.6,
+    "rank": 15,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@bad/templates/mfa.enable.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "bad/templates/mfa.enable.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: bad/templates/mfa.enable.html:6 {{ img_str }} and :16 {{ secret_url }} have no |safe (Jinja autoescaped); values are server-generated at bad/mod_mfa.py:25-32 (provisioning_uri/QR base64), no request.form field is reflected | refute: sanitized | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 16,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@bad/templates/posts.view.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.95,
+    "path": "bad/templates/posts.view.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: bad/templates/posts.view.html:23 {{ post.text | safe }} is the same sink already covered by vulpy-stored-xss-posts; heuristic adds no new flow | refute: duplicate | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 17,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@bad/templates/welcome.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "bad/templates/welcome.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: bad/templates/welcome.html:6 {{ session.username }} and :16 {{ post.text }} autoescaped without |safe; template is dead: no render_template('welcome.html') in bad/ (bad/mod_posts.py:21 renders posts.view.html), only reference is unmounted good/mod_welcome1.py:17 | refute: not_reachable | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 18,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@good/templates/mfa.enable.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "good/templates/mfa.enable.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: good/templates/mfa.enable.html:6 {{ img_str }} and :16 {{ secret_url }} have no |safe (autoescaped); values server-generated at good/mod_mfa.py:26-33, no request.form reflection | refute: sanitized | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "sanitizer",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 19,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "tpl-form-reflect@good/templates/welcome.html",
+    "title": "template reflection surface",
+    "cwe": "CWE-79",
+    "severity": "info",
+    "confidence": 0.9,
+    "path": "good/templates/welcome.html",
+    "start_line": 0,
+    "end_line": 0,
+    "snippet": "form + {{ }} in template (verify server-side reflection)",
+    "taint": {
+      "source": "form input",
+      "sink": "template render",
+      "path": []
+    },
+    "evidence": "heuristic: form + {{ }} co-occurrence | validator: good/templates/welcome.html:6 {{ session.username }} and :16 {{ post.text }} autoescaped without |safe; only referenced by good/mod_welcome1.py:17 whose blueprint is never registered in good/vulpy.py:17-22, so unreachable | refute: not_reachable | consensus: 1/1 fp",
+    "status": "fp",
+    "hunter_evidence": "heuristic: form + {{ }} co-occurrence",
+    "hunter_snippet": "form + {{ }} in template (verify server-side reflection)",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 20,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  },
+  {
+    "id": "vulpy-posts-idor",
+    "title": "Missing authorization: unauthenticated read of any user's posts",
+    "cwe": "CWE-285",
+    "severity": "info",
+    "confidence": 0.85,
+    "path": "bad/mod_posts.py",
+    "start_line": 11,
+    "end_line": 12,
+    "snippet": "@mod_posts.route('/<username>')",
+    "taint": {
+      "source": "URL path /posts/<username> and /api/post/<username>",
+      "sink": "render/json of arbitrary user posts",
+      "path": [
+        "bad/mod_posts.py:11 path username",
+        "bad/libposts.py:13 SELECT posts WHERE username=?"
+      ]
+    },
+    "refs": [
+      {
+        "file": "bad/mod_posts.py",
+        "line": 11,
+        "note": "endpoint GET /posts/<username> no auth check"
+      },
+      {
+        "file": "bad/mod_api.py",
+        "line": 47,
+        "note": "endpoint GET /api/post/<username> no auth check"
+      },
+      {
+        "file": "bad/libposts.py",
+        "line": 13,
+        "note": "DB read of arbitrary username"
+      }
+    ],
+    "evidence": "bad/mod_posts.py:11-12 and bad/mod_api.py:47-50 return any username posts with no login check; enumeration via /posts/<user> and /api/post/<user> | validator: Hardened variant good/mod_posts.py:11 also exposes /<username> with no auth and bad/templates/posts.view.html:33 lists Other users links, proving public-board design not a boundary | refute: not_a_vulnerability | consensus: 1/1 fp",
+    "rationale": "View handlers accept arbitrary username path param and return that user's posts without requiring session or ownership check. Unauthenticated attacker can harvest all users posts by iterating usernames from userlist.",
+    "status": "fp",
+    "conditions": [],
+    "unit": "system",
+    "hunter_evidence": "bad/mod_posts.py:11-12 and bad/mod_api.py:47-50 return any username posts with no login check; enumeration via /posts/<user> and /api/post/<user>",
+    "hunter_snippet": "@mod_posts.route('/<username>')",
+    "control_type": "none",
+    "duplicate_of": "",
+    "cvss": 0.0,
+    "rank": 21,
+    "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N"
+  }
+]

@@ -1,0 +1,1062 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="103" errors="0" skipped="0" timestamp="2026-11-04T15:56:57Z" time="0.000" failures="67">
+  <testcase classname="CWE-78" name="Command injection in FastAPI cmdi route [critical] apps/fastapi_app.py:39-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Command injection in FastAPI cmdi route (CWE-78) critical conf=1.0 apps/fastapi_app.py:39-43">cmd = "echo " + user_input + " this should be echoed"
+        os.system(cmd)
+cmd = "echo " + user_input + " this should be echoed"
+        os.system(cmd)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS command injection in do_os_system [critical] src/vulnpy/trigger/cmdi.py:5-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection in do_os_system (CWE-78) critical conf=1.0 src/vulnpy/trigger/cmdi.py:5-6">def do_os_system(command):
+    return os.system(command)
+def do_os_system(command):
+    return os.system(command)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Shell injection in do_subprocess_popen [critical] src/vulnpy/trigger/cmdi.py:9-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Shell injection in do_subprocess_popen (CWE-78) critical conf=1.0 src/vulnpy/trigger/cmdi.py:9-12">def do_subprocess_popen(command):
+    process = subprocess.Popen(
+def do_subprocess_popen(command):
+    process = subprocess.Popen(</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe pickle.load in do_pickle_load [critical] src/vulnpy/trigger/deserialization.py:6-8">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe pickle.load in do_pickle_load (CWE-502) critical conf=1.0 src/vulnpy/trigger/deserialization.py:6-8">def do_pickle_load(user_input):
+    return pickle.load(user_input)
+def do_pickle_load(user_input):
+    return pickle.load(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe pickle.loads in do_pickle_loads [critical] src/vulnpy/trigger/deserialization.py:11-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe pickle.loads in do_pickle_loads (CWE-502) critical conf=1.0 src/vulnpy/trigger/deserialization.py:11-12">def do_pickle_loads(user_input):
+    return pickle.loads(user_input.encode("utf-8"))
+def do_pickle_loads(user_input):
+    return pickle.loads(user_input.encode("utf-8"))</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe yaml.load in do_yaml_load [critical] src/vulnpy/trigger/deserialization.py:15-17">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe yaml.load in do_yaml_load (CWE-502) critical conf=1.0 src/vulnpy/trigger/deserialization.py:15-17">def do_yaml_load(user_input):
+        return yaml.load(user_input, Loader=yaml.UnsafeLoader)
+def do_yaml_load(user_input):
+        return yaml.load(user_input, Loader=yaml.UnsafeLoader)</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe yaml.load_all in do_yaml_load_all [critical] src/vulnpy/trigger/deserialization.py:22-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe yaml.load_all in do_yaml_load_all (CWE-502) critical conf=1.0 src/vulnpy/trigger/deserialization.py:22-23">def do_yaml_load_all(user_input):
+    result = yaml.load_all(user_input, Loader=yaml.UnsafeLoader)
+def do_yaml_load_all(user_input):
+    result = yaml.load_all(user_input, Loader=yaml.UnsafeLoader)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Code injection via do_exec [critical] src/vulnpy/trigger/unsafe_code_exec.py:1-2">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection via do_exec (CWE-94) critical conf=1.0 src/vulnpy/trigger/unsafe_code_exec.py:1-2">def do_exec(code):
+    exec(code)
+def do_exec(code):
+    exec(code)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Code injection via do_eval [critical] src/vulnpy/trigger/unsafe_code_exec.py:5-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Code injection via do_eval (CWE-94) critical conf=1.0 src/vulnpy/trigger/unsafe_code_exec.py:5-6">def do_eval(code):
+    return eval(code)
+def do_eval(code):
+    return eval(code)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Missing authentication on FastAPI /cmdi command-execution endpoint [critical] apps/fastapi_app.py:37-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on FastAPI /cmdi command-execution endpoint (CWE-78) critical conf=0.98 apps/fastapi_app.py:37-43">Route def cmdi at apps/fastapi_app.py:37-38 takes attacker user_input with no auth decorator, Depends, API key, or session check and directly builds shell command at :39 and loops os.system(cmd)+sleep(3)x10 at :41-45
+cmd = "echo " + user_input + "..."; os.system(cmd)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Command injection via FastAPI file upload [critical] apps/fastapi_app.py:32-33">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Command injection via FastAPI file upload (CWE-78) critical conf=0.95 apps/fastapi_app.py:32-33">content = await file.read()
+    do_os_system(content[:20])
+content = await file.read()
+    do_os_system(content[:20])</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Command injection via Quart file upload [critical] apps/quart_app.py:23-23">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Command injection via Quart file upload (CWE-78) critical conf=0.95 apps/quart_app.py:23-23">do_os_system(user_input[:20])
+do_os_system(user_input[:20])</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in aiohttp get_trigger_view [critical] src/vulnpy/aiohttp/vulnerable_routes.py:23-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in aiohttp get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/aiohttp/vulnerable_routes.py:23-24">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Bottle get_trigger_view [critical] src/vulnpy/bottle/vulnerable_routes.py:34-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Bottle get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/bottle/vulnerable_routes.py:34-35">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Django get_trigger_view [critical] src/vulnpy/django/vulnerable.py:30-31">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Django get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/django/vulnerable.py:30-31">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Django ASGI get_trigger_view [critical] src/vulnpy/django/vulnerable_asgi.py:49-50">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Django ASGI get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/django/vulnerable_asgi.py:49-50">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Falcon root view for xss [critical] src/vulnpy/falcon/vulnerable.py:42-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Falcon root view for xss (CWE-79) critical conf=0.95 src/vulnpy/falcon/vulnerable.py:42-43">if name == "xss":
+                    _set_xss_response(resp, "{}.html".format(name), user_input)
+                if name == "xss":
+                    _set_xss_response(resp, "{}.html".format(name), user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Trigger dispatch RCE in Falcon get_trigger_view [critical] src/vulnpy/falcon/vulnerable.py:71-72">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Trigger dispatch RCE in Falcon get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/falcon/vulnerable.py:71-72">if trigger_func:
+                trigger_func(command)
+if trigger_func:
+                trigger_func(command)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Falcon ASGI root view for xss [critical] src/vulnpy/falcon/vulnerable_asgi.py:42-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Falcon ASGI root view for xss (CWE-79) critical conf=0.95 src/vulnpy/falcon/vulnerable_asgi.py:42-43">if name == "xss":
+                    _set_xss_response(resp, "{}.html".format(name), user_input)
+                if name == "xss":
+                    _set_xss_response(resp, "{}.html".format(name), user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Trigger dispatch RCE in Falcon ASGI get_trigger_view [critical] src/vulnpy/falcon/vulnerable_asgi.py:71-72">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Trigger dispatch RCE in Falcon ASGI get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/falcon/vulnerable_asgi.py:71-72">if trigger_func:
+                trigger_func(command)
+if trigger_func:
+                trigger_func(command)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in FastAPI get_trigger_view [critical] src/vulnpy/fastapi/vulnerable.py:36-37">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in FastAPI get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/fastapi/vulnerable.py:36-37">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Flask get_trigger_view [critical] src/vulnpy/flask/blueprint.py:49-50">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Flask get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/flask/blueprint.py:49-50">if trigger_func:
+                trigger_func(user_input)
+if trigger_func:
+                trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Pyramid get_trigger_view [critical] src/vulnpy/pyramid/vulnerable_routes.py:45-46">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Pyramid get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/pyramid/vulnerable_routes.py:45-46">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in Quart get_trigger_view [critical] src/vulnpy/quart/blueprint.py:47-48">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in Quart get_trigger_view (CWE-94) critical conf=0.95 src/vulnpy/quart/blueprint.py:47-48">if trigger_func:
+            trigger_func(user_input)
+if trigger_func:
+            trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-94" name="Unauthenticated trigger dispatch RCE in WSGI vulnerable_app [critical] src/vulnpy/wsgi/app.py:22-24">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unauthenticated trigger dispatch RCE in WSGI vulnerable_app (CWE-94) critical conf=0.95 src/vulnpy/wsgi/app.py:22-24">if trigger_func:
+        user_input = _get_user_input(environ)
+        trigger_func(user_input)
+if trigger_func:
+        user_input = _get_user_input(environ)
+        trigger_func(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Command injection in Falcon FileUpload [critical] apps/falcon_app.py:28-29">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.5" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Command injection in Falcon FileUpload (CWE-78) critical conf=0.9 apps/falcon_app.py:28-29">cmd = "echo " + str(user_input[:10])
+        os.system(cmd)
+cmd = "echo " + str(user_input[:10])
+        os.system(cmd)</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Header-trusted code input in Quart _get_user_input [critical] src/vulnpy/quart/blueprint.py:10-11">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.5" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Header-trusted code input in Quart _get_user_input (CWE-78) critical conf=0.9 src/vulnpy/quart/blueprint.py:10-11">if request.headers.get("User_Input") is not None:
+        return request.headers.get("User_Input")
+    if request.headers.get("User_Input") is not None:
+        return request.headers.get("User_Input")</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Command injection in Falcon thread_function [critical] apps/falcon_app.py:63-64">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Command injection in Falcon thread_function (CWE-78) critical conf=0.85 apps/falcon_app.py:63-64">cmd = "echo " + str(user_input)
+    os.system(cmd)
+cmd = "echo " + str(user_input)
+    os.system(cmd)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in aiohttp get_trigger_view [high] src/vulnpy/aiohttp/vulnerable_routes.py:28-29">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in aiohttp get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/aiohttp/vulnerable_routes.py:28-29">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Bottle get_trigger_view [high] src/vulnpy/bottle/vulnerable_routes.py:38-39">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Bottle get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/bottle/vulnerable_routes.py:38-39">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Django get_trigger_view [high] src/vulnpy/django/vulnerable.py:35-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Django get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/django/vulnerable.py:35-36">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Django ASGI get_trigger_view [high] src/vulnpy/django/vulnerable_asgi.py:54-55">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Django ASGI get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/django/vulnerable_asgi.py:54-55">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Falcon _set_xss_response [high] src/vulnpy/falcon/vulnerable.py:122-124">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Falcon _set_xss_response (CWE-79) high conf=1.0 src/vulnpy/falcon/vulnerable.py:122-124">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Falcon ASGI _set_xss_response [high] src/vulnpy/falcon/vulnerable_asgi.py:122-124">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Falcon ASGI _set_xss_response (CWE-79) high conf=1.0 src/vulnpy/falcon/vulnerable_asgi.py:122-124">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in FastAPI get_trigger_view [high] src/vulnpy/fastapi/vulnerable.py:41-42">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in FastAPI get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/fastapi/vulnerable.py:41-42">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Flask get_trigger_view [high] src/vulnpy/flask/blueprint.py:54-55">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Flask get_trigger_view (CWE-79) high conf=1.0 src/vulnpy/flask/blueprint.py:54-55">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_tarfile_bz2 [high] src/vulnpy/trigger/pt.py:22-25">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_tarfile_bz2 (CWE-22) high conf=1.0 src/vulnpy/trigger/pt.py:22-25">def do_tarfile_bz2(user_input):
+        with tarfile.open(user_input, mode="r:bz2") as tf:
+def do_tarfile_bz2(user_input):
+        with tarfile.open(user_input, mode="r:bz2") as tf:</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_bz2_class [high] src/vulnpy/trigger/pt.py:30-33">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_bz2_class (CWE-22) high conf=1.0 src/vulnpy/trigger/pt.py:30-33">def do_bz2_class(user_input, size=0):
+        with bz2.BZ2File(user_input) as bz2file:
+def do_bz2_class(user_input, size=0):
+        with bz2.BZ2File(user_input) as bz2file:</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_bz2_open [high] src/vulnpy/trigger/pt.py:38-41">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_bz2_open (CWE-22) high conf=1.0 src/vulnpy/trigger/pt.py:38-41">def do_bz2_open(user_input, size=0):
+        with bz2.open(user_input) as bz2file:
+def do_bz2_open(user_input, size=0):
+        with bz2.open(user_input) as bz2file:</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_io_open [high] src/vulnpy/trigger/pt.py:46-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_io_open (CWE-22) high conf=1.0 src/vulnpy/trigger/pt.py:46-49">def do_io_open(user_input):
+        with io.open(user_input) as f:
+def do_io_open(user_input):
+        with io.open(user_input) as f:</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_open [high] src/vulnpy/trigger/pt.py:54-57">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_open (CWE-22) high conf=1.0 src/vulnpy/trigger/pt.py:54-57">def do_open(user_input):
+        with open(user_input) as f:
+def do_open(user_input):
+        with open(user_input) as f:</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in do_sqlite3_execute [high] src/vulnpy/trigger/sqli.py:34-37">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in do_sqlite3_execute (CWE-89) high conf=1.0 src/vulnpy/trigger/sqli.py:34-37">def do_sqlite3_execute(user_input):
+        sql = EXECUTE_QUERY_FMT.format(user_input)
+def do_sqlite3_execute(user_input):
+        sql = EXECUTE_QUERY_FMT.format(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL injection in do_sqlite3_executemany [high] src/vulnpy/trigger/sqli.py:45-48">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL injection in do_sqlite3_executemany (CWE-89) high conf=1.0 src/vulnpy/trigger/sqli.py:45-48">def do_sqlite3_executemany(user_input):
+        sql = EXECUTEMANY_QUERY_FMT.format(user_input)
+def do_sqlite3_executemany(user_input):
+        sql = EXECUTEMANY_QUERY_FMT.format(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL script injection in do_sqlite3_executescript [high] src/vulnpy/trigger/sqli.py:56-59">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.5" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL script injection in do_sqlite3_executescript (CWE-89) high conf=1.0 src/vulnpy/trigger/sqli.py:56-59">def do_sqlite3_executescript(user_input):
+        return cursor.executescript(sql)
+def do_sqlite3_executescript(user_input):
+        return cursor.executescript(sql)</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Django SECRET_KEY [high] apps/django_app.py:27-27">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Django SECRET_KEY (CWE-798) high conf=0.95 apps/django_app.py:27-27">"SECRET_KEY": "test_key",  # pragma: allowlist secret
+"SECRET_KEY": "test_key",  # pragma: allowlist secret</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="Loop-amplified blocking execution DoS in FastAPI cmdi route [high] apps/fastapi_app.py:41-43">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Loop-amplified blocking execution DoS in FastAPI cmdi route (CWE-78) high conf=0.95 apps/fastapi_app.py:41-43">for i in range(10):
+        print("will echo command")
+        os.system(cmd)
+    for i in range(10):
+        print("will echo command")
+        os.system(cmd)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Unescaped output in jinja xss.html [high] apps/templates/jinja/xss.html:28-28">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unescaped output in jinja xss.html (CWE-79) high conf=0.95 apps/templates/jinja/xss.html:28-28">{{ user_input | safe }} | safe }} disables escaping; rendered with attacker data at apps/flask_app.py:19-20 request.args user_input -&gt; template.render; Environment at apps/flask_app.py:11 has autoescape off
+{{ user_input | safe }}</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Pyramid get_trigger_view [high] src/vulnpy/pyramid/vulnerable_routes.py:50-51">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Pyramid get_trigger_view (CWE-79) high conf=0.95 src/vulnpy/pyramid/vulnerable_routes.py:50-51">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in Quart get_trigger_view [high] src/vulnpy/quart/blueprint.py:52-53">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in Quart get_trigger_view (CWE-79) high conf=0.95 src/vulnpy/quart/blueprint.py:52-53">template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"
+template += "&lt;p&gt;XSS: " + user_input + "&lt;/p&gt;"</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in do_urlopen_str [high] src/vulnpy/trigger/ssrf.py:64-69">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF in do_urlopen_str (CWE-918) high conf=0.95 src/vulnpy/trigger/ssrf.py:64-69">def do_urlopen_str(user_input):
+    return _urlopen(urlopen, user_input)
+def do_urlopen_str(user_input):
+    return _urlopen(urlopen, user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF via Request in do_urlopen_obj [high] src/vulnpy/trigger/ssrf.py:72-79">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF via Request in do_urlopen_obj (CWE-918) high conf=0.95 src/vulnpy/trigger/ssrf.py:72-79">def do_urlopen_obj(user_input):
+        req = Request(user_input)
+def do_urlopen_obj(user_input):
+        req = Request(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF host-control sink in _request_init helper [high] src/vulnpy/trigger/ssrf.py:136-136">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF host-control sink in _request_init helper (CWE-918) high conf=0.95 src/vulnpy/trigger/ssrf.py:136-136">c = connection_class(user_input)
+c = connection_class(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF host control in do_httpconnection_init [high] src/vulnpy/trigger/ssrf.py:143-144">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF host control in do_httpconnection_init (CWE-918) high conf=0.95 src/vulnpy/trigger/ssrf.py:143-144">def do_httpconnection_init(user_input):
+    return _request_init(user_input, HTTPConnection)
+def do_httpconnection_init(user_input):
+    return _request_init(user_input, HTTPConnection)</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF host control in do_httpsconnection_init [high] src/vulnpy/trigger/ssrf.py:147-148">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SSRF host control in do_httpsconnection_init (CWE-918) high conf=0.95 src/vulnpy/trigger/ssrf.py:147-148">def do_httpsconnection_init(user_input):
+    return _request_init(user_input, HTTPSConnection)
+def do_httpsconnection_init(user_input):
+    return _request_init(user_input, HTTPSConnection)</failure>
+  </testcase>
+  <testcase classname="CWE-91" name="XPath injection in do_lxml_etree_findall [high] src/vulnpy/trigger/xpath.py:24-25">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XPath injection in do_lxml_etree_findall (CWE-91) high conf=0.95 src/vulnpy/trigger/xpath.py:24-25">def do_lxml_etree_findall(user_input):
+    return root.findall(user_input)[0][0].text
+def do_lxml_etree_findall(user_input):
+    return root.findall(user_input)[0][0].text</failure>
+  </testcase>
+  <testcase classname="CWE-91" name="XPath injection in do_lxml_etree_findtext [high] src/vulnpy/trigger/xpath.py:28-29">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XPath injection in do_lxml_etree_findtext (CWE-91) high conf=0.95 src/vulnpy/trigger/xpath.py:28-29">def do_lxml_etree_findtext(user_input):
+    return root.findtext(user_input)
+def do_lxml_etree_findtext(user_input):
+    return root.findtext(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-91" name="XPath injection in do_xml_etree_findall [high] src/vulnpy/trigger/xpath.py:32-34">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XPath injection in do_xml_etree_findall (CWE-91) high conf=0.95 src/vulnpy/trigger/xpath.py:32-34">def do_xml_etree_elementtree_findall(user_input):
+    node = ET.fromstring(xml)
+def do_xml_etree_elementtree_findall(user_input):
+    node = ET.fromstring(xml)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in WSGI vulnerable_app [high] src/vulnpy/wsgi/app.py:25-26">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in WSGI vulnerable_app (CWE-79) high conf=0.95 src/vulnpy/wsgi/app.py:25-26">response.append("&lt;p&gt;XSS: {}&lt;/p&gt;".format(user_input))
+response.append("&lt;p&gt;XSS: {}&lt;/p&gt;".format(user_input))</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Jinja XSS sink in flask_app jinja_xss [high] apps/flask_app.py:19-21">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Jinja XSS sink in flask_app jinja_xss (CWE-79) high conf=0.9 apps/flask_app.py:19-21">return template.render(
+        path="/template-xss/jinja", user_input=request.args.get("user_input", "") | safe }} yielding unescaped output; route /template-xss/jinja at :16
+return template.render(
+        path="/template-xss/jinja", user_input=request.args.get("user_input", "")</failure>
+  </testcase>
+  <testcase classname="CWE-400" name="Unbounded file read in Quart upload handler [high] apps/quart_app.py:19-21">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unbounded file read in Quart upload handler (CWE-400) high conf=0.9 apps/quart_app.py:19-21">files = await request.files
+    stream = files.get("file")
+user_input = stream.read()</failure>
+  </testcase>
+  <testcase classname="CWE-306" name="Missing authentication/authorization on /vulnpy trigger routes [high] src/vulnpy/flask/blueprint.py:61-63">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication/authorization on /vulnpy trigger routes (CWE-306) high conf=0.9 src/vulnpy/flask/blueprint.py:61-63">src/vulnpy/flask/blueprint.py:61 add_url_rule for every /vulnpy/&lt;name&gt;/&lt;trigger&gt;/ with methods GET,POST and no authentication, authorization, CSRF, or rate-limiting; same pattern in FastAPI/Django/Bottle/Quart/Pyramid/aiohttp/Falcon/WSGI generators
+vulnerable_blueprint.add_url_rule(view_name, view_name, _view, methods=["GET", "POST"]) without auth</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_tarfile_open [high] src/vulnpy/trigger/pt.py:6-9">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_tarfile_open (CWE-22) high conf=0.9 src/vulnpy/trigger/pt.py:6-9">def do_tarfile_open(user_input):
+        with tarfile.TarFile.open(user_input, mode="r:") as tf:
+def do_tarfile_open(user_input):
+        with tarfile.TarFile.open(user_input, mode="r:") as tf:</failure>
+  </testcase>
+  <testcase classname="CWE-22" name="Path traversal in do_tarfile_class [high] src/vulnpy/trigger/pt.py:14-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Path traversal in do_tarfile_class (CWE-22) high conf=0.9 src/vulnpy/trigger/pt.py:14-16">def do_tarfile_class(user_input):
+        with tarfile.TarFile(user_input) as tf:
+def do_tarfile_class(user_input):
+        with tarfile.TarFile(user_input) as tf:</failure>
+  </testcase>
+  <testcase classname="CWE-918" name="Central SSRF sink in _urlopen helper [high] src/vulnpy/trigger/ssrf.py:51-51">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Central SSRF sink in _urlopen helper (CWE-918) high conf=0.9 src/vulnpy/trigger/ssrf.py:51-51">return urlopen_func(arg).getcode()
+        return urlopen_func(arg).getcode()</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE in do_lxml_etree_fromstring [high] src/vulnpy/trigger/xxe.py:7-8">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE in do_lxml_etree_fromstring (CWE-611) high conf=0.9 src/vulnpy/trigger/xxe.py:7-8">def do_lxml_etree_fromstring(user_input):
+    return etree.fromstring(user_input)
+def do_lxml_etree_fromstring(user_input):
+    return etree.fromstring(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE in do_xml_dom_pulldom_parsestring [high] src/vulnpy/trigger/xxe.py:11-12">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE in do_xml_dom_pulldom_parsestring (CWE-611) high conf=0.9 src/vulnpy/trigger/xxe.py:11-12">def do_xml_dom_pulldom_parsestring(user_input):
+    return pulldom.parseString(user_input)
+def do_xml_dom_pulldom_parsestring(user_input):
+    return pulldom.parseString(user_input)</failure>
+  </testcase>
+  <testcase classname="CWE-611" name="XXE in do_xml_sax_parsestring [high] src/vulnpy/trigger/xxe.py:15-16">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="XXE in do_xml_sax_parsestring (CWE-611) high conf=0.9 src/vulnpy/trigger/xxe.py:15-16">def do_xml_sax_parsestring(user_input):
+    return sax.parseString(user_input, ContentHandler())
+def do_xml_sax_parsestring(user_input):
+    return sax.parseString(user_input, ContentHandler())</failure>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_sub [medium] src/vulnpy/trigger/redos.py:65-66">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_sub_compiled [medium] src/vulnpy/trigger/redos.py:69-70">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_subn [medium] src/vulnpy/trigger/redos.py:74-75">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_subn_compiled [medium] src/vulnpy/trigger/redos.py:78-79">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_split [medium] src/vulnpy/trigger/redos.py:83-84">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_split_compiled [medium] src/vulnpy/trigger/redos.py:87-88">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF in do_legacy_urlopen [medium] src/vulnpy/trigger/ssrf.py:56-61">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.9" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Insecure MD5 hash in do_hashlib_md5 [medium] src/vulnpy/trigger/hash.py:18-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Insecure SHA1 hash in do_hashlib_sha1 [medium] src/vulnpy/trigger/hash.py:23-25">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-327" name="Insecure SHA1 via hashlib.new in do_hashlib_new [medium] src/vulnpy/trigger/hash.py:28-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Attacker-controlled PRNG seed in _seed [medium] src/vulnpy/trigger/rand.py:15-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1333" name="Evil nested-quantifier regex definition PATTERN [medium] src/vulnpy/trigger/redos.py:3-3">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_match [medium] src/vulnpy/trigger/redos.py:6-7">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_match_compiled [medium] src/vulnpy/trigger/redos.py:12-14">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_search [medium] src/vulnpy/trigger/redos.py:19-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_search_compiled [medium] src/vulnpy/trigger/redos.py:25-27">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_finditer [medium] src/vulnpy/trigger/redos.py:32-33">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_finditer_compiled [medium] src/vulnpy/trigger/redos.py:37-39">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_findall [medium] src/vulnpy/trigger/redos.py:43-44">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_findall_compiled [medium] src/vulnpy/trigger/redos.py:47-49">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_fullmatch [medium] src/vulnpy/trigger/redos.py:52-53">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="ReDoS in do_re_fullmatch_compiled [medium] src/vulnpy/trigger/redos.py:58-60">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Event-loop blocking DoS in async_will_block [medium] apps/fastapi_app.py:51-57">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-918" name="SSRF and method injection sink in _request helper [medium] src/vulnpy/trigger/ssrf.py:90-92">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-79" name="Insecure Jinja2 Environment without autoescape [low] apps/flask_app.py:8-9">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Insecure session cookie Secure flag [low] apps/flask_app.py:29-29">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-1004" name="Insecure session cookie HttpOnly flag [low] apps/flask_app.py:30-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-489" name="Django DEBUG enabled [low] apps/django_app.py:28-28">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-400" name="Unbounded file read in FastAPI upload handler [low] apps/fastapi_app.py:31-32">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-614" name="Cacheable responses in WSGI app [low] src/vulnpy/wsgi/app.py:33-33">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Disabled XSS protection header in WSGI app [low] src/vulnpy/wsgi/app.py:35-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-319" name="Disabled HSTS in WSGI app [low] src/vulnpy/wsgi/app.py:36-36">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.4" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak randomness in do_random [low] src/vulnpy/trigger/rand.py:18-20">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak randomness in do_randint [low] src/vulnpy/trigger/rand.py:23-25">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak randomness in do_randrange [low] src/vulnpy/trigger/rand.py:28-30">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-338" name="Weak randomness in do_uniform [low] src/vulnpy/trigger/rand.py:33-35">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

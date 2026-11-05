@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="13" errors="0" skipped="0" timestamp="2026-11-04T17:44:15Z" time="0.000" failures="9">
+  <testcase classname="CWE-89" name="SQL Injection entry via POST /search searchText [critical] routes/search.js:11-13">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection entry via POST /search searchText (CWE-89) critical conf=0.98 routes/search.js:11-13">const searchText = req.body.searchText;
+
+  searchService.searchByName(searchText, function (err, ret) {
+const searchText = req.body.searchText; searchService.searchByName(searchText,...)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="Intrinsic SQL concatenation sink in searchByName [critical] service/search.js:4-7">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Intrinsic SQL concatenation sink in searchByName (CWE-89) critical conf=0.98 service/search.js:4-7">const searchByName = function (searchText, cb) {
+
+  db.all("select id,name,description from item where name like '%" + searchText + "%'", [], function (err, rows) {
+db.all("select id,name,description from item where name like '%" + searchText + "%'", [], ...)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="test [critical] service/search.js:6-6">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.98" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="test (CWE-89) critical conf=0.98 service/search.js:6-6">db.all test
+const searchText = req.body.searchText; searchService.searchByName(searchText,...)</failure>
+  </testcase>
+  <testcase classname="CWE-89" name="SQL Injection entry via GET /api/search query searchText [critical] routes/api.js:7-10">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.9" />
+      <property name="confidence" value="0.97" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="SQL Injection entry via GET /api/search query searchText (CWE-89) critical conf=0.97 routes/api.js:7-10">const searchText = req.query.searchText !== undefined ? req.query.searchText : '';
+  console.log(req.query);
+  console.log('search text: ' + searchText);
+  searchService.searchByName(searchText, function (err, ret) {
+const searchText = req.query.searchText !== undefined ? req.query.searchText : '';</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded seed credentials including admin password [critical] bootstrapdb.js:43-46">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded seed credentials including admin password (CWE-798) critical conf=0.95 bootstrapdb.js:43-46">userTbl.run('admin', 'S3cr37P@$$w0rD!');
+      userTbl.run('user1', 'bad_password');
+      userTbl.run('user2', 'worse');
+      userTbl.run('user3', 'fail');
+userTbl.run('admin', 'S3cr37P@$$w0rD!');</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage without hashing [critical] bootstrapdb.js:34-34">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="8.6" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password storage without hashing (CWE-256) critical conf=0.92 bootstrapdb.js:34-34">db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)', function (err) {
+CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS render via POST /search searchResult [high] routes/search.js:17-17">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.96" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS render via POST /search searchResult (CWE-79) high conf=0.96 routes/search.js:17-17">res.render('searchResult', ret)
+h1!= 'Search Results for: ' + searchText</failure>
+  </testcase>
+  <testcase classname="CWE-256" name="Plaintext password storage without hashing [high] bootstrapdb.js:30-34">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Plaintext password storage without hashing (CWE-256) high conf=0.95 bootstrapdb.js:30-34">bootstrapdb.js:30 CREATE TABLE user with password TEXT and bootstrapdb.js:43-46 inserts without any hash; login-equivalent SQLi can read plaintext
+db.run('CREATE TABLE user (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, username NVARCHAR(1024) NOT NULL, password TEXT NOT NULL)'</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS via unescaped Pug render of searchText [high] views/searchResult.pug:4-4">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.1" />
+      <property name="confidence" value="0.90" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS via unescaped Pug render of searchText (CWE-79) high conf=0.9 views/searchResult.pug:4-4">Cross-unit flow: routes/search.js:11 req.body.searchText -&gt; service/search.js:15-18 ret.searchText passthrough -&gt; routes/search.js:17 res.render -&gt; views/searchResult.pug:4 unescaped render
+h1!= 'Search Results for: ' + searchText</failure>
+  </testcase>
+  <testcase classname="CWE-209" name="Verbose SQLite error disclosure in GET /api/search [medium] routes/api.js:11-12">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.8" />
+      <property name="confidence" value="0.92" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-117" name="Log injection via unsanitized req.query logging [medium] routes/api.js:8-9">
+    <properties>
+      <property name="poc_status" value="planned" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-693" name="Missing security headers and CSP baseline amplifies XSS [low] app.js:23-27">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.3" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-532" name="Sensitive SQL errors and DB rows logged to stdout in shared search service [low] service/search.js:9-15">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="2.2" />
+      <property name="confidence" value="0.80" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+</testsuite>

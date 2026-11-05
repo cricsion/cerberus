@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cerberus" tests="10" errors="0" skipped="0" timestamp="2026-11-04T17:42:32Z" time="0.000" failures="9">
+  <testcase classname="CWE-95" name="Eval injection via req.query.red in rgbToHex handler [critical] app/server.js:32-32">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Eval injection via req.query.red in rgbToHex handler (CWE-95) critical conf=1.0 app/server.js:32-32">var red = eval(req.query.red);
+var red = eval(req.query.red);</failure>
+  </testcase>
+  <testcase classname="CWE-95" name="Cross-unit Eval RCE to response via converter.rgbToHex [critical] app/server.js:39-40">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Cross-unit Eval RCE to response via converter.rgbToHex (CWE-95) critical conf=1.0 app/server.js:39-40">source app/server.js:32 eval(req.query.red) -&gt; app/converter.js:3 red.toString(16) -&gt; sink app/server.js:40 res.send(hex)
+  var hex = converter.rgbToHex(red, green, blue);
+  res.send(hex);</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Unsafe deserialization RCE in cwe502 serialize handler [critical] app/server.js:97-97">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Unsafe deserialization RCE in cwe502 serialize handler (CWE-502) critical conf=1.0 app/server.js:97-97">serialize.unserialize(req.query.foo);
+serialize.unserialize(req.query.foo);</failure>
+  </testcase>
+  <testcase classname="CWE-78" name="OS command injection in cwe78 childprocess handler [critical] app/server.js:106-106">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="9.0" />
+      <property name="confidence" value="1.00" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="OS command injection in cwe78 childprocess handler (CWE-78) critical conf=1.0 app/server.js:106-106">cprocess.exec(req.query.foo, (error,stdout,stderr) =&gt; {
+cprocess.exec(req.query.foo, (error,stdout,stderr) =&gt; {</failure>
+  </testcase>
+  <testcase classname="CWE-502" name="Use of known-vulnerable node-serialize component [critical] app/server.js:2-2">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="8.8" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Use of known-vulnerable node-serialize component (CWE-502) critical conf=0.95 app/server.js:2-2">var serialize = require('node-serialize');
+serialize.unserialize(req.query.foo);</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in cwe79 echo handler [high] app/server.js:62-62">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in cwe79 echo handler (CWE-79) high conf=0.95 app/server.js:62-62">res.send(textConcat);
+res.send("&lt;p&gt;You sent this: " + req.query.text + "&lt;/p&gt;")</failure>
+  </testcase>
+  <testcase classname="CWE-79" name="Reflected XSS in /cwe201/exposure via unsanitized res.send [high] app/server.js:80-80">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Reflected XSS in /cwe201/exposure via unsanitized res.send (CWE-79) high conf=0.95 app/server.js:80-80">app/server.js:79 route receives req.query.text; app/server.js:80 sinks it via res.send(req.query.text) with default text/html content-type and no output encoding
+res.send(req.query.text);</failure>
+  </testcase>
+  <testcase classname="CWE-798" name="Hardcoded Veracode API credentials in start-agent-server.sh [high] start-agent-server.sh:3-4">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Hardcoded Veracode API credentials in start-agent-server.sh (CWE-798) high conf=0.95 start-agent-server.sh:3-4">start-agent-server.sh:3 exports VERACODE_API_KEY_ID and start-agent-server.sh:4 exports VERACODE_API_KEY_SECRET committed in plaintext
+export VERACODE_API_KEY_ID=***
+export VERACODE_API_KEY_SECRET=***</failure>
+  </testcase>
+  <testcase classname="CWE-113" name="HTTP response splitting in cwe113 split handler [medium] app/server.js:70-70">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="4.6" />
+      <property name="confidence" value="0.85" />
+      <property name="has_patch" value="true" />
+    </properties>
+  </testcase>
+  <testcase classname="CWE-22" name="Missing authentication on CWE-73 file-read route [high] app/server.js:53-53">
+    <properties>
+      <property name="poc_status" value="none" />
+      <property name="cvss" value="7.3" />
+      <property name="confidence" value="0.95" />
+      <property name="has_patch" value="true" />
+    </properties>
+    <failure message="Missing authentication on CWE-73 file-read route (CWE-22) high conf=0.95 app/server.js:53-53">app.get("/cwe73/read", function(req, res) {
+res.send(fse.readJsonSync(req.query.foo));</failure>
+  </testcase>
+</testsuite>
